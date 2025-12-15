@@ -24,12 +24,11 @@ export async function register() {
             if (baseUrl) {
                 console.log(`🚀 Base URL detected (${baseUrl}). Configuring Telegram Webhook...`);
                 try {
-                    const { ensureWebhook } = await import("./lib/telegram");
-                    // Intent: Asynchronous execution ("Fire and Forget") to prevent blocking server cold-start.
-                    ensureWebhook(baseUrl, token).then(success => {
-                        if (success) console.log("✅ Telegram Webhook configured.");
-                        else console.error("❌ Failed to configure Telegram Webhook.");
-                    });
+                    const { ensureWebhook } = await import("@/lib/telegram");
+                    // Intent: Await execution to ensure Vercel/Lambda doesn't freeze the process before completion.
+                    const success = await ensureWebhook(baseUrl, token);
+                    if (success) console.log("✅ Telegram Webhook configured.");
+                    else console.error("❌ Failed to configure Telegram Webhook.");
                 } catch (err) {
                     console.error("❌ Failed to import/run ensureWebhook:", err);
                 }
