@@ -1,0 +1,22 @@
+name: Trigger Reminders
+
+on:
+  schedule:
+    # Run every hour (at minute 0)
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Reminder API
+        run: |
+          # Replace with your actual deployed URL
+          # We use a secret for the URL to keep it flexible
+          if [ -n "${{ secrets.DEPLOYMENT_URL }}" ]; then
+             curl -L -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders"
+             echo "Pinged ${{ secrets.DEPLOYMENT_URL }}"
+          else
+             echo "No DEPLOYMENT_URL secret set. Skipping."
+          fi
