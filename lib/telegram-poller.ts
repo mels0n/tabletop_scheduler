@@ -44,7 +44,7 @@ export async function startPolling() {
  * @param {string} token - The Telegram Bot Token.
  */
 export async function checkReminders(token: string) {
-    // Intent: Find candidates: Active, Reminders Enabled, Not yet notified of Viable Quorum.
+    // Intent: Find candidates: Active or Draft, Reminders Enabled, Not yet notified of Viable Quorum.
     const events = await prisma.event.findMany({
         where: {
             status: { in: ["ACTIVE", "DRAFT"] },
@@ -96,9 +96,9 @@ export async function checkReminders(token: string) {
             // Intent: Handle day wrapping logic if needed (currently simplified to same-day window)
             // if (diff < 0) { ... }
 
-            // Intent: Validate strict execution window (0 to 65 minutes late).
-            // This accommodates hourly cron jobs.
-            if (diff < 0 || diff > 65) {
+            // Intent: Validate strict execution window (0 to 90 minutes late).
+            // This accommodates hourly cron jobs with potential delays.
+            if (diff < 0 || diff > 90) {
                 // Debug log to help diagnose missed reminders
                 log.debug(`Skipping reminder for ${event.slug}`, {
                     reason: "Time window mismatch",
