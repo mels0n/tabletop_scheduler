@@ -38,6 +38,9 @@ TabletopTime uses environment variables for configuration. You can set these in 
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `NEXT_PUBLIC_GOOGLE_ADSENSE_ID` | No | - | Publisher ID for Google AdSense (e.g. `ca-pub-123...`). |
+| `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` | No | - | Measurement ID for Google Analytics 4 (e.g. `G-XYZ...`). |
+| `NEXT_PUBLIC_IS_HOSTED` | No | `false` | Set to `true` to enable "Hosted" specific features (Ads, Analytics, Sitemap). Leave unset or `false` for self-hosted privacy. |
+
 
 ## Example `.env` File
 ```env

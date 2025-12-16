@@ -52,6 +52,7 @@ TabletopTime is configured via environment variables. See [EnvVariables.md](docs
 *   **[Setup Guide](docs/guides/TelegramSetup.md)**: How to create a Telegram bot and get started.
 *   **[Understanding Magic Links](docs/guides/MagicLinks.md)**: How passwordless recovery and login works.
 *   **[Environment Variables](docs/reference/EnvVariables.md)**: Detailed configuration options.
+*   **[Privacy & Architecture](docs/reference/PrivacyAndArchitecture.md)**: How we ensure self-hosted privacy (NoOp builds).
 *   **[API Reference](docs/reference/ApiReference.md)**: Internal API endpoints and webhook specs.
 *   **[User Guide](docs/guides/UserGuide.md)**: Comprehensive usage guide.
 *   **[Contributing](CONTRIBUTING.md)**: Guide for developers wanting to help out.
