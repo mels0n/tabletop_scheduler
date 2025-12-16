@@ -54,7 +54,8 @@ echo "⏰ Setting up internal cleanup loop..."
     sleep 60
     while true; do
         echo "🔔 Checking reminders..."
-        node -e "fetch('http://127.0.0.1:3000/api/cron/reminders').then(r => console.log('Reminder check status:', r.status)).catch(e => console.error('Reminder check failed:', e))" >> /app/data/cron.log 2>&1
+        # Intent: Conditionally add Authorization header if CRON_SECRET is set
+        node -e "const headers = process.env.CRON_SECRET ? { 'Authorization': 'Bearer ' + process.env.CRON_SECRET } : {}; fetch('http://127.0.0.1:3000/api/cron/reminders', { headers }).then(r => console.log('Reminder check status:', r.status)).catch(e => console.error('Reminder check failed:', e))" >> /app/data/cron.log 2>&1
         sleep 600
     done
 ) &

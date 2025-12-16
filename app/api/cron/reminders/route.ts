@@ -25,9 +25,7 @@ export async function GET(request: Request) {
     // or we can rely on obfuscating the URL if strictly necessary, but for now open
     // Ideally, check for process.env.CRON_SECRET
     if (process.env.CRON_SECRET && `Bearer ${process.env.CRON_SECRET}` !== authHeader) {
-        // return new NextResponse('Unauthorized', { status: 401 });
-        // Keeping it open for now as per likely Vercel default usage, 
-        // but let's log it.
+        return new NextResponse('Unauthorized', { status: 401 });
     }
 
     log.info("triggering reminder check via API");
