@@ -70,8 +70,12 @@ export async function checkReminders(token: string) {
                 minute: "2-digit"
             });
 
-            // Intent: Parse target reminder time (HH:MM)
-            const [targetH, targetM] = event.reminderTime.split(':').map(Number);
+            // Intent: Parse target reminder time (HH:MM) supporting both 24h and 12h (AM/PM) formats
+            let [targetH, targetM] = event.reminderTime.split(':').map(part => parseInt(part.replace(/\D/g, '')));
+
+            // Adjust for AM/PM if present
+            if (event.reminderTime.toLowerCase().includes('pm') && targetH < 12) targetH += 12;
+            if (event.reminderTime.toLowerCase().includes('am') && targetH === 12) targetH = 0;
 
             // Intent: Get Current Time in user's TZ broken down for minute-math
             const timeParts = new Intl.DateTimeFormat('en-US', {
@@ -87,16 +91,24 @@ export async function checkReminders(token: string) {
             const currentTotalMinutes = currentH * 60 + currentM;
             const targetTotalMinutes = targetH * 60 + targetM;
 
-            let diff = currentTotalMinutes - targetTotalMinutes;
+            const diff = currentTotalMinutes - targetTotalMinutes;
 
             // Intent: Handle day wrapping logic if needed (currently simplified to same-day window)
-            if (diff < 0) {
-                // Logic: Negative diff means it's before the reminder time, or yesterday's reminder time.
-            }
+            // if (diff < 0) { ... }
 
             // Intent: Validate strict execution window (0 to 65 minutes late).
             // This accommodates hourly cron jobs.
-            if (diff < 0 || diff > 65) continue;
+            if (diff < 0 || diff > 65) {
+                // Debug log to help diagnose missed reminders
+                log.debug(`Skipping reminder for ${event.slug}`, {
+                    reason: "Time window mismatch",
+                    diff,
+                    current: `${currentH}:${currentM}`,
+                    target: `${targetH}:${targetM}`,
+                    tz
+                });
+                continue;
+            }
 
             // Intent: Prevent duplicate sends within the same "Logical Day".
             // If sent < 18 hours ago, assume it was for this cycle.
