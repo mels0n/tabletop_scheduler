@@ -22,10 +22,13 @@ const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
  */
 export const metadata: Metadata = {
     title: {
-        template: '%s | Tabletop Scheduler',
-        default: 'Tabletop Scheduler',
+        template: '%s | Tabletop Time',
+        default: 'Tabletop Time | Free D&D & RPG Session Scheduler',
     },
     description: "Coordinate D&D and board game sessions without the chaos.",
+    alternates: {
+        canonical: process.env.NEXT_PUBLIC_BASE_URL,
+    },
     robots: isHosted ? "index, follow" : "noindex, nofollow",
     keywords: ["D&D", "Scheduler", "Tabletop", "Board Games", "RPG", "Event Planner"],
     openGraph: isHosted ? {
@@ -61,7 +64,8 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const adClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_ID;
+    const isAdSenseConfigured = adClient && adClient !== "ca-pub-XXXXXXXXXXXXXXXX";
 
     return (
         <html lang="en">
@@ -71,10 +75,10 @@ export default function RootLayout({
                 {children}
                 {isHosted && <GoogleAdBar />}
             </body>
-            {isHosted && (
+            {isHosted && isAdSenseConfigured && (
                 <Script
                     async
-                    src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_ID || "ca-pub-XXXXXXXXXXXXXXXX"}`}
+                    src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`}
                     crossOrigin="anonymous"
                     strategy="afterInteractive"
                 />

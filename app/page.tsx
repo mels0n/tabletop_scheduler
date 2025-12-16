@@ -23,13 +23,21 @@ export default function Home() {
     "@type": "SoftwareApplication",
     "name": "Tabletop Scheduler",
     "applicationCategory": "UtilitiesApplication",
-    "operatingSystem": "Web",
+    "operatingSystem": "Web Browser",
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD"
     },
-    "description": "Coordinate D&D and board game sessions without the chaos."
+    "description": "Coordinate D&D and board game sessions without the chaos.",
+    "featureList": [
+      "Frictionless Voting",
+      "No Login Required",
+      "Smart Resolution",
+      "Telegram Integration",
+      "Free & Open",
+      "Privacy First"
+    ]
   };
 
   return (
@@ -60,6 +68,7 @@ export default function Home() {
             <PlusCircle className="w-5 h-5" />
             Start Scheduling
           </Link>
+          {' '}
           <a
             href="https://github.com/mels0n/tabletop_scheduler"
             target="_blank"
