@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { Copy, PlusCircle, ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
+import { FAQItem } from "@/components/FAQItem";
+import { FaqJsonLd } from "@/components/FaqJsonLd";
+
 
 /**
  * @component Home
@@ -115,6 +118,31 @@ export default function Home() {
           />
         )}
       </div>
+
+      {isHosted && (
+        <>
+          <div className="mt-20 max-w-4xl w-full">
+            <h2 className="text-2xl font-bold mb-6 text-center text-indigo-400">Frequently Asked Questions</h2>
+            <div className="space-y-4">
+              <FAQItem
+                question="Is Tabletop Time free?"
+                answer="Yes, it is free and open source. We believe in tools that serve the community without paywalls."
+              />
+              <FAQItem
+                question="Do players need an account to vote?"
+                answer="No. Players can click the link you send and vote immediately. No login required."
+              />
+            </div>
+          </div>
+
+          {/* Intent: Answer Engine Optimization (AEO) Schema */}
+          <FaqJsonLd data={[
+            { question: "Is Tabletop Time free?", answer: "Yes, it is free and open source. We believe in tools that serve the community without paywalls." },
+            { question: "Do players need an account to vote?", answer: "No. Players can click the link you send and vote immediately. No login required." }
+          ]} />
+        </>
+      )}
+
     </main>
   );
 }
