@@ -34,14 +34,14 @@ export const metadata: Metadata = {
     openGraph: isHosted ? {
         type: "website",
         locale: "en_US",
-        url: process.env.NEXT_PUBLIC_BASE_URL || "https://tabletop-scheduler.vercel.app",
-        title: "Tabletop Scheduler",
+        url: process.env.NEXT_PUBLIC_BASE_URL,
+        title: "Tabletop Time",
         description: "Coordinate D&D and board game sessions without the chaos.",
-        siteName: "Tabletop Scheduler",
+        siteName: "Tabletop Time",
     } : undefined,
     twitter: isHosted ? {
         card: "summary_large_image",
-        title: "Tabletop Scheduler",
+        title: "Tabletop Time",
         description: "Coordinate D&D and board game sessions without the chaos.",
     } : undefined,
 };

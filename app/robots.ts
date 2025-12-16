@@ -10,9 +10,9 @@ import { MetadataRoute } from 'next';
  */
 export default function robots(): MetadataRoute.Robots {
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tabletop-scheduler.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    if (!isHosted) {
+    if (!isHosted || !baseUrl) {
         return {
             rules: {
                 userAgent: '*',

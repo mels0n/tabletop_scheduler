@@ -10,10 +10,10 @@ import { MetadataRoute } from 'next';
  */
 export default function sitemap(): MetadataRoute.Sitemap {
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tabletop-scheduler.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-    // Privacy Guard: Do not expose sitemap in self-hosted mode
-    if (!isHosted) {
+    // Privacy Guard: Do not expose sitemap in self-hosted mode or if URL is missing
+    if (!isHosted || !baseUrl) {
         return [];
     }
 
