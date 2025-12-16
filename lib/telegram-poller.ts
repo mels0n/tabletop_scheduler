@@ -47,7 +47,7 @@ export async function checkReminders(token: string) {
     // Intent: Find candidates: Active, Reminders Enabled, Not yet notified of Viable Quorum.
     const events = await prisma.event.findMany({
         where: {
-            status: "ACTIVE",
+            status: { in: ["ACTIVE", "DRAFT"] },
             reminderEnabled: true,
             quorumViableNotified: false
         }
