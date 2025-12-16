@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 /**
  * @constant inter
- * @description Configuration for the local Inter font to ensure privacy and performance
- * by hosting font files locally instead of fetching from Google Fonts.
+ * @description Configuration for the Inter font via next/font/google.
+ * Automatically optimizes and hosts the font files at build time.
  */
-const inter = localFont({
-    src: "../public/fonts/Inter-VariableFont.woff2",
+const inter = Inter({
+    subsets: ["latin"],
     display: "swap",
     variable: "--font-inter",
 });
@@ -45,6 +45,7 @@ export const metadata: Metadata = {
 
 import { Navbar } from "@/components/Navbar";
 import { GoogleAdBar } from "@/components/GoogleAdBar";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import Script from "next/script";
 
 /**
@@ -65,6 +66,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
+                {isHosted && <GoogleAnalytics />}
                 <Navbar />
                 {children}
                 {isHosted && <GoogleAdBar />}
