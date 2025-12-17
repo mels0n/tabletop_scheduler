@@ -27,7 +27,7 @@ export const GoogleAnalytics = () => {
         <>
             <Script
                 src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-                strategy="afterInteractive"
+                strategy="lazyOnload"
                 onError={(e) => {
                     console.warn(`Google Analytics failed to load (likely blocked by client): ${e.message}`);
                 }}
