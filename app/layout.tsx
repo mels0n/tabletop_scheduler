@@ -68,6 +68,10 @@ import Script from "next/script";
  * @param {Object} props - The component props.
  * @param {React.ReactNode} props.children - The child components (pages) to render.
  */
+import { Footer } from "@/components/Footer";
+
+// ... (existing imports)
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -78,10 +82,13 @@ export default function RootLayout({
 
     return (
         <html lang="en">
-            <body className={inter.className}>
+            <body className={`${inter.className} min-h-screen flex flex-col`}>
                 {isHosted && <GoogleAnalytics />}
                 <Navbar />
-                {children}
+                <main className="flex-grow">
+                    {children}
+                </main>
+                <Footer />
                 {isHosted && <GoogleAdBar />}
             </body>
             {isHosted && isAdSenseConfigured && (

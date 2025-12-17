@@ -21,7 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         {
             url: baseUrl,
             lastModified: new Date(),
-            changeFrequency: 'weekly',
+            changeFrequency: 'monthly',
             priority: 1,
         },
         {
@@ -30,6 +30,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'monthly',
             priority: 0.8,
         },
-        // Add other static pages here if they exist (e.g., /faq)
+        {
+            url: `${baseUrl}/faq`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/how-it-works`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.8,
+        },
     ];
 }
+
