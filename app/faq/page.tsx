@@ -13,6 +13,7 @@ import { ArrowLeft } from "lucide-react";
  * - Pure client component for simplicity, though could be RSC.
  */
 import { FAQItem } from "@/components/FAQItem";
+import { DataTooltip } from "@/components/DataTooltip";
 
 
 /**
@@ -45,9 +46,7 @@ export default function FAQPage() {
                         question="How does the app remember who I am?"
                         answer="We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
                     />
-                    import {DataTooltip} from "@/components/DataTooltip";
 
-                    // ... inside FAQPage ...
 
                     <FAQItem
                         question="Where is my data stored?"
