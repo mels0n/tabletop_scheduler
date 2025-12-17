@@ -45,9 +45,17 @@ export default function FAQPage() {
                         question="How does the app remember who I am?"
                         answer="We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
                     />
+                    import {DataTooltip} from "@/components/DataTooltip";
+
+                    // ... inside FAQPage ...
+
                     <FAQItem
                         question="Where is my data stored?"
-                        answer="If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don't mine, sell, or keep your data. If you are self-hosting, the data lives on your own server and stays with you."
+                        answer={
+                            <span>
+                                If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don't mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you.
+                            </span>
+                        }
                     />
                     <FAQItem
                         question="How do I find my past events?"
