@@ -20,16 +20,12 @@ export function Footer() {
 
                 {/* Navigation Links */}
                 <div className="flex items-center gap-6">
-                    {isHosted && (
-                        <>
-                            <Link href="/how-it-works" className="hover:text-indigo-400 transition-colors">
-                                How it Works
-                            </Link>
-                            <Link href="/faq" className="hover:text-indigo-400 transition-colors">
-                                FAQ
-                            </Link>
-                        </>
-                    )}
+                    <Link href="/how-it-works" className="hover:text-indigo-400 transition-colors">
+                        How it Works
+                    </Link>
+                    <Link href="/faq" className="hover:text-indigo-400 transition-colors">
+                        FAQ
+                    </Link>
 
                     <a
                         href="https://github.com/mels0n/tabletop_scheduler"
