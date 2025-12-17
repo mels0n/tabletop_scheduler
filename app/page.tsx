@@ -84,8 +84,12 @@ export default function Home() {
           </a>
         </div>
 
+
+      </div>
+
+      <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left">
         {isHosted && (
-          <div className="mt-12 max-w-2xl text-sm text-slate-500 bg-slate-900/40 p-6 rounded-2xl border border-slate-900">
+          <div className="col-span-1 md:col-span-3 text-center text-sm text-slate-500 bg-slate-900/40 p-6 rounded-2xl border border-slate-900">
             <p>
               Stop fighting with Doodle polls. Tabletop Time is the <strong>privacy-first</strong>, <strong>login-free</strong> scheduler built specifically for gamers.
               Whether you play D&D, Pathfinder, or Board Games, find a time that works for everyone.
@@ -96,9 +100,6 @@ export default function Home() {
             </p>
           </div>
         )}
-      </div>
-
-      <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left">
         <FeatureCard
           icon={<Copy className="w-6 h-6 text-indigo-400" />}
           title={isHosted ? "Frictionless Voting" : "No Login Required"}
