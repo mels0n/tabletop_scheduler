@@ -12,6 +12,18 @@ import { ArrowLeft } from "lucide-react";
  * - Explains the philosophy of "Account-less Scheduling" and privacy model.
  * - Pure client component for simplicity, though could be RSC.
  */
+import { FAQItem } from "@/components/FAQItem";
+
+
+/**
+ * @component FAQPage
+ * @description Static "Frequently Asked Questions" page.
+ *
+ * Design:
+ * - Simple, text-heavy layout optimized for readability.
+ * - Explains the philosophy of "Account-less Scheduling" and privacy model.
+ * - Pure client component for simplicity, though could be RSC.
+ */
 export default function FAQPage() {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
@@ -47,15 +59,3 @@ export default function FAQPage() {
     )
 }
 
-/**
- * @component FAQItem
- * @description Reusable presentational component for a single Q&A block.
- */
-function FAQItem({ question, answer }: { question: string, answer: string }) {
-    return (
-        <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-800">
-            <h3 className="font-semibold text-lg text-slate-200 mb-2">{question}</h3>
-            <p className="text-slate-400 leading-relaxed">{answer}</p>
-        </div>
-    )
-}

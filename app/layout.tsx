@@ -23,14 +23,14 @@ const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 export const metadata: Metadata = {
     title: {
         template: '%s | Tabletop Time',
-        default: 'Tabletop Time | Free D&D & RPG Session Scheduler',
+        default: 'Tabletop Time | The Ultimate Game Night Session Scheduler',
     },
     description: "Coordinate D&D and board game sessions without the chaos.",
     alternates: {
         canonical: process.env.NEXT_PUBLIC_BASE_URL,
     },
     robots: isHosted ? "index, follow" : "noindex, nofollow",
-    keywords: ["D&D", "Scheduler", "Tabletop", "Board Games", "RPG", "Event Planner"],
+    keywords: ["D&D", "Scheduler", "Tabletop", "Board Games", "RPG", "Event Planner", "Doodle Alternative", "No Login"],
     openGraph: isHosted ? {
         type: "website",
         locale: "en_US",
@@ -38,11 +38,20 @@ export const metadata: Metadata = {
         title: "Tabletop Time",
         description: "Coordinate D&D and board game sessions without the chaos.",
         siteName: "Tabletop Time",
+        images: [
+            {
+                url: `${process.env.NEXT_PUBLIC_BASE_URL}/og-image.jpg`, // Ensure this image exists in public/
+                width: 1200,
+                height: 630,
+                alt: "Tabletop Time Scheduler Interface",
+            }
+        ]
     } : undefined,
     twitter: isHosted ? {
         card: "summary_large_image",
         title: "Tabletop Time",
         description: "Coordinate D&D and board game sessions without the chaos.",
+        images: [`${process.env.NEXT_PUBLIC_BASE_URL}/og-image.jpg`],
     } : undefined,
 };
 

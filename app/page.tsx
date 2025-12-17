@@ -55,6 +55,7 @@ export default function Home() {
       <div className="relative flex flex-col place-items-center text-center">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl md:text-7xl bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
           Tabletop Time
+          {isHosted && <span className="sr-only">: The Ultimate Game Night Session Scheduler</span>}
         </h1>
         <p className="mt-4 max-w-[600px] text-zinc-400 md:text-xl">
           {isHosted
@@ -62,6 +63,15 @@ export default function Home() {
             : "Coordinate your D&D sessions, board game nights, and RPG campaigns without the group chat chaos."
           }
         </p>
+
+        {isHosted && (
+          <div className="mt-6 max-w-2xl text-sm text-slate-500">
+            <p>
+              Stop fighting with Doodle polls. Tabletop Time is the <strong>privacy-first</strong>, <strong>login-free</strong> scheduler built specifically for gamers.
+              Whether you play D&D, Pathfinder, or Board Games, find a time that works for everyone.
+            </p>
+          </div>
+        )}
 
         <div className="mt-8 flex gap-4">
           <Link
