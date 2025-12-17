@@ -52,7 +52,7 @@ export default function FAQPage() {
                         question="Where is my data stored?"
                         answer={
                             <span>
-                                If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don't mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you.
+                                If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don&apos;t mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you.
                             </span>
                         }
                     />
