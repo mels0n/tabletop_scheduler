@@ -47,11 +47,15 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="Where is my data stored?"
-                        answer="If you are self-hosting this, the data lives right on your own server. We don't see anything. It stays with you."
+                        answer="If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don't mine, sell, or keep your data. If you are self-hosting, the data lives on your own server and stays with you."
                     />
                     <FAQItem
                         question="How do I find my past events?"
                         answer="Check out the 'My Profile' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access."
+                    />
+                    <FAQItem
+                        question="What is a 'Magic Link'?"
+                        answer="(Optional) If you switch devices or clear your cache, you might lose access to your events. You can generate a 'Magic Link' to save somewhere safe. Clicking it on a new device will restore your access. This is completely optional."
                     />
                 </div>
             </div>
