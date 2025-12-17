@@ -14,15 +14,23 @@ import Script from "next/script";
  * @env NEXT_PUBLIC_GOOGLE_ANALYTICS_ID - The unique GA4 Measurement ID.
  */
 export const GoogleAnalytics = () => {
-    // Intent: Retrieve the GA Measurement ID, falling back to the hardcoded project defaults if the env var is missing.
-    // Critical: Ensure this ID matches the production property to avoid data loss.
-    const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || "G-VYGGWH54F1";
+    // Intent: Retrieve the GA Measurement ID.
+    // Critical: STRICTLY use the environment variable. Do not fallback to a default to prevent data pollution.
+    const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID;
+
+    // Guard: If no ID is configured (e.g. dev/docker), strictly do not render.
+    if (!GA_MEASUREMENT_ID) {
+        return null;
+    }
 
     return (
         <>
             <Script
                 src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
                 strategy="afterInteractive"
+                onError={(e) => {
+                    console.warn(`Google Analytics failed to load (likely blocked by client): ${e.message}`);
+                }}
             />
             <Script id="google-analytics" strategy="afterInteractive">
                 {`
