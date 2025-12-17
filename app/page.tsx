@@ -69,6 +69,10 @@ export default function Home() {
             <p>
               Stop fighting with Doodle polls. Tabletop Time is the <strong>privacy-first</strong>, <strong>login-free</strong> scheduler built specifically for gamers.
               Whether you play D&D, Pathfinder, or Board Games, find a time that works for everyone.
+              <br />
+              <Link href="/how-it-works" className="text-indigo-400 hover:underline mt-2 inline-block">
+                See how it works &rarr;
+              </Link>
             </p>
           </div>
         )}
