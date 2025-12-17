@@ -56,10 +56,11 @@ export function Navbar() {
  * @param {ReactNode} props.icon - Icon element to display.
  * @param {ReactNode} props.children - Label content (hidden on mobile).
  */
-function NavLink({ href, active, icon, children }: any) {
+function NavLink({ href, active, icon, children }: { href: string, active: boolean, icon: React.ReactNode, children: string }) {
     return (
         <Link
             href={href}
+            aria-label={children}
             className={clsx(
                 "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
                 active
