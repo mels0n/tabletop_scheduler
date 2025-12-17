@@ -64,18 +64,6 @@ export default function Home() {
           }
         </p>
 
-        {isHosted && (
-          <div className="mt-6 max-w-2xl text-sm text-slate-500">
-            <p>
-              Stop fighting with Doodle polls. Tabletop Time is the <strong>privacy-first</strong>, <strong>login-free</strong> scheduler built specifically for gamers.
-              Whether you play D&D, Pathfinder, or Board Games, find a time that works for everyone.
-              <br />
-              <Link href="/how-it-works" className="text-indigo-400 hover:underline mt-2 inline-block">
-                See how it works &rarr;
-              </Link>
-            </p>
-          </div>
-        )}
 
         <div className="mt-8 flex gap-4">
           <Link
@@ -95,6 +83,19 @@ export default function Home() {
             GitHub
           </a>
         </div>
+
+        {isHosted && (
+          <div className="mt-12 max-w-2xl text-sm text-slate-500 bg-slate-900/40 p-6 rounded-2xl border border-slate-900">
+            <p>
+              Stop fighting with Doodle polls. Tabletop Time is the <strong>privacy-first</strong>, <strong>login-free</strong> scheduler built specifically for gamers.
+              Whether you play D&D, Pathfinder, or Board Games, find a time that works for everyone.
+              <br />
+              <Link href="/how-it-works" className="text-indigo-400 hover:underline mt-2 inline-block">
+                See how it works &rarr;
+              </Link>
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left">
@@ -135,7 +136,8 @@ export default function Home() {
 
       {isHosted && (
         <>
-          <div className="mt-20 max-w-4xl w-full">
+          {/* Intent: Hidden FAQ for AEO (Answer Engine Optimization) - Visible to bots/screen-readers only */}
+          <div className="sr-only mt-20 max-w-4xl w-full">
             <h2 className="text-2xl font-bold mb-6 text-center text-indigo-400">Frequently Asked Questions</h2>
             <div className="space-y-4">
               <FAQItem
