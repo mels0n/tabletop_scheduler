@@ -64,6 +64,10 @@ export default function FAQPage() {
                         question="What is a 'Magic Link'?"
                         answer="(Optional) If you switch devices or clear your cache, you might lose access to your events. You can generate a 'Magic Link' to save somewhere safe. Clicking it on a new device will restore your access. This is completely optional."
                     />
+                    <FAQItem
+                        question="Why did I make this tool?"
+                        answer="I have a group of friends that plays Magic the Gathering - some of whom flat refuse to create an account at some data farming website. If I'm honest, I'd prefer to control my own data too. Also, some have families, some work strange hours, some have season tickets to sports, some have kids playing sports... trying to find a date that works for everyone is chaos."
+                    />
                 </div>
             </div>
         </div>
