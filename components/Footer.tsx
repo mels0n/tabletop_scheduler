@@ -16,7 +16,7 @@ export function Footer() {
                 {/* Copyright / Brand */}
                 <div className="flex items-center gap-1">
                     {isHosted ? (
-                        <span>&copy; 2025 <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Christopher Melson</a>. All rights reserved.</span>
+                        <span>&copy; 2025 <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer author me" className="hover:text-indigo-400 transition-colors">Christopher Melson</a>. All rights reserved.</span>
                     ) : (
                         <span>&copy; {new Date().getFullYear()} Tabletop Time</span>
                     )}

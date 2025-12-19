@@ -21,6 +21,8 @@ const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
  * @property {string} robots - Dynamically configured to index only the hosted instance.
  */
 export const metadata: Metadata = {
+    authors: [{ name: "Christopher Melson", url: "https://chris.melson.us/" }],
+    creator: "Christopher Melson",
     title: {
         template: '%s | Tabletop Time',
         default: 'Tabletop Time | The Ultimate Game Night Session Scheduler',
@@ -88,6 +90,29 @@ export default function RootLayout({
                     src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`}
                     crossOrigin="anonymous"
                     strategy="afterInteractive"
+                />
+            )}
+            {isHosted && (
+                <Script
+                    id="json-ld-schema"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@type": "WebSite",
+                            "name": "Tabletop Time",
+                            "url": "https://tabletop.melson.us",
+                            "author": {
+                                "@type": "Person",
+                                "name": "Christopher Melson",
+                                "url": "https://chris.melson.us/",
+                                "sameAs": [
+                                    "https://github.com/mels0n",
+                                    "https://www.linkedin.com/in/christopher-melson/"
+                                ]
+                            }
+                        })
+                    }}
                 />
             )}
         </html>
