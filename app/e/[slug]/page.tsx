@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import type { Metadata, ResolvingMetadata } from "next";
 import prisma from "@/lib/prisma";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { Calendar, Users } from "lucide-react";
@@ -10,6 +11,39 @@ import Link from "next/link";
 
 interface PageProps {
     params: { slug: string };
+}
+
+/**
+ * @function generateMetadata
+ * @description Generates dynamic metadata for the event page.
+ */
+export async function generateMetadata(
+    { params }: PageProps,
+    parent: ResolvingMetadata
+): Promise<Metadata> {
+    const event = await getEvent(params.slug);
+
+    if (!event) {
+        return {
+            title: "Event Not Found",
+            description: "The requested event could not be found.",
+        };
+    }
+
+    return {
+        title: event.title,
+        description: event.description || "Coordinate D&D and board game sessions without the chaos.",
+        openGraph: {
+            title: event.title,
+            description: event.description || "Coordinate D&D and board game sessions without the chaos.",
+            type: "website",
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: event.title,
+            description: event.description || "Coordinate D&D and board game sessions without the chaos.",
+        },
+    };
 }
 
 /**
