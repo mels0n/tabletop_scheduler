@@ -100,6 +100,34 @@ export async function GET(req: Request) {
         // Optional: Set Username cookie for display
         cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false }); // readable by client
 
+        // MAGIC LINK / RECOVERY LOGIC
+        // Intent: If the user is returning to a /manage page, try to restore their Admin Access automatically.
+        // This acts as the "Magic Link" for Discord users.
+        if (returnTo.includes("/manage")) {
+            // Extract slug from path: /e/[slug]/manage
+            const match = returnTo.match(/\/e\/([^\/]+)\/manage/);
+            if (match && match[1]) {
+                const slug = match[1];
+                const { setAdminCookie } = await import("@/app/actions");
+                const prisma = (await import("@/lib/prisma")).default;
+
+                const event = await prisma.event.findUnique({ where: { slug } });
+
+                // Verify: Does this Discord User own this event?
+                if (event && event.managerDiscordId === user.id) {
+                    // Success! Restore the admin session.
+                    await setAdminCookie(slug, event.adminToken || "");
+                    log.info("Manager session restored via Discord", { slug, userId: user.id });
+                } else if (event && !event.managerDiscordId) {
+                    // Claiming: If no Discord ID is set but they are logging in via the Manage page...
+                    // We might handle this if they are ALREADY authenticated via cookie (unlikely if loop)
+                    // or if this is a "Connect Bot" flow.
+                    // For safety, we only restore IF strictly matched.
+                    // If they are trying to "Claim" it, they should use the 'Connect' flow.
+                }
+            }
+        }
+
         return NextResponse.redirect(new URL(returnTo, req.url));
     }
     else if (flow === "connect") {

@@ -119,7 +119,8 @@ export async function POST(
                 .replace(/<br\s*\/?>/g, '\n')
                 .replace(/&nbsp;/g, ' ');
 
-            const msgId = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+            const res = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+            const msgId = res.id;
 
             // Step 4: Pin the new message and track its ID.
             if (msgId) {
@@ -129,6 +130,8 @@ export async function POST(
                     where: { id: event.id },
                     data: { discordMessageId: msgId }
                 });
+            } else {
+                log.warn("Failed to send Discord finalize message", { error: res.error });
             }
         }
 

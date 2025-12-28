@@ -210,19 +210,36 @@ export async function deleteEvent(slug: string) {
     log.warn("Deleting event", { slug, title: event.title });
 
     // Intent: Cleanup external Telegram state (unpin message, notify chat) before database deletion.
-    if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
+    if (process.env.TELEGRAM_BOT_TOKEN) {
         const { sendTelegramMessage, unpinChatMessage } = await import("@/lib/telegram");
 
-        // Intent: Unpin the event message to clean up the chat interface.
-        if (event.pinnedMessageId) {
-            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
+        if (event.telegramChatId) {
+            // Intent: Unpin the event message to clean up the chat interface.
+            if (event.pinnedMessageId) {
+                await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
+            }
+
+            // Intent: Inform the group that the event has been deleted.
+            await sendTelegramMessage(
+                event.telegramChatId,
+                `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been removed by the organizer.`,
+                process.env.TELEGRAM_BOT_TOKEN
+            );
+        }
+    }
+
+    // Intent: Cleanup external Discord state
+    if (process.env.DISCORD_BOT_TOKEN && event.discordChannelId) {
+        const { sendDiscordMessage, unpinDiscordMessage } = await import("@/lib/discord");
+
+        if (event.discordMessageId) {
+            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
         }
 
-        // Intent: Inform the group that the event has been deleted.
-        await sendTelegramMessage(
-            event.telegramChatId,
-            `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been removed by the organizer.`,
-            process.env.TELEGRAM_BOT_TOKEN
+        await sendDiscordMessage(
+            event.discordChannelId,
+            `🚫 **Event Deleted**\n\nThe event "**${event.title}**" has been removed by the organizer.`,
+            process.env.DISCORD_BOT_TOKEN
         );
     }
 
@@ -285,13 +302,14 @@ export async function cancelEvent(slug: string) {
             data: { status: 'CANCELLED' }
         });
 
+        const { getBaseUrl } = await import("@/lib/url");
+        const { headers } = await import("next/headers");
+        const baseUrl = getBaseUrl(headers());
+
         // Intent: Update Telegram message to reflect cancellation but keep it visible (pinned).
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
             const { editMessageText, sendTelegramMessage } = await import("@/lib/telegram");
             const token = process.env.TELEGRAM_BOT_TOKEN;
-            const { getBaseUrl } = await import("@/lib/url");
-            const { headers } = await import("next/headers");
-            const baseUrl = getBaseUrl(headers());
 
             if (event.pinnedMessageId) {
                 // Intent: Edit the pinned message to show cancellation
@@ -310,6 +328,27 @@ export async function cancelEvent(slug: string) {
             await sendTelegramMessage(
                 event.telegramChatId,
                 `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been cancelled by the organizer.`,
+                token
+            );
+        }
+
+        // Intent: Update Discord message
+        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
+            const { editDiscordMessage, sendDiscordMessage } = await import("@/lib/discord");
+            const token = process.env.DISCORD_BOT_TOKEN!;
+
+            if (event.discordMessageId) {
+                await editDiscordMessage(
+                    event.discordChannelId,
+                    event.discordMessageId,
+                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${event.title}**" has been cancelled by the host.\n\n[View Event Details](${baseUrl}/e/${slug})`,
+                    token
+                );
+            }
+
+            await sendDiscordMessage(
+                event.discordChannelId,
+                `🚫 **Event Cancelled**\n\nThe event "**${event.title}**" has been cancelled by the organizer.`,
                 token
             );
         }
