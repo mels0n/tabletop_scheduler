@@ -179,6 +179,9 @@ export default async function ManageEventPage({ params }: PageProps) {
                             botUsername={botUsername || 'TabletopSchedulerBot'}
                             initialTelegramLink={event.telegramLink}
                             hasChatId={!!event.telegramChatId}
+                            initialHandle={event.managerTelegram}
+                            hasManagerChatId={!!event.managerChatId}
+                            recoveryToken={(await generateShortRecoveryToken(event.slug)).token || ""}
                         />
 
                         <DiscordConnect
@@ -186,17 +189,15 @@ export default async function ManageEventPage({ params }: PageProps) {
                             hasChannel={!!event.discordChannelId}
                             guildId={event.discordGuildId}
                             channelId={event.discordChannelId}
+                            hasManagerDiscordId={!!event.managerDiscordId}
                         />
 
                         <ManagerControls
                             slug={event.slug}
-                            initialHandle={event.managerTelegram}
-                            hasManagerChatId={!!event.managerChatId}
-                            hasManagerDiscordId={!!event.managerDiscordId}
-                            isFinalized={event.status === "FINALIZED" || event.status === "CANCELLED"}
+                            isFinalized={event.status === "FINALIZED"}
                             isCancelled={event.status === "CANCELLED"}
-                            botUsername={botUsername || 'TabletopSchedulerBot'}
-                            recoveryToken={(await generateShortRecoveryToken(event.slug)).token || ""}
+                            isTelegramConnected={!!event.telegramChatId}
+                            isDiscordConnected={!!event.discordChannelId}
                             initialReminderEnabled={event.reminderEnabled}
                             initialReminderTime={event.reminderTime}
                             initialReminderDays={event.reminderDays}

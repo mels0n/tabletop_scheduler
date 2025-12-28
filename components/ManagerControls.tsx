@@ -1,32 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { dmManagerLink, checkManagerStatus, deleteEvent, cancelEvent } from "@/app/actions";
-import { MessageCircle, Loader2, Trash2, AlertTriangle, Send, Check as CheckIcon } from "lucide-react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { deleteEvent, cancelEvent } from "@/app/actions";
+import { Loader2, Trash2, AlertTriangle } from "lucide-react";
 
 /**
  * @interface ManagerControlsProps
- * @description Props for the ManagerControls component.
+ * @description Props for the ManagerControls (Event Settings) component.
  * @property {string} slug - The event slug.
- * @property {string | null} initialHandle - The Telegram handle of the manager (if known).
- * @property {boolean} hasManagerChatId - Whether the bot has verified the manager's chat ID (needed for DMs).
  * @property {boolean} isFinalized - Whether the event is in a finalized state.
- * @property {string} botUsername - The Telegram bot's username (for deep linking).
- * @property {string} recoveryToken - Token for the 'One-Click' recovery flow.
+ * @property {boolean} isCancelled - Whether the event is cancelled.
+ * @property {boolean} isTelegramConnected - Used to gate Reminder settings.
+ * @property {boolean} isDiscordConnected - Used to gate Reminder settings.
  * @property {boolean} initialReminderEnabled - Saved state of reminder setting.
  * @property {string | null} initialReminderTime - Saved reminder time (HH:MM).
  * @property {string | null} initialReminderDays - Saved reminder days (csv string).
  */
 interface ManagerControlsProps {
     slug: string;
-    initialHandle: string | null;
-    hasManagerChatId: boolean;
-    hasManagerDiscordId: boolean;
-    isFinalized: boolean; // boolean
-    isCancelled?: boolean; // New prop for cancelled state
-    botUsername: string;
-    recoveryToken: string;
+    isFinalized: boolean;
+    isCancelled?: boolean;
+    isTelegramConnected: boolean;
+    isDiscordConnected: boolean;
     // Reminder Init Props
     initialReminderEnabled: boolean;
     initialReminderTime: string | null;
@@ -35,39 +31,28 @@ interface ManagerControlsProps {
 
 /**
  * @component ManagerControls
- * @description The primary control panel for event organizers.
+ * @description The settings panel for event organizers.
  * Features:
- * 1. Manager Authentication/Recovery via Telegram Deep Links.
+ * 1. Automated Reminder Scheduling.
  * 2. Event Lifecycle Management (Cancel/Delete).
- * 3. Automated Reminder Scheduling.
  *
  * @param {ManagerControlsProps} props - Component props.
- * @returns {JSX.Element} The manager dashboard UI.
+ * @returns {JSX.Element} The manager settings UI.
  */
 export function ManagerControls({
     slug,
-    initialHandle: propsInitialHandle,
-    hasManagerChatId: initialHasId,
-    hasManagerDiscordId,
     isFinalized,
-    isCancelled = false, // Default to false if not provided
-    botUsername,
-    recoveryToken,
+    isCancelled = false,
+    isTelegramConnected,
+    isDiscordConnected,
     initialReminderEnabled,
     initialReminderTime,
     initialReminderDays
 }: ManagerControlsProps) {
-    // Intent: Track local state for manager identity to update UI immediately upon polling success.
-    const [initialHandle, setInitialHandle] = useState(propsInitialHandle);
-    const [hasManagerChatId, setHasManagerChatId] = useState(initialHasId);
 
     // Delete state
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    // DM Action State
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
     const router = useRouter();
@@ -84,59 +69,9 @@ export function ManagerControls({
     const [reminderEnabled, setReminderEnabled] = useState(initialReminderEnabled);
     const [reminderTime, setReminderTime] = useState(initialReminderTime || "10:00");
     const [reminderDays, setReminderDays] = useState<number[]>(parseDays(initialReminderDays));
-
-    // UI State for Reminders
-    const [isEditing, setIsEditing] = useState(!initialReminderEnabled);
     const [isSavingReminders, setIsSavingReminders] = useState(false);
     const [reminderMessage, setReminderMessage] = useState("");
     const [reminderError, setReminderError] = useState("");
-
-    // Intent: Polling mechanism to auto-detect when the user has finally messaged the bot.
-    // This provides a "Real-time" feel during the setup process without websockets.
-    useEffect(() => {
-        // Poll if we don't have a chat ID yet, regardless of whether we have a handle (since we now capture handle via this flow)
-        if (hasManagerChatId) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const status = await checkManagerStatus(slug);
-                if (status.hasManagerChatId) {
-                    setHasManagerChatId(true);
-                    if (status.handle) setInitialHandle(status.handle);
-                    router.refresh();
-                }
-            } catch (e) {
-                // simple ignore background polling errors
-            }
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [hasManagerChatId, slug, router]);
-
-    /**
-     * Triggers the server action to send a Magic Link via Telegram DM.
-     * Requires the bot to have a known Chat ID for the manager.
-     */
-    const handleDM = async () => {
-        if (!hasManagerChatId) return;
-
-        setLoading(true);
-        setMessage("");
-        setError("");
-
-        try {
-            const res = await dmManagerLink(slug);
-            if (res.error) {
-                setError(res.error);
-            } else {
-                setMessage("✅ Link sent! Check your DMs.");
-            }
-        } catch (e) {
-            setError("Failed to send request.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     /**
      * Handles Event Deletion or Cancellation depending on state.
@@ -153,7 +88,7 @@ export function ManagerControls({
                 setError(res.error || "Unknown error");
                 setIsDeleting(false);
             } else {
-                if (isFinalized) {
+                if (isFinalized && !isCancelled) {
                     // Cancelled -> Refresh to show cancelled state
                     router.refresh();
                     setShowDeleteConfirm(false);
@@ -169,78 +104,13 @@ export function ManagerControls({
         }
     };
 
+    const hasAnyConnection = isTelegramConnected || isDiscordConnected;
+
     return (
         <div className="mt-6 space-y-4">
-            {/* Manager Connection / Setup Section */}
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                <h3 className="font-semibold text-slate-200 flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-indigo-400" />
-                    Manager Recovery
-                </h3>
-
-                {!hasManagerChatId ? (
-                    // State: Setup Mode (No Chat ID yet)
-                    <div className="space-y-3">
-                        <p className="text-sm text-slate-400">
-                            Not going to connect the bot to a group? Register to receive magic login links via DM.
-                        </p>
-
-                        <a
-                            href={`https://t.me/${botUsername}?start=rec_${recoveryToken}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-transparent shadow-lg shadow-indigo-900/20"
-                        >
-                            <Send className="w-4 h-4" />
-                            Register for Magic Links
-                        </a>
-                        <p className="text-[10px] text-slate-500 text-center">
-                            (This will open Telegram and start the bot to secure your link)
-                        </p>
-                    </div>
-                ) : (
-                    // State: Connected Mode (Has Chat ID)
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-2 text-sm text-green-400 bg-green-900/20 px-3 py-2 rounded-lg border border-green-900/50">
-                            <CheckIcon className="w-4 h-4 shrink-0" />
-                            <span className="font-medium">Registered for Magic Links</span>
-                        </div>
-
-                        {initialHandle && (
-                            <div className="flex items-center justify-between text-sm text-slate-400 gap-4 px-1">
-                                <span className="shrink-0">Manager Handle:</span>
-                                <span className="font-mono text-slate-300 truncate">{initialHandle}</span>
-                            </div>
-                        )}
-
-                        {message && <p className="text-green-400 text-sm font-medium px-1">{message}</p>}
-                        {error && <p className="text-red-400 text-sm font-medium px-1">{error}</p>}
-
-                        <button
-                            onClick={handleDM}
-                            disabled={loading || !hasManagerChatId}
-                            className={`w-full py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 border ${loading || !hasManagerChatId
-                                ? "bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed"
-                                : "bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border-indigo-500/30"
-                                }`}
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Magic Link (Telegram)"}
-                        </button>
-
-                        {/* Discord Recovery Option */}
-                        <a
-                            href={`/api/auth/discord?flow=login&returnTo=/e/${slug}/manage`}
-                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
-                        >
-                            <svg className="w-4 h-4 fill-current" viewBox="0 0 127 96" xmlns="http://www.w3.org/2000/svg"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
-                            Recover with Discord
-                        </a>
-                    </div>
-                )}
-            </div>
 
             {/* Reminder Scheduler - Only if Connected */}
-            {hasManagerChatId && (
+            {hasAnyConnection ? (
                 <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
                     <h3 className="font-semibold text-slate-200 flex items-center gap-2">
                         <span className="text-xl">🔔</span>
@@ -257,7 +127,7 @@ export function ManagerControls({
                             />
                             <div className="flex-1">
                                 <span className="font-medium text-slate-200 block">Enable Automated Reminders</span>
-                                <span className="text-xs text-slate-500">Post a reminder in the group chat automatically.</span>
+                                <span className="text-xs text-slate-500">Post a reminder in the group/channel automatically.</span>
                             </div>
                         </label>
 
@@ -307,7 +177,10 @@ export function ManagerControls({
                                             setReminderMessage("");
                                             setReminderError("");
 
-                                            // Intent: Lazy load action to reduce initial bundle size, or just standard import.
+                                            // Intent: Sticky lazy load or direct import depending on bundle pref.
+                                            // Using direct import from top level for now as it's cleaner.
+                                            // But we are in a client component, so we imported the server action at top.
+                                            // We need to import updateReminderSettings.
                                             const { updateReminderSettings } = await import("@/app/actions");
                                             const res = await updateReminderSettings(slug, reminderEnabled, reminderTime, reminderDays);
 
@@ -326,6 +199,13 @@ export function ManagerControls({
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            ) : (
+                <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+                    <div className="text-sm text-slate-500 flex items-center gap-2">
+                        <span className="text-lg opacity-50">🔔</span>
+                        <span>Connect Telegram or Discord to enable reminders.</span>
                     </div>
                 </div>
             )}
@@ -349,10 +229,10 @@ export function ManagerControls({
 
                 {showDeleteConfirm && (
                     <div className="space-y-3 animation-in fade-in slide-in-from-top-2">
-                        <div className={`p-3 ${isFinalized ? 'bg-orange-950/40 border border-orange-900/50 text-orange-200' : 'bg-red-950/40 border border-red-900/50 text-red-200'} rounded text-xs flex gap-2`}>
-                            <AlertTriangle className={`w-4 h-4 ${isFinalized ? 'text-orange-500' : 'text-red-500'} shrink-0`} />
+                        <div className={`p-3 ${isFinalized && !isCancelled ? 'bg-orange-950/40 border border-orange-900/50 text-orange-200' : 'bg-red-950/40 border border-red-900/50 text-red-200'} rounded text-xs flex gap-2`}>
+                            <AlertTriangle className={`w-4 h-4 ${isFinalized && !isCancelled ? 'text-orange-500' : 'text-red-500'} shrink-0`} />
                             <p>
-                                <b>Warning:</b> {isFinalized
+                                <b>Warning:</b> {isFinalized && !isCancelled
                                     ? "This will cancel the event and notify all participants. The event data will be permanently removed."
                                     : (isCancelled
                                         ? "This event is already cancelled. Deleting it will permanently remove all data from the database."
@@ -371,16 +251,17 @@ export function ManagerControls({
                             <button
                                 onClick={handleAction}
                                 disabled={isDeleting}
-                                className={`flex-1 py-2 rounded ${isFinalized ? 'bg-orange-600 hover:bg-orange-500' : 'bg-red-600 hover:bg-red-500'} text-white text-xs font-bold shadow-lg ${isFinalized ? 'shadow-orange-900/20' : 'shadow-red-900/20'} flex items-center justify-center gap-2`}
+                                className={`flex-1 py-2 rounded ${isFinalized && !isCancelled ? 'bg-orange-600 hover:bg-orange-500' : 'bg-red-600 hover:bg-red-500'} text-white text-xs font-bold shadow-lg ${isFinalized && !isCancelled ? 'shadow-orange-900/20' : 'shadow-red-900/20'} flex items-center justify-center gap-2`}
                             >
                                 {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : (
-                                    isFinalized ? "Confirm Cancel" : (isCancelled ? "Confirm Delete" : "Confirm Delete")
+                                    isFinalized && !isCancelled ? "Confirm Cancel" : (isCancelled ? "Confirm Delete" : "Confirm Delete")
                                 )}
                             </button>
                         </div>
                     </div>
                 )}
             </div>
+            {error && <p className="text-red-400 text-sm">{error}</p>}
         </div>
     );
 }
