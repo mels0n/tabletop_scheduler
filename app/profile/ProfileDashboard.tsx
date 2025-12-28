@@ -177,6 +177,8 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                             </h4>
                             <p className="text-slate-400 text-sm mb-4">
                                 Enter your Telegram Handle to receive a Magic Link.
+                                <br />
+                                <span className="text-xs text-slate-500 italic">(Requires you to have interacted with the bot previously)</span>
                             </p>
 
                             <div className="flex flex-col gap-3">

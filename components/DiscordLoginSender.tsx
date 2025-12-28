@@ -35,13 +35,13 @@ export function DiscordLoginSender() {
                 <span className="text-xs text-slate-500 italic">(Requires you to have voted via &quot;Log in with Discord&quot; previously)</span>
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3">
                 <input
                     type="text"
                     placeholder="Username"
                     value={handle}
                     onChange={(e) => setHandle(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:ring-2 focus:ring-[#5865F2] outline-none"
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:ring-2 focus:ring-[#5865F2] outline-none"
                     onKeyDown={(e) => e.key === 'Enter' && handleRecovery()}
                 />
                 <button
