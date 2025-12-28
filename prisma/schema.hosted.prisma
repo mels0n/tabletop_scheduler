@@ -115,7 +115,9 @@ model Vote {
 // Temporary tokens for global "My Events" login
 model LoginToken {
   token     String   @id @default(uuid())
-  chatId    String   // The Telegram Chat ID being authenticated
+  chatId    String?   // The Telegram Chat ID being authenticated
+  discordId String?   // The Discord User ID being authenticated
+  discordUsername String? // For display purposes
   expiresAt DateTime
   createdAt DateTime @default(now())
 }

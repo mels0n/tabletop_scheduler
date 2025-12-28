@@ -686,3 +686,79 @@ export async function dmDiscordManagerLink(slug: string) {
 
     return { success: true };
 }
+
+/**
+ * Generates a global magic link for Discord users to access "My Events".
+ * @param username The Discord username (or handle) to link.
+ */
+export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
+    const prisma = (await import("@/lib/prisma")).default;
+    const { createDMChannel, sendDiscordMessage } = await import('@/lib/discord');
+    const { getBaseUrl } = await import("@/lib/url");
+    const { headers } = await import("next/headers");
+    const token = process.env.DISCORD_BOT_TOKEN;
+
+    if (!token) return { success: false, error: "Server Configuration Error: Discord Token missing" };
+    if (!username) return { success: false, error: "Please enter a username" };
+
+    const normalized = username.toLowerCase().replace('@', '');
+
+    try {
+        // 1. Find User by Username (Case Insensitive-ish)
+        // We prioritize explicit Participant records where we captured identity.
+        const userRecords = await prisma.participant.findMany({
+            where: {
+                discordId: { not: null }
+            },
+            select: { discordId: true, discordUsername: true, name: true }
+        });
+
+        // Manual fuzzy match since SQLite/Postgres 'search' varies and we rely on 'discordUsername' which might be inconsistent.
+        // We look for 'discordUsername' matching or 'name' matching if no discordUsername.
+        const match = userRecords.find(p =>
+            (p.discordUsername && p.discordUsername.toLowerCase().includes(normalized)) ||
+            (p.name && p.name.toLowerCase().includes(normalized))
+        );
+
+        if (!match || !match.discordId) {
+            return { success: false, error: "We couldn't find a record for this username. Have you voted on an event using the 'Log in with Discord' button before?" };
+        }
+
+        const targetId = match.discordId;
+
+        // 3. Generate Token
+        // Expiry: 15 minutes
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+        const loginToken = await prisma.loginToken.create({
+            data: {
+                discordId: targetId,
+                discordUsername: match.discordUsername || username,
+                expiresAt
+            }
+        });
+
+        const baseUrl = getBaseUrl(headers());
+        const magicLink = `${baseUrl}/auth/login?token=${loginToken.token}`;
+
+        // 4. Create DM & Send
+        const channel = await createDMChannel(targetId, token);
+        if (channel.error || !channel.id) {
+            return { success: false, error: "Could not open a DM. Please check your privacy settings." };
+        }
+
+        const msg = `🔐 **Magic Login**\n\nClick here to access **My Events**:\n${magicLink}\n\n(Valid for 15 minutes)`;
+        const sent = await sendDiscordMessage(channel.id, msg, token);
+
+        if (sent.error) {
+            return { success: false, error: "Failed to send DM. Check privacy settings." };
+        }
+
+        return { success: true, message: "Link sent! Check your Discord DMs." };
+
+    } catch (e) {
+        console.error("Discord Magic Link Error", e);
+        return { success: false, error: "Internal Server Error" };
+    }
+}

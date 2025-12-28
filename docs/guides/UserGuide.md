@@ -80,5 +80,6 @@ To get notifications in your group chat:
 
 Your personal history of events.
 - **Local History**: This page tracks events you've visited or created on this device.
+- **Sync**: Use the "Sync & Recover" tool to merge events from your Telegram or Discord account.
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.
 - **Cleanup**: The list automatically removes events that have been deleted from the server.

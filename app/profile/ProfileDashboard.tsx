@@ -7,6 +7,9 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { sendGlobalMagicLink } from "@/app/actions";
 
+
+import { DiscordLoginSender } from "@/components/DiscordLoginSender";
+
 interface ServerEvent {
     slug: string;
     title: string;
@@ -14,6 +17,7 @@ interface ServerEvent {
     lastVisited: string; // ISO string
     eventId?: number;
     participantId?: number;
+    source?: 'telegram' | 'discord';
 }
 
 /**
@@ -30,7 +34,7 @@ interface ServerEvent {
  * 3. Recovery:
  *    - Provides a "Magic Link" request form to elevate a session from Anonymous -> Authenticated.
  */
-export function ProfileDashboard({ serverEvents = [] }: { serverEvents?: ServerEvent[] }) {
+export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
 
@@ -100,7 +104,21 @@ export function ProfileDashboard({ serverEvents = [] }: { serverEvents?: ServerE
                         <h1 className="text-3xl font-bold text-slate-100">
                             Hello, {userName}
                         </h1>
-                        <p className="text-slate-400">Welcome to your event dashboard.</p>
+                        <p className="text-slate-400 mb-2">Welcome to your event dashboard.</p>
+                        <div className="flex flex-wrap gap-2">
+                            {isTelegramSynced && (
+                                <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-green-900/40 text-green-400 rounded-full border border-green-800 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    Telegram Synced
+                                </span>
+                            )}
+                            {isDiscordSynced && (
+                                <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-[#5865F2]/20 text-[#5865F2] rounded-full border border-[#5865F2]/50 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2] animate-pulse" />
+                                    Discord Synced
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -110,7 +128,6 @@ export function ProfileDashboard({ serverEvents = [] }: { serverEvents?: ServerE
                             <Clock className="w-5 h-5 text-indigo-400" />
                             Your Events
                         </h2>
-                        {serverEvents.length > 0 && <span className="text-xs px-2 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">Synced</span>}
                     </div>
 
                     {history.length === 0 ? (
@@ -151,48 +168,58 @@ export function ProfileDashboard({ serverEvents = [] }: { serverEvents?: ServerE
                         <RefreshCw className="w-4 h-4 text-slate-400" />
                         Sync & Recover
                     </h3>
-                    <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-                        <p className="text-slate-400 text-sm mb-4">
-                            Don&apos;t see all your events? Enter your Telegram handle to retrieve them from the cloud.
-                        </p>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <input
-                                type="text"
-                                placeholder="@username"
-                                value={handle}
-                                onChange={(e) => setHandle(e.target.value)}
-                                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                            <button
-                                onClick={handleRecovery}
-                                disabled={loading || !handle}
-                                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                            >
-                                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                Sync My Events
-                            </button>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Telegram Panel */}
+                        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+                            <h4 className="text-md font-semibold text-slate-200 mb-2 flex items-center gap-2">
+                                <span className="text-sky-400">Telegram</span> Sync
+                            </h4>
+                            <p className="text-slate-400 text-sm mb-4">
+                                Enter your Telegram Handle to receive a Magic Link.
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="@username"
+                                    value={handle}
+                                    onChange={(e) => setHandle(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 outline-none"
+                                />
+                                <button
+                                    onClick={handleRecovery}
+                                    disabled={loading || !handle}
+                                    className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                    Send Link
+                                </button>
+                            </div>
+
+                            {msg && (
+                                <div className={`mt-4 p-3 rounded-lg text-sm border ${msg.type === 'success'
+                                    ? 'bg-green-900/20 border-green-800 text-green-300'
+                                    : 'bg-amber-900/20 border-amber-800 text-amber-300'
+                                    }`}>
+                                    <p className="font-medium mb-1">{msg.text}</p>
+                                    {msg.deepLink && (
+                                        <a
+                                            href={msg.deepLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-2 inline-flex items-center gap-2 text-amber-300 hover:text-white underline"
+                                        >
+                                            <Lock className="w-3 h-3" />
+                                            Open Telegram to Verify
+                                        </a>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
-                        {msg && (
-                            <div className={`mt-4 p-3 rounded-lg text-sm border ${msg.type === 'success'
-                                ? 'bg-green-900/20 border-green-800 text-green-300'
-                                : 'bg-amber-900/20 border-amber-800 text-amber-300'
-                                }`}>
-                                <p className="font-medium mb-1">{msg.text}</p>
-                                {msg.deepLink && (
-                                    <a
-                                        href={msg.deepLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mt-2 inline-flex items-center gap-2 text-amber-300 hover:text-white underline"
-                                    >
-                                        <Lock className="w-3 h-3" />
-                                        Open Telegram to Verify
-                                    </a>
-                                )}
-                            </div>
-                        )}
+                        {/* Discord Panel */}
+                        <DiscordLoginSender />
                     </div>
                 </div>
 

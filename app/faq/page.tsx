@@ -62,7 +62,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="What is a 'Magic Link'?"
-                        answer="(Optional) If you switch devices or clear your cache, you might lose access to your events. You can generate a 'Magic Link' to save somewhere safe. Clicking it on a new device will restore your access. This is completely optional."
+                        answer="(Optional) If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
                     />
                     <FAQItem
                         question="Why did I make this tool?"

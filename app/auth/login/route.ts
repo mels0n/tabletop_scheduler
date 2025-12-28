@@ -52,15 +52,37 @@ export async function GET(request: NextRequest) {
         }
 
         // 3. Set Cookie (HTTP Only, Secure)
-        // Intent: Authenticate the user globally across the app based on their Telegram Chat ID.
-        cookies().set("tabletop_user_chat_id", validToken.chatId, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
-            // 30 days expiration for persistence
-            maxAge: 60 * 60 * 24 * 30
-        });
+        // 3. Set Cookie (HTTP Only, Secure)
+        // Intent: Authenticate the user globally across the app based on their Telegram Chat ID OR Discord ID.
+        if (validToken.chatId) {
+            cookies().set("tabletop_user_chat_id", validToken.chatId, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+                maxAge: 60 * 60 * 24 * 30
+            });
+        }
+
+        if (validToken.discordId) {
+            cookies().set("tabletop_user_discord_id", validToken.discordId, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+                maxAge: 60 * 60 * 24 * 30
+            });
+            // Also set username for display
+            if (validToken.discordUsername) {
+                cookies().set("tabletop_user_discord_name", validToken.discordUsername, {
+                    httpOnly: false, // Readable by client
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: "lax",
+                    path: "/",
+                    maxAge: 60 * 60 * 24 * 30
+                });
+            }
+        }
 
         // 4. Cleanup Token (One-time use)
         // MOVED TO CRON: We keep tokens valid until expiry to prevent "Link Preview" race conditions.
