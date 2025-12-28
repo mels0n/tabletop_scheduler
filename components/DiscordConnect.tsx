@@ -148,7 +148,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
             {step === 'initial' && (
                 <div className="pl-12">
                     <a
-                        href="/api/auth/discord?flow=connect"
+                        href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
                         className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20"
                     >
                         Connect Discord Server
