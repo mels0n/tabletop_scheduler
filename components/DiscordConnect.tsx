@@ -98,6 +98,23 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
         }
     }
 
+    // State for Channel Name Display
+    const [channelName, setChannelName] = useState<string>("");
+
+    useEffect(() => {
+        // Condition: Connected and have Guild ID
+        // Intent: Fetch the name of the connected channel for better UX
+        const gId = guildId || newGuildId;
+        if (hasChannel && gId && !channelName) {
+            listDiscordChannels(gId).then((res) => {
+                if (res.channels) {
+                    const found = res.channels.find((c: any) => c.id === savedChannelId);
+                    if (found) setChannelName(found.name);
+                }
+            });
+        }
+    }, [hasChannel, guildId, newGuildId, savedChannelId, channelName]);
+
     // State: Fully Connected
     if (hasChannel) {
         return (
@@ -106,7 +123,9 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                     <CheckCircle className="w-5 h-5 flex-shrink-0 text-indigo-400" />
                     <div>
                         <p className="font-bold text-indigo-200">Discord Connected</p>
-                        <p className="opacity-80 text-xs text-indigo-400">Updates posting to channel <code className="bg-indigo-950 px-1 rounded">{savedChannelId}</code></p>
+                        <p className="opacity-80 text-xs text-indigo-400">
+                            Updates posting to channel <code className="bg-indigo-950 px-1 rounded">{channelName ? `#${channelName}` : savedChannelId}</code>
+                        </p>
                     </div>
                 </div>
                 <button
