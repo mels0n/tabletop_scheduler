@@ -38,6 +38,7 @@ model Event {
   discordMessageId  String? // ID of the pinned "Dashboard" message
   discordInviteLink String? // Optional direct invite link to the server
   managerDiscordId  String? // The Discord User ID of the event manager (for recovery)
+  managerDiscordUsername String? // The Discord Username of the event manager
   
   // Reminders & Notifications
   reminderEnabled      Boolean   @default(false)
@@ -115,7 +116,9 @@ model Vote {
 // Temporary tokens for global "My Events" login
 model LoginToken {
   token     String   @id @default(uuid())
-  chatId    String   // The Telegram Chat ID being authenticated
+  chatId    String?   // The Telegram Chat ID being authenticated
+  discordId String?   // The Discord User ID being authenticated
+  discordUsername String? // For display purposes
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
