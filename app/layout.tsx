@@ -23,6 +23,7 @@ const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 export const metadata: Metadata = {
     authors: [{ name: "Christopher Melson", url: "https://chris.melson.us/" }],
     creator: "Christopher Melson",
+    metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'),
     title: {
         template: '%s | Tabletop Time',
         default: 'Tabletop Time | The Ultimate Game Night Session Scheduler',

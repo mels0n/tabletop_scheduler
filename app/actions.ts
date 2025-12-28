@@ -654,3 +654,35 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
         return { success: false, error: "Internal Error" };
     }
 }
+/**
+ * Sends a Magic Link to the manager via Discord DM.
+ * @param {string} slug - The event slug.
+ */
+export async function dmDiscordManagerLink(slug: string) {
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event || !event.managerDiscordId) return { error: "No manager linked." };
+
+    const { token } = await generateShortRecoveryToken(slug);
+    if (!token) return { error: "Failed to generate token." };
+
+    const { createDMChannel, sendDiscordMessage } = await import('@/lib/discord');
+    const tokenVal = process.env.DISCORD_BOT_TOKEN || "";
+
+    // 1. Open DM Channel
+    const dmRes = await createDMChannel(event.managerDiscordId, tokenVal);
+    if (dmRes.error || !dmRes.id) {
+        return { error: "Could not open DM channel. Bot might be blocked." };
+    }
+
+    // 2. Send Message
+    const magicLink = `${process.env.NEXT_PUBLIC_BASE_URL}/e/${slug}/manage?token=${token}`;
+    const msg = `**Magic Link Request**\nHere is your link to manage **${event.title}**:\n${magicLink}\n\n(This link expires in 1 hour)`;
+
+    const sendRes = await sendDiscordMessage(dmRes.id, msg, tokenVal);
+
+    if (sendRes.error) {
+        return { error: "Failed to send DM." };
+    }
+
+    return { success: true };
+}

@@ -173,3 +173,38 @@ export async function getGuildChannels(guildId: string, token: string): Promise<
         return [];
     }
 }
+
+/**
+ * Creates a DM channel with a specific user.
+ * @param userId The Discord User ID.
+ * @param token The Bot Token.
+ */
+export async function createDMChannel(userId: string, token: string): Promise<{ id?: string, error?: any }> {
+    const url = `https://discord.com/api/v10/users/@me/channels`;
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bot ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ recipient_id: userId })
+        });
+
+        if (!res.ok) {
+            const err = await res.text();
+            let errJson;
+            try { errJson = JSON.parse(err); } catch { errJson = { message: err }; }
+
+            log.error("API Error (createDM)", { error: err });
+            return { error: errJson };
+        }
+
+        const data = await res.json();
+        return { id: data.id };
+    } catch (e) {
+        log.error("Failed to create DM channel", e as Error);
+        return { error: { message: (e as Error).message } };
+    }
+}

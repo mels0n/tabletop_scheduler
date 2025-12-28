@@ -48,6 +48,10 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // DM State
+    const [dmLoading, setDmLoading] = useState(false);
+    const [dmMessage, setDmMessage] = useState("");
+
     // Detect OAuth Return
     const discordConnected = searchParams.get("discord_connected") === "true";
     const newGuildId = searchParams.get("guild_id");
@@ -105,6 +109,30 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
         }
     }
 
+    async function handleDM() {
+        if (!hasManagerDiscordId) return;
+        setDmLoading(true);
+        setDmMessage("");
+
+        try {
+            // Lazy load or import at top (we need to be consistent, but let's lazy load mainly to avoid big bundles if not needed, 
+            // though here it's small). Actually let's just dynamic import to match pattern.
+            const { dmDiscordManagerLink } = await import("@/app/actions");
+            const res = await dmDiscordManagerLink(slug);
+
+            if (res.error) {
+                // Reuse main error state or local? Use dmMessage for success/error text here
+                setDmMessage(`❌ ${res.error}`);
+            } else {
+                setDmMessage("✅ Link sent! Check your DMs.");
+            }
+        } catch (e) {
+            setDmMessage("❌ Failed to send.");
+        } finally {
+            setDmLoading(false);
+        }
+    }
+
     // State for Channel Name Display
     const [channelName, setChannelName] = useState<string>("");
 
@@ -126,13 +154,13 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
         <div className="space-y-4">
             {/* CHANNEL CONNECTION CARD */}
             {hasChannel ? (
-                <div className="p-4 bg-indigo-900/20 border border-indigo-800 rounded-xl text-sm text-indigo-300 flex items-center justify-between gap-3">
+                <div className="p-4 bg-green-900/20 border border-green-800 rounded-xl text-sm text-green-300 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 flex-shrink-0 text-indigo-400" />
+                        <CheckCircle className="w-5 h-5 flex-shrink-0" />
                         <div>
-                            <p className="font-bold text-indigo-200">Discord Connected</p>
-                            <p className="opacity-80 text-xs text-indigo-400">
-                                Updates posting to channel <code className="bg-indigo-950 px-1 rounded">{channelName ? `#${channelName}` : savedChannelId}</code>
+                            <p className="font-bold">Discord Connected</p>
+                            <p className="opacity-80 text-xs text-green-400">
+                                Updates posting to channel <code className="bg-green-950 px-1 rounded">{channelName ? `#${channelName}` : savedChannelId}</code>
                             </p>
                         </div>
                     </div>
@@ -251,9 +279,21 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 </h3>
 
                 {hasManagerDiscordId ? (
-                    <div className="flex items-center gap-2 text-xs text-green-400 bg-green-900/10 px-3 py-2 rounded border border-green-900/30">
-                        <CheckIcon className="w-3 h-3 shrink-0" />
-                        <span className="font-medium">Identity Verified</span>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-900/10 px-3 py-2 rounded border border-green-900/30">
+                            <CheckIcon className="w-3 h-3 shrink-0" />
+                            <span className="font-medium">Identity Verified</span>
+                        </div>
+
+                        {dmMessage && <p className="text-xs font-medium text-center text-slate-300">{dmMessage}</p>}
+
+                        <button
+                            onClick={handleDM}
+                            disabled={dmLoading}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                        >
+                            {dmLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Send Magic Link (Discord DM)"}
+                        </button>
                     </div>
                 ) : (
                     <div className="space-y-3">
