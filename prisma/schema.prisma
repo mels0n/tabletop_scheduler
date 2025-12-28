@@ -32,6 +32,13 @@ model Event {
   managerChatId   String?   // Creator's numeric ID (for private bot DMs)
   pinnedMessageId Int?      // ID of the pinned status message to update/unpin
   
+  // Discord Integration
+  discordGuildId    String? // ID of the Discord Server
+  discordChannelId  String? // ID of the Channel to post updates in
+  discordMessageId  String? // ID of the pinned "Dashboard" message
+  discordInviteLink String? // Optional direct invite link to the server
+  managerDiscordId  String? // The Discord User ID of the event manager (for recovery)
+  
   // Reminders & Notifications
   reminderEnabled      Boolean   @default(false)
   reminderTime         String?   // "HH:mm" (24h) in Event Timezone
@@ -81,8 +88,12 @@ model Participant {
   event      Event    @relation(fields: [eventId], references: [id])
   eventId    Int
   name       String
-  telegramId String? // The @handle (string)
-  chatId     String? // The numeric Chat ID (captured via webhook)
+  telegramId  String? // The handle (e.g. @user), captured from input or bot
+  chatId      String? // Numeric ID for DM notifications (captured by bot)
+  
+  // Discord Identity
+  discordId       String? // The numeric User ID from Discord
+  discordUsername String? // The username/discriminatorvia webhook)
   createdAt  DateTime @default(now())
   
   votes      Vote[]

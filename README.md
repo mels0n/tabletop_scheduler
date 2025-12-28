@@ -11,9 +11,10 @@ TabletopTime helps you find the best time for your gaming group to meet. It is d
 - **Host**: Create events with multiple time slots and quorum rules (min players).
 - **Vote**: No login required for players. Simple "Yes", "If Needed", or "No" voting.
 - **Finalize**: Select a host/location and generate calendar invites (.ics / Google Calendar).
-- **Telegram Bot**: 
+- **Telegram / Discord Bot**: 
   - Pins a live-updating dashboard in your group chat.
   - Notifies everyone when an event is finalized.
+  - **Discord Exclusive**: "Recover with Discord" allows instant login for event managers.
 - **Privacy-First**: Your data stays on your server (SQLite). We capture as little information as possible and use your local browser cache to remember who you are.
 
 ## One Click Start (Cloud)
@@ -49,7 +50,8 @@ TabletopTime is configured via environment variables. See [EnvVariables.md](docs
 
 ## Documentation
 
-*   **[Setup Guide](docs/guides/TelegramSetup.md)**: How to create a Telegram bot and get started.
+*   **[Telegram Setup Guide](docs/guides/TelegramSetup.md)**: How to create a Telegram bot.
+*   **[Discord Setup Guide](docs/guides/DiscordSetup.md)**: How to create a Discord bot and enable OAuth.
 *   **[Understanding Magic Links](docs/guides/MagicLinks.md)**: How passwordless recovery and login works.
 *   **[Environment Variables](docs/reference/EnvVariables.md)**: Detailed configuration options.
 *   **[Privacy & Architecture](docs/reference/PrivacyAndArchitecture.md)**: How we ensure self-hosted privacy (NoOp builds).

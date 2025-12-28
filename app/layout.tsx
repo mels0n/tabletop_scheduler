@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 import { Navbar } from "@/components/Navbar";
-import { GoogleAdBar } from "@/components/GoogleAdBar";
+
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import Script from "next/script";
 
@@ -70,8 +70,7 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const adClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_ID;
-    const isAdSenseConfigured = adClient && adClient !== "ca-pub-XXXXXXXXXXXXXXXX";
+
 
     return (
         <html lang="en">
@@ -82,16 +81,9 @@ export default function RootLayout({
                     {children}
                 </main>
                 <Footer />
-                {isHosted && <GoogleAdBar />}
+
             </body>
-            {isHosted && isAdSenseConfigured && (
-                <Script
-                    async
-                    src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`}
-                    crossOrigin="anonymous"
-                    strategy="afterInteractive"
-                />
-            )}
+
             {isHosted && (
                 <Script
                     id="json-ld-schema"

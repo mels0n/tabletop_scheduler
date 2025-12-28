@@ -1,16 +1,15 @@
-// This is your Prisma schema file for HOSTED (PostgreSQL + Supabase)
+// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
-  // Binary targets: native (for build), linux-musl (for docker if needed), rhel-openssl-3.0.x (for Vercel/AWS Lambda)
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "rhel-openssl-3.0.x"]
+  // Binary targets ensure compatibility with both local Windows dev and Docker (Linux musl)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // --- CORE MODELS ---
@@ -32,6 +31,13 @@ model Event {
   managerTelegram String?   // Creator's handle (e.g. @user) used for recovery
   managerChatId   String?   // Creator's numeric ID (for private bot DMs)
   pinnedMessageId Int?      // ID of the pinned status message to update/unpin
+  
+  // Discord Integration
+  discordGuildId    String? // ID of the Discord Server
+  discordChannelId  String? // ID of the Channel to post updates in
+  discordMessageId  String? // ID of the pinned "Dashboard" message
+  discordInviteLink String? // Optional direct invite link to the server
+  managerDiscordId  String? // The Discord User ID of the event manager (for recovery)
   
   // Reminders & Notifications
   reminderEnabled      Boolean   @default(false)
@@ -82,8 +88,12 @@ model Participant {
   event      Event    @relation(fields: [eventId], references: [id])
   eventId    Int
   name       String
-  telegramId String? // The @handle (string)
-  chatId     String? // The numeric Chat ID (captured via webhook)
+  telegramId  String? // The handle (e.g. @user), captured from input or bot
+  chatId      String? // Numeric ID for DM notifications (captured by bot)
+  
+  // Discord Identity
+  discordId       String? // The numeric User ID from Discord
+  discordUsername String? // The username/discriminatorvia webhook)
   createdAt  DateTime @default(now())
   
   votes      Vote[]
@@ -109,3 +119,4 @@ model LoginToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+

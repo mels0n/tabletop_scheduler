@@ -114,29 +114,33 @@ export async function POST(
 
         // --- POST-TRANSACTION LOGIC (Notifications) ---
 
+        // --- POST-TRANSACTION LOGIC (Notifications) ---
+
         const event = await prisma.event.findUnique({
             where: { id: eventId },
             include: { timeSlots: { include: { votes: true } } }
         });
 
+        const userDisplay = telegramId ? `@${telegramId.replace('@', '')}` : name;
+        const participants = await prisma.participant.count({ where: { eventId } });
+
+        // Detect URL dynamically
+        const { getBaseUrl } = await import("@/lib/url");
+        const { headers } = await import("next/headers");
+        const headerList = headers();
+        const baseUrl = getBaseUrl(headerList);
+        const { generateStatusMessage } = await import("@/lib/status");
+        const statusMsg = generateStatusMessage(event, participants, baseUrl);
+
+        // --- TELEGRAM LOGIC ---
         if (event && event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
             const { sendTelegramMessage } = await import("@/lib/telegram");
 
             // Notification: Announce activity to group
-            const userDisplay = telegramId ? `@${telegramId.replace('@', '')}` : name;
             await sendTelegramMessage(event.telegramChatId, `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`, process.env.TELEGRAM_BOT_TOKEN);
 
             // --- PINNED MESSAGE DASHBOARD SYNCHRONIZATION ---
             const { editMessageText, pinChatMessage } = await import("@/lib/telegram");
-            const { generateStatusMessage } = await import("@/lib/status");
-            const participants = await prisma.participant.count({ where: { eventId } });
-
-            // Detect URL dynamically
-            const { getBaseUrl } = await import("@/lib/url");
-            const { headers } = await import("next/headers");
-            const headerList = headers();
-            const baseUrl = getBaseUrl(headerList);
-            const statusMsg = generateStatusMessage(event, participants, baseUrl);
 
             if (event.pinnedMessageId) {
                 // Update existing pin
@@ -150,6 +154,35 @@ export async function POST(
                     await prisma.event.update({
                         where: { id: eventId },
                         data: { pinnedMessageId: newMsgId }
+                    });
+                }
+            }
+        }
+
+        // --- DISCORD LOGIC ---
+        if (event && event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
+            const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/lib/discord");
+
+            // Notification
+            await sendDiscordMessage(event.discordChannelId, `🚀 **${userDisplay}** updated availability for **${event.title}**!`, process.env.DISCORD_BOT_TOKEN);
+
+            // Dashboard Sync
+            // Simple HTML -> Markdown Converter
+            const discordMsg = statusMsg
+                .replace(/<b>(.*?)<\/b>/g, '**$1**')
+                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
+                .replace(/<br\s*\/?>/g, '\n')
+                .replace(/&nbsp;/g, ' '); // Basic entities
+
+            if (event.discordMessageId) {
+                await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+            } else {
+                const newMsgId = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+                if (newMsgId) {
+                    await pinDiscordMessage(event.discordChannelId, newMsgId, process.env.DISCORD_BOT_TOKEN);
+                    await prisma.event.update({
+                        where: { id: eventId },
+                        data: { discordMessageId: newMsgId }
                     });
                 }
             }

@@ -122,7 +122,7 @@ export default function Home() {
           icon={<PlusCircle className="w-6 h-6 text-indigo-400" />}
           title={isHosted ? "Free & Open" : "Self Hosted"}
           desc={isHosted
-            ? "We host this for free for the community. Use it as much as you want. Supported by unobtrusive ads."
+            ? "We host this for free for the community. Use it as much as you want."
             : "Your data stays with you. Open source and privacy first."
           }
         />

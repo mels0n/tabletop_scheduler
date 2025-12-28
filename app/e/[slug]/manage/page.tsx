@@ -12,6 +12,7 @@ import { EditLocationModal } from "./EditLocationModal";
 import { getBotUsername } from "@/lib/telegram";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
+import { DiscordConnect } from "@/components/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { generateShortRecoveryToken } from "@/app/actions";
 
@@ -180,10 +181,18 @@ export default async function ManageEventPage({ params }: PageProps) {
                             hasChatId={!!event.telegramChatId}
                         />
 
+                        <DiscordConnect
+                            slug={event.slug}
+                            hasChannel={!!event.discordChannelId}
+                            guildId={event.discordGuildId}
+                            channelId={event.discordChannelId}
+                        />
+
                         <ManagerControls
                             slug={event.slug}
                             initialHandle={event.managerTelegram}
                             hasManagerChatId={!!event.managerChatId}
+                            hasManagerDiscordId={!!event.managerDiscordId}
                             isFinalized={event.status === "FINALIZED" || event.status === "CANCELLED"}
                             botUsername={botUsername || 'TabletopSchedulerBot'}
                             recoveryToken={(await generateShortRecoveryToken(event.slug)).token || ""}

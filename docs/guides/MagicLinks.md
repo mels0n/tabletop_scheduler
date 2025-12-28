@@ -43,3 +43,29 @@ If you are viewing an event you created but are seeing it as a *Participant* (no
 ---
 
 **Security Note**: All Magic Links are valid for **15 minutes**. If you accidentally close the window, you can click the same link again within that time. Do not share them.
+
+---
+
+## Technical Implementation
+
+### Browser Cache & Storage
+
+Our authentication system relies on two layers of browser storage to keep you logged in and remember your preferences:
+
+1.  **Cookies (Server Auth)**:
+    *   **User Identity**: `tabletop_user_chat_id` (HTTPOnly, Secure, 30 days). This cookie *proves* you own the Telegram account associated with your events. It allows the server to trust you without a password.
+    *   **Event Admin**: `tabletop_admin_[slug]` (HTTPOnly, Secure, 30 days). This grants administrative rights to a specific event.
+
+2.  **LocalStorage (Client Cache)**:
+    *   **User Preference Cache**: `tabletop_username` & `tabletop_telegram` are stored in your browser after you vote. The next time you visit *any* event on Tabletop Scheduler, these fields are auto-filled so you don't have to type them again.
+    *   **Session Cache**: `tabletop_participant_[eventId]` remembers your specific Voter ID for a particular event. This allows you to return to an event and edit your votes immediately, even if your global login cookie has expired.
+
+### Telegram Identity Linking
+
+When you enter a Telegram handle (e.g., `@YourName`) and request a Magic Link:
+
+1.  **Normalization**: The system converts your input to lowercase and removes the `@` (e.g., `@YourName` -> `yourname`).
+2.  **Lookup**: It searches the database for any Participant or Manager record that matches this handle.
+3.  **Verification**:
+    *   **If you have used the bot before**: We have your numeric `Chat ID`. The system generates a token and sends the link directly to your Telegram DMs.
+    *   **If you are new**: We only know your text handle, not your numeric ID. The system cannot DM you yet. You will be prompted to "Start" the bot to establish this connection.

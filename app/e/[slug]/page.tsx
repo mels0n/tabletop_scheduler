@@ -203,6 +203,10 @@ export default async function EventPage({ params }: PageProps) {
                         participants={event.participants}
                         minPlayers={event.minPlayers}
                         serverParticipantId={serverParticipantId}
+                        discordIdentity={cookieStore.get("tabletop_user_discord_id")?.value ? {
+                            id: cookieStore.get("tabletop_user_discord_id")!.value,
+                            username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"
+                        } : undefined}
                     />
                 )}
 

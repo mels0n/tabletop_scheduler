@@ -131,11 +131,24 @@ export async function checkReminders(token: string) {
             const baseUrl = getBaseUrl(null);
             const link = `${baseUrl}/e/${event.slug}`;
 
-            await sendTelegramMessage(
-                event.telegramChatId,
-                `🔔 <b>Reminder</b>\n\nPlease cast your votes for <b>${event.title}</b>!\n\n👉 <a href="${link}">Vote Here</a>`,
-                token
-            );
+            // 1. Telegram Reminder
+            if (event.telegramChatId && token) {
+                await sendTelegramMessage(
+                    event.telegramChatId,
+                    `🔔 <b>Reminder</b>\n\nPlease cast your votes for <b>${event.title}</b>!\n\n👉 <a href="${link}">Vote Here</a>`,
+                    token
+                );
+            }
+
+            // 2. Discord Reminder
+            if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
+                const { sendDiscordMessage } = await import("./discord");
+                await sendDiscordMessage(
+                    event.discordChannelId,
+                    `🔔 **Reminder**\n\nPlease cast your votes for **${event.title}**!\n\n👉 [Vote Here](${link})`,
+                    process.env.DISCORD_BOT_TOKEN
+                );
+            }
 
             // Intent: Update Last Sent State
             await prisma.event.update({

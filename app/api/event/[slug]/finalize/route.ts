@@ -94,6 +94,44 @@ export async function POST(
             }
         }
 
+        // Action: Discord Notification Cycle
+        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
+            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/lib/discord");
+            const { buildFinalizedMessage } = await import("@/lib/eventMessage");
+            const slotTime = event.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
+
+            // Step 1: Unpin the previous voting message (dashboard).
+            if (event.discordMessageId) {
+                await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
+            }
+
+            // Step 2: Determine origin dynamically for absolute links.
+            const { getBaseUrl } = await import("@/lib/url");
+            const origin = getBaseUrl(req.headers);
+
+            // Step 3: Construct & Send the "Finalized" message.
+            const htmlMsg = buildFinalizedMessage(event, slotTime, origin);
+            // Convert HTML to Markdown for Discord
+            const discordMsg = htmlMsg
+                .replace(/<b>(.*?)<\/b>/g, '**$1**')
+                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
+                .replace(/ \| /g, ' • ') // Cleaner separator for links
+                .replace(/<br\s*\/?>/g, '\n')
+                .replace(/&nbsp;/g, ' ');
+
+            const msgId = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+
+            // Step 4: Pin the new message and track its ID.
+            if (msgId) {
+                await pinDiscordMessage(event.discordChannelId, msgId, process.env.DISCORD_BOT_TOKEN);
+
+                await prisma.event.update({
+                    where: { id: event.id },
+                    data: { discordMessageId: msgId }
+                });
+            }
+        }
+
         log.info("Event finalized successfully", { slug: params.slug });
 
     } catch (error) {

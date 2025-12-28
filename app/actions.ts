@@ -459,6 +459,104 @@ export async function generateShortRecoveryToken(slug: string) {
 }
 
 /**
+ * Connects the event to a specific Discord Channel.
+ *
+ * @param {string} slug - The event slug.
+ * @param {string} guildId - The Discord Server ID.
+ * @param {string} channelId - The target Channel ID.
+ * @param {string} discordToken - The Bot Token (serverside environment variable only).
+ */
+export async function connectDiscordChannel(slug: string, guildId: string, channelId: string) {
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event) return { error: "Event not found" };
+
+    const token = process.env.DISCORD_BOT_TOKEN;
+    if (!token) return { error: "Server Configuration Error: Discord Token missing" };
+
+    try {
+        const { cookies } = await import("next/headers");
+        const cookieStore = cookies();
+        const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
+
+        // 1. Save Connection
+        // Intent: Also link the manager if this is the first connection or recovery needed
+        const dataToUpdate: any = {
+            discordGuildId: guildId,
+            discordChannelId: channelId
+        };
+
+        if (discordUserId && !event.managerDiscordId) {
+            dataToUpdate.managerDiscordId = discordUserId;
+        }
+
+        await prisma.event.update({
+            where: { id: event.id },
+            data: dataToUpdate
+        });
+
+        // 2. Send Hello / Init Dashboard
+        const { sendDiscordMessage, pinDiscordMessage } = await import("@/lib/discord");
+        const { generateStatusMessage } = await import("@/lib/status");
+        const { getBaseUrl } = await import("@/lib/url");
+        const { headers } = await import("next/headers");
+
+        // Send "Connected" confirmation
+        await sendDiscordMessage(channelId, `👋 **Beep Boop!**\nI've been connected to **${event.title}** logic matrix.\nI'll post updates here.`, token);
+
+        // Calculate Dashboard State
+        const fullEvent = await prisma.event.findUnique({
+            where: { id: event.id },
+            include: { timeSlots: { include: { votes: true } } }
+        });
+        const participants = await prisma.participant.count({ where: { eventId: event.id } });
+        const baseUrl = getBaseUrl(headers());
+        const statusMsg = generateStatusMessage(fullEvent!, participants, baseUrl); // "Event Status" text
+
+        // Post & Pin Dashboard
+        // Note: Discord format might need tweaking vs HTML, but let's send text first.
+        // Status message generator usually outputs HTML for Telegram.
+        // We'll simplistic strip tags or just trigger it.
+        // For now, let's just trigger the "Update" flow which handles formatting.
+
+        // Actually, let's do a direct post to initialize the value
+        const cleanMsg = statusMsg.replace(/<[^>]*>?/gm, ''); // Quick strip tags for Discord plain text fallback
+        const msgId = await sendDiscordMessage(channelId, `**EVENT STATUS**\n${cleanMsg}\n\n[View Event](${baseUrl}/e/${slug})`, token);
+
+        if (msgId) {
+            await pinDiscordMessage(channelId, msgId, token);
+            await prisma.event.update({
+                where: { id: event.id },
+                data: { discordMessageId: msgId }
+            });
+        }
+
+        return { success: true };
+    } catch (e) {
+        log.error("Failed to connect Discord", e as Error);
+        return { error: "Failed to connect channel." };
+    }
+}
+
+/**
+ * Fetches the list of text channels for a given Discord Guild.
+ *
+ * @param {string} guildId - The Discord Server ID.
+ * @returns {Promise<Object>} List of channels or error.
+ */
+export async function listDiscordChannels(guildId: string) {
+    const token = process.env.DISCORD_BOT_TOKEN;
+    if (!token) return { error: "Server Configuration Error" };
+
+    try {
+        const { getGuildChannels } = await import("@/lib/discord");
+        const channels = await getGuildChannels(guildId, token);
+        return { success: true, channels };
+    } catch (e) {
+        return { error: "Failed to fetch channels" };
+    }
+}
+
+/**
  * Updates the automated reminder settings for an event.
  *
  * @param {string} slug - The event slug.

@@ -68,7 +68,6 @@ export default function NewEventPage() {
             router.push(`/e/${data.slug}/manage`);
         } catch (error) {
             console.error("Submit Failed", error);
-        } finally {
             setLoading(false);
         }
     };
