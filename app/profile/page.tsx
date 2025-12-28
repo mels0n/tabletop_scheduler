@@ -19,60 +19,100 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
     // Security: Only read the HTTP-only cookie.
     const cookieStore = cookies();
-    const userChatId = cookieStore.get("tabletop_user_chat_id")?.value;
+    const telegramChatId = cookieStore.get("tabletop_user_chat_id")?.value;
+    const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
 
     let serverEvents: any[] = [];
+    const eventMap = new Map();
 
-    if (userChatId) {
-        try {
-            // 1. Fetch Managed Events
+    const fetchEvents = async (chatId: string | undefined, discordId: string | undefined) => {
+        // 1. Fetch Managed Events (Telegram)
+        if (chatId) {
             const managed = await prisma.event.findMany({
-                where: { managerChatId: userChatId },
-                select: { slug: true, title: true, updatedAt: true },
+                where: { managerChatId: chatId },
+                select: { id: true, slug: true, title: true, updatedAt: true },
                 orderBy: { updatedAt: 'desc' }
             });
-
-            // 2. Fetch Participated Events
-            // Intent: Find all events where this user has voted/interacted.
-            const participated = await prisma.participant.findMany({
-                where: { chatId: userChatId },
-                include: { event: { select: { id: true, slug: true, title: true, updatedAt: true } } },
-                orderBy: { event: { updatedAt: 'desc' } }
-            });
-
-            const managedMapped = managed.map(e => ({
+            managed.forEach(e => eventMap.set(e.slug, {
                 slug: e.slug,
                 title: e.title,
                 role: 'MANAGER',
-                lastVisited: e.updatedAt.toISOString()
+                lastVisited: e.updatedAt.toISOString(),
+                source: 'telegram'
             }));
+        }
 
-            const participatedMapped = participated.map(p => ({
-                slug: p.event.slug,
-                title: p.event.title,
-                role: 'PARTICIPANT',
-                lastVisited: p.event.updatedAt.toISOString(),
-                // Identity Payload: Used by client to restore voting rights on this device.
-                eventId: p.event.id,
-                participantId: p.id
+        // 2. Fetch Managed Events (Discord)
+        if (discordId) {
+            const managedDiscord = await prisma.event.findMany({
+                where: { managerDiscordId: discordId },
+                select: { id: true, slug: true, title: true, updatedAt: true },
+                orderBy: { updatedAt: 'desc' }
+            });
+            managedDiscord.forEach(e => eventMap.set(e.slug, {
+                slug: e.slug,
+                title: e.title,
+                role: 'MANAGER',
+                lastVisited: e.updatedAt.toISOString(),
+                source: 'discord'
             }));
+        }
 
-            // Merge and Dedupe (Manager role takes precedence)
-            const map = new Map();
-            [...participatedMapped, ...managedMapped].forEach(e => {
-                if (map.has(e.slug)) {
-                    if (e.role === 'MANAGER') map.set(e.slug, e);
-                } else {
-                    map.set(e.slug, e);
+        // 3. Fetch Participated Events (Telegram)
+        if (chatId) {
+            const participated = await prisma.participant.findMany({
+                where: { chatId: chatId },
+                include: { event: { select: { id: true, slug: true, title: true, updatedAt: true } } },
+                orderBy: { event: { updatedAt: 'desc' } }
+            });
+            participated.forEach(p => {
+                const existing = eventMap.get(p.event.slug);
+                // Manager role takes precedence
+                if (!existing || existing.role !== 'MANAGER') {
+                    eventMap.set(p.event.slug, {
+                        slug: p.event.slug,
+                        title: p.event.title,
+                        role: 'PARTICIPANT',
+                        lastVisited: p.event.updatedAt.toISOString(),
+                        eventId: p.event.id,
+                        participantId: p.id,
+                        source: 'telegram'
+                    });
                 }
             });
-
-            serverEvents = Array.from(map.values());
-
-        } catch (e) {
-            console.error("Failed to fetch server events", e);
         }
+
+        // 4. Fetch Participated Events (Discord)
+        if (discordId) {
+            const participatedDiscord = await prisma.participant.findMany({
+                where: { discordId: discordId },
+                include: { event: { select: { id: true, slug: true, title: true, updatedAt: true } } },
+                orderBy: { event: { updatedAt: 'desc' } }
+            });
+            participatedDiscord.forEach(p => {
+                const existing = eventMap.get(p.event.slug);
+                if (!existing || existing.role !== 'MANAGER') {
+                    eventMap.set(p.event.slug, {
+                        slug: p.event.slug,
+                        title: p.event.title,
+                        role: 'PARTICIPANT',
+                        lastVisited: p.event.updatedAt.toISOString(),
+                        eventId: p.event.id,
+                        participantId: p.id,
+                        source: 'discord'
+                    });
+                }
+            });
+        }
+    };
+
+    try {
+        await fetchEvents(telegramChatId, discordUserId);
+        // Sort by recency
+        serverEvents = Array.from(eventMap.values()).sort((a, b) => new Date(b.lastVisited).getTime() - new Date(a.lastVisited).getTime());
+    } catch (e) {
+        console.error("Failed to fetch server events", e);
     }
 
-    return <ProfileDashboard serverEvents={serverEvents} />;
+    return <ProfileDashboard serverEvents={serverEvents} isTelegramSynced={!!telegramChatId} isDiscordSynced={!!discordUserId} />;
 }

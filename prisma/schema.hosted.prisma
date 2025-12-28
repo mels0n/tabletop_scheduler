@@ -38,6 +38,7 @@ model Event {
   discordMessageId  String? // ID of the pinned "Dashboard" message
   discordInviteLink String? // Optional direct invite link to the server
   managerDiscordId  String? // The Discord User ID of the event manager (for recovery)
+  managerDiscordUsername String? // The Discord Username of the event manager
   
   // Reminders & Notifications
   reminderEnabled      Boolean   @default(false)

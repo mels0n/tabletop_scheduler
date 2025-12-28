@@ -523,6 +523,7 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
         const { cookies } = await import("next/headers");
         const cookieStore = cookies();
         const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
+        const discordUsername = cookieStore.get("tabletop_user_discord_name")?.value;
 
         // 1. Save Connection
         // Intent: Also link the manager if this is the first connection or recovery needed
@@ -531,8 +532,15 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
             discordChannelId: channelId
         };
 
-        if (discordUserId && !event.managerDiscordId) {
-            dataToUpdate.managerDiscordId = discordUserId;
+        if (discordUserId) {
+            // Intent: Always ensure manager ID and username are up to date if the user is authenticated
+            // This allows fixing missing usernames by just reconnecting/refreshing the bot channel.
+            if (!event.managerDiscordId || event.managerDiscordId === discordUserId) {
+                dataToUpdate.managerDiscordId = discordUserId;
+                if (discordUsername) {
+                    dataToUpdate.managerDiscordUsername = discordUsername;
+                }
+            }
         }
 
         await prisma.event.update({
@@ -720,11 +728,31 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
             (p.name && p.name.toLowerCase().includes(normalized))
         );
 
-        if (!match || !match.discordId) {
-            return { success: false, error: "We couldn't find a record for this username. Have you voted on an event using the 'Log in with Discord' button before?" };
+        let targetId = match?.discordId;
+        let targetUsername = match?.discordUsername;
+
+        // 2. Fallback: Check Event Manager records
+        if (!targetId) {
+            // Intent: If the user never voted but is an event manager (and we captured their username)
+            const managerRecords = await prisma.event.findMany({
+                where: {
+                    managerDiscordId: { not: null },
+                    managerDiscordUsername: { contains: normalized, mode: 'insensitive' }
+                },
+                select: { managerDiscordId: true, managerDiscordUsername: true }
+            });
+
+            // Just take the first match
+            const mgr = managerRecords[0];
+            if (mgr) {
+                targetId = mgr.managerDiscordId;
+                targetUsername = mgr.managerDiscordUsername;
+            }
         }
 
-        const targetId = match.discordId;
+        if (!targetId) {
+            return { success: false, error: "We couldn't find a record for this username. Have you voted on an event using the 'Log in with Discord' button before?" };
+        }
 
         // 3. Generate Token
         // Expiry: 15 minutes
@@ -734,7 +762,7 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
         const loginToken = await prisma.loginToken.create({
             data: {
                 discordId: targetId,
-                discordUsername: match.discordUsername || username,
+                discordUsername: targetUsername || username,
                 expiresAt
             }
         });
