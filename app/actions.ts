@@ -287,7 +287,7 @@ export async function cancelEvent(slug: string) {
 
         // Intent: Update Telegram message to reflect cancellation but keep it visible (pinned).
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { editMessageText, unpinChatMessage } = await import("@/lib/telegram");
+            const { editMessageText, sendTelegramMessage } = await import("@/lib/telegram");
             const token = process.env.TELEGRAM_BOT_TOKEN;
             const { getBaseUrl } = await import("@/lib/url");
             const { headers } = await import("next/headers");
@@ -305,6 +305,13 @@ export async function cancelEvent(slug: string) {
                     token
                 );
             }
+
+            // Intent: Send a fresh message so users get a notification (editing doesn't notify)
+            await sendTelegramMessage(
+                event.telegramChatId,
+                `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been cancelled by the organizer.`,
+                token
+            );
         }
 
         log.info("Event cancelled successfully", { slug });

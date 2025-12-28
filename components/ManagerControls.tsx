@@ -24,6 +24,7 @@ interface ManagerControlsProps {
     hasManagerChatId: boolean;
     hasManagerDiscordId: boolean;
     isFinalized: boolean; // boolean
+    isCancelled?: boolean; // New prop for cancelled state
     botUsername: string;
     recoveryToken: string;
     // Reminder Init Props
@@ -49,6 +50,7 @@ export function ManagerControls({
     hasManagerChatId: initialHasId,
     hasManagerDiscordId,
     isFinalized,
+    isCancelled = false, // Default to false if not provided
     botUsername,
     recoveryToken,
     initialReminderEnabled,
@@ -142,8 +144,9 @@ export function ManagerControls({
     const handleAction = async () => {
         setIsDeleting(true);
         try {
-            // Intent: Choose action based on state (Cancellation for finalized, Deletion for draft)
-            const actionPromise = isFinalized ? cancelEvent(slug) : deleteEvent(slug);
+            // Intent: Choose action based on state (Cancellation for finalized, Deletion for draft/cancelled)
+            // If it's already cancelled, we want to delete it.
+            const actionPromise = (isFinalized && !isCancelled) ? cancelEvent(slug) : deleteEvent(slug);
             const res = await actionPromise;
 
             if ('error' in res) {
@@ -339,7 +342,7 @@ export function ManagerControls({
                             onClick={() => setShowDeleteConfirm(true)}
                             className={`text-xs ${isFinalized ? 'text-orange-400 hover:text-orange-300' : 'text-red-400 hover:text-red-300'} underline`}
                         >
-                            {isFinalized ? "Cancel Event..." : "Delete Event..."}
+                            {isFinalized ? "Cancel Event..." : (isCancelled ? "Delete Event..." : "Delete Event...")}
                         </button>
                     )}
                 </div>
@@ -351,7 +354,10 @@ export function ManagerControls({
                             <p>
                                 <b>Warning:</b> {isFinalized
                                     ? "This will cancel the event and notify all participants. The event data will be permanently removed."
-                                    : "This action cannot be undone. All votes, participants, and data will be permanently erased."
+                                    : (isCancelled
+                                        ? "This event is already cancelled. Deleting it will permanently remove all data from the database."
+                                        : "This action cannot be undone. All votes, participants, and data will be permanently erased."
+                                    )
                                 }
                             </p>
                         </div>
@@ -367,7 +373,9 @@ export function ManagerControls({
                                 disabled={isDeleting}
                                 className={`flex-1 py-2 rounded ${isFinalized ? 'bg-orange-600 hover:bg-orange-500' : 'bg-red-600 hover:bg-red-500'} text-white text-xs font-bold shadow-lg ${isFinalized ? 'shadow-orange-900/20' : 'shadow-red-900/20'} flex items-center justify-center gap-2`}
                             >
-                                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : (isFinalized ? "Confirm Cancel" : "Confirm Delete")}
+                                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : (
+                                    isFinalized ? "Confirm Cancel" : (isCancelled ? "Confirm Delete" : "Confirm Delete")
+                                )}
                             </button>
                         </div>
                     </div>

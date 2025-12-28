@@ -26,6 +26,9 @@ export default function NewEventPage() {
     const [minPlayers, setMinPlayers] = useState(3);
     const [slots, setSlots] = useState<TimeSlot[]>([]);
 
+    // Intent: Track success state to prevent UI reset during navigation delay
+    const [success, setSuccess] = useState(false);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title || slots.length === 0) {
@@ -33,6 +36,8 @@ export default function NewEventPage() {
         }
 
         setLoading(true);
+        let eventSlug = "";
+        let creationSucceeded = false;
 
         try {
             // Step 1: Create Event Resource
@@ -55,6 +60,7 @@ export default function NewEventPage() {
             }
 
             const data = await res.json();
+            eventSlug = data.slug;
 
             // Step 2: Establish Administration Rights
             // We use a Server Action to set the cookie because we are in a Client Component
@@ -64,11 +70,22 @@ export default function NewEventPage() {
                 await setAdminCookie(data.slug, data.adminToken);
             }
 
+            // Mark as successful to lock the UI
+            creationSucceeded = true;
+            setSuccess(true);
+
             // Step 3: Redirect to Dashboard
             router.push(`/e/${data.slug}/manage`);
         } catch (error) {
-            console.error("Submit Failed", error);
-            setLoading(false);
+            if (creationSucceeded) {
+                // Intent: If creation succeeded but router.push failed (e.g. network timeout),
+                // fallback to hard navigation to ensure user gets to the next page.
+                console.warn("Router push failed, falling back to location.href", error);
+                window.location.href = `/e/${eventSlug}/manage`;
+            } else {
+                console.error("Submit Failed", error);
+                setLoading(false);
+            }
         }
     };
 
@@ -128,10 +145,10 @@ export default function NewEventPage() {
                     <div className="pt-6 border-t border-slate-800">
                         <button
                             type="submit"
-                            disabled={loading || slots.length === 0}
+                            disabled={loading || slots.length === 0 || success}
                             className="w-full py-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            {loading ? <Loader2 className="animate-spin" /> : "Create Event & Get Link"}
+                            {loading ? <Loader2 className="animate-spin" /> : success ? "Redirecting..." : "Create Event & Get Link"}
                         </button>
                     </div>
                 </form>

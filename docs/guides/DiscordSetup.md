@@ -47,7 +47,13 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com
 3. Scroll to **Connect Discord Notifications**.
 4. Click **Connect Discord Server**.
    - This will open a window to invite the bot to your server.
-   - It automatically requests permissions to send and pin messages.
+   - This will open a window to invite the bot to your server.
+   - You will be asked to **Authorize** the following permissions (required for the bot to function):
+     - **View Channels**
+     - **Send Messages**
+     - **Manage Messages** (Critical for pinning the dashboard)
+     - **Embed Links**
+     - **Read Message History**
 5. Once invited, you will be redirected back to the dashboard.
 6. A **Channel Picker** will appear. Select the channel where you want updates (e.g., `#scheduling`).
 7. Click **Save**. The bot will post a "Beep Boop!" message and pin a live dashboard to that channel.

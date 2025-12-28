@@ -7,6 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "build:hosted": "prisma generate --schema=prisma/schema.hosted.prisma && next build",
+    "db:deploy:hosted": "prisma migrate deploy --schema=prisma/schema.hosted.prisma",
+    "db:push:hosted": "prisma db push --schema=prisma/schema.hosted.prisma",
     "db:diff:hosted": "prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.hosted.prisma --script",
     "start": "next start",
     "lint": "next lint"
