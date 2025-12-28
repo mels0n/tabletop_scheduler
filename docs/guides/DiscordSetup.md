@@ -61,4 +61,8 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com
 ### Features
 *   **Live Dashboard:** The pinned message updates automatically when people vote.
 *   **Notifications:** The bot posts new messages when creating, updating, or finalizing events.
-*   **Manager Recovery:** If you lose your manager session, you can click "Recover with Discord" on the event page to instantly log back in using your Discord account.
+### Troubleshooting
+*   **"Missing Access" (Error 50001)**: This means the bot cannot see or post in the specific channel you selected.
+    *   **Fix**: Go to the Channel Settings -> Permissions.
+    *   Add the Bot (or its role) and explicitly grant **View Channel** and **Send Messages**.
+*   **Bot not in list**: If you don't see the bot in the channel picker, ensure you have invited it to the server using the "Connect Discord Server" button.

@@ -39,8 +39,8 @@ export default function FAQPage() {
 
                 <div className="space-y-6">
                     <FAQItem
-                        question="Why do I not need to create an account?"
-                        answer="TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."
+                        question="Wait, I don't need an account?"
+                        answer="That's right! TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."
                     />
                     <FAQItem
                         question="How does the app remember who I am?"
