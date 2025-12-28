@@ -738,7 +738,7 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
             const managerRecords = await prisma.event.findMany({
                 where: {
                     managerDiscordId: { not: null },
-                    managerDiscordUsername: { contains: normalized, mode: 'insensitive' }
+                    managerDiscordUsername: { contains: normalized }
                 },
                 select: { managerDiscordId: true, managerDiscordUsername: true }
             });
