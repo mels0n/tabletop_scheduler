@@ -101,6 +101,7 @@ export default function NewEventPage() {
                         <div className="flex flex-col gap-2">
                             <label className="font-semibold text-slate-200">Event Title</label>
                             <input
+                                data-testid="event-title-input"
                                 type="text"
                                 required
                                 placeholder="e.g. Campaign Session 42"
@@ -113,6 +114,7 @@ export default function NewEventPage() {
                         <div className="flex flex-col gap-2">
                             <label className="font-semibold text-slate-200">Description (Optional)</label>
                             <textarea
+                                data-testid="event-description-input"
                                 placeholder="What are we playing? Any prep needed?"
                                 className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all min-h-[100px] placeholder:text-slate-600"
                                 value={description}
@@ -124,6 +126,7 @@ export default function NewEventPage() {
                             <label className="font-semibold text-slate-200">Minimum Players</label>
                             <p className="text-xs text-slate-400">Lowest number of players required for this event</p>
                             <input
+                                data-testid="min-players-input"
                                 type="number"
                                 min="2"
                                 max="100"
@@ -144,6 +147,7 @@ export default function NewEventPage() {
 
                     <div className="pt-6 border-t border-slate-800">
                         <button
+                            data-testid="create-event-button"
                             type="submit"
                             disabled={loading || slots.length === 0 || success}
                             className="w-full py-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"

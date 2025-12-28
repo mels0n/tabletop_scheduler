@@ -102,6 +102,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                 <div className="flex flex-col gap-1">
                     <label className="text-xs text-slate-400">Date</label>
                     <input
+                        data-testid="slot-date-input"
                         type="date"
                         className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         value={date}
@@ -111,6 +112,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                 <div className="flex flex-col gap-1">
                     <label className="text-xs text-slate-400">Start</label>
                     <input
+                        data-testid="slot-start-input"
                         type="time"
                         className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         value={start}
@@ -120,6 +122,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                 <div className="flex flex-col gap-1">
                     <label className="text-xs text-slate-400">End</label>
                     <input
+                        data-testid="slot-end-input"
                         type="time"
                         className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         value={end}
@@ -128,6 +131,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                 </div>
                 <div className="flex items-end">
                     <button
+                        data-testid="add-slot-button"
                         type="button"
                         onClick={addSlot}
                         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium transition-colors"
