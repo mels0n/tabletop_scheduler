@@ -265,77 +265,76 @@ export default async function ManageEventPage({ params }: PageProps) {
                                     />
                                 </div>
                             </div>
+                        ) : event.status === 'CANCELLED' ? (
+                            /* CANCELLED STATE UI */
+                            <div className="p-8 rounded-2xl bg-slate-900 border border-red-900/50 text-center space-y-6">
+                                <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-3xl">🚫</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-red-500 mb-2">Event Cancelled</h2>
+                                    <p className="text-slate-400 text-lg">
+                                        You have cancelled this event via the manager controls.
+                                    </p>
+                                    <p className="text-slate-500 text-sm mt-2">
+                                        The event is visible to users as &quot;Cancelled&quot; but no actions can be taken.
+                                        You can permanently delete it from the database using the &quot;Delete&quot; button.
+                                    </p>
+                                </div>
                             </div>
-                    ) : event.status === 'CANCELLED' ? (
-                    /* CANCELLED STATE UI */
-                    <div className="p-8 rounded-2xl bg-slate-900 border border-red-900/50 text-center space-y-6">
-                        <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-3xl">🚫</span>
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-red-500 mb-2">Event Cancelled</h2>
-                            <p className="text-slate-400 text-lg">
-                                You have cancelled this event via the manager controls.
-                            </p>
-                            <p className="text-slate-500 text-sm mt-2">
-                                The event is visible to users as "Cancelled" but no actions can be taken.
-                                You can permanently delete it from the database using the "Delete" button.
-                            </p>
-                        </div>
-                    </div>
-                    ) : (
-                    /* VOTING STATE UI */
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-semibold text-slate-200">Proposed Slots</h2>
-                            <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">Best Options First</span>
-                        </div>
-
-                        <ManagerVoteWarning
-                            eventId={event.id}
-                            participants={event.participants}
-                            slug={event.slug}
-                        />
-
-                        <div className="grid gap-3">
-                            {slots.length === 0 ? (
-                                <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                                    No time slots proposed yet.
+                        ) : (
+                            /* VOTING STATE UI */
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xl font-semibold text-slate-200">Proposed Slots</h2>
+                                    <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">Best Options First</span>
                                 </div>
-                            ) : slots.map(slot => (
-                                <div key={slot.id} className="group relative p-4 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors flex flex-col sm:flex-row items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                                        <div className="text-center min-w-[60px] shrink-0">
-                                            {slot.perfect && <div className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1 bg-green-900/20 px-1.5 py-0.5 rounded">Perfect</div>}
-                                            {!slot.hasHost && <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1 bg-orange-900/20 px-1.5 py-0.5 rounded">No Host</div>}
-                                            {slot.viable && !slot.perfect && slot.hasHost && <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 bg-indigo-900/20 px-1.5 py-0.5 rounded">Viable</div>}
-                                            {!slot.viable && <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1 bg-slate-800/50 px-1.5 py-0.5 rounded">Low T/O</div>}
-                                        </div>
-                                        <div>
-                                            <div className="font-semibold text-base text-slate-200">
-                                                <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
-                                            </div>
-                                            <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
-                                                <span className="text-green-400 font-medium">{slot.yesCount} Yes</span>
-                                                <span className="text-yellow-500/80">{slot.maybeCount} If Needed</span>
-                                                <span className="text-red-900/60">{slot.noCount} No</span>
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <FinalizeEventModal
-                                        slug={event.slug}
-                                        slotId={slot.id}
-                                        potentialHosts={slot.potentialHosts}
-                                    />
+                                <ManagerVoteWarning
+                                    eventId={event.id}
+                                    participants={event.participants}
+                                    slug={event.slug}
+                                />
+
+                                <div className="grid gap-3">
+                                    {slots.length === 0 ? (
+                                        <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                                            No time slots proposed yet.
+                                        </div>
+                                    ) : slots.map(slot => (
+                                        <div key={slot.id} className="group relative p-4 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors flex flex-col sm:flex-row items-center justify-between gap-4">
+                                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                                <div className="text-center min-w-[60px] shrink-0">
+                                                    {slot.perfect && <div className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1 bg-green-900/20 px-1.5 py-0.5 rounded">Perfect</div>}
+                                                    {!slot.hasHost && <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1 bg-orange-900/20 px-1.5 py-0.5 rounded">No Host</div>}
+                                                    {slot.viable && !slot.perfect && slot.hasHost && <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 bg-indigo-900/20 px-1.5 py-0.5 rounded">Viable</div>}
+                                                    {!slot.viable && <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1 bg-slate-800/50 px-1.5 py-0.5 rounded">Low T/O</div>}
+                                                </div>
+                                                <div>
+                                                    <div className="font-semibold text-base text-slate-200">
+                                                        <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
+                                                    </div>
+                                                    <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
+                                                        <span className="text-green-400 font-medium">{slot.yesCount} Yes</span>
+                                                        <span className="text-yellow-500/80">{slot.maybeCount} If Needed</span>
+                                                        <span className="text-red-900/60">{slot.noCount} No</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <FinalizeEventModal
+                                                slug={event.slug}
+                                                slotId={slot.id}
+                                                potentialHosts={slot.potentialHosts}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
+                            </div>
                         )}
+                    </div>
                 </div>
             </div>
-        </div>
         </div >
     );
 }
