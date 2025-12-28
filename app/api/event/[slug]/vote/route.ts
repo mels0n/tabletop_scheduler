@@ -160,6 +160,12 @@ export async function POST(
         }
 
         // --- DISCORD LOGIC ---
+        log.info("Checking Discord integration", {
+            hasChannel: !!event?.discordChannelId,
+            channelId: event?.discordChannelId,
+            envToken: !!process.env.DISCORD_BOT_TOKEN
+        });
+
         if (event && event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
             const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/lib/discord");
 
@@ -176,6 +182,7 @@ export async function POST(
 
             if (event.discordMessageId) {
                 await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+                log.info("Discord dashboard updated", { msgId: event.discordMessageId });
             } else {
                 const newMsgId = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
                 if (newMsgId) {
@@ -184,6 +191,9 @@ export async function POST(
                         where: { id: eventId },
                         data: { discordMessageId: newMsgId }
                     });
+                    log.info("Discord dashboard created and pinned", { newMsgId });
+                } else {
+                    log.warn("Failed to create Discord dashboard message");
                 }
             }
         }
