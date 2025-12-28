@@ -13,10 +13,11 @@ const log = Logger.get("Actions");
  */
 export async function setAdminCookie(slug: string, token: string) {
     const cookieStore = cookies();
+    const isProd = process.env.NODE_ENV === "production";
     const opts = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax") as "none" | "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 30 // Intent: Persist session for 30 days
     };

@@ -84,10 +84,11 @@ export async function GET(req: Request) {
 
     // 3. Handle Flow Logic
     const cookieStore = cookies();
+    const isProd = process.env.NODE_ENV === "production";
     const cookieOpts = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax") as "none" | "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 30, // 30 days
     };
