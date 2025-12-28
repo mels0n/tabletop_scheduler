@@ -157,7 +157,31 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 </div>
             </div>
 
-            {error && (
+            {error === "MISSING_PERMISSIONS" ? (
+                <div className="p-3 bg-amber-900/20 border border-amber-900/50 rounded-lg space-y-3">
+                    <div className="flex items-start gap-2 text-amber-200">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-bold text-sm">Action Required: Permissions</p>
+                            <p className="text-xs opacity-90 mt-1">Found the channel, but the bot isn&apos;t allowed to post in it.</p>
+                        </div>
+                    </div>
+
+                    <ol className="text-xs text-amber-100/80 list-decimal ml-8 space-y-1">
+                        <li>Go to <b>Discord Channel Settings</b></li>
+                        <li>Click <b>Permissions</b></li>
+                        <li>Add <b>{process.env.NEXT_PUBLIC_BOT_NAME || "the Bot"}</b></li>
+                        <li>Grant: <b className="text-white">View Channel</b> & <b className="text-white">Send Messages</b></li>
+                    </ol>
+
+                    <button
+                        onClick={handleSave}
+                        className="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white rounded text-xs font-bold transition-colors"
+                    >
+                        I Fixed It - Try Again
+                    </button>
+                </div>
+            ) : error && (
                 <div className="p-2 bg-red-900/20 border border-red-900/50 rounded text-xs text-red-300 flex items-center gap-2">
                     <AlertCircle className="w-3 h-3" />
                     {error}

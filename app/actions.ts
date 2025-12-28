@@ -503,38 +503,55 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
 
         // 2. Send Hello / Init Dashboard
         const { sendDiscordMessage, pinDiscordMessage } = await import("@/lib/discord");
-        const { generateStatusMessage } = await import("@/lib/status");
         const { getBaseUrl } = await import("@/lib/url");
         const { headers } = await import("next/headers");
-
-        // Send "Connected" confirmation
-        await sendDiscordMessage(channelId, `👋 **Beep Boop!**\nI've been connected to **${event.title}** logic matrix.\nI'll post updates here.`, token);
-
-        // Calculate Dashboard State
-        const fullEvent = await prisma.event.findUnique({
-            where: { id: event.id },
-            include: { timeSlots: { include: { votes: true } } }
-        });
-        const participants = await prisma.participant.count({ where: { eventId: event.id } });
         const baseUrl = getBaseUrl(headers());
-        const statusMsg = generateStatusMessage(fullEvent!, participants, baseUrl); // "Event Status" text
 
-        // Post & Pin Dashboard
-        // Note: Discord format might need tweaking vs HTML, but let's send text first.
-        // Status message generator usually outputs HTML for Telegram.
-        // We'll simplistic strip tags or just trigger it.
-        // For now, let's just trigger the "Update" flow which handles formatting.
+        // Intent: Announce the event professionally instead of "Beep Boop"
+        const announcement = `📅 **Event Planning: ${event.title}**\nTime to vote!\n${baseUrl}/e/${slug}`;
 
-        // Actually, let's do a direct post to initialize the value
-        const cleanMsg = statusMsg.replace(/<[^>]*>?/gm, ''); // Quick strip tags for Discord plain text fallback
-        const msgId = await sendDiscordMessage(channelId, `**EVENT STATUS**\n${cleanMsg}\n\n[View Event](${baseUrl}/e/${slug})`, token);
+        // Intent: Try to send. This acts as our permission check.
+        const sendResult = await sendDiscordMessage(channelId, announcement, token);
 
+        if (sendResult.error) {
+            // Check for specific "Missing Access" code from Discord API
+            if (sendResult.error.code === 50001) {
+                return { error: "MISSING_PERMISSIONS" };
+            }
+            return { error: `Discord Error: ${sendResult.error.message || 'Unknown'}` };
+        }
+
+        const msgId = sendResult.id;
+
+        // 3. Create & Pin Dashboard (if announcement succeeded)
         if (msgId) {
-            await pinDiscordMessage(channelId, msgId, token);
-            await prisma.event.update({
+            // Calculate Dashboard State
+            const participants = await prisma.participant.count({ where: { eventId: event.id } });
+            const { generateStatusMessage } = await import("@/lib/status");
+            const fullEvent = await prisma.event.findUnique({
                 where: { id: event.id },
-                data: { discordMessageId: msgId }
+                include: { timeSlots: { include: { votes: true } } }
             });
+            const statusMsg = generateStatusMessage(fullEvent!, participants, baseUrl);
+            const cleanMsg = statusMsg.replace(/<[^>]*>?/gm, ''); // Quick strip tags
+
+            // We use the announcement as the anchor, but also create the dashboard message separately?
+            // User requested: "announce the event... once it works it should have the 'connected' message"
+            // Actually, the previous code sent "Beep Boop" AND then a Dashboard.
+            // Let's stick to the pattern: Send Announcement -> Pin it? Or Send Announcement -> Send Dashboard -> Pin Dashboard?
+            // The dashboard is the "Persistent" status.
+            // Let's keep the dashboard separate but ensure the announcement is what we test with.
+
+            // Post Dashboard
+            const dashResult = await sendDiscordMessage(channelId, `**EVENT STATUS**\n${cleanMsg}\n\n[View Event](${baseUrl}/e/${slug})`, token);
+
+            if (dashResult.id) {
+                await pinDiscordMessage(channelId, dashResult.id, token);
+                await prisma.event.update({
+                    where: { id: event.id },
+                    data: { discordMessageId: dashResult.id }
+                });
+            }
         }
 
         return { success: true };

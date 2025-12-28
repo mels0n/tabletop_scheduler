@@ -8,10 +8,10 @@ const log = Logger.get("Discord");
  * @param content The text content (or embed object).
  * @param token The Bot Token.
  */
-export async function sendDiscordMessage(channelId: string, content: string | any, token: string): Promise<string | null> {
+export async function sendDiscordMessage(channelId: string, content: string | any, token: string): Promise<{ id?: string; error?: any }> {
     if (!token) {
         log.error("Token is missing");
-        return null;
+        return { error: "Token missing" };
     }
 
     const url = `https://discord.com/api/v10/channels/${channelId}/messages`;
@@ -28,16 +28,20 @@ export async function sendDiscordMessage(channelId: string, content: string | an
         });
 
         if (!res.ok) {
-            const err = await res.text();
-            log.error("API Error (sendMessage)", { error: err });
-            return null;
+            const errText = await res.text();
+            let errJson;
+            try { errJson = JSON.parse(errText); } catch { errJson = { message: errText }; }
+
+            log.error("API Error (sendMessage)", { error: errText });
+            return { error: errJson };
         }
 
         const data = await res.json();
-        return data.id;
+        return { id: data.id };
     } catch (e) {
         log.error("Failed to send message", e as Error);
-        return null;
+        // Intent: Return a generic error structure if network catch fails
+        return { error: { message: (e as Error).message } };
     }
 }
 

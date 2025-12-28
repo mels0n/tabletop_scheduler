@@ -184,16 +184,16 @@ export async function POST(
                 await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
                 log.info("Discord dashboard updated", { msgId: event.discordMessageId });
             } else {
-                const newMsgId = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-                if (newMsgId) {
-                    await pinDiscordMessage(event.discordChannelId, newMsgId, process.env.DISCORD_BOT_TOKEN);
+                const res = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+                if (res.id) {
+                    await pinDiscordMessage(event.discordChannelId, res.id, process.env.DISCORD_BOT_TOKEN);
                     await prisma.event.update({
                         where: { id: eventId },
-                        data: { discordMessageId: newMsgId }
+                        data: { discordMessageId: res.id }
                     });
-                    log.info("Discord dashboard created and pinned", { newMsgId });
+                    log.info("Discord dashboard created and pinned", { newMsgId: res.id });
                 } else {
-                    log.warn("Failed to create Discord dashboard message");
+                    log.warn("Failed to create Discord dashboard message", { error: res.error });
                 }
             }
         }
