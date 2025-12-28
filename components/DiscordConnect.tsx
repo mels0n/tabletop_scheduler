@@ -104,16 +104,16 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     useEffect(() => {
         // Condition: Connected and have Guild ID
         // Intent: Fetch the name of the connected channel for better UX
-        const gId = guildId || newGuildId;
+        const gId = initialGuildId || newGuildId;
         if (hasChannel && gId && !channelName) {
             listDiscordChannels(gId).then((res) => {
                 if (res.channels) {
-                    const found = res.channels.find((c: any) => c.id === savedChannelId);
+                    const found = res.channels.find((c: { id: string, name: string }) => c.id === savedChannelId);
                     if (found) setChannelName(found.name);
                 }
             });
         }
-    }, [hasChannel, guildId, newGuildId, savedChannelId, channelName]);
+    }, [hasChannel, initialGuildId, newGuildId, savedChannelId, channelName]);
 
     // State: Fully Connected
     if (hasChannel) {
