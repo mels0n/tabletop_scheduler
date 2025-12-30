@@ -41,8 +41,8 @@ export function ManagerRecovery({ slug }: { slug: string }) {
 
             if (res.error) {
                 setError(res.error);
-            } else if (res.success) {
-                setSuccessMsg(res.message || (platform === 'telegram' ? "Recovery link sent to Telegram!" : "Recovery link sent to Discord!"));
+            } else if ((res as any).success) {
+                setSuccessMsg((res as any).message || (platform === 'telegram' ? "Recovery link sent to Telegram!" : "Recovery link sent to Discord!"));
             }
         } catch (err) {
             setError("Something went wrong");

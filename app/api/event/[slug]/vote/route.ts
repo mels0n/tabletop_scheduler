@@ -240,6 +240,54 @@ export async function POST(
             }
         }
 
+        // --- FINALIZED EVENT: WAITLIST AUTO-PROMOTION LOGIC ---
+        if (event && event.status === 'FINALIZED' && event.maxPlayers) {
+            // Re-fetch counts to see if a spot opened up
+            const count = await prisma.participant.count({
+                where: { eventId, status: 'ACCEPTED' }
+            });
+
+            if (count < event.maxPlayers) {
+                const spotsAvailable = event.maxPlayers - count;
+
+                // Find next in line
+                const waitlist = await prisma.participant.findMany({
+                    where: { eventId, status: 'WAITLIST' },
+                    orderBy: { createdAt: 'asc' }, // FCFS
+                    take: spotsAvailable
+                });
+
+                for (const candidate of waitlist) {
+                    // Promote
+                    await prisma.participant.update({
+                        where: { id: candidate.id },
+                        data: { status: 'ACCEPTED' }
+                    });
+
+                    // Notify Candidate via Telegram
+                    if (candidate.chatId && process.env.TELEGRAM_BOT_TOKEN) {
+                        const { sendTelegramMessage } = await import("@/lib/telegram");
+                        await sendTelegramMessage(
+                            candidate.chatId,
+                            `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${event.title}</b> and you've been moved off the waitlist!`,
+                            process.env.TELEGRAM_BOT_TOKEN
+                        );
+                    }
+
+                    // Notify Candidate via Discord (if mapped)
+                    if (candidate.discordId && process.env.DISCORD_BOT_TOKEN) {
+                        const { createDMChannel, sendDiscordMessage } = await import("@/lib/discord");
+                        const dm = await createDMChannel(candidate.discordId, process.env.DISCORD_BOT_TOKEN);
+                        if (dm.id) {
+                            await sendDiscordMessage(dm.id, `🎟️ **You're In!**\n\nA spot opened up for **${event.title}** and you've been moved off the waitlist!`, process.env.DISCORD_BOT_TOKEN);
+                        }
+                    }
+
+                    log.info("Auto-promoted user from waitlist", { eventId, participantId: candidate.id });
+                }
+            }
+        }
+
         // --- QUORUM & MANAGER NOTIFICATION LOGIC ---
 
         if (event && event.managerChatId && process.env.TELEGRAM_BOT_TOKEN) {
