@@ -34,7 +34,7 @@ export default function VotingLogicPage() {
                                 <CheckCircle className="w-5 h-5" /> Available (Yes)
                             </h3>
                             <p className="text-slate-400 text-sm">
-                                "I want to play." <br />
+                                &quot;I want to play.&quot; <br />
                                 <strong className="text-slate-300">Priority: High</strong>
                             </p>
                         </div>
@@ -43,7 +43,7 @@ export default function VotingLogicPage() {
                                 <AlertCircle className="w-5 h-5" /> If Needed
                             </h3>
                             <p className="text-slate-400 text-sm">
-                                "I'll play if you need numbers to run." <br />
+                                &quot;I&apos;ll play if you need numbers to run.&quot; <br />
                                 <strong className="text-slate-300">Priority: Backup Only</strong>
                             </p>
                         </div>
@@ -52,7 +52,7 @@ export default function VotingLogicPage() {
                                 <Clock className="w-5 h-5" /> Busy (No)
                             </h3>
                             <p className="text-slate-500 text-sm">
-                                "I cannot make it."
+                                &quot;I cannot make it.&quot;
                             </p>
                         </div>
                     </div>
@@ -67,13 +67,13 @@ export default function VotingLogicPage() {
                         </p>
                         <ol className="list-decimal pl-5 space-y-2 marker:text-indigo-500">
                             <li>
-                                <strong>Availability (Yes):</strong> We fill the table with "Yes" votes first, up to the Max Player limit.
+                                <strong>Availability (Yes):</strong> We fill the table with &quot;Yes&quot; votes first, up to the Max Player limit.
                             </li>
                             <li>
-                                <strong>Quorum Check:</strong> Do we have enough "Yes" players to reach the <em>Minimum</em> player count?
+                                <strong>Quorum Check:</strong> Do we have enough &quot;Yes&quot; players to reach the <em>Minimum</em> player count?
                                 <ul className="list-disc pl-5 mt-1 space-y-1">
-                                    <li><strong>Yes?</strong> We stop. "If Needed" players are NOT added.</li>
-                                    <li><strong>No?</strong> We add just enough "If Needed" players to reach the Minimum.</li>
+                                    <li><strong>Yes?</strong> We stop. &quot;If Needed&quot; players are NOT added.</li>
+                                    <li><strong>No?</strong> We add just enough &quot;If Needed&quot; players to reach the Minimum.</li>
                                 </ul>
                             </li>
                             <li>
@@ -85,7 +85,7 @@ export default function VotingLogicPage() {
                                 <ShieldCheck className="w-4 h-4" /> The "Lock"
                             </h4>
                             <p className="text-sm">
-                                Once finalized, the list is <strong>frozen</strong>. A new player signing up (even with "Yes") will go to the waitlist and will NOT displace a confirmed player.
+                                Once finalized, the list is <strong>frozen</strong>. A new player signing up (even with &quot;Yes&quot;) will go to the waitlist and will NOT displace a confirmed player.
                             </p>
                         </div>
                     </div>
