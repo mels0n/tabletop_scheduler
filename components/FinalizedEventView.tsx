@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { Calendar, Clock, MapPin, Home, User as UserIcon, Loader2, Check } from "lucide-react";
 import { clsx } from "clsx";
@@ -38,16 +38,15 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
     const [participantId, setParticipantId] = useState<number | null>(null);
 
     // Intent: Filter participants who voted YES/MAYBE for this specific slot to display the "Going" list.
-    const attendees = finalizedSlot.votes
+    // Memoize to prevent effect dependency churn.
+    const attendees = useMemo(() => finalizedSlot.votes
         .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
         .map((v: any) => ({
             ...v.participant,
             preference: v.preference
-        }));
+        })), [finalizedSlot.votes]);
 
     // Intent: Separate attendees (ACCEPTED) from waitlist (WAITLIST)
-    // Note: If no status field exists yet (legacy), we assume everyone is attending unless logic dictates otherwise.
-    // However, our backend finalize logic now sets 'ACCEPTED' or 'WAITLIST'.
     const acceptedDetails = attendees.filter((a: any) => !a.status || a.status === 'ACCEPTED');
     const waitlistDetails = attendees.filter((a: any) => a.status === 'WAITLIST');
 
@@ -78,8 +77,11 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
             }
         } else {
             // Intent: Pre-fill form from global preferences if not yet joined for this specific event.
-            setUserName(localStorage.getItem('tabletop_username') || "");
-            setUserTelegram(localStorage.getItem('tabletop_telegram') || "");
+            // Guard: Only set if state is empty to prevent overwriting user typing (Android/Edge issue)
+            const savedName = localStorage.getItem('tabletop_username');
+            const savedTele = localStorage.getItem('tabletop_telegram');
+            if (savedName) setUserName(prev => prev || savedName);
+            if (savedTele) setUserTelegram(prev => prev || savedTele);
         }
     }, [event.id, attendees, serverParticipantId]);
 
