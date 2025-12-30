@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { recoverManagerLink, recoverDiscordManagerLink } from "@/app/actions";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,12 @@ import { useRouter } from "next/navigation";
 export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, defaultOpen?: boolean }) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    // Intent: Sync internal state with prop changes (e.g. from URL redirects)
+    useEffect(() => {
+        setIsOpen(defaultOpen);
+    }, [defaultOpen]);
+
     const [platform, setPlatform] = useState<"telegram" | "discord">("telegram");
     const [handle, setHandle] = useState("");
     const [loading, setLoading] = useState(false);
