@@ -77,7 +77,14 @@ export default function HowItWorksPage() {
                         <StepCard
                             step="3"
                             title="Players Vote"
-                            desc="Your players click the link and tap the times they are free. No sign-ups, no passwords. It takes 10 seconds."
+                            desc={
+                                <span>
+                                    Your players click the link and tap the times they are free. No sign-ups, no passwords. It takes 10 seconds.{" "}
+                                    <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
+                                        Read the logic
+                                    </Link>.
+                                </span>
+                            }
                         />
                         <StepCard
                             step="4"
@@ -119,7 +126,7 @@ export default function HowItWorksPage() {
     );
 }
 
-function StepCard({ step, title, desc }: { step: string, title: string, desc: string }) {
+function StepCard({ step, title, desc }: { step: string, title: string, desc: string | React.ReactNode }) {
     return (
         <div className="flex gap-4 p-4 rounded-lg bg-slate-900/50 border border-slate-800 hover:border-indigo-500/30 transition-colors">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-indigo-400 border border-slate-700">
