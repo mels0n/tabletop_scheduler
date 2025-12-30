@@ -152,7 +152,7 @@ export async function POST(
         // --- DM NOTIFICATIONS ---
         // Feature: Opt-in DMs (We use chatId presence as opt-in/capability)
         if (process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/lib/telegram");
+            const { sendTelegramMessage } = await import("@/features/telegram");
 
             // Notify Accepted
             const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
@@ -181,7 +181,7 @@ export async function POST(
 
         // Action: Telegram Notification Cycle (Public Group)
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/lib/telegram");
+            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
             const { buildFinalizedMessage } = await import("@/lib/eventMessage");
             const slotTime = event.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
 

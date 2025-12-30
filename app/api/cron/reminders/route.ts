@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     log.info("triggering reminder check via API");
 
     try {
-        const { checkReminders } = await import("@/lib/telegram-poller");
+        const { checkReminders } = await import("@/features/telegram");
         const token = process.env.TELEGRAM_BOT_TOKEN;
 
         if (!token) {

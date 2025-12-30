@@ -24,7 +24,7 @@ export async function register() {
             if (baseUrl) {
                 console.log(`🚀 Base URL detected (${baseUrl}). Configuring Telegram Webhook...`);
                 try {
-                    const { ensureWebhook } = await import("@/lib/telegram");
+                    const { ensureWebhook } = await import("@/features/telegram");
                     // Intent: Await execution to ensure Vercel/Lambda doesn't freeze the process before completion.
                     const success = await ensureWebhook(baseUrl, token);
                     if (success) console.log("✅ Telegram Webhook configured.");
@@ -37,7 +37,7 @@ export async function register() {
             else {
                 console.log("🤖 No Base URL found. Initializing Poller (Default Mode)...");
                 try {
-                    const { startPolling } = await import("./lib/telegram-poller");
+                    const { startPolling } = await import("@/features/telegram");
                     startPolling();
                 } catch (err) {
                     console.error("❌ Failed to start Telegram Poller:", err);

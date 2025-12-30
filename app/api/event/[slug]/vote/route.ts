@@ -199,13 +199,13 @@ export async function POST(
 
         // --- TELEGRAM LOGIC ---
         if (event && event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/lib/telegram");
+            const { sendTelegramMessage } = await import("@/features/telegram");
 
             // Notification: Announce activity to group
             await sendTelegramMessage(event.telegramChatId, `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`, process.env.TELEGRAM_BOT_TOKEN);
 
             // --- PINNED MESSAGE DASHBOARD SYNCHRONIZATION ---
-            const { editMessageText, pinChatMessage } = await import("@/lib/telegram");
+            const { editMessageText, pinChatMessage } = await import("@/features/telegram");
 
             if (event.pinnedMessageId) {
                 // Update existing pin
@@ -317,7 +317,7 @@ export async function POST(
 
                     // Notify Candidate via Telegram
                     if (candidate.chatId && process.env.TELEGRAM_BOT_TOKEN) {
-                        const { sendTelegramMessage } = await import("@/lib/telegram");
+                        const { sendTelegramMessage } = await import("@/features/telegram");
                         await sendTelegramMessage(
                             candidate.chatId,
                             `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${event.title}</b> and you've been moved off the waitlist!`,
@@ -342,7 +342,7 @@ export async function POST(
         // --- QUORUM & MANAGER NOTIFICATION LOGIC ---
 
         if (event && event.managerChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/lib/telegram");
+            const { sendTelegramMessage } = await import("@/features/telegram");
             const { getBaseUrl } = await import("@/lib/url");
             const { headers } = await import("next/headers");
             const baseUrl = getBaseUrl(headers());

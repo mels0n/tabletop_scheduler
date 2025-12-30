@@ -1,9 +1,10 @@
-import { sendTelegramMessage } from "./telegram";
-import prisma from "./prisma";
-import Logger from "./logger";
-import { getBaseUrl } from "./url";
+import { sendTelegramMessage, deleteWebhook, pinChatMessage } from "./telegram-client";
+import prisma from "@/lib/prisma";
+import Logger from "@/lib/logger";
+import { getBaseUrl } from "@/lib/url";
+import { TelegramUpdate } from "../model/types";
 
-const log = Logger.get("TelegramPoller");
+const log = Logger.get("TelegramService");
 
 // Intent: State tracking for singleton polling instance
 let isPolling = false;
@@ -127,8 +128,8 @@ export async function checkReminders(token: string) {
             if (!targetDays.includes(currentDay)) continue;
 
             // Intent: Send Reminder
-            const { getBaseUrl } = await import("./url");
-            const baseUrl = getBaseUrl(null);
+            const { getBaseUrl: getBaseUrlUrl } = await import("@/lib/url");
+            const baseUrl = getBaseUrlUrl(null);
             const link = `${baseUrl}/e/${event.slug}`;
 
             // 1. Telegram Reminder
@@ -142,7 +143,7 @@ export async function checkReminders(token: string) {
 
             // 2. Discord Reminder
             if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-                const { sendDiscordMessage } = await import("./discord");
+                const { sendDiscordMessage } = await import("@/lib/discord");
                 await sendDiscordMessage(
                     event.discordChannelId,
                     `🔔 **Reminder**\n\nPlease cast your votes for **${event.title}**!\n\n👉 [Vote Here](${link})`,
@@ -194,7 +195,6 @@ async function poll(token: string) {
                 if (description.includes("webhook is active")) {
                     log.warn("Webhook conflict detected. Deleting Webhook to enable Polling...");
 
-                    const { deleteWebhook } = await import("./telegram");
                     await deleteWebhook(token);
 
                     // Intent: Wait for propagation
@@ -225,21 +225,6 @@ async function poll(token: string) {
 
     // Intent: Continue polling immediately
     poll(token);
-}
-
-// Basic types for Telegram Update
-interface TelegramUpdate {
-    update_id: number;
-    message?: {
-        text?: string;
-        chat: {
-            id: number;
-        };
-        from?: {
-            id: number;
-            username?: string;
-        };
-    };
 }
 
 /**
@@ -414,7 +399,7 @@ async function captureParticipantIdentity(chatId: number, user: any) {
  */
 async function handleRecoverySetup(chatId: number, user: any, slug: string, recoveryToken: string, token: string) {
     // Verify Security Token
-    const { verifyRecoveryToken } = await import("./token");
+    const { verifyRecoveryToken } = await import("@/lib/token");
     if (!verifyRecoveryToken(slug, recoveryToken)) {
         await sendTelegramMessage(chatId, "⚠️ <b>Link Expired or Invalid</b>\n\nPlease go back to the Manage page and click the button again.", token);
         return;
@@ -539,8 +524,7 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
             include: { timeSlots: { include: { votes: true } } }
         });
         const participants = await prisma.participant.count({ where: { eventId: event.id } });
-        const { generateStatusMessage } = await import("./status");
-        const { pinChatMessage } = await import("./telegram");
+        const { generateStatusMessage } = await import("@/lib/status");
 
         if (fullEvent) {
             const baseUrl = detectedBaseUrl || getBaseUrl(null);

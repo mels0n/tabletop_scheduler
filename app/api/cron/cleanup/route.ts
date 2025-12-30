@@ -105,7 +105,7 @@ export async function GET(req: Request) {
         let errors = 0;
 
         if (eventsToDelete.length > 0) {
-            const { unpinChatMessage } = await import("@/lib/telegram");
+            const { unpinChatMessage } = await import("@/features/telegram");
             const token = process.env.TELEGRAM_BOT_TOKEN;
 
             for (const event of eventsToDelete) {

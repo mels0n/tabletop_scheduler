@@ -49,7 +49,7 @@ export async function recoverManagerLink(slug: string, handle: string) {
             return { error: "Handle matched, but the bot hasn't connected with you yet. Please open the bot and click 'Start' first." };
         }
 
-        const { sendTelegramMessage } = await import("@/lib/telegram");
+        const { sendTelegramMessage } = await import("@/features/telegram");
         const { getBaseUrl } = await import("@/lib/url");
         const { headers } = await import("next/headers");
 
@@ -143,7 +143,7 @@ export async function dmManagerLink(slug: string) {
         return { error: `Bot doesn't know you yet. Please start the bot first!` };
     }
 
-    const { sendTelegramMessage } = await import("@/lib/telegram");
+    const { sendTelegramMessage } = await import("@/features/telegram");
 
     const { getBaseUrl } = await import("@/lib/url");
     const { headers } = await import("next/headers");
@@ -267,7 +267,7 @@ export async function deleteEvent(slug: string) {
 
     // Intent: Cleanup external Telegram state (unpin message, notify chat) before database deletion.
     if (process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage, unpinChatMessage } = await import("@/lib/telegram");
+        const { sendTelegramMessage, unpinChatMessage } = await import("@/features/telegram");
 
         if (event.telegramChatId) {
             // Intent: Unpin the event message to clean up the chat interface.
@@ -364,7 +364,7 @@ export async function cancelEvent(slug: string) {
 
         // Intent: Update Telegram message to reflect cancellation but keep it visible (pinned).
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { editMessageText, sendTelegramMessage } = await import("@/lib/telegram");
+            const { editMessageText, sendTelegramMessage } = await import("@/features/telegram");
             const token = process.env.TELEGRAM_BOT_TOKEN;
 
             if (event.pinnedMessageId) {
@@ -462,7 +462,7 @@ export async function sendGlobalMagicLink(handle: string) {
         // Logic Branch: Send link if verified, otherwise guide to verification.
         if (chatId) {
             // Case A: User is Known & Verified (Has Chat ID) -> Send Link
-            const { sendTelegramMessage } = await import("@/lib/telegram");
+            const { sendTelegramMessage } = await import("@/features/telegram");
             const { getBaseUrl } = await import("@/lib/url");
             const { headers } = await import("next/headers");
 
