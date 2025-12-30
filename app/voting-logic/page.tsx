@@ -77,7 +77,7 @@ export default function VotingLogicPage() {
                                 </ul>
                             </li>
                             <li>
-                                <strong>Tie-Breaker:</strong> If we have to choose between two equal votes (e.g., two "Yes" votes for the last spot), the person who voted <strong>earliest</strong> gets the spot.
+                                <strong>Tie-Breaker:</strong> If we have to choose between two equal votes (e.g., two &quot;Yes&quot; votes for the last spot), the person who voted <strong>earliest</strong> gets the spot.
                             </li>
                         </ol>
                         <div className="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg mt-4">
