@@ -1,7 +1,7 @@
 ---
 title: "5 Signs Your Gaming Group Needs a Dedicated Scheduler"
 description: "Is your D&D group falling apart due to scheduling conflicts? Here are 5 signs you need to ditch the group chat and use a dedicated tool."
-date: "2024-05-24"
+date: "2025-10-01"
 tags: ["D&D", "Scheduling", "Group Dynamics", "Tabletop Tools"]
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: "Why We Don't Want Your Email: The Case for Privacy-First Scheduling"
 description: "Most apps want your data. We just want you to play games. Here is why Tabletop Time requires no login, no email, and no personal data."
-date: "2024-05-26"
+date: "2025-12-01"
 tags: ["Privacy", "No Login", "Security", "Data Ethics"]
 ---
 

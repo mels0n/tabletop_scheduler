@@ -1,7 +1,7 @@
 ---
 title: "How to Schedule D&D Sessions Without the Headache"
 description: "Master the art of scheduling Dungeons & Dragons sessions. Learn tools, quorum rules, and tips to keep your campaign alive."
-date: "2024-05-21"
+date: "2025-07-01"
 tags: ["D&D", "Scheduling", "DM Tips", "Tabletop"]
 ---
 

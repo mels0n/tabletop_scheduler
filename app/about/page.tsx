@@ -34,7 +34,7 @@ export default function AboutPage() {
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-6 text-lg text-slate-300">
                         <p>
-                            <strong>Tabletop Time</strong> started because my own D&D group was falling apart. Not because of drama, but because we are adults with jobs, kids, and fluctuating schedules.
+                            <strong>Tabletop Time</strong> started because my own Magic: The Gathering group was falling apart. Not because of drama, but because we are adults with jobs, kids, and fluctuating schedules.
                         </p>
                         <p>
                             Group chats were messy. Doodle polls required logins and felt corporate. We needed something <strong>fast, private, and specific to gamers</strong>.

@@ -1,7 +1,7 @@
 ---
 title: "Organizing the Perfect Commander Night: Logistics for MTG Players"
 description: "How to schedule and organize Magic: The Gathering Commander (EDH) nights. Managing 4-player pods, rule 0, and snack logistics."
-date: "2024-05-23"
+date: "2025-09-01"
 tags: ["MTG", "Commander", "EDH", "Magic The Gathering", "Scheduling"]
 ---
 
