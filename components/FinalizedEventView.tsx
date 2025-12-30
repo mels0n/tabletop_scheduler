@@ -245,23 +245,65 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                     </div>
                 ) : (
                     <div className={clsx(
-                        "p-6 rounded-xl flex items-center gap-4 border",
+                        "p-6 rounded-xl flex items-center justify-between gap-4 border",
                         myStatus === 'WAITLIST' ? "bg-yellow-900/10 border-yellow-800/30" : "bg-green-900/10 border-green-800/30"
                     )}>
-                        <div className={clsx(
-                            "w-12 h-12 rounded-full flex items-center justify-center",
-                            myStatus === 'WAITLIST' ? "bg-yellow-900/30" : "bg-green-900/30"
-                        )}>
-                            {myStatus === 'WAITLIST' ? <Clock className="w-6 h-6 text-yellow-400" /> : <Check className="w-6 h-6 text-green-400" />}
+                        <div className="flex items-center gap-4">
+                            <div className={clsx(
+                                "w-12 h-12 rounded-full flex items-center justify-center",
+                                myStatus === 'WAITLIST' ? "bg-yellow-900/30" : "bg-green-900/30"
+                            )}>
+                                {myStatus === 'WAITLIST' ? <Clock className="w-6 h-6 text-yellow-400" /> : <Check className="w-6 h-6 text-green-400" />}
+                            </div>
+                            <div>
+                                <h3 className={clsx("text-lg font-bold", myStatus === 'WAITLIST' ? "text-yellow-300" : "text-green-300")}>
+                                    {myStatus === 'WAITLIST' ? "You are on the Waitlist" : "You are on the list!"}
+                                </h3>
+                                <p className={clsx("text-sm", myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60")}>
+                                    {myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className={clsx("text-lg font-bold", myStatus === 'WAITLIST' ? "text-yellow-300" : "text-green-300")}>
-                                {myStatus === 'WAITLIST' ? "You are on the Waitlist" : "You are on the list!"}
-                            </h3>
-                            <p className={clsx("text-sm", myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60")}>
-                                {myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
-                            </p>
-                        </div>
+
+                        {/* Give Up Spot Option */}
+                        {myStatus === 'ACCEPTED' && waitlistDetails.length > 0 && (
+                            <button
+                                onClick={async () => {
+                                    if (confirm("Are you sure you want to give up your spot? It will immediately go to the next person on the waitlist.")) {
+                                        setIsSubmitting(true);
+                                        try {
+                                            const payload = {
+                                                name: userName || localStorage.getItem('tabletop_username') || "Unknown",
+                                                telegramId: userTelegram || localStorage.getItem('tabletop_telegram') || "",
+                                                participantId,
+                                                votes: [{
+                                                    slotId: finalizedSlot.id,
+                                                    preference: 'NO', // Relinquish spot
+                                                    canHost: false
+                                                }]
+                                            };
+
+                                            const res = await fetch(`/api/event/${event.id}/vote`, {
+                                                method: 'POST',
+                                                body: JSON.stringify(payload),
+                                                headers: { 'Content-Type': 'application/json' }
+                                            });
+
+                                            if (res.ok) window.location.reload();
+                                        } catch (e) {
+                                            console.error(e);
+                                            alert("Error updating status");
+                                        } finally {
+                                            setIsSubmitting(false);
+                                        }
+                                    }
+                                }}
+                                disabled={isSubmitting}
+                                className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-50"
+                            >
+                                Give up spot
+                            </button>
+                        )}
                     </div>
                 )}
 
