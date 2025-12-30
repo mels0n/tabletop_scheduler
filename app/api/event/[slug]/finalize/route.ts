@@ -64,36 +64,57 @@ export async function POST(
         });
 
         // 2. Fetch Event Settings
-        const currentEvent = await prisma.event.findUnique({ where: { slug: params.slug }, select: { maxPlayers: true, title: true } });
+        const currentEvent = await prisma.event.findUnique({ where: { slug: params.slug }, select: { maxPlayers: true, minPlayers: true, title: true } });
         const max = currentEvent?.maxPlayers;
+        const min = currentEvent?.minPlayers || 0;
 
         let acceptedIds: number[] = [];
         let waitlistIds: number[] = [];
         let acceptedNames: string[] = [];
         let waitlistNames: string[] = [];
 
-        if (max && votes.length > max) {
-            // Sort: YES < MAYBE, then Oldest CreatedAt < Newest CreatedAt
-            votes.sort((a, b) => {
-                const prefTimeout = (p: string) => p === 'YES' ? 0 : 1;
-                if (prefTimeout(a.preference) !== prefTimeout(b.preference)) {
-                    return prefTimeout(a.preference) - prefTimeout(b.preference);
-                }
-                return a.createdAt.getTime() - b.createdAt.getTime();
-            });
+        // Sort Helper: Oldest First
+        const byTime = (a: any, b: any) => a.createdAt.getTime() - b.createdAt.getTime();
 
-            const selected = votes.slice(0, max);
-            const waiting = votes.slice(max);
+        const yesVotes = votes.filter(v => v.preference === 'YES').sort(byTime);
+        const maybeVotes = votes.filter(v => v.preference === 'MAYBE').sort(byTime);
 
-            acceptedIds = selected.map(v => v.participantId);
-            waitlistIds = waiting.map(v => v.participantId);
-            acceptedNames = selected.map(v => v.participant.name);
-            waitlistNames = waiting.map(v => v.participant.name);
-        } else {
-            // Everyone gets in
-            acceptedIds = votes.map(v => v.participantId);
-            acceptedNames = votes.map(v => v.participant.name);
+        // Core Logic:
+        // 1. Take as many YES votes as possible (up to Max)
+        const yesAccepted = max ? yesVotes.slice(0, max) : yesVotes;
+
+        // 2. Check if we met Min Players
+        let currentCount = yesAccepted.length;
+        let maybeAccepted: typeof votes = [];
+
+        if (currentCount < min) {
+            const needed = min - currentCount;
+            // Fill gap with MAYBE votes
+            maybeAccepted = maybeVotes.slice(0, needed);
+            currentCount += maybeAccepted.length;
         }
+
+        // 3. Combine Accepted
+        const allAccepted = [...yesAccepted, ...maybeAccepted];
+
+        // 4. Everyone else -> Waitlist
+        // (Waitlist priority: YES > MAYBE > Time)
+        const yesWaitlist = max ? yesVotes.slice(max) : []; // Excess Yes
+        const maybeWaitlist = maybeVotes.slice(maybeAccepted.length); // Excess Maybe
+
+        const allWaitlist = [...yesWaitlist, ...maybeWaitlist];
+        // Ensure waitlist is sorted by Preference then Time (Yes first)
+        allWaitlist.sort((a, b) => {
+            if (a.preference !== b.preference) {
+                return a.preference === 'YES' ? -1 : 1;
+            }
+            return a.createdAt.getTime() - b.createdAt.getTime();
+        });
+
+        acceptedIds = allAccepted.map(v => v.participantId);
+        waitlistIds = allWaitlist.map(v => v.participantId);
+        acceptedNames = allAccepted.map(v => v.participant.name);
+        waitlistNames = allWaitlist.map(v => v.participant.name);
 
         // --- ATOMIC DB UPDATE ---
         const event = await prisma.$transaction(async (tx) => {

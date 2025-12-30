@@ -146,7 +146,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="How does the waitlist work?"
-                        answer="We prioritize 'Available' (Yes) votes over 'If Needed'. When the organizer **finalizes** the event, the best mix of players is locked in. Once finalized, the guest list is fixed—new players (even 'Yes' votes) will join the waitlist until a confirmed player drops out."
+                        answer="**Yes** votes always come first. **If Needed** votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked."
                     />
                     <FAQItem
                         question="Why did I make this tool?"
