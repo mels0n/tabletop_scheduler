@@ -273,12 +273,40 @@ export async function POST(
             if (count < event.maxPlayers) {
                 const spotsAvailable = event.maxPlayers - count;
 
-                // Find next in line
-                const waitlist = await prisma.participant.findMany({
+                // CHANGED: Prioritize Quality (YES) > Time (First-Come)
+                // We need to fetch votes to know the preference for the finalized slot
+                const candidates = await prisma.participant.findMany({
                     where: { eventId, status: 'WAITLIST' },
-                    orderBy: { createdAt: 'asc' }, // FCFS
-                    take: spotsAvailable
+                    include: {
+                        votes: {
+                            where: { timeSlotId: event.finalizedSlotId! }
+                        }
+                    }
                 });
+
+                // Sort candidates in memory
+                candidates.sort((a, b) => {
+                    const voteA = a.votes[0];
+                    const voteB = b.votes[0];
+
+                    // Safety Check: Users should have a vote for this slot if on waitlist
+                    if (!voteA) return 1;
+                    if (!voteB) return -1;
+
+                    // 1. Preference: YES (0) < MAYBE (1)
+                    const getScore = (p: string) => (p === 'YES' ? 0 : 1);
+                    const scoreA = getScore(voteA.preference);
+                    const scoreB = getScore(voteB.preference);
+
+                    if (scoreA !== scoreB) {
+                        return scoreA - scoreB;
+                    }
+
+                    // 2. Time: Oldest First
+                    return voteA.createdAt.getTime() - voteB.createdAt.getTime();
+                });
+
+                const waitlist = candidates.slice(0, spotsAvailable);
 
                 for (const candidate of waitlist) {
                     // Promote
