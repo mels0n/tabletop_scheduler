@@ -47,7 +47,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-slate-950 text-slate-50">
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-24 md:py-32 text-slate-50 selection:bg-indigo-500/30">
       {/* Intent: Inject JSON-LD only in hosted mode to boost SEO for the public instance */}
       {isHosted && (
         <script
@@ -55,16 +55,17 @@ export default function Home() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <div className="relative flex flex-col place-items-center text-center">
-        <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl md:text-7xl bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+      <div className="relative flex flex-col place-items-center text-center max-w-5xl mx-auto">
+        {/* Hero Section */}
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-br from-indigo-300 via-white to-cyan-300 bg-clip-text text-transparent pb-2">
           Tabletop Time
           <br className="hidden md:block" />
-          <span className="text-2xl md:text-5xl text-slate-200 block mt-4 font-extrabold tracking-tight">
+          <span className="text-2xl md:text-5xl text-slate-400 block mt-6 font-medium tracking-wide">
             Free D&D Session Scheduler <br className="md:hidden" />& RPG Game Night Planner
           </span>
           {isHosted && <span className="sr-only">: The Ultimate Game Night Session Scheduler</span>}
         </h1>
-        <p className="mt-4 max-w-[600px] text-zinc-400 md:text-xl">
+        <p className="mt-8 max-w-2xl text-slate-400 text-lg md:text-xl leading-relaxed">
           {isHosted
             ? "The \"When are we playing?\" dance is over. Coordinate your D&D sessions, board game nights, and RPG campaigns without the group chat chaos."
             : "Coordinate your D&D sessions, board game nights, and RPG campaigns without the group chat chaos."
@@ -72,10 +73,10 @@ export default function Home() {
         </p>
 
 
-        <div className="mt-8 flex gap-4">
+        <div className="mt-12 flex gap-6">
           <Link
             href="/new"
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all shadow-lg shadow-indigo-500/20"
+            className="flex items-center gap-2 px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.6)] hover:scale-105"
           >
             <PlusCircle className="w-5 h-5" />
             Start Scheduling
@@ -85,70 +86,77 @@ export default function Home() {
             href="https://github.com/mels0n/tabletop_scheduler"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-semibold transition-all border border-slate-700"
+            className="flex items-center gap-2 px-8 py-4 rounded-full bg-slate-900/50 backdrop-blur-sm hover:bg-slate-800 text-slate-300 font-medium transition-all border border-slate-700 hover:border-slate-600"
           >
             GitHub
           </a>
         </div>
-
-
       </div>
 
       {isHosted && (
         <>
           {/* Supported Games Section */}
-          <section className="mt-28 max-w-6xl mx-auto text-center px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-indigo-100 mb-6">Built for Every Tabletop Experience</h2>
-            <p className="text-slate-400 mb-12 max-w-2xl mx-auto text-lg">
+          <section className="mt-40 max-w-7xl mx-auto text-center px-4 w-full">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-200 mb-6 tracking-tight">Built for Every Tabletop Experience</h2>
+            <p className="text-slate-400 mb-16 max-w-2xl mx-auto text-lg leading-relaxed">
               Whether you are crawling dungeons, tapping mana, or trading resources, we handle the logistics.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
               {/* For D&D Groups */}
-              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
-                <h3 className="text-xl font-bold text-slate-100 mb-3 flex items-center gap-2">
-                  <span role="img" aria-label="Dragon icon">🐉</span> For D&D & RPG Groups
+              <div className="group relative p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:border-indigo-500/30">
+                <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <h3 className="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-3">
+                  <span className="p-2 rounded-lg bg-indigo-500/10 text-xl">🐉</span> For D&D & RPG Groups
                 </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                <p className="text-slate-400 text-sm leading-7 mb-6">
                   Keep your campaign alive. Perfect for <strong>Dungeons & Dragons 5e</strong>, <strong>Pathfinder</strong>, and <strong>Call of Cthulhu</strong>. Support for Quorums means you play even if the Bard is busy.
                 </p>
-                <ul className="text-sm text-indigo-300 space-y-2">
-                  <li>• Minimum player counts</li> <li>• Campaign continuity tracking</li>
+                <ul className="text-sm text-indigo-300 space-y-3 font-medium">
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Minimum player counts</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Campaign continuity</li>
                 </ul>
               </div>
 
               {/* For MTG Players */}
-              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
-                <h3 className="text-xl font-bold text-slate-100 mb-3 flex items-center gap-2">
-                  <span role="img" aria-label="Cards icon">🃏</span> For Magic: The Gathering
+              <div className="group relative p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:border-emerald-500/30">
+                <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <h3 className="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-3">
+                  <span className="p-2 rounded-lg bg-emerald-500/10 text-xl">🃏</span> For Magic: The Gathering
                 </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                <p className="text-slate-400 text-sm leading-7 mb-6">
                   The only scheduler optimized for <strong>Commander (EDH) pods</strong> and <strong>Draft nights</strong>. Find the exact 4-hour block where your whole pod can throw down.
                 </p>
-                <ul className="text-sm text-indigo-300 space-y-2">
-                  <li>• 4-player pod alignment</li> <li>• Draft night organization</li>
+                <ul className="text-sm text-emerald-300 space-y-3 font-medium">
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 4-player pod alignment</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Draft night organization</li>
                 </ul>
               </div>
 
               {/* For Board Gamers */}
-              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
-                <h3 className="text-xl font-bold text-slate-100 mb-3 flex items-center gap-2">
-                  <span role="img" aria-label="Dice icon">🎲</span> For Board Gamers
+              <div className="group relative p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:border-amber-500/30">
+                <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <h3 className="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-3">
+                  <span className="p-2 rounded-lg bg-amber-500/10 text-xl">🎲</span> For Board Gamers
                 </h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                <p className="text-slate-400 text-sm leading-7 mb-6">
                   From heavy Euros like <strong>Gloomhaven</strong> to party games. Stop guessing who&apos;s free for board game night. Send one link, get one answer.
                 </p>
-                <ul className="text-sm text-indigo-300 space-y-2">
-                  <li>• Table size management</li> <li>• Game night planning</li>
+                <ul className="text-sm text-amber-300 space-y-3 font-medium">
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Table size management</li>
+                  <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Game night planning</li>
                 </ul>
               </div>
             </div>
           </section>
 
           {/* Features Section */}
-          <section className="mt-24 max-w-4xl text-center space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-indigo-100">Why Gamers Choose Tabletop Time</h2>
-            <div className="text-slate-300 leading-relaxed space-y-4 text-lg">
+          <section className="mt-40 max-w-4xl text-center space-y-12">
+            <h2 className="text-3xl md:text-5xl font-bold text-slate-200 tracking-tight">Why Gamers Choose Tabletop Time</h2>
+            <div className="text-slate-400 leading-loose space-y-8 text-lg md:text-xl font-light">
               <p>
                 We&apos;ve all been there. You have a level 5 party ready to slay the dragon, but you can&apos;t defeat the true final boss: <strong>Scheduling</strong>.
                 Group chats become a mess of &quot;I can do Tuesday&quot; and &quot;Wait, I thought we said Thursday?&quot;.
@@ -160,16 +168,16 @@ export default function Home() {
               </p>
             </div>
             {/* New CTA for How It Works */}
-            <div className="mt-8 text-center">
-              <Link href="/how-it-works" className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-2 group">
-                See exactly how it works <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <div className="mt-12 text-center">
+              <Link href="/how-it-works" className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-2 group text-lg transition-colors">
+                See exactly how it works <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </section>
         </>
       )}
 
-      <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left">
+      <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl text-left w-full">
         <FeatureCard
           icon={<Copy className="w-6 h-6 text-indigo-400" />}
           title={isHosted ? "Frictionless Voting" : "No Login Required"}
@@ -211,13 +219,14 @@ export default function Home() {
           />
         )}
       </div>
-    </main>
+    </div>
   );
 }
 
 /**
  * @component FeatureCard
  * @description A stateless presentational component for displaying feature highlights.
+ * Refactored to use Glassmorphism styles.
  *
  * @param {Object} props - The component props.
  * @param {React.ReactNode} props.icon - The icon element to display.
@@ -227,10 +236,11 @@ export default function Home() {
  */
 function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
   return (
-    <div className="group rounded-lg border border-slate-800 bg-slate-900/50 p-5 hover:border-indigo-500/50 transition-colors">
-      <div className="mb-3">{icon}</div>
-      <h2 className="mb-2 font-semibold text-slate-200">{title}</h2>
-      <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+    <div className="group relative rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm p-6 hover:bg-white/10 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
+      <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="mb-4 p-2 bg-slate-900/50 rounded-lg w-fit group-hover:scale-110 transition-transform duration-300">{icon}</div>
+      <h2 className="mb-3 font-semibold text-slate-100 text-lg">{title}</h2>
+      <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors">{desc}</p>
     </div>
   )
 }
