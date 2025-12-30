@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { recoverManagerLink } from "@/app/actions";
+import { recoverManagerLink, recoverDiscordManagerLink } from "@/app/actions";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 /**
  * @component ManagerRecovery
  * @description A modal-based workflow to recover manager access.
- * If the manager loses their "admin cookie" (e.g. cleared cache, new device),
- * this component allows them to request a new "Magic Link" by verifying their
- * previously stored Telegram Handle.
+ * If the manager loses their administrative cookie, this allows recovery via
+ * their linked Telegram Handle or Discord Username.
  *
  * @param {Object} props - Component props.
  * @param {string} props.slug - The event slug.
@@ -19,6 +18,7 @@ import { useRouter } from "next/navigation";
 export function ManagerRecovery({ slug }: { slug: string }) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
+    const [platform, setPlatform] = useState<"telegram" | "discord">("telegram");
     const [handle, setHandle] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -35,11 +35,14 @@ export function ManagerRecovery({ slug }: { slug: string }) {
         setSuccessMsg("");
 
         try {
-            const res = await recoverManagerLink(slug, handle);
+            const res = platform === 'telegram'
+                ? await recoverManagerLink(slug, handle)
+                : await recoverDiscordManagerLink(slug, handle);
+
             if (res.error) {
                 setError(res.error);
-            } else if (res.success && res.message) {
-                setSuccessMsg(res.message);
+            } else if (res.success) {
+                setSuccessMsg(res.message || (platform === 'telegram' ? "Recovery link sent to Telegram!" : "Recovery link sent to Discord!"));
             }
         } catch (err) {
             setError("Something went wrong");
@@ -98,17 +101,46 @@ export function ManagerRecovery({ slug }: { slug: string }) {
                 </p>
 
                 <form onSubmit={handleRecover} className="space-y-4">
-                    <input
-                        type="text"
-                        placeholder="@YourHandle"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50"
-                        value={handle}
-                        onChange={e => setHandle(e.target.value)}
-                    />
 
-                    {error && <p className="text-red-400 text-sm">{error}</p>}
+                    {/* Platform Toggle */}
+                    <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-700">
+                        <button
+                            type="button"
+                            onClick={() => setPlatform("telegram")}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${platform === "telegram" ? "bg-slate-800 text-sky-400 shadow-sm" : "text-slate-500 hover:text-slate-300"}`}
+                        >
+                            Telegram
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPlatform("discord")}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${platform === "discord" ? "bg-slate-800 text-indigo-400 shadow-sm" : "text-slate-500 hover:text-slate-300"}`}
+                        >
+                            Discord
+                        </button>
+                    </div>
 
-                    <div className="flex gap-2">
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                            {platform === "telegram" ? "Telegram Handle" : "Discord Username"}
+                        </label>
+                        <input
+                            type="text"
+                            placeholder={platform === "telegram" ? "@YourHandle" : "username"}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
+                            value={handle}
+                            onChange={e => setHandle(e.target.value)}
+                        />
+                        <p className="text-[10px] text-slate-500">
+                            {platform === "telegram"
+                                ? "Enter the handle you used to create the event."
+                                : "Enter the username of the linked Discord account."}
+                        </p>
+                    </div>
+
+                    {error && <p className="text-red-400 text-sm bg-red-900/10 p-2 rounded border border-red-900/50">{error}</p>}
+
+                    <div className="flex gap-2 pt-2">
                         <button
                             type="button"
                             onClick={() => setIsOpen(false)}
@@ -118,8 +150,8 @@ export function ManagerRecovery({ slug }: { slug: string }) {
                         </button>
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center"
+                            disabled={loading || !handle}
+                            className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center text-white ${platform === 'telegram' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Send"}
                         </button>

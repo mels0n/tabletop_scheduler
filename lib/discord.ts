@@ -208,3 +208,31 @@ export async function createDMChannel(userId: string, token: string): Promise<{ 
         return { error: { message: (e as Error).message } };
     }
 }
+
+/**
+ * Fetches Public User Details from Discord.
+ * @param userId The Discord User ID.
+ * @param token The Bot Token.
+ */
+export async function getDiscordUser(userId: string, token: string): Promise<{ id: string, username: string, discriminator: string } | null> {
+    const url = `https://discord.com/api/v10/users/${userId}`;
+
+    try {
+        const res = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bot ${token}`,
+            }
+        });
+
+        if (!res.ok) {
+            log.error("API Error (getUser)", { status: res.status });
+            return null;
+        }
+
+        return await res.json();
+    } catch (e) {
+        log.error("Failed to fetch user", e as Error);
+        return null;
+    }
+}

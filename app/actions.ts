@@ -68,6 +68,61 @@ export async function recoverManagerLink(slug: string, handle: string) {
 
     log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: handle });
     return { error: "Telegram handle does not match our records." };
+    log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: handle });
+    return { error: "Telegram handle does not match our records." };
+}
+
+/**
+ * Initiates the recovery process for a manager link via Discord DM.
+ *
+ * @param {string} slug - The event slug.
+ * @param {string} username - The Discord username provided by the user.
+ * @returns {Promise<Object>} Success message or error description.
+ */
+export async function recoverDiscordManagerLink(slug: string, username: string) {
+    const event = await prisma.event.findUnique({ where: { slug } });
+
+    if (!event || !event.managerDiscordId) {
+        return { error: "No Discord account linked to this event." };
+    }
+
+    const { dmDiscordManagerLink } = await import("@/app/actions");
+    const normalize = (name: string) => name.toLowerCase().replace('@', '').trim();
+    const inputName = normalize(username);
+
+    let storedName = event.managerDiscordUsername ? normalize(event.managerDiscordUsername) : null;
+
+    // Intent: Handle legacy events where username wasn't saved, or name changed.
+    // If we don't have a stored name, or even if we do, we might want to verify against real-time data if mismatch?
+    // Let's rely on stored first. If mismatch or null, try to fetch fresh from Discord if we have the ID.
+    if (!storedName || storedName !== inputName) {
+        if (process.env.DISCORD_BOT_TOKEN) {
+            const { getDiscordUser } = await import("@/lib/discord");
+            const discordUser = await getDiscordUser(event.managerDiscordId, process.env.DISCORD_BOT_TOKEN);
+
+            if (discordUser) {
+                // Heuristic: Check against current username and global name? Discord now uses unique usernames (mostly).
+                // API returns 'username' and 'discriminator' (0 for new names).
+                const realName = normalize(discordUser.username);
+
+                if (realName === inputName) {
+                    // Self-healing: Update the stored username for future speed
+                    await prisma.event.update({
+                        where: { id: event.id },
+                        data: { managerDiscordUsername: discordUser.username }
+                    });
+                    storedName = realName;
+                }
+            }
+        }
+    }
+
+    if (storedName === inputName) {
+        return await dmDiscordManagerLink(slug);
+    }
+
+    log.warn("Manager Discord recovery failed: Username mismatch", { slug, input: username, stored: storedName });
+    return { error: "Discord username does not match our records." };
 }
 
 /**
