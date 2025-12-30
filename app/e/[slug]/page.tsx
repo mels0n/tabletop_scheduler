@@ -95,7 +95,7 @@ async function getEvent(slug: string) {
  *    - Provides a link to `/manage` for the organizer.
  *    - Includes `ManagerRecovery` tool for lost access.
  */
-export default async function EventPage({ params }: PageProps) {
+export default async function EventPage({ params, searchParams }: PageProps) {
     const event = await getEvent(params.slug);
 
     // Intent: Identify user from server-side cookie (Fail-safe for cross-browser sync).
