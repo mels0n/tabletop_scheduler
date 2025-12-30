@@ -165,6 +165,8 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
     };
 
     const myStatus = attendees.find((a: any) => a.id === participantId)?.status;
+    const spotsOpen = event.maxPlayers && acceptedDetails.length < event.maxPlayers;
+    const isWaitlistedButSpaceAvailable = myStatus === 'WAITLIST' && spotsOpen;
 
     return (
         <div className="grid gap-8 lg:grid-cols-3">
@@ -293,64 +295,88 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                     </div>
                 ) : (
                     <div className={clsx(
-                        "p-6 rounded-xl flex items-center justify-between gap-4 border",
-                        myStatus === 'WAITLIST' ? "bg-yellow-900/10 border-yellow-800/30" : "bg-green-900/10 border-green-800/30"
+                        "p-6 rounded-xl border transition-all",
+                        isWaitlistedButSpaceAvailable ? "bg-indigo-900/10 border-indigo-500/30" :
+                            myStatus === 'WAITLIST' ? "bg-yellow-900/10 border-yellow-800/30" : "bg-green-900/10 border-green-800/30"
                     )}>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 mb-4">
                             <div className={clsx(
-                                "w-12 h-12 rounded-full flex items-center justify-center",
-                                myStatus === 'WAITLIST' ? "bg-yellow-900/30" : "bg-green-900/30"
+                                "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                                isWaitlistedButSpaceAvailable ? "bg-indigo-900/30" :
+                                    myStatus === 'WAITLIST' ? "bg-yellow-900/30" : "bg-green-900/30"
                             )}>
-                                {myStatus === 'WAITLIST' ? <Clock className="w-6 h-6 text-yellow-400" /> : <Check className="w-6 h-6 text-green-400" />}
+                                {isWaitlistedButSpaceAvailable ? <UserIcon className="w-6 h-6 text-indigo-400" /> :
+                                    myStatus === 'WAITLIST' ? <Clock className="w-6 h-6 text-yellow-400" /> : <Check className="w-6 h-6 text-green-400" />}
                             </div>
                             <div>
-                                <h3 className={clsx("text-lg font-bold", myStatus === 'WAITLIST' ? "text-yellow-300" : "text-green-300")}>
-                                    {myStatus === 'WAITLIST' ? "You are on the Waitlist" : "You are on the list!"}
+                                <h3 className={clsx("text-lg font-bold",
+                                    isWaitlistedButSpaceAvailable ? "text-indigo-300" :
+                                        myStatus === 'WAITLIST' ? "text-yellow-300" : "text-green-300"
+                                )}>
+                                    {isWaitlistedButSpaceAvailable ? "Spots are Open!" :
+                                        myStatus === 'WAITLIST' ? "You are on the Waitlist" : "You are on the list!"}
                                 </h3>
-                                <p className={clsx("text-sm", myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60")}>
-                                    {myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
+                                <p className={clsx("text-sm",
+                                    isWaitlistedButSpaceAvailable ? "text-indigo-400/80" :
+                                        myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60"
+                                )}>
+                                    {isWaitlistedButSpaceAvailable ? "We have space! Change your RSVP to 'Available' to join." :
+                                        myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
                                 </p>
                             </div>
                         </div>
 
+                        {/* Action: Claim Spot */}
+                        {isWaitlistedButSpaceAvailable && (
+                            <button
+                                onClick={handleJoin}
+                                disabled={isSubmitting}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2 mb-2"
+                            >
+                                {isSubmitting ? <Loader2 className="animate-spin w-5 h-5" /> : "Claim Spot (RSVP Yes)"}
+                            </button>
+                        )}
+
                         {/* Give Up Spot Option */}
                         {myStatus === 'ACCEPTED' && waitlistDetails.length > 0 && (
-                            <button
-                                onClick={async () => {
-                                    if (confirm("Are you sure you want to give up your spot? It will immediately go to the next person on the waitlist.")) {
-                                        setIsSubmitting(true);
-                                        try {
-                                            const payload = {
-                                                name: userName || localStorage.getItem('tabletop_username') || "Unknown",
-                                                telegramId: userTelegram || localStorage.getItem('tabletop_telegram') || "",
-                                                participantId,
-                                                votes: [{
-                                                    slotId: finalizedSlot.id,
-                                                    preference: 'NO', // Relinquish spot
-                                                    canHost: false
-                                                }]
-                                            };
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={async () => {
+                                        if (confirm("Are you sure you want to give up your spot? It will immediately go to the next person on the waitlist.")) {
+                                            setIsSubmitting(true);
+                                            try {
+                                                const payload = {
+                                                    name: userName || localStorage.getItem('tabletop_username') || "Unknown",
+                                                    telegramId: userTelegram || localStorage.getItem('tabletop_telegram') || "",
+                                                    participantId,
+                                                    votes: [{
+                                                        slotId: finalizedSlot.id,
+                                                        preference: 'NO', // Relinquish spot
+                                                        canHost: false
+                                                    }]
+                                                };
 
-                                            const res = await fetch(`/api/event/${event.id}/vote`, {
-                                                method: 'POST',
-                                                body: JSON.stringify(payload),
-                                                headers: { 'Content-Type': 'application/json' }
-                                            });
+                                                const res = await fetch(`/api/event/${event.id}/vote`, {
+                                                    method: 'POST',
+                                                    body: JSON.stringify(payload),
+                                                    headers: { 'Content-Type': 'application/json' }
+                                                });
 
-                                            if (res.ok) window.location.reload();
-                                        } catch (e) {
-                                            console.error(e);
-                                            alert("Error updating status");
-                                        } finally {
-                                            setIsSubmitting(false);
+                                                if (res.ok) window.location.reload();
+                                            } catch (e) {
+                                                console.error(e);
+                                                alert("Error updating status");
+                                            } finally {
+                                                setIsSubmitting(false);
+                                            }
                                         }
-                                    }
-                                }}
-                                disabled={isSubmitting}
-                                className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-50"
-                            >
-                                Give up spot
-                            </button>
+                                    }}
+                                    disabled={isSubmitting}
+                                    className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-50"
+                                >
+                                    Give up spot
+                                </button>
+                            </div>
                         )}
                     </div>
                 )}
