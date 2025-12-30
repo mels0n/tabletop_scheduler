@@ -51,7 +51,7 @@ export default function AboutPage() {
                         <ul className="space-y-3">
                             <li className="flex gap-3 text-sm text-slate-300">
                                 <ShieldCheck className="w-5 h-5 text-indigo-400" />
-                                <span>No tracking cookies or ad profiling</span>
+                                <span>No mining or selling of your data</span>
                             </li>
                             <li className="flex gap-3 text-sm text-slate-300">
                                 <Users className="w-5 h-5 text-indigo-400" />
