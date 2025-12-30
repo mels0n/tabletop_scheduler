@@ -154,13 +154,13 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
         <div className="space-y-4">
             {/* CHANNEL CONNECTION CARD */}
             {hasChannel ? (
-                <div className="p-4 bg-green-900/20 border border-green-800 rounded-xl text-sm text-green-300 flex items-center justify-between gap-3">
+                <div className="p-4 bg-[#5865F2]/20 border border-[#5865F2]/50 rounded-xl text-sm text-[#5865F2] flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 flex-shrink-0" />
                         <div>
                             <p className="font-bold">Discord Connected</p>
-                            <p className="opacity-80 text-xs text-green-400">
-                                Updates posting to channel <code className="bg-green-950 px-1 rounded">{channelName ? `#${channelName}` : savedChannelId}</code>
+                            <p className="opacity-80 text-xs text-[#5865F2]/80">
+                                Updates posting to channel <code className="bg-[#5865F2]/20 px-1 rounded">{channelName ? `#${channelName}` : savedChannelId}</code>
                             </p>
                         </div>
                     </div>
@@ -280,7 +280,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
 
                 {hasManagerDiscordId ? (
                     <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-900/10 px-3 py-2 rounded border border-green-900/30">
+                        <div className="flex items-center gap-2 text-xs text-[#5865F2] bg-[#5865F2]/10 px-3 py-2 rounded border border-[#5865F2]/30">
                             <CheckIcon className="w-3 h-3 shrink-0" />
                             <span className="font-medium">Identity Verified</span>
                         </div>
