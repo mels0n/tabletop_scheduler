@@ -63,7 +63,7 @@ export default function VotingLogicPage() {
                     <h2 className="text-2xl font-semibold text-slate-200">2. How Finalization Works</h2>
                     <div className="prose prose-invert prose-slate max-w-none text-slate-400">
                         <p>
-                            When a Manager clicks "Finalize", the system locks in the guest list. This is the moment of truth. We select players based on the following strict hierarchy:
+                            When a Manager clicks &quot;Finalize&quot;, the system locks in the guest list. This is the moment of truth. We select players based on the following strict hierarchy:
                         </p>
                         <ol className="list-decimal pl-5 space-y-2 marker:text-indigo-500">
                             <li>
@@ -82,7 +82,7 @@ export default function VotingLogicPage() {
                         </ol>
                         <div className="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg mt-4">
                             <h4 className="font-bold text-indigo-300 flex items-center gap-2 mb-1">
-                                <ShieldCheck className="w-4 h-4" /> The "Lock"
+                                <ShieldCheck className="w-4 h-4" /> The &quot;Lock&quot;
                             </h4>
                             <p className="text-sm">
                                 Once finalized, the list is <strong>frozen</strong>. A new player signing up (even with &quot;Yes&quot;) will go to the waitlist and will NOT displace a confirmed player.
