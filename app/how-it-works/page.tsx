@@ -8,8 +8,24 @@ export const metadata: Metadata = {
 };
 
 export default function HowItWorksPage() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to Schedule a D&D Session with Tabletop Time",
+        "step": [
+            { "@type": "HowToStep", "text": "Create a new event and add available time slots" },
+            { "@type": "HowToStep", "text": "Share the secure link with your gaming group via Discord or Telegram" },
+            { "@type": "HowToStep", "text": "Players vote on times they are available (No login required)" },
+            { "@type": "HowToStep", "text": "System automatically identifies the best time slot where everyone is free" }
+        ]
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <div className="max-w-4xl mx-auto space-y-12">
                 {/* Header */}
                 <div className="space-y-4">

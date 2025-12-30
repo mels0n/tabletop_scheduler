@@ -26,8 +26,88 @@ import { DataTooltip } from "@/components/DataTooltip";
  * - Pure client component for simplicity, though could be RSC.
  */
 export default function FAQPage() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "Wait, I don't need an account?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "That's right! TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "How does the app remember who I am?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Where is my data stored?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. If you are self-hosting, the data lives on your own server."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "How do I find my past events?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Check out the 'My Events' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "What is a 'Magic Link'?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Why did I make this tool?",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Tabletop Time started because my own Magic: The Gathering group was falling apart. We needed something fast, private, and specific to gamers."
+                        }
+                    }
+                ]
+            },
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "https://www.tabletoptime.us"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "FAQ",
+                        "item": "https://www.tabletoptime.us/faq"
+                    }
+                ]
+            }
+        ]
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <div className="max-w-3xl mx-auto space-y-8">
                 <Link href="/" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back Home
