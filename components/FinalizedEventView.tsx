@@ -40,15 +40,42 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
 
     // Intent: Filter participants who voted YES/MAYBE for this specific slot to display the "Going" list.
     // Memoize to prevent effect dependency churn.
-    const attendees = useMemo(() => finalizedSlot.votes
-        .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
-        .map((v: any) => ({
-            ...v.participant,
-            preference: v.preference
-        })), [finalizedSlot.votes]);
+    const attendees = useMemo(() => {
+        // 1. Filter candidates
+        const candidates = finalizedSlot.votes
+            .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
+            .map((v: any) => ({
+                ...v.participant,
+                preference: v.preference,
+                voteCreatedAt: v.createdAt // Capture vote time for tie-breaking
+            }));
+
+        // 2. Sort candidates: YES first, then by FIFO (Time)
+        candidates.sort((a: any, b: any) => {
+            // Primary: Preference (YES < MAYBE)
+            if (a.preference !== b.preference) {
+                return a.preference === 'YES' ? -1 : 1;
+            }
+            // Secondary: Time (Earliest first)
+            return new Date(a.voteCreatedAt).getTime() - new Date(b.voteCreatedAt).getTime();
+        });
+
+        // 3. Assign Status (ACCEPTED vs WAITLIST) based on capacity
+        // Note: usage of 'status' here is virtual for this view unless persisted backend status exists and overrides
+        return candidates.map((c: any, index: number) => {
+            // If backend already has a definitive status, respect it.
+            // Otherwise, apply the "First Come First Serve" logic.
+            const existingStatus = c.status && c.status !== 'PENDING' ? c.status : null;
+            const computedStatus = (event.maxPlayers && index >= event.maxPlayers) ? 'WAITLIST' : 'ACCEPTED';
+            return {
+                ...c,
+                status: existingStatus || computedStatus
+            };
+        });
+    }, [finalizedSlot.votes, event.maxPlayers]);
 
     // Intent: Separate attendees (ACCEPTED) from waitlist (WAITLIST)
-    const acceptedDetails = attendees.filter((a: any) => !a.status || a.status === 'ACCEPTED');
+    const acceptedDetails = attendees.filter((a: any) => a.status === 'ACCEPTED');
     const waitlistDetails = attendees.filter((a: any) => a.status === 'WAITLIST');
 
     const isFull = event.maxPlayers && acceptedDetails.length >= event.maxPlayers;
