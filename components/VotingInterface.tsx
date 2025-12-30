@@ -258,6 +258,11 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                         </div>
                     </div>
 
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 px-1">
+                        <Loader2 className="w-3 h-3" />
+                        <span>Prioritization applies at Finalization. Confirmed spots are locked.</span>
+                    </div>
+
                     {slots.map(slot => {
                         const start = new Date(slot.startTime);
                         const end = new Date(slot.endTime);
