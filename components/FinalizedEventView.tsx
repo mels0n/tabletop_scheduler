@@ -45,6 +45,14 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
             preference: v.preference
         }));
 
+    // Intent: Separate attendees (ACCEPTED) from waitlist (WAITLIST)
+    // Note: If no status field exists yet (legacy), we assume everyone is attending unless logic dictates otherwise.
+    // However, our backend finalize logic now sets 'ACCEPTED' or 'WAITLIST'.
+    const acceptedDetails = attendees.filter((a: any) => !a.status || a.status === 'ACCEPTED');
+    const waitlistDetails = attendees.filter((a: any) => a.status === 'WAITLIST');
+
+    const isFull = event.maxPlayers && acceptedDetails.length >= event.maxPlayers;
+
     // Intent: Check if user is already in attendees list (Priority: Server Cookie > LocalStorage)
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -124,6 +132,8 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
         }
     };
 
+    const myStatus = attendees.find((a: any) => a.id === participantId)?.status;
+
     return (
         <div className="grid gap-8 lg:grid-cols-3">
             {/* LEFT COLUMN: Event Details & Join Form */}
@@ -190,8 +200,14 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                                 <UserIcon className="w-5 h-5" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-white">Join the Adventure</h3>
-                                <p className="text-slate-400 text-sm">Add yourself to the guest list.</p>
+                                <h3 className="text-lg font-bold text-white">
+                                    {isFull ? "Join the Waitlist" : "Join the Adventure"}
+                                </h3>
+                                <p className="text-slate-400 text-sm">
+                                    {isFull
+                                        ? `The event is full (${event.maxPlayers}/${event.maxPlayers}), but you can join the queue.`
+                                        : "Add yourself to the guest list."}
+                                </p>
                             </div>
                         </div>
 
@@ -200,14 +216,14 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                                 <input
                                     type="text"
                                     placeholder="Your Name (Required)"
-                                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
+                                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
                                     value={userName}
                                     onChange={(e) => setUserName(e.target.value)}
                                 />
                                 <input
                                     type="text"
                                     placeholder="Telegram Handle (Optional)"
-                                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
+                                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
                                     value={userTelegram}
                                     onChange={(e) => setUserTelegram(e.target.value)}
                                 />
@@ -216,20 +232,33 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                             <button
                                 onClick={handleJoin}
                                 disabled={isSubmitting}
-                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2"
+                                className={clsx(
+                                    "w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2",
+                                    isFull ? "bg-yellow-600 hover:bg-yellow-500 shadow-yellow-900/20 text-white" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-900/20 text-white"
+                                )}
                             >
-                                {isSubmitting ? <Loader2 className="animate-spin" /> : "I'm Coming!"}
+                                {isSubmitting ? <Loader2 className="animate-spin" /> : (isFull ? "Join Waitlist" : "I'm Coming!")}
                             </button>
                         </div>
                     </div>
                 ) : (
-                    <div className="p-6 bg-green-900/10 border border-green-800/30 rounded-xl flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-green-900/30 flex items-center justify-center">
-                            <Check className="w-6 h-6 text-green-400" />
+                    <div className={clsx(
+                        "p-6 rounded-xl flex items-center gap-4 border",
+                        myStatus === 'WAITLIST' ? "bg-yellow-900/10 border-yellow-800/30" : "bg-green-900/10 border-green-800/30"
+                    )}>
+                        <div className={clsx(
+                            "w-12 h-12 rounded-full flex items-center justify-center",
+                            myStatus === 'WAITLIST' ? "bg-yellow-900/30" : "bg-green-900/30"
+                        )}>
+                            {myStatus === 'WAITLIST' ? <Clock className="w-6 h-6 text-yellow-400" /> : <Check className="w-6 h-6 text-green-400" />}
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-green-300">You are on the list!</h3>
-                            <p className="text-green-400/60 text-sm">See you at the session.</p>
+                            <h3 className={clsx("text-lg font-bold", myStatus === 'WAITLIST' ? "text-yellow-300" : "text-green-300")}>
+                                {myStatus === 'WAITLIST' ? "You are on the Waitlist" : "You are on the list!"}
+                            </h3>
+                            <p className={clsx("text-sm", myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60")}>
+                                {myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
+                            </p>
                         </div>
                     </div>
                 )}
@@ -241,11 +270,18 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                 <div className="bg-slate-900/30 p-6 rounded-xl border border-slate-800 sticky top-6">
                     <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
                         <span>Going</span>
-                        <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">{attendees.length}</span>
+                        <div className="flex items-center gap-2">
+                            {event.maxPlayers && (
+                                <span className="text-xs text-slate-500">
+                                    {acceptedDetails.length}/{event.maxPlayers}
+                                </span>
+                            )}
+                            <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">{acceptedDetails.length}</span>
+                        </div>
                     </h3>
 
                     <ul className="space-y-3">
-                        {attendees.map((p: any) => (
+                        {acceptedDetails.map((p: any) => (
                             <li key={p.id} className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs ring-2 ring-slate-900">
                                     {p.name.substring(0, 2).toUpperCase()}
@@ -254,13 +290,33 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                                     <div className={clsx("font-medium", p.id === participantId ? "text-indigo-300" : "text-slate-300")}>
                                         {p.name} {p.id === participantId && "(You)"}
                                     </div>
-                                    {p.preference === 'MAYBE' && (
-                                        <div className="text-[10px] text-yellow-500 font-mono uppercase">If Needed</div>
-                                    )}
                                 </div>
                             </li>
                         ))}
                     </ul>
+
+                    {waitlistDetails.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-slate-800">
+                            <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
+                                <span>Waitlist</span>
+                                <span className="bg-yellow-900/30 text-yellow-500 px-2 py-1 rounded text-xs border border-yellow-900/50">{waitlistDetails.length}</span>
+                            </h3>
+                            <ul className="space-y-3">
+                                {waitlistDetails.map((p: any) => (
+                                    <li key={p.id} className="flex items-center gap-3 opacity-60">
+                                        <div className="w-8 h-8 rounded-full bg-yellow-900/20 flex items-center justify-center text-yellow-600 font-bold text-xs ring-1 ring-yellow-900/50">
+                                            {p.name.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-slate-400">
+                                                {p.name} {p.id === participantId && "(You)"}
+                                            </div>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
