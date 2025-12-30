@@ -1,27 +1,25 @@
 import { MetadataRoute } from 'next';
+import { getAllPosts } from '@/lib/blog';
 
-/**
- * @function sitemap
- * @description Generates the sitemap.xml file dynamically.
- * 
- * Logic: 
- * - Hosted: Return static pages (Home, New, FAQ).
- * - Self-Hosted: Return empty array (effectively 404/Empty).
- */
 export default function sitemap(): MetadataRoute.Sitemap {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tabletoptime.us';
 
-    // Privacy Guard: Do not expose sitemap in self-hosted mode or if URL is missing
-    if (!isHosted || !baseUrl) {
-        return [];
-    }
+    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+
+    // Get all blog posts
+    const posts = isHosted ? getAllPosts() : [];
+    const blogUrls = posts.map((post) => ({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: new Date(post.date),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+    }));
 
     return [
         {
             url: baseUrl,
             lastModified: new Date(),
-            changeFrequency: 'monthly',
+            changeFrequency: 'weekly',
             priority: 1,
         },
         {
@@ -30,18 +28,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'monthly',
             priority: 0.8,
         },
-        {
-            url: `${baseUrl}/faq`,
+        ...(isHosted ? [{
+            url: `${baseUrl}/pricing`,
             lastModified: new Date(),
-            changeFrequency: 'monthly',
+            changeFrequency: 'monthly' as const,
             priority: 0.8,
         },
         {
-            url: `${baseUrl}/how-it-works`,
+            url: `${baseUrl}/about`,
             lastModified: new Date(),
-            changeFrequency: 'monthly',
+            changeFrequency: 'monthly' as const,
+            priority: 0.7,
+        }] : []),
+        {
+            url: `${baseUrl}/blog`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
             priority: 0.8,
         },
+        ...blogUrls,
     ];
 }
-

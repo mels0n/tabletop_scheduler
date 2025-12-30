@@ -17,6 +17,7 @@ import { clsx } from "clsx";
  */
 export function Navbar() {
     const pathname = usePathname();
+    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
     // Intent: Helper to determine if a specific route is currently active for UI highlighting.
     const isActive = (path: string) => pathname === path;
@@ -39,6 +40,16 @@ export function Navbar() {
                     <NavLink href="/profile" active={isActive('/profile')} icon={<User className="w-4 h-4" />}>
                         My Events
                     </NavLink>
+                    {isHosted && (
+                        <>
+                            <NavLink href="/blog" active={isActive('/blog')} icon={<Calendar className="w-4 h-4" />}>
+                                Blog
+                            </NavLink>
+                            <NavLink href="/pricing" active={isActive('/pricing')} icon={<User className="w-4 h-4" />}>
+                                Pricing
+                            </NavLink>
+                        </>
+                    )}
                 </div>
             </div>
         </nav>

@@ -23,23 +23,83 @@ export default function Home() {
    */
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Tabletop Scheduler",
-    "applicationCategory": "UtilitiesApplication",
-    "operatingSystem": "Web Browser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "description": "Coordinate D&D and board game sessions without the chaos.",
-    "featureList": [
-      "Frictionless Voting",
-      "No Login Required",
-      "Smart Resolution",
-      "Telegram Integration",
-      "Free & Open",
-      "Privacy First"
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Tabletop Scheduler",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0.00",
+          "priceCurrency": "USD"
+        },
+        "description": "Coordinate D&D and board game sessions without the chaos.",
+        "featureList": [
+          "Frictionless Voting",
+          "No Login Required",
+          "Smart Resolution",
+          "Telegram Integration",
+          "Discord Integration",
+          "Free & Open",
+          "Privacy First"
+        ]
+      },
+      {
+        "@type": "HowTo",
+        "name": "How to Schedule a D&D Session with Tabletop Time",
+        "step": [
+          { "@type": "HowToStep", "text": "Create a new event and add available time slots" },
+          { "@type": "HowToStep", "text": "Share the secure link with your gaming group via Discord or Telegram" },
+          { "@type": "HowToStep", "text": "Players vote on times they are available (No login required)" },
+          { "@type": "HowToStep", "text": "System automatically identifies the best time slot where everyone is free" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Tabletop Time really free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The hosted version is free to use for the community. The project is also open-source if you want to self-host."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I schedule a D&D session?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Simply click 'Start Scheduling', choose your date range, and share the link with your party. Once they vote, you pick the best time."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Good for Magic: The Gathering?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! It's ideal for coordinating 4-player Commander (EDH) pods or 8-player drafts where scheduling is the hardest part."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do my players need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Tabletop Time is designed to be frictionless. Players can vote on times without creating an account or logging in."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it safe to use without a login?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. We use a privacy-first approach. Your events are secure and we do not collect personal data like emails or passwords for standard voting."
+            }
+          }
+        ]
+      }
     ]
   };
 
@@ -55,6 +115,10 @@ export default function Home() {
       <div className="relative flex flex-col place-items-center text-center">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl md:text-7xl bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
           Tabletop Time
+          <br className="hidden md:block" />
+          <span className="text-2xl md:text-5xl text-slate-200 block mt-4 font-extrabold tracking-tight">
+            Free D&D Session Scheduler <br className="md:hidden" />& RPG Game Night Planner
+          </span>
           {isHosted && <span className="sr-only">: The Ultimate Game Night Session Scheduler</span>}
         </h1>
         <p className="mt-4 max-w-[600px] text-zinc-400 md:text-xl">
@@ -86,6 +150,97 @@ export default function Home() {
 
 
       </div>
+
+      {isHosted && (
+        <>
+          {/* Features Section */}
+          <section className="mt-24 max-w-4xl text-center space-y-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-indigo-100">Why Gamers Choose Tabletop Time</h2>
+            <div className="text-slate-300 leading-relaxed space-y-4 text-lg">
+              <p>
+                We&apos;ve all been there. You have a level 5 party ready to slay the dragon, but you can&apos;t defeat the true final boss: <strong>Scheduling</strong>.
+                Group chats become a mess of &quot;I can do Tuesday&quot; and &quot;Wait, I thought we said Thursday?&quot;.
+              </p>
+              <p>
+                Tabletop Time is built specifically for <strong>RPG groups, Magic: The Gathering pods, and Board Game nights</strong>.
+                Unlike generic calendar tools, we focus on finding the <em>overlapping availability</em> for your specific quorum.
+                Whether you are planning a one-shot or a multi-year campaign, we make the logistics invisible so you can focus on the game.
+              </p>
+            </div>
+          </section>
+
+          {/* How it Works Section */}
+          <section className="mt-20 w-full max-w-5xl">
+            <h2 className="text-3xl font-bold text-center text-indigo-100 mb-10">How It Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <StepCard
+                step="01"
+                title="Create Group"
+                desc="Start a new event for your D&D campaign or MTG draft. Set your date range and required quorum."
+              />
+              <StepCard
+                step="02"
+                title="Share Link"
+                desc="Send the unique link to your players via Discord, Telegram, or SMS. No login required for them."
+              />
+              <StepCard
+                step="03"
+                title="Sync & Play"
+                desc="Visualise everyone's availability instantly. Pick the perfect time and sync it to your calendars."
+              />
+            </div>
+          </section>
+
+          {/* Supported Games Section */}
+          <section className="mt-28 max-w-6xl mx-auto text-center px-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-indigo-100 mb-6">Built for Every Tabletop Experience</h2>
+            <p className="text-slate-400 mb-12 max-w-2xl mx-auto text-lg">
+              Whether you are crawling dungeons, tapping mana, or trading resources, we handle the logistics.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+              {/* For D&D Groups */}
+              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
+                <h3 className="text-xl font-bold text-slate-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="Dragon icon">🐉</span> For D&D & RPG Groups
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                  Keep your campaign alive. Perfect for <strong>Dungeons & Dragons 5e</strong>, <strong>Pathfinder</strong>, and <strong>Call of Cthulhu</strong>. Support for Quorums means you play even if the Bard is busy.
+                </p>
+                <ul className="text-sm text-indigo-300 space-y-2">
+                  <li>• Minimum player counts</li> <li>• Campaign continuity tracking</li>
+                </ul>
+              </div>
+
+              {/* For MTG Players */}
+              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
+                <h3 className="text-xl font-bold text-slate-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="Cards icon">🃏</span> For Magic: The Gathering
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                  The only scheduler optimized for <strong>Commander (EDH) pods</strong> and <strong>Draft nights</strong>. Find the exact 4-hour block where your whole pod can throw down.
+                </p>
+                <ul className="text-sm text-indigo-300 space-y-2">
+                  <li>• 4-player pod alignment</li> <li>• Draft night organization</li>
+                </ul>
+              </div>
+
+              {/* For Board Gamers */}
+              <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
+                <h3 className="text-xl font-bold text-slate-100 mb-3 flex items-center gap-2">
+                  <span role="img" aria-label="Dice icon">🎲</span> For Board Gamers
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed mb-4">
+                  From heavy Euros like <strong>Gloomhaven</strong> to party games. Stop guessing who&apos;s free for board game night. Send one link, get one answer.
+                </p>
+                <ul className="text-sm text-indigo-300 space-y-2">
+                  <li>• Table size management</li> <li>• Game night planning</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl text-left">
         {isHosted && (
@@ -156,13 +311,49 @@ export default function Home() {
                 question="Do players need an account to vote?"
                 answer="No. Players can click the link you send and vote immediately. No login required."
               />
+              <FAQItem
+                question="Can I schedule Magic: The Gathering Commander nights?"
+                answer="Absolutely. Our tool is perfect for finding a time when all 4 players in your EDH pod are available."
+              />
+              <FAQItem
+                question="Is this better than a group chat?"
+                answer="Yes. Instead of scrolling through hundreds of messages to find a date, you get a clean visual heatmap of availability."
+              />
+            </div>
+          </div>
+
+          <div className="mt-24 max-w-3xl w-full px-6">
+            <h2 className="text-3xl font-bold text-center text-white mb-8">Frequently Asked Questions</h2>
+            <div className="space-y-4">
+              <FAQItem
+                question="Is Tabletop Time really free?"
+                answer="Yes. The hosted version is free to use for the community. The project is also open-source if you want to self-host."
+              />
+              <FAQItem
+                question="How do I schedule a D&D session?"
+                answer="Simply click 'Start Scheduling', choose your date range, and share the link with your party. Once they vote, you pick the best time."
+              />
+              <FAQItem
+                question="Good for Magic: The Gathering?"
+                answer="Yes! It's ideal for coordinating 4-player Commander (EDH) pods or 8-player drafts where scheduling is the hardest part."
+              />
+              <FAQItem
+                question="Do my players need to create an account?"
+                answer="No. Tabletop Time is designed to be frictionless. Players can vote on times without creating an account or logging in."
+              />
+              <FAQItem
+                question="Is it safe to use without a login?"
+                answer="Yes. We use a privacy-first approach. Your events are secure and we do not collect personal data like emails or passwords for standard voting."
+              />
             </div>
           </div>
 
           {/* Intent: Answer Engine Optimization (AEO) Schema */}
           <FaqJsonLd data={[
             { question: "Is Tabletop Time free?", answer: "Yes, it is free and open source. We believe in tools that serve the community without paywalls." },
-            { question: "Do players need an account to vote?", answer: "No. Players can click the link you send and vote immediately. No login required." }
+            { question: "Do players need an account to vote?", answer: "No. Players can click the link you send and vote immediately. No login required." },
+            { question: "Can I schedule Magic: The Gathering Commander nights?", answer: "Absolutely. Our tool is perfect for finding a time when all 4 players in your EDH pod are available." },
+            { question: "Is this better than a group chat?", answer: "Yes. Instead of scrolling through hundreds of messages to find a date, you get a clean visual heatmap of availability." }
           ]} />
         </>
       )}
@@ -187,6 +378,16 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: stri
       <div className="mb-3">{icon}</div>
       <h2 className="mb-2 font-semibold text-slate-200">{title}</h2>
       <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+    </div>
+  )
+}
+
+function StepCard({ step, title, desc }: { step: string, title: string, desc: string }) {
+  return (
+    <div className="flex flex-col items-center text-center p-6 bg-slate-900/30 rounded-xl border border-slate-800">
+      <span className="text-4xl font-black text-slate-800 mb-4">{step}</span>
+      <h3 className="text-xl font-bold text-indigo-300 mb-2">{title}</h3>
+      <p className="text-sm text-slate-400">{desc}</p>
     </div>
   )
 }

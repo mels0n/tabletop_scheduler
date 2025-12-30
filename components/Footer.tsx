@@ -24,6 +24,16 @@ export function Footer() {
 
                 {/* Navigation Links */}
                 <div className="flex items-center gap-6">
+                    {isHosted && (
+                        <>
+                            <Link href="/blog" className="hover:text-indigo-400 transition-colors">
+                                Blog
+                            </Link>
+                            <Link href="/about" className="hover:text-indigo-400 transition-colors">
+                                About
+                            </Link>
+                        </>
+                    )}
                     <Link href="/how-it-works" className="hover:text-indigo-400 transition-colors">
                         How it Works
                     </Link>
