@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { sendTelegramMessage } from "@/features/telegram";
 import Logger from "@/lib/logger";
 
 const log = Logger.get("API:Webhook");
@@ -341,7 +341,7 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
         });
         const participants = await prisma.participant.count({ where: { eventId: event.id } });
         const { generateStatusMessage } = await import("@/lib/status");
-        const { pinChatMessage } = await import("@/lib/telegram");
+        const { pinChatMessage } = await import("@/features/telegram");
         const { getBaseUrl } = await import("@/lib/url");
         const { headers } = await import("next/headers");
 
