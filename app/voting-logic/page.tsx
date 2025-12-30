@@ -11,6 +11,29 @@ export default function VotingLogicPage() {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
             <div className="max-w-4xl mx-auto space-y-12">
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@type": "Article",
+                            "headline": "The Logic of Voting: How Tabletop Time Handles RSVPs",
+                            "description": "A deep dive into how Tabletop Time determines who plays, who waits, and who gets promoted using a transparent voting priority system.",
+                            "author": {
+                                "@type": "Organization",
+                                "name": "Tabletop Time"
+                            },
+                            "publisher": {
+                                "@type": "Organization",
+                                "name": "Tabletop Time",
+                                "logo": {
+                                    "@type": "ImageObject",
+                                    "url": "https://www.tabletoptime.us/logo.png"
+                                }
+                            }
+                        })
+                    }}
+                />
 
                 {/* Header */}
                 <div className="space-y-4">
