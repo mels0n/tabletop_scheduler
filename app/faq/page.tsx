@@ -146,7 +146,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="How does the waitlist work?"
-                        answer="**Yes** votes always come first. **If Needed** votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked."
+                        answer="**Yes** votes always come first. **If Needed** votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked. <Link href='/voting-logic' className='text-indigo-400 hover:text-indigo-300 underline'>See full logic & examples</Link>."
                     />
                     <FAQItem
                         question="Why did I make this tool?"
