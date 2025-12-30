@@ -57,7 +57,7 @@ export default function Home() {
       )}
       <div className="relative flex flex-col place-items-center text-center max-w-5xl mx-auto">
         {/* Hero Section */}
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-br from-indigo-300 via-white to-cyan-300 bg-clip-text text-transparent pb-2">
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent pb-2">
           Tabletop Time
           <br className="hidden md:block" />
           <span className="text-2xl md:text-5xl text-slate-400 block mt-6 font-medium tracking-wide">
@@ -215,7 +215,7 @@ export default function Home() {
           <FeatureCard
             icon={<ShieldCheck className="w-6 h-6 text-indigo-400" />}
             title="Privacy First"
-            desc="We delete old event data every 24 hours. We don't want your data, and we don't keep it."
+            desc="We don't mine your data or sell it to advertisers. We just want you to play more games."
           />
         )}
       </div>

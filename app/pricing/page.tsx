@@ -38,7 +38,7 @@ export default function PricingPage() {
                         <FeatureItem text="Unlimited Players" />
                         <FeatureItem text="Discord & Telegram Integration" />
                         <FeatureItem text="No Account Required" />
-                        <FeatureItem text="Privacy First (No Tracking)" />
+                        <FeatureItem text="Privacy First" />
                         <FeatureItem text="Open Source" />
                     </ul>
 
