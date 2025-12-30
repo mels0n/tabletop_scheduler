@@ -20,7 +20,7 @@ TabletopTime helps you find the best time for your gaming group to meet. It is d
 
 ## One Click Start (Cloud)
 
-Don't want to manage a server? We host a free version for the community supported by unobtrusive ads.
+Don't want to manage a server? We host a free version for the community.
 
 [**Launch TabletopTime Cloud**](https://www.tabletoptime.us/)
 
