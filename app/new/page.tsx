@@ -156,36 +156,38 @@ function NewEventForm() {
                             />
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-slate-200">Minimum Players</label>
-                            <p className="text-xs text-slate-400">Lowest number of players required for this event</p>
-                            <input
-                                data-testid="min-players-input"
-                                type="number"
-                                min="2"
-                                max="100"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32 text-base"
-                                value={minPlayers}
-                                onChange={(e) => setMinPlayers(parseInt(e.target.value))}
-                            />
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex flex-col gap-2">
+                                <label className="font-semibold text-slate-200">Minimum Players</label>
+                                <p className="text-xs text-slate-400">Lowest number of players required for this event</p>
+                                <input
+                                    data-testid="min-players-input"
+                                    type="number"
+                                    min="2"
+                                    max="100"
+                                    className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full text-base"
+                                    value={minPlayers}
+                                    onChange={(e) => setMinPlayers(parseInt(e.target.value))}
+                                />
+                            </div>
 
-                        <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-slate-200">Maximum Players (Optional)</label>
-                            <p className="text-xs text-slate-400">Limit the event size (e.g. for a 5-player one-shot)</p>
-                            <input
-                                data-testid="max-players-input"
-                                type="number"
-                                min={minPlayers}
-                                max="100"
-                                placeholder="Unimited"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32 placeholder:text-slate-600 text-base"
-                                value={maxPlayers || ""}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    setMaxPlayers(isNaN(val) ? null : val);
-                                }}
-                            />
+                            <div className="flex flex-col gap-2">
+                                <label className="font-semibold text-slate-200">Maximum Players (Optional)</label>
+                                <p className="text-xs text-slate-400">Limit the event size (e.g. for a 5-player one-shot)</p>
+                                <input
+                                    data-testid="max-players-input"
+                                    type="number"
+                                    min={minPlayers}
+                                    max="100"
+                                    placeholder="Unimited"
+                                    className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full placeholder:text-slate-600 text-base"
+                                    value={maxPlayers || ""}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        setMaxPlayers(isNaN(val) ? null : val);
+                                    }}
+                                />
+                            </div>
                         </div>
                     </div>
 
