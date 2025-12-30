@@ -273,12 +273,9 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId }
                     <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
                         <span>Going</span>
                         <div className="flex items-center gap-2">
-                            {event.maxPlayers && (
-                                <span className="text-xs text-slate-500">
-                                    {acceptedDetails.length}/{event.maxPlayers}
-                                </span>
-                            )}
-                            <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">{acceptedDetails.length}</span>
+                            <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">
+                                {event.maxPlayers ? `${acceptedDetails.length}/${event.maxPlayers}` : acceptedDetails.length}
+                            </span>
                         </div>
                     </h3>
 

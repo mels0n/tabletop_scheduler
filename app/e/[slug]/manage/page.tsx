@@ -273,13 +273,11 @@ export default async function ManageEventPage({ params }: PageProps) {
                                     <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
                                         <span>Who&apos;s Going</span>
                                         <div className="flex items-center gap-2">
-                                            {event.maxPlayers && (
-                                                <span className="text-xs text-slate-500">
-                                                    {finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}/{event.maxPlayers}
-                                                </span>
-                                            )}
                                             <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">
-                                                {finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}
+                                                {event.maxPlayers
+                                                    ? `${finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}/${event.maxPlayers}`
+                                                    : finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length
+                                                }
                                             </span>
                                         </div>
                                     </h3>
