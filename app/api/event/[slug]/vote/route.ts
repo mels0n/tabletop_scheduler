@@ -46,32 +46,42 @@ export async function POST(
         // Check for Max Players Regulation (if Finalized)
         const targetEvent = await prisma.event.findUnique({
             where: { id: eventId },
-            select: { status: true, maxPlayers: true, slug: true }
+            select: { status: true, maxPlayers: true, slug: true, finalizedSlotId: true }
         });
 
         // Intent: Determine status for the participant
         let nextStatus = undefined; // Undefined means no change or pending if new
 
-        if (targetEvent?.status === 'FINALIZED' && targetEvent.maxPlayers) {
-            const acceptedCount = await prisma.participant.count({
-                where: { eventId, status: 'ACCEPTED' }
-            });
+        if (targetEvent?.status === 'FINALIZED') {
+            // 1. Check if this vote is a "NO" for the finalized slot
+            const finalizedVote = votes.find((v: any) => v.slotId === targetEvent.finalizedSlotId);
 
-            if (acceptedCount >= targetEvent.maxPlayers) {
-                // If it's full, new joiners go to WAITLIST
-                nextStatus = 'WAITLIST';
+            if (finalizedVote && finalizedVote.preference === 'NO') {
+                // User is voluntarily leaving the finalized slot
+                nextStatus = 'PENDING';
+            }
+            else if (targetEvent.maxPlayers) {
+                // 2. Logic for YES/MAYBE votes when Max Players is active
+                const acceptedCount = await prisma.participant.count({
+                    where: { eventId, status: 'ACCEPTED' }
+                });
 
-                // Exception: If current user is already ACCEPTED, keep them ACCEPTED 
-                if (participantId) {
-                    const current = await prisma.participant.findUnique({
-                        where: { id: participantId },
-                        select: { status: true }
-                    });
-                    if (current?.status === 'ACCEPTED') nextStatus = 'ACCEPTED';
+                if (acceptedCount >= targetEvent.maxPlayers) {
+                    // event full -> waitlist
+                    nextStatus = 'WAITLIST';
+
+                    // Exception: If current user is already ACCEPTED, keep them ACCEPTED
+                    if (participantId) {
+                        const current = await prisma.participant.findUnique({
+                            where: { id: participantId },
+                            select: { status: true }
+                        });
+                        if (current?.status === 'ACCEPTED') nextStatus = 'ACCEPTED';
+                    }
+                } else {
+                    // spots open -> accept
+                    nextStatus = 'ACCEPTED';
                 }
-            } else {
-                // If not full, they can be ACCEPTED (Auto-accept logic for late joiners)
-                nextStatus = 'ACCEPTED';
             }
         }
 
