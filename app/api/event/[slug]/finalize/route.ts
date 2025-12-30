@@ -51,17 +51,114 @@ export async function POST(
             updateData.finalizedHostId = parseInt(hostId.toString());
         }
 
-        // Action: Atomic DB Update
-        const event = await prisma.event.update({
-            where: { slug: params.slug },
-            data: updateData,
-            include: {
-                timeSlots: true,
-                finalizedHost: true
-            }
+        // --- SELECTION ALGORITHM ---
+        const sId = parseInt(slotId.toString());
+
+        // 1. Fetch all votes for this slot
+        const votes = await prisma.vote.findMany({
+            where: {
+                timeSlotId: sId,
+                preference: { in: ['YES', 'MAYBE'] }
+            },
+            include: { participant: true }
         });
 
-        // Action: Telegram Notification Cycle
+        // 2. Fetch Event Settings
+        const currentEvent = await prisma.event.findUnique({ where: { slug: params.slug }, select: { maxPlayers: true, title: true } });
+        const max = currentEvent?.maxPlayers;
+
+        let acceptedIds: number[] = [];
+        let waitlistIds: number[] = [];
+        let acceptedNames: string[] = [];
+        let waitlistNames: string[] = [];
+
+        if (max && votes.length > max) {
+            // Sort: YES < MAYBE, then Oldest CreatedAt < Newest CreatedAt
+            votes.sort((a, b) => {
+                const prefTimeout = (p: string) => p === 'YES' ? 0 : 1;
+                if (prefTimeout(a.preference) !== prefTimeout(b.preference)) {
+                    return prefTimeout(a.preference) - prefTimeout(b.preference);
+                }
+                return a.createdAt.getTime() - b.createdAt.getTime();
+            });
+
+            const selected = votes.slice(0, max);
+            const waiting = votes.slice(max);
+
+            acceptedIds = selected.map(v => v.participantId);
+            waitlistIds = waiting.map(v => v.participantId);
+            acceptedNames = selected.map(v => v.participant.name);
+            waitlistNames = waiting.map(v => v.participant.name);
+        } else {
+            // Everyone gets in
+            acceptedIds = votes.map(v => v.participantId);
+            acceptedNames = votes.map(v => v.participant.name);
+        }
+
+        // --- ATOMIC DB UPDATE ---
+        const event = await prisma.$transaction(async (tx) => {
+            // 1. Update Event
+            const updatedEvent = await tx.event.update({
+                where: { slug: params.slug },
+                data: updateData,
+                include: {
+                    timeSlots: true,
+                    finalizedHost: true
+                }
+            });
+
+            // 2. Update Participants
+            if (acceptedIds.length > 0) {
+                await tx.participant.updateMany({
+                    where: { id: { in: acceptedIds } },
+                    data: { status: 'ACCEPTED' }
+                });
+            }
+            if (waitlistIds.length > 0) {
+                await tx.participant.updateMany({
+                    where: { id: { in: waitlistIds } },
+                    data: { status: 'WAITLIST' }
+                });
+            }
+
+            return updatedEvent;
+        });
+
+        const { getBaseUrl } = await import("@/lib/url");
+        const origin = getBaseUrl(req.headers);
+        const eventLink = `${origin}/e/${params.slug}`;
+
+        // --- DM NOTIFICATIONS ---
+        // Feature: Opt-in DMs (We use chatId presence as opt-in/capability)
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+            const { sendTelegramMessage } = await import("@/lib/telegram");
+
+            // Notify Accepted
+            const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
+            for (const p of acceptedParticipants) {
+                if (p.participant.chatId) {
+                    await sendTelegramMessage(
+                        p.participant.chatId,
+                        `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${currentEvent?.title}</b>.\n<a href="${eventLink}">View Details</a>`,
+                        process.env.TELEGRAM_BOT_TOKEN
+                    );
+                }
+            }
+
+            // Notify Waitlisted
+            const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
+            for (const p of waitlistedParticipants) {
+                if (p.participant.chatId) {
+                    await sendTelegramMessage(
+                        p.participant.chatId,
+                        `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent?.title}</b>.\nWe'll let you know if a spot opens up!`,
+                        process.env.TELEGRAM_BOT_TOKEN
+                    );
+                }
+            }
+        }
+
+        // Action: Telegram Notification Cycle (Public Group)
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
             const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/lib/telegram");
             const { buildFinalizedMessage } = await import("@/lib/eventMessage");
@@ -73,12 +170,8 @@ export async function POST(
                 await deleteMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
             }
 
-            // Step 2: Determine origin dynamically for absolute links.
-            const { getBaseUrl } = await import("@/lib/url");
-            const origin = getBaseUrl(req.headers);
-
             // Step 3: Construct & Send the "Finalized" message.
-            const msg = buildFinalizedMessage(event, slotTime, origin);
+            const msg = buildFinalizedMessage(event, slotTime, origin, acceptedNames, waitlistNames);
             const msgId = await sendTelegramMessage(event.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
 
             // Step 4: Pin the new message and track its ID.
@@ -105,12 +198,8 @@ export async function POST(
                 await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
             }
 
-            // Step 2: Determine origin dynamically for absolute links.
-            const { getBaseUrl } = await import("@/lib/url");
-            const origin = getBaseUrl(req.headers);
-
             // Step 3: Construct & Send the "Finalized" message.
-            const htmlMsg = buildFinalizedMessage(event, slotTime, origin);
+            const htmlMsg = buildFinalizedMessage(event, slotTime, origin, acceptedNames, waitlistNames);
             // Convert HTML to Markdown for Discord
             const discordMsg = htmlMsg
                 .replace(/<b>(.*?)<\/b>/g, '**$1**')

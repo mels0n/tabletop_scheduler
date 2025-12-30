@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 import { TimeSlotPicker, TimeSlot } from "@/components/TimeSlotPicker";
 import { Loader2 } from "lucide-react";
 
@@ -18,12 +19,27 @@ import { Loader2 } from "lucide-react";
  *    - Client calls Server Action `setAdminCookie` to save this token securely.
  *    - Redirects to the new Management Dashboard.
  */
+// Basic wrapper to support useSearchParams without de-opting static generation where unnecessary
 export default function NewEventPage() {
+    return (
+        <Suspense fallback={<Loader2 className="animate-spin text-white" />}>
+            <NewEventForm />
+        </Suspense>
+    );
+}
+
+function NewEventForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [minPlayers, setMinPlayers] = useState(3);
+    const searchParams = useSearchParams();
+
+    // Intent: Pre-fill from URL params for easier "Reuse" or "Template" links
+    const [title, setTitle] = useState(searchParams.get("title") || "");
+    const [description, setDescription] = useState(searchParams.get("description") || "");
+    const [minPlayers, setMinPlayers] = useState(parseInt(searchParams.get("minPlayers") || "3"));
+    const [maxPlayers, setMaxPlayers] = useState<number | null>(
+        searchParams.get("maxPlayers") ? parseInt(searchParams.get("maxPlayers")!) : null
+    );
     const [slots, setSlots] = useState<TimeSlot[]>([]);
 
     // Intent: Track success state to prevent UI reset during navigation delay
@@ -50,6 +66,7 @@ export default function NewEventPage() {
                     // Note: telegramLink & managerTelegram removed from create flow simplify initial onboarding.
                     // They can be added later in the Manager Dashboard.
                     minPlayers,
+                    maxPlayers,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     slots
                 }),
@@ -133,6 +150,24 @@ export default function NewEventPage() {
                                 className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32"
                                 value={minPlayers}
                                 onChange={(e) => setMinPlayers(parseInt(e.target.value))}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label className="font-semibold text-slate-200">Maximum Players (Optional)</label>
+                            <p className="text-xs text-slate-400">Limit the event size (e.g. for a 5-player one-shot)</p>
+                            <input
+                                data-testid="max-players-input"
+                                type="number"
+                                min={minPlayers}
+                                max="100"
+                                placeholder="Unimited"
+                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32 placeholder:text-slate-600"
+                                value={maxPlayers || ""}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    setMaxPlayers(isNaN(val) ? null : val);
+                                }}
                             />
                         </div>
                     </div>

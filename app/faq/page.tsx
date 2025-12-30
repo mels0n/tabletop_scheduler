@@ -65,6 +65,10 @@ export default function FAQPage() {
                         answer="(Optional) If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
                     />
                     <FAQItem
+                        question="How does the waitlist work?"
+                        answer="For events with a player limit, we prioritize people who vote 'Available' (Yes) over 'If Needed' (Maybe). If the event is full, 'Yes' votes get first dibs (based on who voted first), then 'Maybe' votes. Everyone else is placed on the waitlist in order."
+                    />
+                    <FAQItem
                         question="Why did I make this tool?"
                         answer="I have a group of friends that plays Magic the Gathering - some of whom flat refuse to create an account at some data farming website. If I'm honest, I'd prefer to control my own data too. Also, some have families, some work strange hours, some have season tickets to sports, some have kids playing sports... trying to find a date that works for everyone is chaos."
                     />

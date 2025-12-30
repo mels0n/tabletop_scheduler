@@ -32,13 +32,16 @@ interface SlotData {
  *
  * @param {EventData} event - The event details.
  * @param {SlotData} slot - The selected time slot.
- * @param {string} origin - The base URL of the application (for calculating absolute links).
+ * @param {string[]} [attendees] - List of accepted participant names.
+ * @param {string[]} [waitlist] - List of waitlisted participant names.
  * @returns {string} HTML string compatible with Telegram's parse_mode='HTML'.
  */
 export function buildFinalizedMessage(
     event: EventData,
     slot: SlotData,
-    origin: string
+    origin: string,
+    attendees: string[] = [],
+    waitlist: string[] = []
 ): string {
     const slotTime = new Date(slot.startTime);
     const slotEndTime = new Date(slot.endTime);
@@ -74,7 +77,15 @@ export function buildFinalizedMessage(
         timeZone: event.timezone || 'UTC'
     });
 
+    // Intent: Add Attendee Lists if applicable (Max Players logic)
+    let listString = "";
+    if (waitlist.length > 0) {
+        // If there's a waitlist, we definitely want to show who made it.
+        listString += `\n\n👥 <b>Attendees:</b>\n${attendees.map(a => `- ${a}`).join('\n')}`;
+        listString += `\n\n⚠️ <b>Waitlist (Next Up):</b>\n${waitlist.map(w => `- ${w}`).join('\n')}`;
+    }
+
     const eventUrl = `${origin}/e/${event.slug}`;
 
-    return `🎉 <b>Event Finalized!</b>\n\n<b>${event.title}</b> is happening on:\n📅 ${dateString}\n⏰ ${timeString}${hostString}${locString}\n\n<a href="${eventUrl}">🔗 View Event Details</a>\n<a href="${googleLink}">📅 Google Calendar</a> | <a href="${outlookLink}">📧 Outlook</a> | <a href="${icsLink}">📎 ICS</a>\n\nSee you there!`;
+    return `🎉 <b>Event Finalized!</b>\n\n<b>${event.title}</b> is happening on:\n📅 ${dateString}\n⏰ ${timeString}${hostString}${locString}${listString}\n\n<a href="${eventUrl}">🔗 View Event Details</a>\n<a href="${googleLink}">📅 Google Calendar</a> | <a href="${outlookLink}">📧 Outlook</a> | <a href="${icsLink}">📎 ICS</a>\n\nSee you there!`;
 }

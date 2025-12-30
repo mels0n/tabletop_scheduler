@@ -43,9 +43,39 @@ export async function POST(
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
         }
 
+        // Check for Max Players Regulation (if Finalized)
+        const targetEvent = await prisma.event.findUnique({
+            where: { id: eventId },
+            select: { status: true, maxPlayers: true, slug: true }
+        });
+
+        if (targetEvent?.status === 'FINALIZED' && targetEvent.maxPlayers) {
+            const acceptedCount = await prisma.participant.count({
+                where: { eventId, status: 'ACCEPTED' }
+            });
+
+            if (acceptedCount >= targetEvent.maxPlayers) {
+                // Check if current user is already accepted (allow updates)
+                let isAllowed = false;
+                if (participantId) {
+                    const current = await prisma.participant.findUnique({
+                        where: { id: participantId },
+                        select: { status: true }
+                    });
+                    if (current?.status === 'ACCEPTED') isAllowed = true;
+                }
+
+                if (!isAllowed) {
+                    return NextResponse.json({ error: "This event has been finalized and is at capacity." }, { status: 403 });
+                }
+            }
+        }
+
         // Action: Atomic Transaction for Participant & Votes
+
         const result = await prisma.$transaction(async (tx: any) => {
             let participant;
+            let existingVotes: any[] = [];
 
             // 1. Check if updating existing participant
             if (participantId) {
@@ -58,6 +88,11 @@ export async function POST(
                     participant = await tx.participant.update({
                         where: { id: participantId },
                         data: { name, telegramId }
+                    });
+
+                    // Intent: Fetch existing votes to preserve timestamps for Fairness
+                    existingVotes = await tx.vote.findMany({
+                        where: { participantId }
                     });
 
                     // Clear old votes to replace with new ones
@@ -97,13 +132,20 @@ export async function POST(
                 });
             }
 
-            // 3. Create votes
-            const voteData = votes.map((v: any) => ({
-                participantId: participant.id,
-                timeSlotId: v.slotId,
-                preference: v.preference,
-                canHost: v.canHost || false
-            }));
+            // 3. Create votes with Timestamp Preservation
+            const voteData = votes.map((v: any) => {
+                // Check if we have an existing vote for this slot/preference
+                const match = existingVotes.find(ev => ev.timeSlotId === v.slotId && ev.preference === v.preference);
+
+                return {
+                    participantId: participant.id,
+                    timeSlotId: v.slotId,
+                    preference: v.preference,
+                    canHost: v.canHost || false,
+                    // Critical: Use old timestamp if preference is unchanged, else New Date
+                    createdAt: match ? match.createdAt : new Date()
+                };
+            });
 
             await tx.vote.createMany({
                 data: voteData,

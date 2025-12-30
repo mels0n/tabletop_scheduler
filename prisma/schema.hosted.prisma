@@ -96,6 +96,7 @@ model Participant {
   discordId       String? // The numeric User ID from Discord
   discordUsername String? // The username/discriminatorvia webhook)
   createdAt  DateTime @default(now())
+  status     String   @default("PENDING") // PENDING, ACCEPTED, WAITLIST
   
   votes      Vote[]
   hostedEvents Event[] @relation("FinalizedHost")
@@ -111,6 +112,7 @@ model Vote {
   
   preference    String      // YES: Available, MAYBE: If needed, NO: Busy
   canHost       Boolean     @default(false) // Specific willingness to host this slot
+  createdAt     DateTime    @default(now())
 }
 
 // Temporary tokens for global "My Events" login

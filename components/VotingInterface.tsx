@@ -253,7 +253,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                         </div>
                         <div className="flex items-center gap-2">
                             <HelpCircle className="w-4 h-4 text-yellow-500" />
-                            <span><b>If Needed:</b> Yes, but not my preference for day</span>
+                            <span><b>If Needed:</b> Lower priority for limited spots</span>
                         </div>
                     </div>
 
@@ -304,7 +304,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                                             color="yellow"
                                             icon={<HelpCircle className="w-5 h-5" />}
                                             label="If Needed"
-                                            title="Yes, but not my preference for day."
+                                            title="Yes, but taking a back seat to 'Available' players."
                                         />
                                         <VoteButton
                                             active={myVote === 'NO'}
