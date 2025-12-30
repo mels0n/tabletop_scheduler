@@ -45,6 +45,7 @@ You can link users to the "Create Event" page with pre-filled values using query
 - `description` (string): Pre-fills description
 - `minPlayers` (number): Pre-fills minimum players (default 3)
 - `maxPlayers` (number): Pre-fills maximum players
+- `slots` (string): JSON stringified array of objects `[{startTime: ISO, endTime: ISO}]`
 
 **Example:**
 `https://tabletopscheduler.com/new?title=Raid%20Night&maxPlayers=8&minPlayers=8`

@@ -40,7 +40,24 @@ function NewEventForm() {
     const [maxPlayers, setMaxPlayers] = useState<number | null>(
         searchParams.get("maxPlayers") ? parseInt(searchParams.get("maxPlayers")!) : null
     );
-    const [slots, setSlots] = useState<TimeSlot[]>([]);
+    const [slots, setSlots] = useState<TimeSlot[]>(() => {
+        const slotsParam = searchParams.get("slots");
+        if (slotsParam) {
+            try {
+                const parsed = JSON.parse(slotsParam);
+                if (Array.isArray(parsed)) {
+                    return parsed.map((s: any) => ({
+                        id: crypto.randomUUID(),
+                        startTime: s.startTime,
+                        endTime: s.endTime
+                    }));
+                }
+            } catch (e) {
+                console.error("Failed to parse slots param", e);
+            }
+        }
+        return [];
+    });
 
     // Intent: Track success state to prevent UI reset during navigation delay
     const [success, setSuccess] = useState(false);
