@@ -40,16 +40,7 @@ export function Navbar() {
                     <NavLink href="/profile" active={isActive('/profile')} icon={<User className="w-4 h-4" />}>
                         My Events
                     </NavLink>
-                    {isHosted && (
-                        <>
-                            <NavLink href="/blog" active={isActive('/blog')} icon={<Calendar className="w-4 h-4" />}>
-                                Blog
-                            </NavLink>
-                            <NavLink href="/pricing" active={isActive('/pricing')} icon={<User className="w-4 h-4" />}>
-                                Pricing
-                            </NavLink>
-                        </>
-                    )}
+
                 </div>
             </div>
         </nav>
