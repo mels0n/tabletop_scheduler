@@ -96,29 +96,6 @@ export default function Home() {
 
       {isHosted && (
         <>
-          {/* Features Section */}
-          <section className="mt-24 max-w-4xl text-center space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-indigo-100">Why Gamers Choose Tabletop Time</h2>
-            <div className="text-slate-300 leading-relaxed space-y-4 text-lg">
-              <p>
-                We&apos;ve all been there. You have a level 5 party ready to slay the dragon, but you can&apos;t defeat the true final boss: <strong>Scheduling</strong>.
-                Group chats become a mess of &quot;I can do Tuesday&quot; and &quot;Wait, I thought we said Thursday?&quot;.
-              </p>
-              <p>
-                Tabletop Time is built specifically for <strong>RPG groups, Magic: The Gathering pods, and Board Game nights</strong>.
-                Unlike generic calendar tools, we focus on finding the <em>overlapping availability</em> for your specific quorum.
-                Whether you are planning a one-shot or a multi-year campaign, we make the logistics invisible so you can focus on the game.
-              </p>
-            </div>
-            {/* New CTA for How It Works */}
-            <div className="mt-8 text-center">
-              <Link href="/how-it-works" className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-2 group">
-                See exactly how it works <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-          </section>
-
-
           {/* Supported Games Section */}
           <section className="mt-28 max-w-6xl mx-auto text-center px-4">
             <h2 className="text-3xl md:text-4xl font-bold text-indigo-100 mb-6">Built for Every Tabletop Experience</h2>
@@ -165,6 +142,28 @@ export default function Home() {
                   <li>• Table size management</li> <li>• Game night planning</li>
                 </ul>
               </div>
+            </div>
+          </section>
+
+          {/* Features Section */}
+          <section className="mt-24 max-w-4xl text-center space-y-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-indigo-100">Why Gamers Choose Tabletop Time</h2>
+            <div className="text-slate-300 leading-relaxed space-y-4 text-lg">
+              <p>
+                We&apos;ve all been there. You have a level 5 party ready to slay the dragon, but you can&apos;t defeat the true final boss: <strong>Scheduling</strong>.
+                Group chats become a mess of &quot;I can do Tuesday&quot; and &quot;Wait, I thought we said Thursday?&quot;.
+              </p>
+              <p>
+                Tabletop Time is built specifically for <strong>RPG groups, Magic: The Gathering pods, and Board Game nights</strong>.
+                Unlike generic calendar tools, we focus on finding the <em>overlapping availability</em> for your specific quorum.
+                Whether you are planning a one-shot or a multi-year campaign, we make the logistics invisible so you can focus on the game.
+              </p>
+            </div>
+            {/* New CTA for How It Works */}
+            <div className="mt-8 text-center">
+              <Link href="/how-it-works" className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-2 group">
+                See exactly how it works <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
           </section>
         </>
