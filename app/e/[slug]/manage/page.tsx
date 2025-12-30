@@ -208,64 +208,129 @@ export default async function ManageEventPage({ params }: PageProps) {
                     <div className="lg:col-span-7 space-y-6">
                         {isFinalized && finalizedSlot ? (
                             /* FINALIZED STATE UI */
-                            <div className="p-8 rounded-2xl bg-gradient-to-br from-green-900/20 to-slate-900/40 border border-green-800/50 text-center space-y-6">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-green-400 mb-2">Event Finalized!</h2>
-                                    <p className="text-slate-300 text-lg">
-                                        Playing on <br />
-                                        <ClientDate date={finalizedSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-white" />
-                                        <span className="text-slate-400"> at </span>
-                                        <ClientDate date={finalizedSlot.startTime} formatStr="h:mm a" className="font-semibold text-white" />
-                                    </p>
+                            <>
+                                <div className="p-8 rounded-2xl bg-gradient-to-br from-green-900/20 to-slate-900/40 border border-green-800/50 text-center space-y-6">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-green-400 mb-2">Event Finalized!</h2>
+                                        <p className="text-slate-300 text-lg">
+                                            Playing on <br />
+                                            <ClientDate date={finalizedSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-white" />
+                                            <span className="text-slate-400"> at </span>
+                                            <ClientDate date={finalizedSlot.startTime} formatStr="h:mm a" className="font-semibold text-white" />
+                                        </p>
 
 
-                                    {(event.finalizedHost || event.location) && (
-                                        <div className="mt-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 inline-block text-left text-sm space-y-2 min-w-[250px]">
-                                            {event.finalizedHost && (
-                                                <div className="flex items-center gap-2 text-slate-300">
-                                                    <span className="text-lg">🏠</span>
-                                                    <span>Hosted by <span className="font-semibold text-white">{event.finalizedHost.name}</span></span>
-                                                </div>
-                                            )}
-                                            {event.location && (
-                                                <div className="flex items-start gap-2 text-slate-300">
-                                                    <span className="text-lg mt-0.5">📍</span>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
-                                                            <EditLocationModal slug={event.slug} initialLocation={event.location} />
-                                                        </div>
-                                                        <div className="text-white">{event.location}</div>
+                                        {(event.finalizedHost || event.location) && (
+                                            <div className="mt-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 inline-block text-left text-sm space-y-2 min-w-[250px]">
+                                                {event.finalizedHost && (
+                                                    <div className="flex items-center gap-2 text-slate-300">
+                                                        <span className="text-lg">🏠</span>
+                                                        <span>Hosted by <span className="font-semibold text-white">{event.finalizedHost.name}</span></span>
                                                     </div>
-                                                </div>
-                                            )}
-                                            {!event.location && (
-                                                <div className="flex items-start gap-2 text-slate-300">
-                                                    <span className="text-lg mt-0.5">📍</span>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
-                                                            <EditLocationModal slug={event.slug} initialLocation={null} />
+                                                )}
+                                                {event.location && (
+                                                    <div className="flex items-start gap-2 text-slate-300">
+                                                        <span className="text-lg mt-0.5">📍</span>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                                <EditLocationModal slug={event.slug} initialLocation={event.location} />
+                                                            </div>
+                                                            <div className="text-white">{event.location}</div>
                                                         </div>
-                                                        <div className="text-slate-500 italic">TBD</div>
                                                     </div>
-                                                </div>
+                                                )}
+                                                {!event.location && (
+                                                    <div className="flex items-start gap-2 text-slate-300">
+                                                        <span className="text-lg mt-0.5">📍</span>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                                <EditLocationModal slug={event.slug} initialLocation={null} />
+                                                            </div>
+                                                            <div className="text-slate-500 italic">TBD</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="border-t border-slate-700/50 pt-6">
+                                        <AddToCalendar
+                                            event={{
+                                                ...event,
+                                                description: event.description || undefined
+                                            }}
+                                            slot={finalizedSlot}
+                                            className="justify-center"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Finalized Attendees List */}
+                                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                                    <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
+                                        <span>Who&apos;s Going</span>
+                                        <div className="flex items-center gap-2">
+                                            {event.maxPlayers && (
+                                                <span className="text-xs text-slate-500">
+                                                    {finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}/{event.maxPlayers}
+                                                </span>
                                             )}
+                                            <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">
+                                                {finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}
+                                            </span>
+                                        </div>
+                                    </h3>
+
+                                    <ul className="space-y-3 mb-8">
+                                        {finalizedSlot.votes
+                                            .filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED'))
+                                            .map((v: any) => (
+                                                <li key={v.participant.id} className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs ring-2 ring-slate-900">
+                                                        {v.participant.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium text-slate-200">
+                                                            {v.participant.name}
+                                                            {v.participant.telegramId && <span className="ml-2 text-xs text-indigo-400 font-normal">{v.participant.telegramId}</span>}
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                    </ul>
+
+                                    {finalizedSlot.votes.some((v: any) => v.participant.status === 'WAITLIST') && (
+                                        <div className="border-t border-slate-800 pt-6">
+                                            <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
+                                                <span>Waitlist</span>
+                                                <span className="bg-yellow-900/30 text-yellow-500 px-2 py-1 rounded text-xs border border-yellow-900/50">
+                                                    {finalizedSlot.votes.filter((v: any) => v.participant.status === 'WAITLIST').length}
+                                                </span>
+                                            </h3>
+                                            <ul className="space-y-3">
+                                                {finalizedSlot.votes
+                                                    .filter((v: any) => v.participant.status === 'WAITLIST')
+                                                    .map((v: any) => (
+                                                        <li key={v.participant.id} className="flex items-center gap-3 opacity-60">
+                                                            <div className="w-8 h-8 rounded-full bg-yellow-900/20 flex items-center justify-center text-yellow-600 font-bold text-xs ring-1 ring-yellow-900/50">
+                                                                {v.participant.name.substring(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium text-slate-400">
+                                                                    {v.participant.name}
+                                                                    {v.participant.telegramId && <span className="ml-2 text-xs text-yellow-600/50 font-normal">{v.participant.telegramId}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                            </ul>
                                         </div>
                                     )}
                                 </div>
-
-                                <div className="border-t border-slate-700/50 pt-6">
-                                    <AddToCalendar
-                                        event={{
-                                            ...event,
-                                            description: event.description || undefined
-                                        }}
-                                        slot={finalizedSlot}
-                                        className="justify-center"
-                                    />
-                                </div>
-                            </div>
+                            </>
                         ) : event.status === 'CANCELLED' ? (
                             /* CANCELLED STATE UI */
                             <div className="p-8 rounded-2xl bg-slate-900 border border-red-900/50 text-center space-y-6">

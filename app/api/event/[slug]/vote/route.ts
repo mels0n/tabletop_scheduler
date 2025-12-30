@@ -49,25 +49,29 @@ export async function POST(
             select: { status: true, maxPlayers: true, slug: true }
         });
 
+        // Intent: Determine status for the participant
+        let nextStatus = undefined; // Undefined means no change or pending if new
+
         if (targetEvent?.status === 'FINALIZED' && targetEvent.maxPlayers) {
             const acceptedCount = await prisma.participant.count({
                 where: { eventId, status: 'ACCEPTED' }
             });
 
             if (acceptedCount >= targetEvent.maxPlayers) {
-                // Check if current user is already accepted (allow updates)
-                let isAllowed = false;
+                // If it's full, new joiners go to WAITLIST
+                nextStatus = 'WAITLIST';
+
+                // Exception: If current user is already ACCEPTED, keep them ACCEPTED 
                 if (participantId) {
                     const current = await prisma.participant.findUnique({
                         where: { id: participantId },
                         select: { status: true }
                     });
-                    if (current?.status === 'ACCEPTED') isAllowed = true;
+                    if (current?.status === 'ACCEPTED') nextStatus = 'ACCEPTED';
                 }
-
-                if (!isAllowed) {
-                    return NextResponse.json({ error: "This event has been finalized and is at capacity." }, { status: 403 });
-                }
+            } else {
+                // If not full, they can be ACCEPTED (Auto-accept logic for late joiners)
+                nextStatus = 'ACCEPTED';
             }
         }
 
@@ -87,7 +91,7 @@ export async function POST(
                 if (existing && existing.eventId === eventId) {
                     participant = await tx.participant.update({
                         where: { id: participantId },
-                        data: { name, telegramId }
+                        data: { name, telegramId, status: nextStatus }
                     });
 
                     // Intent: Fetch existing votes to preserve timestamps for Fairness
@@ -127,7 +131,8 @@ export async function POST(
                         eventId,
                         name,
                         telegramId,
-                        chatId: existingChatId // Inherit identity if known
+                        chatId: existingChatId, // Inherit identity if known
+                        status: nextStatus || 'PENDING'
                     },
                 });
             }
