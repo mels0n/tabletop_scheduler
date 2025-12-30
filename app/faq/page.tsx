@@ -58,7 +58,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="How do I find my past events?"
-                        answer="Check out the 'My Profile' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access."
+                        answer="Check out the 'My Events' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access."
                     />
                     <FAQItem
                         question="What is a 'Magic Link'?"
