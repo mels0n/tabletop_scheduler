@@ -122,7 +122,7 @@ function NewEventForm() {
                                 type="text"
                                 required
                                 placeholder="e.g. Campaign Session 42"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600"
+                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600 text-base"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                             />
@@ -133,7 +133,7 @@ function NewEventForm() {
                             <textarea
                                 data-testid="event-description-input"
                                 placeholder="What are we playing? Any prep needed?"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all min-h-[100px] placeholder:text-slate-600"
+                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all min-h-[100px] placeholder:text-slate-600 text-base"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                             />
@@ -147,7 +147,7 @@ function NewEventForm() {
                                 type="number"
                                 min="2"
                                 max="100"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32"
+                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32 text-base"
                                 value={minPlayers}
                                 onChange={(e) => setMinPlayers(parseInt(e.target.value))}
                             />
@@ -162,7 +162,7 @@ function NewEventForm() {
                                 min={minPlayers}
                                 max="100"
                                 placeholder="Unimited"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32 placeholder:text-slate-600"
+                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-32 placeholder:text-slate-600 text-base"
                                 value={maxPlayers || ""}
                                 onChange={(e) => {
                                     const val = parseInt(e.target.value);

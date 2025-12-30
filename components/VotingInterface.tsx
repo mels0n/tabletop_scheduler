@@ -110,8 +110,9 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             }
         } else {
             // Intent: Fallback for new user - pre-fill from global user preferences if available.
-            setUserName(localStorage.getItem('tabletop_username') || "");
-            setUserTelegram(localStorage.getItem('tabletop_telegram') || "");
+            // Fix: Only overwrite if currently empty to prevent typing interruption if effect re-runs.
+            setUserName(prev => prev || localStorage.getItem('tabletop_username') || "");
+            setUserTelegram(prev => prev || localStorage.getItem('tabletop_telegram') || "");
         }
     }, [serverParticipantId, eventId, participants, initialSlots]);
 
@@ -230,14 +231,14 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                         <input
                             type="text"
                             placeholder="Your Name (Required)"
-                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
+                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
                             value={userName}
                             onChange={(e) => setUserName(e.target.value)}
                         />
                         <input
                             type="text"
                             placeholder="Telegram Handle (Optional)"
-                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
+                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
                             value={userTelegram}
                             onChange={(e) => setUserTelegram(e.target.value)}
                         />
