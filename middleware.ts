@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
         if (!adminToken) {
             // Intent: Redirect unauthorized users back to the public event page.
             // Note: Presence check is a lightweight authorized heuristic; deeper validation occurs downstream.
-            return NextResponse.redirect(new URL(`/e/${slug}`, request.url));
+            return NextResponse.redirect(new URL(`/e/${slug}?action=login`, request.url));
         }
     }
 

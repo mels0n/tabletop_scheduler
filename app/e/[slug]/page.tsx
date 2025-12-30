@@ -11,6 +11,7 @@ import Link from "next/link";
 
 interface PageProps {
     params: { slug: string };
+    searchParams: { action?: string };
 }
 
 /**
@@ -195,6 +196,10 @@ export default async function EventPage({ params }: PageProps) {
                         event={event}
                         finalizedSlot={finalizedSlot}
                         serverParticipantId={serverParticipantId}
+                        discordIdentity={cookieStore.get("tabletop_user_discord_id")?.value ? {
+                            id: cookieStore.get("tabletop_user_discord_id")!.value,
+                            username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"
+                        } : undefined}
                     />
                 ) : (
                     <VotingInterface
@@ -220,7 +225,7 @@ export default async function EventPage({ params }: PageProps) {
                     </Link>
                 </div>
 
-                <ManagerRecovery slug={event.slug} />
+                <ManagerRecovery slug={event.slug} defaultOpen={searchParams.action === 'login'} />
 
             </div>
         </main>

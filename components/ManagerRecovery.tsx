@@ -15,9 +15,9 @@ import { useRouter } from "next/navigation";
  * @param {string} props.slug - The event slug.
  * @returns {JSX.Element} The recovery modal trigger and content.
  */
-export function ManagerRecovery({ slug }: { slug: string }) {
+export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, defaultOpen?: boolean }) {
     const router = useRouter();
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(defaultOpen);
     const [platform, setPlatform] = useState<"telegram" | "discord">("telegram");
     const [handle, setHandle] = useState("");
     const [loading, setLoading] = useState(false);

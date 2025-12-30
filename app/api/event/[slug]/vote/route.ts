@@ -36,7 +36,7 @@ export async function POST(
         // Legacy: Ideally strictly slug-based, but currently numeric ID is used in API calls.
         const eventId = parseInt(params.slug);
         const body = await req.json();
-        const { name, telegramId, votes, participantId } = body;
+        const { name, telegramId, votes, participantId, discordId, discordUsername } = body;
 
         if (!name || !votes || !Array.isArray(votes)) {
             log.warn("Invalid vote data", { eventId });
@@ -101,7 +101,13 @@ export async function POST(
                 if (existing && existing.eventId === eventId) {
                     participant = await tx.participant.update({
                         where: { id: participantId },
-                        data: { name, telegramId, status: nextStatus }
+                        data: {
+                            name,
+                            telegramId,
+                            discordId,
+                            discordUsername,
+                            status: nextStatus
+                        }
                     });
 
                     // Intent: Fetch existing votes to preserve timestamps for Fairness
@@ -141,6 +147,8 @@ export async function POST(
                         eventId,
                         name,
                         telegramId,
+                        discordId,
+                        discordUsername,
                         chatId: existingChatId, // Inherit identity if known
                         status: nextStatus || 'PENDING'
                     },
