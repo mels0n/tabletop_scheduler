@@ -4,7 +4,7 @@ TabletopTime is primarily a user-facing Next.js application, but it exposes seve
 
 ## Base URL
 All API routes are prefixed with `/api`.
-Example: `https://your-domain.com/api/event`
+Example: `https://tabletoptime.us/api/event`
 
 ---
 
@@ -29,7 +29,7 @@ Example: `https://your-domain.com/api/event`
 ### Pre-fill Creation Form
 You can link users to the "Create Event" page with pre-filled values using query parameters.
 
-**UID:** `https://your-domain.com/new`
+**UID:** `https://tabletoptime.us/new`
 
 **Parameters:**
 - `title` (string): Pre-fills title
@@ -39,7 +39,7 @@ You can link users to the "Create Event" page with pre-filled values using query
 - `slots` (string): JSON stringified array of objects `[{startTime: ISO, endTime: ISO}]`
 
 **Example:**
-`https://tabletopscheduler.com/new?title=Raid%20Night&maxPlayers=8&minPlayers=8`
+`https://tabletoptime.us/new?title=Raid%20Night&maxPlayers=8&minPlayers=8`
 
 ### Get Event Details
 Retrieve read-only details about a specific event.

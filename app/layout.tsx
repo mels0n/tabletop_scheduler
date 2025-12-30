@@ -94,7 +94,7 @@ export default function RootLayout({
                             "@context": "https://schema.org",
                             "@type": "WebSite",
                             "name": "Tabletop Time",
-                            "url": "https://tabletop.melson.us",
+                            "url": "https://www.tabletoptime.us",
                             "author": {
                                 "@type": "Person",
                                 "name": "Christopher Melson",
