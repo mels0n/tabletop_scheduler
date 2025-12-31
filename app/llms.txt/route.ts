@@ -1,44 +1,56 @@
-import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+export const dynamic = 'force-dynamic'; // Ensure we check env var on every request if needed, though for env vars static generation might cache. 
+// Actually, 'force-dynamic' is safer to respect the runtime env var if it changes, but usually build time env var is baked in.
+// Since we use process.env.NEXT_PUBLIC_IS_HOSTED which is available at build time, we can arguably use static, 
+// BUT to be safe and allow runtime config if switched (unlikely for NEXT_PUBLIC), dynamic is fine for a text file.
 
 export async function GET() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
+    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
     if (!isHosted) {
-        return new NextResponse('Not Found', { status: 404 });
+        return new Response('Not Found', { status: 404 });
     }
 
-    const content = `# Tabletop Scheduler Context
-Project: Tabletop Time
-Description: A privacy-first, login-free scheduler for D&D and Board Games.
-Stack: Next.js, Prisma, PostgreSQL, Tailwind CSS
-License: Open Source
+    const content = `# Tabletop Time - Project Documentation
 
-## Frequently Asked Questions
+## Summary
+Tabletop Time is a privacy-first, open-source scheduling tool for RPG groups and board gamers. It solves the "scheduling boss" problem without requiring user accounts.
 
-### Why do I not need to create an account?
-TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service.
+## Core Concepts
 
-### How does the app remember who I am?
-We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again.
+### 1. Identity & Auth
+- **No Passwords**: Users are identified by browser Cookies and LocalStorage.
+- **Magic Links**: Cross-device recovery is handled by sending a unique, time-limited link via Telegram or Discord Bot DMs.
+- **Roles**:
+  - **Host/Manager**: The creator of the event. Has a special \`admin_token\` cookie.
+  - **Participant**: Anyone else. Can vote on slots.
 
-### Where is my data stored?
-If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don't mine, sell, or keep your data. If you are self-hosting, the data lives on your own server and stays with you.
+### 2. Voting & Logic
+- **Yes**: Guaranteed availability.
+- **If Needed**: Conditional availability. Only counts towards Quorum if "Yes" votes are insufficient.
+- **No**: Unavailable.
+- **Quorum**: The minimum number of players (set by Host) required to confirm a slot.
 
-### How do I find my past events?
-Check out the 'My Profile' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access.
+### 3. Integrations
+- **Telegram**: Self-hosted bot. Can PIN a live dashboard message in a group chat. Updates in real-time.
+- **Discord**: Self-hosted bot. Post event summaries and provides OAuth2 for quick Manager Login.
 
-### What is a 'Magic Link'?
-(Optional) If you switch devices or clear your cache, you might lose access to your events. You can generate a 'Magic Link' to save somewhere safe. Clicking it on a new device will restore your access. This is completely optional.
+## Tech Stack
+- **Framework**: Next.js 14 (App Router)
+- **Database**: PostgreSQL (Prisma ORM)
+- **Styling**: Tailwind CSS (Vanilla, no component libraries)
+- **Deployment**: VSCode + Docker (Self-Hosted) or Vercel (Hosted)
 
-### Why did I make this tool?
-I have a group of friends that plays Magic the Gathering - some of whom flat refuse to create an account at some data farming website. If I'm honest, I'd prefer to control my own data too. Also, some have families, some work strange hours, some have season tickets to sports, some have kids playing sports... trying to find a date that works for everyone is chaos.
+## Rules for Agents (Contributions)
+- **AEO First**: All new features must have a "Semantic Twin" (a Guide or FAQ page) with Schema.org JSON-LD.
+- **FSD**: Follow Feature-Sliced Design. Use \`features/\` for domains, \`shared/\` for utils.
+- **No Auth Walls**: Never require a login for basic participant features (voting).
 `;
 
-    return new NextResponse(content, {
+    return new Response(content, {
         headers: {
             'Content-Type': 'text/plain',
+            'Cache-Control': 'public, max-age=3600, s-maxage=86400',
         },
     });
 }

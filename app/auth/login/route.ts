@@ -3,6 +3,7 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { getBaseUrl } from "@/shared/lib/url";
 import { cookies } from "next/headers";
+import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 
 const log = Logger.get("Auth:Global");
 
@@ -56,30 +57,22 @@ export async function GET(request: NextRequest) {
         // Intent: Authenticate the user globally across the app based on their Telegram Chat ID OR Discord ID.
         if (validToken.chatId) {
             cookies().set("tabletop_user_chat_id", validToken.chatId, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "lax",
-                path: "/",
-                maxAge: 60 * 60 * 24 * 30
+                ...COOKIE_BASE_OPTIONS,
+                maxAge: COOKIE_MAX_AGE
             });
         }
 
         if (validToken.discordId) {
             cookies().set("tabletop_user_discord_id", validToken.discordId, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "lax",
-                path: "/",
-                maxAge: 60 * 60 * 24 * 30
+                ...COOKIE_BASE_OPTIONS,
+                maxAge: COOKIE_MAX_AGE
             });
             // Also set username for display
             if (validToken.discordUsername) {
                 cookies().set("tabletop_user_discord_name", validToken.discordUsername, {
+                    ...COOKIE_BASE_OPTIONS,
                     httpOnly: false, // Readable by client
-                    secure: process.env.NODE_ENV === "production",
-                    sameSite: "lax",
-                    path: "/",
-                    maxAge: 60 * 60 * 24 * 30
+                    maxAge: COOKIE_MAX_AGE
                 });
             }
         }

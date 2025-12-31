@@ -24,24 +24,32 @@ export function Footer() {
 
                 {/* Navigation Links */}
                 <div className="flex items-center gap-6">
+                    <Link href="/features" className="hover:text-indigo-400 transition-colors">
+                        Features
+                    </Link>
+                    <Link href="/how-it-works" className="hover:text-indigo-400 transition-colors">
+                        How it Works
+                    </Link>
+
                     {isHosted && (
                         <>
-                            <Link href="/blog" className="hover:text-indigo-400 transition-colors">
-                                Blog
+                            <Link href="/pricing" className="hover:text-indigo-400 transition-colors">
+                                Pricing
                             </Link>
                             <Link href="/about" className="hover:text-indigo-400 transition-colors">
                                 About
                             </Link>
-                            <Link href="/pricing" className="hover:text-indigo-400 transition-colors">
-                                Pricing
+                            <Link href="/blog" className="hover:text-indigo-400 transition-colors">
+                                Blog
                             </Link>
                         </>
                     )}
-                    <Link href="/how-it-works" className="hover:text-indigo-400 transition-colors">
-                        How it Works
-                    </Link>
+
                     <Link href="/faq" className="hover:text-indigo-400 transition-colors">
                         FAQ
+                    </Link>
+                    <Link href="/privacy" className="hover:text-indigo-400 transition-colors">
+                        Privacy
                     </Link>
 
                     <a

@@ -11,15 +11,14 @@ const log = Logger.get("Actions");
  * @param {string} slug - The event slug identifier.
  * @param {string} token - The administrative token.
  */
+// Intent: Centralized cookie configuration for 400-day persistence
+import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
+
 export async function setAdminCookie(slug: string, token: string) {
     const cookieStore = cookies();
-    const isProd = process.env.NODE_ENV === "production";
     const opts = {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: (isProd ? "none" : "lax") as "none" | "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30 // Intent: Persist session for 30 days
+        ...COOKIE_BASE_OPTIONS,
+        maxAge: COOKIE_MAX_AGE
     };
     cookieStore.set(`tabletop_admin_${slug}`, token, opts);
 }

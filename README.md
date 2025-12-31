@@ -18,7 +18,10 @@ TabletopTime helps you find the best time for your gaming group to meet. It is d
   - **Discord Exclusive**: 
     - "Recover with Discord" allows instant login for event managers.
     - Post live-updating dashboards to your channel.
-- **Privacy-First**: Your data stays on your server (SQLite). We capture as little information as possible and use your local browser cache to remember who you are.
+- **Privacy-First**: 
+  - **Zero Tracking**: We do not use Google Analytics, Facebook Pixels, or any third-party trackers.
+  - **Self-Hostable**: Your data stays on your server (SQLite). We capture as little information as possible.
+  - **Persistence**: We use cookies only to restore your session, never to track you.
 
 ## One Click Start (Cloud)
 

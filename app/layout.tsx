@@ -56,9 +56,9 @@ export const metadata: Metadata = {
 };
 
 import { Navbar } from "@/components/Navbar";
-
-import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import Script from "next/script";
+
+
 
 /**
  * @component RootLayout
@@ -82,7 +82,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${inter.className} min-h-screen flex flex-col`}>
-                {isHosted && <GoogleAnalytics />}
+
                 <Navbar />
                 <main className="flex-grow">
                     {children}

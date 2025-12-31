@@ -80,7 +80,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="How does the app remember who I am?"
-                        answer="We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
+                        answer="For verified users (Telegram/Discord), we use a secure cookie that lasts for 400 days and auto-refreshes every time you visit. For anonymous users, we use your browser's local storage to remember your name."
                     />
 
 
