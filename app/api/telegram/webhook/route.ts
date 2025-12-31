@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 import { sendTelegramMessage } from "@/features/telegram";
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:Webhook");
 
@@ -198,7 +198,7 @@ async function captureParticipantIdentity(chatId: number, user: any) {
  */
 async function handleRecoverySetup(chatId: number, user: any, slug: string, recoveryToken: string, token: string) {
     // Verify Security Token
-    const { verifyRecoveryToken } = await import("@/lib/token");
+    const { verifyRecoveryToken } = await import("@/features/auth/model/token");
     if (!verifyRecoveryToken(slug, recoveryToken)) {
         await sendTelegramMessage(chatId, "⚠️ <b>Link Expired or Invalid</b>\n\nPlease go back to the Manage page and click the button again.", token);
         return;
@@ -253,7 +253,7 @@ async function handleRecoverySetup(chatId: number, user: any, slug: string, reco
  * @description Generates a Magic Login Link valid for 15 minutes.
  */
 async function handleGlobalLogin(chatId: number, user: any, token: string) {
-    const { getBaseUrl } = await import("@/lib/url");
+    const { getBaseUrl } = await import("@/shared/lib/url");
     const { headers } = await import("next/headers");
 
     // 1. Create Login Token
@@ -340,9 +340,9 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
             include: { timeSlots: { include: { votes: true } } }
         });
         const participants = await prisma.participant.count({ where: { eventId: event.id } });
-        const { generateStatusMessage } = await import("@/lib/status");
+        const { generateStatusMessage } = await import("@/shared/lib/status");
         const { pinChatMessage } = await import("@/features/telegram");
-        const { getBaseUrl } = await import("@/lib/url");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const { headers } = await import("next/headers");
 
         if (fullEvent) {

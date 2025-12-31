@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import Logger from "@/lib/logger";
-import { getBaseUrl } from "@/lib/url";
+import prisma from "@/shared/lib/prisma";
+import Logger from "@/shared/lib/logger";
+import { getBaseUrl } from "@/shared/lib/url";
 import { cookies } from "next/headers";
 
 const log = Logger.get("Auth:Global");

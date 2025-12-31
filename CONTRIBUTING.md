@@ -54,6 +54,7 @@ Thank you for your interest in improving TabletopTime! This project is a self-ho
   - `app/e/[slug]/`: The main event page (voting).
   - `app/e/[slug]/manage/`: The admin dashboard for a specific event.
 - `components/`: Reusable React components.
+- `features/`: Vertical slices of business logic (FSD), e.g., `telegram/`.
 - `lib/`: Shared helpers (Telegram, URL logic, Prisma client).
 - `prisma/`: Database schema and migrations.
 

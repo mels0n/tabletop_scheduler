@@ -15,7 +15,9 @@ TabletopTime helps you find the best time for your gaming group to meet. It is d
 - **Telegram / Discord Bot**: 
   - Pins a live-updating dashboard in your group chat.
   - Notifies everyone when an event is finalized.
-  - **Discord Exclusive**: "Recover with Discord" allows instant login for event managers.
+  - **Discord Exclusive**: 
+    - "Recover with Discord" allows instant login for event managers.
+    - Post live-updating dashboards to your channel.
 - **Privacy-First**: Your data stays on your server (SQLite). We capture as little information as possible and use your local browser cache to remember who you are.
 
 ## One Click Start (Cloud)

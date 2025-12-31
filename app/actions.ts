@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Actions");
 
@@ -24,7 +24,7 @@ export async function setAdminCookie(slug: string, token: string) {
     cookieStore.set(`tabletop_admin_${slug}`, token, opts);
 }
 
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 
 /**
  * Initiates the recovery process for a manager link via Telegram DM.
@@ -50,7 +50,7 @@ export async function recoverManagerLink(slug: string, handle: string) {
         }
 
         const { sendTelegramMessage } = await import("@/features/telegram");
-        const { getBaseUrl } = await import("@/lib/url");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const { headers } = await import("next/headers");
 
         const baseUrl = getBaseUrl(headers());
@@ -97,7 +97,7 @@ export async function recoverDiscordManagerLink(slug: string, username: string) 
     // Let's rely on stored first. If mismatch or null, try to fetch fresh from Discord if we have the ID.
     if (!storedName || storedName !== inputName) {
         if (process.env.DISCORD_BOT_TOKEN) {
-            const { getDiscordUser } = await import("@/lib/discord");
+            const { getDiscordUser } = await import("@/features/discord/model/discord");
             const discordUser = await getDiscordUser(event.managerDiscordId, process.env.DISCORD_BOT_TOKEN);
 
             if (discordUser) {
@@ -145,7 +145,7 @@ export async function dmManagerLink(slug: string) {
 
     const { sendTelegramMessage } = await import("@/features/telegram");
 
-    const { getBaseUrl } = await import("@/lib/url");
+    const { getBaseUrl } = await import("@/shared/lib/url");
     const { headers } = await import("next/headers");
     const headerList = headers();
 
@@ -286,7 +286,7 @@ export async function deleteEvent(slug: string) {
 
     // Intent: Cleanup external Discord state
     if (process.env.DISCORD_BOT_TOKEN && event.discordChannelId) {
-        const { sendDiscordMessage, unpinDiscordMessage } = await import("@/lib/discord");
+        const { sendDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
 
         if (event.discordMessageId) {
             await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
@@ -358,7 +358,7 @@ export async function cancelEvent(slug: string) {
             data: { status: 'CANCELLED' }
         });
 
-        const { getBaseUrl } = await import("@/lib/url");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const { headers } = await import("next/headers");
         const baseUrl = getBaseUrl(headers());
 
@@ -390,7 +390,7 @@ export async function cancelEvent(slug: string) {
 
         // Intent: Update Discord message
         if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { editDiscordMessage, sendDiscordMessage } = await import("@/lib/discord");
+            const { editDiscordMessage, sendDiscordMessage } = await import("@/features/discord/model/discord");
             const token = process.env.DISCORD_BOT_TOKEN!;
 
             if (event.discordMessageId) {
@@ -463,7 +463,7 @@ export async function sendGlobalMagicLink(handle: string) {
         if (chatId) {
             // Case A: User is Known & Verified (Has Chat ID) -> Send Link
             const { sendTelegramMessage } = await import("@/features/telegram");
-            const { getBaseUrl } = await import("@/lib/url");
+            const { getBaseUrl } = await import("@/shared/lib/url");
             const { headers } = await import("next/headers");
 
             // Intent: Create short-lived authentication token (15 mins)
@@ -607,8 +607,8 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
         });
 
         // 2. Send Hello / Init Dashboard
-        const { sendDiscordMessage, pinDiscordMessage } = await import("@/lib/discord");
-        const { getBaseUrl } = await import("@/lib/url");
+        const { sendDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const { headers } = await import("next/headers");
         const baseUrl = getBaseUrl(headers());
 
@@ -632,7 +632,7 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
         if (msgId) {
             // Calculate Dashboard State
             const participants = await prisma.participant.count({ where: { eventId: event.id } });
-            const { generateStatusMessage } = await import("@/lib/status");
+            const { generateStatusMessage } = await import("@/shared/lib/status");
             const fullEvent = await prisma.event.findUnique({
                 where: { id: event.id },
                 include: { timeSlots: { include: { votes: true } } }
@@ -677,7 +677,7 @@ export async function listDiscordChannels(guildId: string) {
     if (!token) return { error: "Server Configuration Error" };
 
     try {
-        const { getGuildChannels } = await import("@/lib/discord");
+        const { getGuildChannels } = await import("@/features/discord/model/discord");
         const channels = await getGuildChannels(guildId, token);
         return { success: true, channels };
     } catch (e) {
@@ -731,7 +731,7 @@ export async function dmDiscordManagerLink(slug: string) {
     const { token } = await generateShortRecoveryToken(slug);
     if (!token) return { error: "Failed to generate token." };
 
-    const { createDMChannel, sendDiscordMessage } = await import('@/lib/discord');
+    const { createDMChannel, sendDiscordMessage } = await import('@/features/discord/model/discord');
     const tokenVal = process.env.DISCORD_BOT_TOKEN || "";
 
     // 1. Open DM Channel
@@ -758,9 +758,9 @@ export async function dmDiscordManagerLink(slug: string) {
  * @param username The Discord username (or handle) to link.
  */
 export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
-    const prisma = (await import("@/lib/prisma")).default;
-    const { createDMChannel, sendDiscordMessage } = await import('@/lib/discord');
-    const { getBaseUrl } = await import("@/lib/url");
+    const prisma = (await import("@/shared/lib/prisma")).default;
+    const { createDMChannel, sendDiscordMessage } = await import('@/features/discord/model/discord');
+    const { getBaseUrl } = await import("@/shared/lib/url");
     const { headers } = await import("next/headers");
     const token = process.env.DISCORD_BOT_TOKEN;
 

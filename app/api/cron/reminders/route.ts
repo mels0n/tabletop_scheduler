@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("CronReminders");
 

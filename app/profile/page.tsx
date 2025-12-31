@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
 import { ProfileDashboard } from "./ProfileDashboard";
 

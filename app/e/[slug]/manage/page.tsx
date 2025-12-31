@@ -1,8 +1,8 @@
 
 import { notFound } from "next/navigation";
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 import Link from "next/link";
-import { checkSlotQuorum } from "@/lib/quorum";
+import { checkSlotQuorum } from "@/shared/lib/quorum";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ManagerControls } from "@/components/ManagerControls";
 import { HistoryTracker } from "@/components/HistoryTracker";
@@ -12,7 +12,7 @@ import { EditLocationModal } from "./EditLocationModal";
 import { getBotUsername } from "@/features/telegram";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
-import { DiscordConnect } from "@/components/DiscordConnect";
+import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { generateShortRecoveryToken } from "@/app/actions";
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from "next/navigation";
-import { getAllPosts } from '@/lib/blog';
+import { getAllPosts } from '@/shared/lib/blog';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

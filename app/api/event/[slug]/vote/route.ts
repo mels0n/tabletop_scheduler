@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import Logger from "@/lib/logger";
+import prisma from "@/shared/lib/prisma";
+import Logger from "@/shared/lib/logger";
 
-import { checkEventQuorum } from "@/lib/quorum";
+import { checkEventQuorum } from "@/shared/lib/quorum";
 
 const log = Logger.get("API:Vote");
 
@@ -190,11 +190,11 @@ export async function POST(
         const participants = await prisma.participant.count({ where: { eventId } });
 
         // Detect URL dynamically
-        const { getBaseUrl } = await import("@/lib/url");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const { headers } = await import("next/headers");
         const headerList = headers();
         const baseUrl = getBaseUrl(headerList);
-        const { generateStatusMessage } = await import("@/lib/status");
+        const { generateStatusMessage } = await import("@/shared/lib/status");
         const statusMsg = generateStatusMessage(event, participants, baseUrl);
 
         // --- TELEGRAM LOGIC ---
@@ -232,7 +232,7 @@ export async function POST(
         });
 
         if (event && event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/lib/discord");
+            const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
 
             // Notification
             await sendDiscordMessage(event.discordChannelId, `🚀 **${userDisplay}** updated availability for **${event.title}**!`, process.env.DISCORD_BOT_TOKEN);
@@ -327,7 +327,7 @@ export async function POST(
 
                     // Notify Candidate via Discord (if mapped)
                     if (candidate.discordId && process.env.DISCORD_BOT_TOKEN) {
-                        const { createDMChannel, sendDiscordMessage } = await import("@/lib/discord");
+                        const { createDMChannel, sendDiscordMessage } = await import("@/features/discord/model/discord");
                         const dm = await createDMChannel(candidate.discordId, process.env.DISCORD_BOT_TOKEN);
                         if (dm.id) {
                             await sendDiscordMessage(dm.id, `🎟️ **You're In!**\n\nA spot opened up for **${event.title}** and you've been moved off the waitlist!`, process.env.DISCORD_BOT_TOKEN);
@@ -343,7 +343,7 @@ export async function POST(
 
         if (event && event.managerChatId && process.env.TELEGRAM_BOT_TOKEN) {
             const { sendTelegramMessage } = await import("@/features/telegram");
-            const { getBaseUrl } = await import("@/lib/url");
+            const { getBaseUrl } = await import("@/shared/lib/url");
             const { headers } = await import("next/headers");
             const baseUrl = getBaseUrl(headers());
             const link = `${baseUrl}/e/${event.slug}/manage`;

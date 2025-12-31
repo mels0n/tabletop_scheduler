@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 import { format } from "date-fns";
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:ICS");
 
@@ -47,7 +47,7 @@ export async function GET(
         const end = formatDateICS(new Date(slot.endTime));
 
         // Determine Base URL purely for the Description link
-        const { getBaseUrl } = await import("@/lib/url");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const origin = getBaseUrl(req.headers);
         const url = `${origin}/e/${event.slug}`;
 

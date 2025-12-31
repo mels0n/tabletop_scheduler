@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 
 export const size = {
     width: 1200,

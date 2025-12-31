@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Bot, CheckCircle, ExternalLink, HelpCircle } from 'lucide-react';
+import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
     title: 'How to Setup Discord Integration | TabletopTime',
@@ -80,28 +81,24 @@ export default function DiscordSetupGuide() {
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{
-                        __html: JSON.stringify({
-                            "@context": "https://schema.org",
-                            "@type": "HowTo",
-                            "name": "How to Setup Discord Integration for TabletopTime",
-                            "step": [
+                        __html: JSON.stringify(SchemaGenerator.howTo({
+                            name: "How to Setup Discord Integration for TabletopTime",
+                            description: "Learn how to create a Discord application, configure bot permissions, and set up OAuth2 for seamless integration.",
+                            steps: [
                                 {
-                                    "@type": "HowToStep",
-                                    "name": "Create Discord Application",
-                                    "text": "Create a new app in the Discord Developer Portal."
+                                    name: "Create Discord Application",
+                                    text: "Create a new app in the Discord Developer Portal."
                                 },
                                 {
-                                    "@type": "HowToStep",
-                                    "name": "Enable Intents",
-                                    "text": "Enable Message Content Intent in the Bot settings."
+                                    name: "Enable Intents",
+                                    text: "Enable Message Content Intent in the Bot settings."
                                 },
                                 {
-                                    "@type": "HowToStep",
-                                    "name": "Configure OAuth2",
-                                    "text": "Add your callback URL and copy the Client ID and Secret to your environment variables."
+                                    name: "Configure OAuth2",
+                                    text: "Add your callback URL and copy the Client ID and Secret to your environment variables."
                                 }
                             ]
-                        })
+                        }))
                     }}
                 />
             </div>

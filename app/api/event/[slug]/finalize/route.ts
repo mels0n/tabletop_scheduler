@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 import { redirect } from "next/navigation";
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:Finalize");
 
@@ -145,7 +145,7 @@ export async function POST(
             return updatedEvent;
         });
 
-        const { getBaseUrl } = await import("@/lib/url");
+        const { getBaseUrl } = await import("@/shared/lib/url");
         const origin = getBaseUrl(req.headers);
         const eventLink = `${origin}/e/${params.slug}`;
 
@@ -182,7 +182,7 @@ export async function POST(
         // Action: Telegram Notification Cycle (Public Group)
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
             const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
-            const { buildFinalizedMessage } = await import("@/lib/eventMessage");
+            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
             const slotTime = event.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
 
             // Step 1: Remove the previous voting message (dashboard).
@@ -210,8 +210,8 @@ export async function POST(
 
         // Action: Discord Notification Cycle
         if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/lib/discord");
-            const { buildFinalizedMessage } = await import("@/lib/eventMessage");
+            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
+            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
             const slotTime = event.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
 
             // Step 1: Unpin the previous voting message (dashboard).

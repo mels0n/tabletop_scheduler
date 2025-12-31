@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { SchemaGenerator } from "@/shared/lib/aeo";
 
 /**
  * @component FAQPage
@@ -26,89 +27,36 @@ import { DataTooltip } from "@/components/DataTooltip";
  * - Pure client component for simplicity, though could be RSC.
  */
 export default function FAQPage() {
-    const jsonLd = {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "FAQPage",
-                "mainEntity": [
-                    {
-                        "@type": "Question",
-                        "name": "Wait, I don't need an account?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "That's right! TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "How does the app remember who I am?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "Where is my data stored?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. If you are self-hosting, the data lives on your own server."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "How do I find my past events?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "Check out the 'My Events' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "What is a 'Magic Link'?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "How does the waitlist work?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked."
-                        }
-                    },
-                    {
-                        "@type": "Question",
-                        "name": "Why did I make this tool?",
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": "Tabletop Time started because my own Magic: The Gathering group was falling apart. We needed something fast, private, and specific to gamers."
-                        }
-                    }
-                ]
-            },
-            {
-                "@type": "BreadcrumbList",
-                "itemListElement": [
-                    {
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "Home",
-                        "item": "https://www.tabletoptime.us"
-                    },
-                    {
-                        "@type": "ListItem",
-                        "position": 2,
-                        "name": "FAQ",
-                        "item": "https://www.tabletoptime.us/faq"
-                    }
-                ]
-            }
-        ]
-    };
+    const jsonLd = SchemaGenerator.faq([
+        {
+            question: "Wait, I don't need an account?",
+            answer: "That's right! TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."
+        },
+        {
+            question: "How does the app remember who I am?",
+            answer: "We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
+        },
+        {
+            question: "Where is my data stored?",
+            answer: "If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. If you are self-hosting, the data lives on your own server."
+        },
+        {
+            question: "How do I find my past events?",
+            answer: "Check out the 'My Events' page! Since we don't have accounts, we track the events you visit on this device and list them there for easy access."
+        },
+        {
+            question: "What is a 'Magic Link'?",
+            answer: "If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
+        },
+        {
+            question: "How does the waitlist work?",
+            answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked."
+        },
+        {
+            question: "Why did I make this tool?",
+            answer: "Tabletop Time started because my own Magic: The Gathering group was falling apart. We needed something fast, private, and specific to gamers."
+        }
+    ]);
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">

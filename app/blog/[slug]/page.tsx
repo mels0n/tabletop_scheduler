@@ -1,4 +1,4 @@
-import { getPostBySlug, getAllPosts } from '@/lib/blog';
+import { getPostBySlug, getAllPosts } from '@/shared/lib/blog';
 import { notFound } from 'next/navigation';
 import Markdown from 'react-markdown';
 import { Metadata } from 'next';

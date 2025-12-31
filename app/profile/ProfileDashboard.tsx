@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { sendGlobalMagicLink } from "@/app/actions";
 
 
-import { DiscordLoginSender } from "@/components/DiscordLoginSender";
+import { DiscordLoginSender } from "@/features/discord/ui/DiscordLoginSender";
 
 interface ServerEvent {
     slug: string;
