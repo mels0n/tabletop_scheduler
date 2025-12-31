@@ -55,7 +55,9 @@ export default function PrivacyPage() {
                         <div className="pt-4">
                             <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: Do I need an account?</h3>
                             <p className="text-slate-300">
-                                <strong>Absolutely not.</strong> You can schedule, vote, and manage events purely as a &quot;Guest&quot; using a secure Magic Link. We do not have a &quot;Sign Up&quot; page.
+                                <strong>Absolutely not.</strong> You can schedule, vote, and manage events purely as a &quot;Guest&quot; using your browser&apos;s local storage. We do not require an email or password.
+                                <br /><br />
+                                <em>Optional:</em> You can link Telegram/Discord for cross-device recovery.
                             </p>
                         </div>
 
