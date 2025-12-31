@@ -62,11 +62,10 @@ export default function FeaturesPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800 text-slate-300 text-sm md:text-base">
-                                <Row label="Account Required" checkTT={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={false} />
+                                <Row label="No Sign-Up Needed" checkTT={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={false} />
                                 <Row label="Quorum (Min Players)" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
                                 <Row label="Waitlist & Capacity" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Recurring Events" checkTT={true} checkW2M={false} checkCal={true} checkApps={true} checkChat={false} />
-                                <Row label="Chat Bots (Discord/TG)" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={true} noteChat="Native Polls" />
+                                <Row label="Optional Chatbots" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={true} noteChat="Native Polls" />
                                 <Row label="Works for Large Groups" checkTT={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={true} />
                             </tbody>
                         </table>
@@ -102,7 +101,7 @@ export default function FeaturesPage() {
 
 
                 <div className="text-center pt-12 border-t border-slate-800">
-                    <Link href="/" className="inline-flex items-center justify-center px-8 py-4 bg-white text-slate-950 font-bold rounded-full hover:bg-indigo-50 transition-colors text-lg">
+                    <Link href="/new" className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.6)] hover:scale-105 text-lg">
                         Start Your First Event &rarr;
                     </Link>
                 </div>
@@ -129,20 +128,20 @@ function Row({ label, checkTT, checkW2M, checkCal, checkApps, checkChat, noteCha
         <tr className="hover:bg-slate-800/20 transition-colors">
             <td className="py-4 pl-4 font-medium">{label}</td>
             <td className="py-4 px-2 bg-indigo-500/5 font-bold text-indigo-300">
-                {checkTT === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-slate-600 inline" />}
+                {checkTT === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
             </td>
             <td className="py-4 px-2">
-                {checkW2M === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-slate-600 inline" />}
+                {checkW2M === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
             </td>
             <td className="py-4 px-2">
-                {checkCal === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-slate-600 inline" />}
+                {checkCal === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
             </td>
             <td className="py-4 px-2">
-                {checkApps === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-slate-600 inline" />}
+                {checkApps === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
             </td>
             <td className="py-4 px-2">
                 {checkChat === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : (
-                    noteChat ? <span className="text-xs text-amber-400">{noteChat}</span> : <X className="w-5 h-5 text-slate-600 inline" />
+                    noteChat ? <span className="text-xs text-amber-400">{noteChat}</span> : <X className="w-5 h-5 text-rose-500 inline" />
                 )}
             </td>
         </tr>

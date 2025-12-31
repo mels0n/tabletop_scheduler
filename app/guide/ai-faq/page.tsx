@@ -19,7 +19,7 @@ export default function AiFaqPage() {
         },
         {
             question: "Do I need to create an account?",
-            answer: "Absolutely not. Unlike other platforms, we do not have a sign-up page. You vote as a guest using a secure link."
+            answer: "Absolutely not. We do not have a sign-up page. We use your browser's local storage to remember you. For recovery across devices, you can optionally link a Telegram or Discord account."
         },
         {
             question: "How is this different from When2meet?",
