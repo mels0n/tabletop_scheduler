@@ -79,7 +79,7 @@ export default async function ManageEventPage({ params }: PageProps) {
         notFound();
     }
 
-    const botUsername = await getBotUsername(process.env.TELEGRAM_BOT_TOKEN || '');
+    const botUsername = await getBotUsername(process.env.TELEGRAM_BOT_TOKEN || '') || 'TabletopSchedulerBot';
 
     // Algorithm: Score and Sort Slots
     const slots = event.timeSlots.map(slot => {

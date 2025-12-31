@@ -31,7 +31,7 @@ TabletopTime uses environment variables for configuration. You can set these in 
 |----------|:--------:|:-------:|-------------|
 | `TELEGRAM_BOT_TOKEN` | No | - | The HTTP API Token from @BotFather. |
 | `NEXT_PUBLIC_BASE_URL` | No | - | Public URL of the app (e.g. `https://myapp.vercel.app`). Setting this **ENABLES Webhook Mode** automatically. |
-| `TELEGRAM_BOT_USERNAME` | No | `TabletopSchedulerBot` | Your bot's handle (without @). Used for generating deep links (e.g. Magic Links). Important for self-hosting! |
+
 
 ## Discord Integration
 *Required for Discord notifications and "Recover with Discord".*

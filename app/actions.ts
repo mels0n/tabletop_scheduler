@@ -501,10 +501,12 @@ export async function sendGlobalMagicLink(handle: string) {
             }) > 0;
 
             if (exists) {
+                const { getBotUsername } = await import("@/features/telegram");
+                const botName = await getBotUsername(process.env.TELEGRAM_BOT_TOKEN!) || "TabletopSchedulerBot";
                 return {
                     error: "UNLINKED",
                     message: "We found your events, but the bot hasn't verified you yet.",
-                    deepLink: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME || "TabletopSchedulerBot"}?start=recover_handle`
+                    deepLink: `https://t.me/${botName}?start=recover_handle`
                 };
             } else {
                 return { error: "No events found for this handle." };
