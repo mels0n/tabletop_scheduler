@@ -1,0 +1,25 @@
+# Tabletop Scheduler (TabletopTime)
+
+> **The Privacy-First, No-Account Game Night Scheduler**
+
+## Overview
+TabletopTime is an open-source, simplified scheduling tool designed for tabletop gaming groups (D&D, MTG, Board Games). It prioritizes privacy, ease of use, and "Game Night Logistics" over complex calendar integrations.
+
+## Core Features
+*   **No Accounts Required**: Users vote via secure "Magic Links". No signup page exists.
+*   **Quorum Logic**: Automatically identifies time slots where the minimum number of players (Quorum) are available.
+*   **Waitlists**: Manages capacity limits with auto-promotion logic.
+*   **Privacy Absolute**: Zero third-party tracking (No Google Analytics). Self-hostable via Docker.
+*   **Integrations**: 
+    *   **Telegram**: Pins live dashboards to group chats.
+    *   **Discord**: Manages event channels and role-based recovery.
+
+## Disambiguation
+*   **We are NOT**: "Tabletop.Events" (Convention Software).
+*   **We are NOT**: The "Tabletop Time" YouTube Channel.
+*   **We DO NOT**: Track game collections or integrate with BoardGameGeek (BGG).
+
+## Documentation
+*   **Privacy Policy**: https://www.tabletoptime.us/privacy
+*   **AI FAQ**: https://www.tabletoptime.us/guide/ai-faq
+*   **Source Code**: https://github.com/mels0n/tabletop_scheduler

@@ -5,10 +5,7 @@ const nextConfig = {
         instrumentationHook: true,
     },
     webpack: (config, { webpack }) => {
-        if (process.env.IS_DOCKER_BUILD === 'true') {
-            config.resolve.alias['@/components/GoogleAdBar'] = '@/components/NoOp';
-            config.resolve.alias['@/components/GoogleAnalytics'] = '@/components/NoOp';
-        }
+
         return config;
     },
 };

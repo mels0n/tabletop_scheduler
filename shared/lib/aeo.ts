@@ -10,6 +10,9 @@ export type SchemaOrgSoftwareApp = {
     featureList: string[];
     price?: string;
     currency?: string;
+    alternateName?: string;
+    disambiguatingDescription?: string;
+
 };
 
 export type SchemaOrgHowToStep = {
@@ -61,7 +64,10 @@ export const SchemaGenerator = {
                         "priceCurrency": data.currency || "USD"
                     },
                     "description": data.description,
-                    "featureList": data.featureList
+                    "featureList": data.featureList,
+                    "alternateName": data.alternateName,
+                    "disambiguatingDescription": data.disambiguatingDescription,
+
                 }
             ]
         };

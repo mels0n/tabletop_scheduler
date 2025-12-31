@@ -84,13 +84,12 @@ export async function GET(req: Request) {
 
     // 3. Handle Flow Logic
     const cookieStore = cookies();
-    const isProd = process.env.NODE_ENV === "production";
+
+    // Intent: Use shared configuration for 400-day persistence
+    const { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } = await import("@/shared/lib/auth-cookie");
     const cookieOpts = {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: (isProd ? "none" : "lax") as "none" | "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30, // 30 days
+        ...COOKIE_BASE_OPTIONS,
+        maxAge: COOKIE_MAX_AGE,
     };
 
     if (flow === "login") {

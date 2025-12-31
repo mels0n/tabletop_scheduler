@@ -61,8 +61,10 @@ If you are viewing an event you created but are seeing it as a *Participant* (no
 Our authentication system relies on two layers of browser storage to keep you logged in and remember your preferences:
 
 1.  **Cookies (Server Auth)**:
-    *   **User Identity**: `tabletop_user_chat_id` (Telegram) and `tabletop_user_discord_id` (Discord). These HTTPOnly, Secure cookies persist for 30 days and *prove* you own the associated account.
-    *   **Event Admin**: `tabletop_admin_[slug]` (HTTPOnly, Secure, 30 days). This grants administrative rights to a specific event.
+    *   **User Identity**: `tabletop_user_chat_id` (Telegram) and `tabletop_user_discord_id` (Discord). These HTTPOnly, Secure cookies persist for **400 days** (browser maximum) to ensure you are rarely logged out.
+    *   **Event Admin**: `tabletop_admin_[slug]` (HTTPOnly, Secure, 400 days). This grants administrative rights to a specific event.
+
+    > **Sliding Session:** Every time you visit a management page or your profile, the system automatically refreshes your cookie's expiration date to a full 400 days from that moment. As long as you visit the site at least once a year, your session will effectively last forever.
 
 2.  **LocalStorage (Client Cache)**:
     *   **User Preference Cache**: `tabletop_username` & `tabletop_telegram` are stored in your browser after you vote. The next time you visit *any* event on Tabletop Scheduler, these fields are auto-filled so you don't have to type them again.
