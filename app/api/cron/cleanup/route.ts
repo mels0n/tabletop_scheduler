@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import Logger from "@/lib/logger";
+import prisma from "@/shared/lib/prisma";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:CronCleanup");
 

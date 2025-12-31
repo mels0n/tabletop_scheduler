@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata, ResolvingMetadata } from "next";
-import prisma from "@/lib/prisma";
+import prisma from "@/shared/lib/prisma";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { Calendar, Users } from "lucide-react";
-import { ManagerRecovery } from "@/components/ManagerRecovery";
+import { ManagerRecovery } from "@/features/auth/ui/ManagerRecovery";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
 import Link from "next/link";

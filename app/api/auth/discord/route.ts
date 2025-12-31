@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/url";
+import { getBaseUrl } from "@/shared/lib/url";
 
 /**
  * @function GET

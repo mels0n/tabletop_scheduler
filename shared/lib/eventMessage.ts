@@ -1,4 +1,4 @@
-import { googleCalendarUrl, outlookCalendarUrl } from "@/lib/calendar";
+import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 
 /**
  * @interface EventData

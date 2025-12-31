@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getBaseUrl } from "@/lib/url";
-import Logger from "@/lib/logger";
+import { getBaseUrl } from "@/shared/lib/url";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Auth:Discord");
 
@@ -110,7 +110,7 @@ export async function GET(req: Request) {
             if (match && match[1]) {
                 const slug = match[1];
                 const { setAdminCookie } = await import("@/app/actions");
-                const prisma = (await import("@/lib/prisma")).default;
+                const prisma = (await import("@/shared/lib/prisma")).default;
 
                 const event = await prisma.event.findUnique({ where: { slug } });
 

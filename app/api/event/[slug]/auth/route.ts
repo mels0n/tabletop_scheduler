@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setAdminCookie } from "@/app/actions";
-import prisma from "@/lib/prisma";
-import Logger from "@/lib/logger";
-import { getBaseUrl } from "@/lib/url";
+import prisma from "@/shared/lib/prisma";
+import Logger from "@/shared/lib/logger";
+import { getBaseUrl } from "@/shared/lib/url";
 
 const log = Logger.get("AuthRoute");
 

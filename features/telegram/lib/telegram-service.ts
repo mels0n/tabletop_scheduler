@@ -1,7 +1,7 @@
 import { sendTelegramMessage, deleteWebhook, pinChatMessage } from "./telegram-client";
-import prisma from "@/lib/prisma";
-import Logger from "@/lib/logger";
-import { getBaseUrl } from "@/lib/url";
+import prisma from "@/shared/lib/prisma";
+import Logger from "@/shared/lib/logger";
+import { getBaseUrl } from "@/shared/lib/url";
 import { TelegramUpdate } from "../model/types";
 
 const log = Logger.get("TelegramService");
@@ -128,7 +128,7 @@ export async function checkReminders(token: string) {
             if (!targetDays.includes(currentDay)) continue;
 
             // Intent: Send Reminder
-            const { getBaseUrl: getBaseUrlUrl } = await import("@/lib/url");
+            const { getBaseUrl: getBaseUrlUrl } = await import("@/shared/lib/url");
             const baseUrl = getBaseUrlUrl(null);
             const link = `${baseUrl}/e/${event.slug}`;
 
@@ -143,7 +143,7 @@ export async function checkReminders(token: string) {
 
             // 2. Discord Reminder
             if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-                const { sendDiscordMessage } = await import("@/lib/discord");
+                const { sendDiscordMessage } = await import("@/features/discord/model/discord");
                 await sendDiscordMessage(
                     event.discordChannelId,
                     `🔔 **Reminder**\n\nPlease cast your votes for **${event.title}**!\n\n👉 [Vote Here](${link})`,
@@ -399,7 +399,7 @@ async function captureParticipantIdentity(chatId: number, user: any) {
  */
 async function handleRecoverySetup(chatId: number, user: any, slug: string, recoveryToken: string, token: string) {
     // Verify Security Token
-    const { verifyRecoveryToken } = await import("@/lib/token");
+    const { verifyRecoveryToken } = await import("@/features/auth/model/token");
     if (!verifyRecoveryToken(slug, recoveryToken)) {
         await sendTelegramMessage(chatId, "⚠️ <b>Link Expired or Invalid</b>\n\nPlease go back to the Manage page and click the button again.", token);
         return;
@@ -524,7 +524,7 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
             include: { timeSlots: { include: { votes: true } } }
         });
         const participants = await prisma.participant.count({ where: { eventId: event.id } });
-        const { generateStatusMessage } = await import("@/lib/status");
+        const { generateStatusMessage } = await import("@/shared/lib/status");
 
         if (fullEvent) {
             const baseUrl = detectedBaseUrl || getBaseUrl(null);

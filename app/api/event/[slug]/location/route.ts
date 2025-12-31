@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { getBaseUrl } from "@/lib/url";
-import { buildFinalizedMessage } from "@/lib/eventMessage";
+import prisma from "@/shared/lib/prisma";
+import { getBaseUrl } from "@/shared/lib/url";
+import { buildFinalizedMessage } from "@/shared/lib/eventMessage";
 import { editMessageText } from "@/features/telegram";
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:Location");
 

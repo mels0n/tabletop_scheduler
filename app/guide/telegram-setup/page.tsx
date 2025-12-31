@@ -2,6 +2,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
     title: 'How to Setup a Telegram Bot for Tabletop Time | Visual Guide',
@@ -14,29 +15,24 @@ export const metadata: Metadata = {
 export default function TelegramSetupPage() {
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
-    const jsonLd = {
-        "@context": "https://schema.org",
-        "@type": "HowTo",
-        "name": "How to Setup a Telegram Bot for Tabletop Time",
-        "description": "Create and configure a Telegram Bot to enable event notifications and pinning for your gaming group.",
-        "step": [
+    const jsonLd = SchemaGenerator.howTo({
+        name: "How to Setup a Telegram Bot for Tabletop Time",
+        description: "Create and configure a Telegram Bot to enable event notifications and pinning for your gaming group.",
+        steps: [
             {
-                "@type": "HowToStep",
-                "name": "Create a Bot",
-                "text": "Open Telegram, search for @BotFather, and send the command /newbot to create a new bot and get your API Token."
+                name: "Create a Bot",
+                text: "Open Telegram, search for @BotFather, and send the command /newbot to create a new bot and get your API Token."
             },
             {
-                "@type": "HowToStep",
-                "name": "Configure Environment",
-                "text": "Add the provided token to your TELEGRAM_BOT_TOKEN environment variable in docker-compose.yml."
+                name: "Configure Environment",
+                text: "Add the provided token to your TELEGRAM_BOT_TOKEN environment variable in docker-compose.yml."
             },
             {
-                "@type": "HowToStep",
-                "name": "Grant Admin Permissions",
-                "text": "Add the bot to your Telegram group as an Administrator with 'Pin Messages' permission enabled."
+                name: "Grant Admin Permissions",
+                text: "Add the bot to your Telegram group as an Administrator with 'Pin Messages' permission enabled."
             }
         ]
-    };
+    });
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 py-12 px-4 md:px-8">

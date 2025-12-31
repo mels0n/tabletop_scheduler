@@ -1,4 +1,4 @@
-import Logger from "@/lib/logger";
+import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Telegram");
 

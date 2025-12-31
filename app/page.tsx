@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Copy, PlusCircle, ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
+import { SchemaGenerator } from "@/shared/lib/aeo";
 
 
 /**
@@ -19,32 +20,22 @@ export default function Home() {
    * @description Structured data for SEO, defining the application as a SoftwareApplication.
    * Helps search engines understand the product context.
    */
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "SoftwareApplication",
-        "name": "Tabletop Scheduler",
-        "applicationCategory": "GameApplication",
-        "operatingSystem": "Web",
-        "offers": {
-          "@type": "Offer",
-          "price": "0.00",
-          "priceCurrency": "USD"
-        },
-        "description": "Coordinate D&D and board game sessions without the chaos.",
-        "featureList": [
-          "Frictionless Voting",
-          "No Login Required",
-          "Smart Resolution",
-          "Telegram Integration",
-          "Discord Integration",
-          "Free & Open",
-          "Privacy First"
-        ]
-      }
-    ]
-  };
+  const jsonLd = SchemaGenerator.softwareApp({
+    name: "Tabletop Scheduler",
+    applicationCategory: "GameApplication",
+    description: "Coordinate D&D and board game sessions without the chaos.",
+    featureList: [
+      "Frictionless Voting",
+      "No Login Required",
+      "Smart Resolution",
+      "Telegram Integration",
+      "Discord Integration",
+      "Free & Open",
+      "Privacy First"
+    ],
+    price: "0.00",
+    currency: "USD"
+  });
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 py-24 md:py-32 text-slate-50 selection:bg-indigo-500/30">
