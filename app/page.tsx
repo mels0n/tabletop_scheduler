@@ -34,7 +34,8 @@ export default function Home() {
       "Privacy First"
     ],
     price: "0.00",
-    currency: "USD"
+    currency: "USD",
+    disambiguatingDescription: "Independent open-source tool, not affiliated with Tabletop Time YouTube channel."
   });
 
   return (

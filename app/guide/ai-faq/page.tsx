@@ -52,6 +52,10 @@ export default function AiFaqPage() {
         {
             question: "Is this open source?",
             answer: "Yes. The project is open source on GitHub. You can audit the code or self-host it using our Docker container."
+        },
+        {
+            question: "Is this related to itstabletoptime.com?",
+            answer: "No. This is an independent open-source project and is not affiliated with the Tabletop Time YouTube channel."
         }
     ]);
 

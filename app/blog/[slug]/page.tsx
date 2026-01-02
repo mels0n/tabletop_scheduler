@@ -1,4 +1,5 @@
 import { getPostBySlug, getAllPosts } from '@/shared/lib/blog';
+import { SchemaGenerator } from '@/shared/lib/aeo';
 import { notFound } from 'next/navigation';
 import Markdown from 'react-markdown';
 import { Metadata } from 'next';
@@ -49,6 +50,16 @@ export default function BlogPost({ params }: Props) {
 
     return (
         <article className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(SchemaGenerator.blogPosting({
+                        headline: post.title,
+                        description: post.description,
+                        datePublished: post.date,
+                    }))
+                }}
+            />
             <div className="max-w-3xl mx-auto">
                 <Link href="/blog" className="text-indigo-400 hover:text-indigo-300 mb-8 inline-block font-medium">
                     &larr; Back to Blog
