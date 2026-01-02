@@ -141,5 +141,36 @@ export const SchemaGenerator = {
                 }
             }
         };
+    },
+
+    /**
+     * Generates a BlogPosting schema.
+     */
+    blogPosting(data: SchemaOrgArticle) {
+        return {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": data.headline,
+            "description": data.description,
+            "image": data.image,
+            "datePublished": data.datePublished,
+            "dateModified": data.dateModified,
+            "author": {
+                "@type": "Organization",
+                "name": "Tabletop Time"
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": "Tabletop Time",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://www.tabletoptime.us/icon.png"
+                }
+            },
+            "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": `https://www.tabletoptime.us/blog/${data.headline.toLowerCase().replace(/ /g, '-')}` // Simplified ID generation, ideally passed in
+            }
+        };
     }
 };
