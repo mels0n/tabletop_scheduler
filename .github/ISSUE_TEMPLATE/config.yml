@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerabilities
+    url: https://github.com/mels0n/tabletop_scheduler/security/policy
+    about: Please report security vulnerabilities here.
+  - name: Telegram Community
+    url: https://t.me/TabletopSchedulerBot
+    about: Join our Telegram specifically for self-hosting support.
