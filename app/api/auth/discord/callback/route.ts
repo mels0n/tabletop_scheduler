@@ -114,16 +114,47 @@ export async function GET(req: Request) {
                 const event = await prisma.event.findUnique({ where: { slug } });
 
                 // Verify: Does this Discord User own this event?
+                // Verify: Does this Discord User own this event?
                 if (event && event.managerDiscordId === user.id) {
                     // Success! Restore the admin session.
-                    await setAdminCookie(slug, event.adminToken || "");
-                    log.info("Manager session restored via Discord", { slug, userId: user.id });
+                    // CRITICAL: We only have the HASH in the DB. We cannot set the cookie to the Hash,
+                    // because verifyEventAdmin expects Cookie(Plaintext) -> Hash(Cookie) === DB(Hash).
+                    // Solution: Rotate the token.
+                    const { hashToken } = await import("@/shared/lib/token");
+                    const { v4: uuidv4 } = await import("uuid");
+
+                    const newToken = uuidv4();
+                    const newHash = hashToken(newToken);
+
+                    await prisma.event.update({
+                        where: { id: event.id },
+                        data: { adminToken: newHash }
+                    });
+
+                    await setAdminCookie(slug, newToken);
+                    log.info("Manager session restored via Discord (Token Rotated)", { slug, userId: user.id });
                 } else if (event && !event.managerDiscordId) {
                     // Claiming: If no Discord ID is set but they are logging in via the Manage page...
-                    // We might handle this if they are ALREADY authenticated via cookie (unlikely if loop)
-                    // or if this is a "Connect Bot" flow.
-                    // For safety, we only restore IF strictly matched.
-                    // If they are trying to "Claim" it, they should use the 'Connect' flow.
+                    // Allow the user to "Claim" this event as the manager since they had the admin link.
+                    const { hashToken } = await import("@/shared/lib/token");
+                    const { v4: uuidv4 } = await import("uuid");
+
+                    const newToken = uuidv4();
+                    const newHash = hashToken(newToken);
+
+                    await prisma.event.update({
+                        where: { id: event.id },
+                        data: {
+                            managerDiscordId: user.id,
+                            managerDiscordUsername: user.username,
+                            adminToken: newHash
+                        }
+                    });
+
+                    // Also set the admin cookie now that they are linked
+                    await setAdminCookie(slug, newToken);
+
+                    log.info("Manager claimed event via Discord", { slug, userId: user.id });
                 }
             }
         }

@@ -1,5 +1,5 @@
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import prisma from "@/shared/lib/prisma";
 import Link from "next/link";
 import { checkSlotQuorum } from "@/shared/lib/quorum";
@@ -14,7 +14,7 @@ import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
 import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
-import { generateShortRecoveryToken } from "@/app/actions";
+import { generateShortRecoveryToken, verifyEventAdmin } from "@/app/actions";
 
 /**
  * @interface PageProps
@@ -73,6 +73,13 @@ async function getEventWithVotes(slug: string) {
  * - Conditional Rendering: Switches between "Voting Mode" (list of slots) and "Finalized Mode" (Big Green Success Card).
  */
 export default async function ManageEventPage({ params }: PageProps) {
+    // Security: Verify Admin Access Server-Side
+    // Middleware only checks for cookie presence, not validity.
+    const isAdmin = await verifyEventAdmin(params.slug);
+    if (!isAdmin) {
+        redirect(`/e/${params.slug}?action=login`);
+    }
+
     const event = await getEventWithVotes(params.slug);
 
     if (!event) {
