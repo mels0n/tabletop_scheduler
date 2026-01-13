@@ -91,7 +91,6 @@ export async function recoverManagerLink(slug: string, handle: string) {
             data: { adminToken: newHash }
         });
 
-        const baseUrl = getBaseUrl(headers());
         const magicLink = `${baseUrl}/api/event/${slug}/auth?token=${newToken}`;
 
         await sendTelegramMessage(
@@ -921,8 +920,7 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
         const baseUrl = getBaseUrl(headers());
         const magicLink = `${baseUrl}/auth/login?token=${rawToken}`;
 
-        const baseUrl = getBaseUrl(headers());
-        const magicLink = `${baseUrl}/auth/login?token=${loginToken.token}`;
+
 
         // 4. Create DM & Send
         const channel = await createDMChannel(targetId, token);
