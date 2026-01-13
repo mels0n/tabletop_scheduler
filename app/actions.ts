@@ -23,6 +23,31 @@ export async function setAdminCookie(slug: string, token: string) {
     cookieStore.set(`tabletop_admin_${slug}`, token, opts);
 }
 
+/**
+ * Verifies if the current user is an admin for the given event.
+ * Uses the HTTP-Only cookie and Hashing logic.
+ */
+export async function verifyEventAdmin(slug: string): Promise<boolean> {
+    const cookieStore = cookies();
+    const token = cookieStore.get(`tabletop_admin_${slug}`)?.value;
+
+    if (!token) return false;
+
+    // Security: Hash the cookie value before comparing to DB
+    const { hashToken } = await import("@/shared/lib/token");
+    const tokenHash = hashToken(token);
+
+    const event = await prisma.event.findUnique({
+        where: { slug },
+        select: { adminToken: true }
+    });
+
+    if (!event) return false;
+
+    // Check Hash OR Legacy Plaintext (Migration support)
+    return event.adminToken === tokenHash || event.adminToken === token;
+}
+
 import prisma from "@/shared/lib/prisma";
 
 /**
@@ -53,7 +78,21 @@ export async function recoverManagerLink(slug: string, handle: string) {
         const { headers } = await import("next/headers");
 
         const baseUrl = getBaseUrl(headers());
-        const magicLink = `${baseUrl}/api/event/${slug}/auth?token=${event.adminToken}`;
+        const { hashToken } = await import("@/shared/lib/token");
+        const { randomUUID } = await import("crypto");
+
+        // Security: Rotate the token on recovery request to ensure validity.
+        // We store the Hash, but send the Plaintext.
+        const newToken = randomUUID();
+        const newHash = hashToken(newToken);
+
+        await prisma.event.update({
+            where: { id: event.id },
+            data: { adminToken: newHash }
+        });
+
+        const baseUrl = getBaseUrl(headers());
+        const magicLink = `${baseUrl}/api/event/${slug}/auth?token=${newToken}`;
 
         await sendTelegramMessage(
             event.managerChatId,
@@ -149,8 +188,22 @@ export async function dmManagerLink(slug: string) {
     const headerList = headers();
 
     // Intent: Determine correct base URL, prioritizing dynamic headers for correct environment resolution.
+    // Intent: Determine correct base URL, prioritizing dynamic headers for correct environment resolution.
     const baseUrl = getBaseUrl(headerList);
-    const magicLink = `${baseUrl}/api/event/${slug}/auth?token=${event.adminToken}`;
+
+    const { hashToken } = await import("@/shared/lib/token");
+    const { randomUUID } = await import("crypto");
+
+    // Security: Rotate token, Store Hash, Send Plaintext
+    const newToken = randomUUID();
+    const newHash = hashToken(newToken);
+
+    await prisma.event.update({
+        where: { id: event.id },
+        data: { adminToken: newHash }
+    });
+
+    const magicLink = `${baseUrl}/api/event/${slug}/auth?token=${newToken}`;
 
     log.info("Sending DM recovery link", { slug, chatId: event.managerChatId });
 
@@ -202,6 +255,8 @@ export async function checkEventStatus(slug: string) {
  * @returns {Promise<Object>} Success status and formatted handle, or error.
  */
 export async function updateManagerHandle(slug: string, handle: string) {
+    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+
     if (!handle || handle.trim().length < 2) {
         return { error: "Handle must be at least 2 characters." };
     }
@@ -230,6 +285,8 @@ export async function updateManagerHandle(slug: string, handle: string) {
  * @returns {Promise<Object>} Success status or error.
  */
 export async function updateTelegramInviteLink(slug: string, link: string) {
+    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+
     if (!link || !link.startsWith("https://t.me/")) {
         return { error: "Invalid Telegram link. It should start with https://t.me/" };
     }
@@ -254,6 +311,8 @@ export async function updateTelegramInviteLink(slug: string, link: string) {
  * @returns {Promise<Object>} Success status or error.
  */
 export async function deleteEvent(slug: string) {
+    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+
     const event = await prisma.event.findUnique({
         where: { slug }
     });
@@ -340,6 +399,8 @@ export async function deleteEvent(slug: string) {
  * @returns {Promise<Object>} Success status or error.
  */
 export async function cancelEvent(slug: string) {
+    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+
     const event = await prisma.event.findUnique({
         where: { slug }
     });
@@ -532,16 +593,30 @@ export async function generateShortRecoveryToken(slug: string) {
     });
 
     // Intent: Reuse existing token if it has sufficient validity remaining (> 2 mins)
+    // Problem: We can't recover the plaintext if we hashed it!
+    // So we MUST generate a NEW token if we are strictly hashing.
+    // However, if the frontend assumes it can call this idempotently to "get the current token", that breaks.
+    // Check usage: `verifyRecoveryToken` (not implementing yet?) or `dmDiscordManagerLink` calls this.
+    // `dmDiscordManagerLink` calls this, gets token, sends it.
+    // So it's fine to ALWAYS generate new.
+    // Dropping the re-use logic.
+    /*
     if (existing?.recoveryToken && existing.recoveryTokenExpires) {
         const timeRemaining = existing.recoveryTokenExpires.getTime() - Date.now();
         if (timeRemaining > 2 * 60 * 1000) {
             return { success: true, token: existing.recoveryToken };
         }
     }
+    */
 
     const crypto = await import('crypto');
+    const { hashToken } = await import('@/shared/lib/token');
+
     // Intent: Generate a short 8-character hex token (4 bytes) for ease of manual entry if needed
-    const token = crypto.randomBytes(4).toString('hex');
+    // Note: We need to store the HASH, but return the PLAINTEXT.
+    // Unlike adminToken (UUID), this is short.
+    const rawToken = crypto.randomBytes(4).toString('hex');
+    const tokenHash = hashToken(rawToken);
 
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 15);
@@ -550,11 +625,12 @@ export async function generateShortRecoveryToken(slug: string) {
         await prisma.event.update({
             where: { slug },
             data: {
-                recoveryToken: token,
+                recoveryToken: tokenHash,
                 recoveryTokenExpires: expiresAt
             }
         });
-        return { success: true, token };
+        // Return Plaintext
+        return { success: true, token: rawToken };
     } catch (e) {
         log.error("Failed to generate recovery token", e as Error);
         return { error: "Failed to generate token" };
@@ -693,31 +769,32 @@ export async function listDiscordChannels(guildId: string) {
  * @param {number[]} days - Array of days (offsets) before the event to send reminders.
  * @returns {Promise<Object>} Success status or error.
  */
-export async function updateReminderSettings(slug: string, enabled: boolean, time: string, days: number[]) {
-    try {
-        const event = await prisma.event.findUnique({ where: { slug } });
-        if (!event) return { success: false, error: "Event not found" };
+try {
+    if (!await verifyEventAdmin(slug)) return { success: false, error: "Unauthorized" };
 
-        // Intent: Validate time format to ensure cron compatibility
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        if (enabled && !timeRegex.test(time)) return { success: false, error: "Invalid time format" };
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event) return { success: false, error: "Event not found" };
 
-        await prisma.event.update({
-            where: { id: event.id },
-            data: {
-                reminderEnabled: enabled,
-                reminderTime: time,
-                reminderDays: days.join(','),
-                // Intent: Do NOT reset notification flags here. Changing schedule shouldn't spam users if quorum was already reached.
-            }
-        });
+    // Intent: Validate time format to ensure cron compatibility
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (enabled && !timeRegex.test(time)) return { success: false, error: "Invalid time format" };
 
-        // Trigger revalidation if needed
-        return { success: true };
-    } catch (e) {
-        console.error("Failed to update reminder settings", e);
-        return { success: false, error: "Internal Error" };
-    }
+    await prisma.event.update({
+        where: { id: event.id },
+        data: {
+            reminderEnabled: enabled,
+            reminderTime: time,
+            reminderDays: days.join(','),
+            // Intent: Do NOT reset notification flags here. Changing schedule shouldn't spam users if quorum was already reached.
+        }
+    });
+
+    // Trigger revalidation if needed
+    return { success: true };
+} catch (e) {
+    console.error("Failed to update reminder settings", e);
+    return { success: false, error: "Internal Error" };
+}
 }
 /**
  * Sends a Magic Link to the manager via Discord DM.
@@ -773,17 +850,17 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
         // We prioritize explicit Participant records where we captured identity.
         const userRecords = await prisma.participant.findMany({
             where: {
-                discordId: { not: null }
+                discordId: { not: null },
+                OR: [
+                    { discordUsername: { contains: normalized } },
+                    { name: { contains: normalized } }
+                ]
             },
-            select: { discordId: true, discordUsername: true, name: true }
+            select: { discordId: true, discordUsername: true, name: true },
+            take: 1
         });
 
-        // Manual fuzzy match since SQLite/Postgres 'search' varies and we rely on 'discordUsername' which might be inconsistent.
-        // We look for 'discordUsername' matching or 'name' matching if no discordUsername.
-        const match = userRecords.find(p =>
-            (p.discordUsername && p.discordUsername.toLowerCase().includes(normalized)) ||
-            (p.name && p.name.toLowerCase().includes(normalized))
-        );
+        const match = userRecords[0];
 
         let targetId = match?.discordId;
         let targetUsername = match?.discordUsername;
@@ -796,7 +873,8 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
                     managerDiscordId: { not: null },
                     managerDiscordUsername: { contains: normalized }
                 },
-                select: { managerDiscordId: true, managerDiscordUsername: true }
+                select: { managerDiscordId: true, managerDiscordUsername: true },
+                take: 1
             });
 
             // Just take the first match
