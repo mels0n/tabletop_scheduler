@@ -795,7 +795,7 @@ try {
     console.error("Failed to update reminder settings", e);
     return { success: false, error: "Internal Error" };
 }
-}
+
 /**
  * Sends a Magic Link to the manager via Discord DM.
  * @param {string} slug - The event slug.
