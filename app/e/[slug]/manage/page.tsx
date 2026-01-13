@@ -181,7 +181,6 @@ export default async function ManageEventPage({ params }: PageProps) {
                             hasChatId={!!event.telegramChatId}
                             initialHandle={event.managerTelegram}
                             hasManagerChatId={!!event.managerChatId}
-                            hasManagerChatId={!!event.managerChatId}
                         />
 
                         <DiscordConnect
