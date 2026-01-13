@@ -39,11 +39,8 @@ export function TelegramConnect({
     initialTelegramLink,
     hasChatId: initialHasChatId,
     initialHandle: propsInitialHandle,
-    hasManagerChatId: initialHasManagerId,
-    recoveryToken
+    hasManagerChatId: initialHasManagerId
 }: TelegramConnectProps & {
-    initialHandle: string | null;
-    hasManagerChatId: boolean;
     initialHandle: string | null;
     hasManagerChatId: boolean;
 }) {
