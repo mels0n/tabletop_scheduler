@@ -36,9 +36,12 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // 1. Find Token
+        const { hashToken } = await import("@/shared/lib/token");
+        const tokenHash = hashToken(token);
+
+        // 1. Find Token (by Hash)
         const validToken = await prisma.loginToken.findUnique({
-            where: { token }
+            where: { token: tokenHash }
         });
 
         // 2. Validate
