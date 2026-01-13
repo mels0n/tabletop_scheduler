@@ -1,5 +1,6 @@
 
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
@@ -12,8 +13,13 @@ export const metadata: Metadata = {
     },
 };
 
+
 export default function TelegramSetupPage() {
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+
+    if (isHosted) {
+        notFound();
+    }
 
     const jsonLd = SchemaGenerator.howTo({
         name: "How to Setup a Telegram Bot for Tabletop Time",

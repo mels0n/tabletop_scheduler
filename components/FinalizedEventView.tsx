@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { Calendar, Clock, MapPin, Home, User as UserIcon, Loader2, Check } from "lucide-react";
 import { clsx } from "clsx";
-import { ClientDate } from "./ClientDate";
+import { ClientDate, ClientTimezone } from "./ClientDate";
 import { AddToCalendar } from "./AddToCalendar";
 
 /**
@@ -192,11 +192,12 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                                 <div className="font-semibold text-white">
                                     <ClientDate date={finalizedSlot.startTime} formatStr="EEEE, MMMM do" />
                                 </div>
-                                <div className="text-indigo-300 text-sm">
+                                <p className="text-indigo-300 text-sm">
                                     <ClientDate date={finalizedSlot.startTime} formatStr="h:mm a" />
                                     {" - "}
                                     <ClientDate date={finalizedSlot.endTime} formatStr="h:mm a" />
-                                </div>
+                                    <ClientTimezone className="ml-1.5 text-slate-300 font-normal text-base" />
+                                </p>
                             </div>
                         </div>
 

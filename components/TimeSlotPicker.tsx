@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { ClientTimezone } from "./ClientDate";
 
 /**
  * @interface TimeSlot
@@ -97,6 +98,15 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
 
     return (
         <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-slate-200">Propose Time Slots</h3>
+                    <div className="text-xs text-slate-500 font-medium bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700/50">
+                        Times are in your local timezone <ClientTimezone className="font-mono text-indigo-400" />
+                    </div>
+                </div>
+                <span className="text-sm text-slate-400">{value.length} slots added</span>
+            </div>
             {/* Input Controls */}
             <div className="flex flex-wrap gap-4 p-4 border border-slate-700 rounded-lg bg-slate-900/50">
                 <div className="flex flex-col gap-1">

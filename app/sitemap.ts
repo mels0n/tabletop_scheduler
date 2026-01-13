@@ -47,18 +47,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
             priority: 0.7,
         },
         {
-            url: `${baseUrl}/guide/telegram-setup`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly' as const,
-            priority: 0.7,
-        },
-        {
-            url: `${baseUrl}/guide/discord-setup`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly' as const,
-            priority: 0.7,
-        },
-        {
             url: `${baseUrl}/guide/magic-links`,
             lastModified: new Date(),
             changeFrequency: 'monthly' as const,

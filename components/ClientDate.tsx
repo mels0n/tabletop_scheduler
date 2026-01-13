@@ -44,3 +44,43 @@ export function ClientDate({ date, formatStr, className }: ClientDateProps) {
         </span>
     );
 }
+
+/**
+ * @component ClientTimezone
+ * @description Renders the user's local timezone code (e.g. "CST", "GMT", "PST")
+ * Safe for hydration (renders nothing on server).
+ */
+export function ClientTimezone({ className, parenthesized = true }: { className?: string, parenthesized?: boolean }) {
+    const [tz, setTz] = useState("");
+
+    useEffect(() => {
+        // Intent: Get short timezone name via Intl API
+        // Fallback to simpler extraction if needed, but 'short' usually gives EST/CST etc.
+        try {
+            // The original line `const short name = ...` had a syntax error. Corrected to `const shortName = ...`
+            // However, the subsequent `Intl.DateTimeFormat` approach is more robust.
+            // const shortName = new Date().toLocaleTimeString('en-us', { timeZoneName: 'short' }).split(' ').pop();
+            // Note: split pop is a bit risky for "Standard Time", prefer direct part lookup if possible, 
+            // but for major US/EU zones usually works. 
+            // Better: Intl.DateTimeFormat with timeZoneName: 'short'
+
+            const parts = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(new Date());
+            const tzName = parts.find(p => p.type === 'timeZoneName')?.value;
+
+            if (tzName) {
+                setTz(tzName);
+            }
+        } catch (e) {
+            // Fallback
+            setTz("");
+        }
+    }, []);
+
+    if (!tz) return null;
+
+    return (
+        <span className={className}>
+            {parenthesized ? `(${tz})` : tz}
+        </span>
+    );
+}
