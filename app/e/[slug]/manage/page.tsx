@@ -181,7 +181,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                             hasChatId={!!event.telegramChatId}
                             initialHandle={event.managerTelegram}
                             hasManagerChatId={!!event.managerChatId}
-                            recoveryToken={(await generateShortRecoveryToken(event.slug)).token || ""}
+                            hasManagerChatId={!!event.managerChatId}
                         />
 
                         <DiscordConnect

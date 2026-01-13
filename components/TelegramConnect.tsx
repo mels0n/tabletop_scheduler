@@ -44,7 +44,8 @@ export function TelegramConnect({
 }: TelegramConnectProps & {
     initialHandle: string | null;
     hasManagerChatId: boolean;
-    recoveryToken: string;
+    initialHandle: string | null;
+    hasManagerChatId: boolean;
 }) {
     const router = useRouter();
     const [telegramLink, setTelegramLink] = useState(initialTelegramLink || "");
@@ -55,6 +56,9 @@ export function TelegramConnect({
     const [hasManagerChatId, setHasManagerChatId] = useState(initialHasManagerId);
     const [dmLoading, setDmLoading] = useState(false);
     const [dmMessage, setDmMessage] = useState("");
+
+    // Register State
+    const [registerLoading, setRegisterLoading] = useState(false);
 
     // Connection State
     const [isSaving, setIsSaving] = useState(false);
@@ -279,15 +283,29 @@ export function TelegramConnect({
                         <p className="text-xs text-slate-400">
                             Register to receive magic login links via DM if you lose access to this browser.
                         </p>
-                        <a
-                            href={`https://t.me/${botUsername}?start=rec_${recoveryToken}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <button
+                            onClick={async () => {
+                                setRegisterLoading(true);
+                                try {
+                                    const { generateShortRecoveryToken } = await import("@/app/actions");
+                                    const res = await generateShortRecoveryToken(slug);
+                                    if (res.token) {
+                                        window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
+                                    } else {
+                                        // Silent error or retry?
+                                    }
+                                } catch (e) {
+                                    // ignore
+                                } finally {
+                                    setRegisterLoading(false);
+                                }
+                            }}
+                            disabled={registerLoading}
                             className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
                         >
-                            <Send className="w-3 h-3" />
+                            {registerLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                             Register for Magic Links
-                        </a>
+                        </button>
                         <p className="text-[10px] text-slate-500 text-center">
                             (Opens Telegram to verify you)
                         </p>
