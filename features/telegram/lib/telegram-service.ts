@@ -448,37 +448,38 @@ async function handleRecoverySetup(chatId: number, user: any, slug: string, reco
 /**
  * Handles "Global Login" or "Recovery Handle" flow to send a magic link to the user.
  */
+/**
+ * Handles "Global Login" or "Recovery Handle" flow to send a magic link to the user.
+ */
 async function handleGlobalLogin(chatId: number, user: any, token: string) {
     const chatStr = chatId.toString();
+    const { hashToken } = await import("@/shared/lib/token");
+    const { v4: uuidv4 } = await import("uuid");
 
     // Intent: Check for existing valid token (reuse to prevent Link Preview race conditions)
-    const existing = await prisma.loginToken.findFirst({
-        where: { chatId: chatStr },
-        orderBy: { expiresAt: 'desc' }
+    // Note: We can only reuse if we have the plaintext. But we only store the hash now.
+    // So we CANNOT reuse efficiently without storing plaintext, which defeats the purpose.
+    // However, for UX, if they spam the button, we should just invalidate the old one or make a new one.
+    // Security takes precedence: We generate a new one.
+
+    const plaintextToken = uuidv4();
+    const tokenHash = hashToken(plaintextToken);
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+    await prisma.loginToken.create({
+        data: {
+            token: tokenHash,
+            chatId: chatStr,
+            expiresAt
+        }
     });
 
-    let tokenValue = "";
-
-    if (existing && existing.expiresAt.getTime() - Date.now() > 2 * 60 * 1000) {
-        // Reuse existing if > 2 mins left
-        tokenValue = existing.token;
-    } else {
-        // Create new
-        const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 15);
-
-        const loginToken = await prisma.loginToken.create({
-            data: {
-                chatId: chatStr,
-                expiresAt
-            }
-        });
-        tokenValue = loginToken.token;
-    }
-
     // Use a fixed hardcoded fallback just in case getBaseUrl is getting weird in polling
+    const { getBaseUrl } = await import("@/shared/lib/url");
     const baseUrl = getBaseUrl(null);
-    const magicLink = `${baseUrl}/auth/login?token=${tokenValue}`;
+    const magicLink = `${baseUrl}/auth/login?token=${plaintextToken}`;
 
     await sendTelegramMessage(chatId, `🔐 <b>Magic Login</b>\n\nClick here to access <b>My Events</b>:\n${magicLink}\n\n(Valid for 15 minutes)`, token);
 }
@@ -525,6 +526,8 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
         });
         const participants = await prisma.participant.count({ where: { eventId: event.id } });
         const { generateStatusMessage } = await import("@/shared/lib/status");
+        const { pinChatMessage } = await import("@/features/telegram"); // Ensure this import exists likely at top
+        const { getBaseUrl } = await import("@/shared/lib/url");
 
         if (fullEvent) {
             const baseUrl = detectedBaseUrl || getBaseUrl(null);
@@ -550,9 +553,12 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
  * Handles event management claiming via a short, 4-byte token (no login required flow).
  */
 async function handleShortLinkRecovery(chatId: number, user: any, recoveryToken: string, botToken: string) {
-    // 1. Find event by token
+    const { hashToken } = await import("@/shared/lib/token");
+    const tokenHash = hashToken(recoveryToken);
+
+    // 1. Find event by HASHED token
     const event = await prisma.event.findUnique({
-        where: { recoveryToken },
+        where: { recoveryToken: tokenHash },
     });
 
     if (!event) {

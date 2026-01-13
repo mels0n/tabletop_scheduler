@@ -255,20 +255,28 @@ async function handleRecoverySetup(chatId: number, user: any, slug: string, reco
 async function handleGlobalLogin(chatId: number, user: any, token: string) {
     const { getBaseUrl } = await import("@/shared/lib/url");
     const { headers } = await import("next/headers");
+    const { hashToken } = await import("@/shared/lib/token");
+    const { v4: uuidv4 } = await import("uuid");
 
-    // 1. Create Login Token
+    // 1. Create Login Token (Generate Plaintext -> Hash -> Store)
+    const plaintextToken = uuidv4();
+    const tokenHash = hashToken(plaintextToken);
+
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 min expiry
 
-    const loginToken = await prisma.loginToken.create({
+    // Store HASH in DB
+    await prisma.loginToken.create({
         data: {
+            token: tokenHash,
             chatId: chatId.toString(),
             expiresAt
         }
     });
 
     const baseUrl = getBaseUrl(headers());
-    const magicLink = `${baseUrl}/auth/login?token=${loginToken.token}`;
+    // Send PLAINTEXT in Link
+    const magicLink = `${baseUrl}/auth/login?token=${plaintextToken}`;
 
     await sendTelegramMessage(chatId, `🔐 <b>Magic Login</b>\n\nClick here to access <b>My Events</b>:\n${magicLink}\n\n(Valid for 15 minutes)`, token);
 }
@@ -330,9 +338,6 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
 
     log.info("Connected chat to event", { chatId, slug, updates: updateData });
 
-    // Customize message if this was purely a DM recovery setup - Wait, ConnectEvent is for Groups usually. 
-    // Recovery via SetupRecovery is separate. 
-
     // Pinned Dashboard Logic (Poller Parity)
     try {
         const fullEvent = await prisma.event.findUnique({
@@ -368,9 +373,14 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
  * @description Handles the "Short Link" (rec_TOKEN) recovery flow for when deep links are truncated or fail.
  */
 async function handleShortLinkRecovery(chatId: number, user: any, recoveryToken: string, botToken: string) {
-    // 1. Find event by token
+    const { hashToken } = await import("@/shared/lib/token");
+
+    // 1. Hash the incoming token to match DB
+    const tokenHash = hashToken(recoveryToken);
+
+    // 2. Find event by HASHED token
     const event = await prisma.event.findUnique({
-        where: { recoveryToken },
+        where: { recoveryToken: tokenHash },
     });
 
     if (!event) {
@@ -383,13 +393,13 @@ async function handleShortLinkRecovery(chatId: number, user: any, recoveryToken:
         return;
     }
 
-    // 2. Clear the token (security: one-time use)
+    // 3. Clear the token (security: one-time use)
     await prisma.event.update({
         where: { id: event.id },
         data: { recoveryToken: null, recoveryTokenExpires: null }
     });
 
-    // 3. User Identity Logic
+    // 4. User Identity Logic
     const senderUsername = user.username?.toLowerCase();
     if (!senderUsername) {
         await sendTelegramMessage(chatId, "⚠️ Could not verify identity. Please ensure you have a Telegram username set.", botToken);
