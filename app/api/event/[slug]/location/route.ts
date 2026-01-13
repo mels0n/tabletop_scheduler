@@ -30,6 +30,11 @@ export async function POST(
     try {
         const { location } = await req.json();
 
+        const { verifyEventAdmin } = await import("@/app/actions");
+        if (!await verifyEventAdmin(params.slug)) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         log.info("Updating location", { slug: params.slug });
 
         // Action: Database Update

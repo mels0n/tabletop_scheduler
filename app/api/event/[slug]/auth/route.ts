@@ -36,8 +36,15 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
             where: { slug }
         });
 
-        // Security: Strict token equality check.
-        if (!event || event.adminToken !== token) {
+        // Security: Strict token equality check with Hashing.
+        // We accept that the DB might still have plaintext tokens during migration.
+        // Logic: Hash(Input) === DB OR Input === DB (Legacy Fallback)
+        const { hashToken } = await import("@/shared/lib/token");
+        const inputHash = hashToken(token);
+
+        const isValid = event && (event.adminToken === inputHash || event.adminToken === token);
+
+        if (!isValid) {
             log.warn("Invalid Magic Link attempt", { slug });
             return NextResponse.redirect(`${baseUrl}/e/${slug}?error=invalid_token`);
         }

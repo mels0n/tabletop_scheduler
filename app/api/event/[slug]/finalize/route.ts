@@ -41,6 +41,11 @@ export async function POST(
             return NextResponse.json({ error: "Missing Slot ID" }, { status: 400 });
         }
 
+        const { verifyEventAdmin } = await import("@/app/actions");
+        if (!await verifyEventAdmin(params.slug)) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const updateData: any = {
             status: "FINALIZED",
             finalizedSlotId: parseInt(slotId.toString()),

@@ -80,6 +80,8 @@ model TimeSlot {
   startTime DateTime
   endTime   DateTime
   votes     Vote[]
+
+  @@index([eventId])
 }
 
 // A user who has interacted with the event.
@@ -100,6 +102,8 @@ model Participant {
   
   votes      Vote[]
   hostedEvents Event[] @relation("FinalizedHost")
+
+  @@index([eventId])
 }
 
 // Linking table for preferences.
@@ -113,6 +117,10 @@ model Vote {
   preference    String      // YES: Available, MAYBE: If needed, NO: Busy
   canHost       Boolean     @default(false) // Specific willingness to host this slot
   createdAt     DateTime    @default(now())
+
+  @@unique([participantId, timeSlotId])
+  @@index([participantId])
+  @@index([timeSlotId])
 }
 
 // Temporary tokens for global "My Events" login

@@ -38,12 +38,20 @@ export async function POST(req: Request) {
 
         const slug = generateSlug();
 
+        // Security: Generate token manually so we can hash it for storage.
+        const { randomUUID } = await import("crypto");
+        const { hashToken } = await import("@/shared/lib/token");
+
+        const rawAdminToken = randomUUID();
+        const hashedAdminToken = hashToken(rawAdminToken);
+
         // Action: transactional creation ensures we don't have an event without slots.
         const event = await prisma.event.create({
             data: {
                 slug,
                 title,
                 description,
+                adminToken: hashedAdminToken, // Store Hash
                 telegramLink,
                 timezone: body.timezone || "UTC",
                 minPlayers: minPlayers || 3,
@@ -59,7 +67,8 @@ export async function POST(req: Request) {
         });
 
         log.info("Event created successfully", { slug, id: event.id });
-        return NextResponse.json({ slug: event.slug, id: event.id, adminToken: event.adminToken });
+        // Return Plaintext to user
+        return NextResponse.json({ slug: event.slug, id: event.id, adminToken: rawAdminToken });
     } catch (error) {
         log.error("Failed to create event", error as Error);
         return NextResponse.json(
