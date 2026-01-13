@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { Bot, CheckCircle, ExternalLink, HelpCircle } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
@@ -7,7 +8,11 @@ export const metadata: Metadata = {
     description: 'Learn how to connect a Discord Bot to TabletopTime for event notifications, pinned dashboards, and seamless login recovery.',
 };
 
+
 export default function DiscordSetupGuide() {
+    if (process.env.NEXT_PUBLIC_IS_HOSTED === "true") {
+        notFound();
+    }
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
             <div className="max-w-3xl mx-auto space-y-12">

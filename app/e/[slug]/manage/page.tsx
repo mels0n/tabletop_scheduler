@@ -6,7 +6,7 @@ import { checkSlotQuorum } from "@/shared/lib/quorum";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ManagerControls } from "@/components/ManagerControls";
 import { HistoryTracker } from "@/components/HistoryTracker";
-import { ClientDate } from "@/components/ClientDate";
+import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
 import { EditLocationModal } from "./EditLocationModal";
 import { getBotUsername } from "@/features/telegram";
@@ -217,6 +217,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                                             <ClientDate date={finalizedSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-white" />
                                             <span className="text-slate-400"> at </span>
                                             <ClientDate date={finalizedSlot.startTime} formatStr="h:mm a" className="font-semibold text-white" />
+                                            <ClientTimezone className="ml-1.5 text-slate-400 font-normal text-base" />
                                         </p>
 
 
@@ -377,6 +378,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                                                 <div>
                                                     <div className="font-semibold text-base text-slate-200">
                                                         <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
+                                                        <ClientTimezone className="ml-1 text-slate-500 font-normal text-sm" />
                                                     </div>
                                                     <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
                                                         <span className="text-green-400 font-medium">{slot.yesCount} Yes</span>

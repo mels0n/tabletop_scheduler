@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
+import { ClientTimezone } from "./ClientDate";
 import { Check, HelpCircle, X, User as UserIcon, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
 import { usePathname } from "next/navigation";
@@ -285,9 +286,9 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                                         <div className="font-semibold text-lg text-slate-200">
                                             {format(start, "EEEE, MMMM do")}
                                         </div>
-                                        <div className="text-indigo-300 font-mono">
-                                            {format(start, "h:mm a")} - {format(end, "h:mm a")}
-                                        </div>
+                                        <p className="text-sm text-indigo-200">
+                                            {format(start, "h:mm a")} - {format(end, "h:mm a")} <ClientTimezone className="text-indigo-300/70 ml-1" />
+                                        </p>
                                         <div className="mt-2 flex gap-2 text-xs">
                                             <span className="text-green-400">{slot.counts.yes} Yes</span>
                                             <span className="text-yellow-400">{slot.counts.maybe} If Needed</span>

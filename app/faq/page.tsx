@@ -53,6 +53,10 @@ export default function FAQPage() {
             answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked."
         },
         {
+            question: "How do timezones work?",
+            answer: "TabletopTime is timezone-aware! We detect your timezone from your browser. Times listed in the app (like voting slots) are automatically converted to your local time. However, notification messages (like in Telegram or Discord) are sent in the Event's timezone to keep everyone on the same page. We always label timestamps so you know exactly which timezone you are looking at."
+        },
+        {
             question: "Why did I make this tool?",
             answer: "Tabletop Time started because my own Magic: The Gathering group was falling apart. We needed something fast, private, and specific to gamers."
         }
