@@ -16,6 +16,22 @@
 # production
 /build
 
+# Agent & AI
+.agent/
+.cursorrules
+.windsurfrules
+composer.json
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System
+.DS_Store
+Thumbs.db
+
 # misc
 .DS_Store
 *.pem
