@@ -116,9 +116,36 @@ export default function FAQPage() {
                         }
                     />
                     <FAQItem
-                        question="Why did I make this tool?"
                         answer="I have a group of friends that plays Magic the Gathering - some of whom flat refuse to create an account at some data farming website. If I'm honest, I'd prefer to control my own data too. Also, some have families, some work strange hours, some have season tickets to sports, some have kids playing sports... trying to find a date that works for everyone is chaos."
                     />
+
+                    <div className="pt-8 border-t border-slate-800">
+                        <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-4">
+                            Developers & Integration
+                        </h2>
+                        <FAQItem
+                            question="Can I integrate this with my own site?"
+                            answer={
+                                <span>
+                                    Absolutely! We have a public API that lets you pre-fill event details, creating voting links from your own community Discord or website.{" "}
+                                    <Link href="/developers" className="text-indigo-400 hover:text-indigo-300 underline">
+                                        Check out the Developer Guide
+                                    </Link>.
+                                </span>
+                            }
+                        />
+                        <FAQItem
+                            question="Found a bug or have an idea?"
+                            answer={
+                                <span>
+                                    We are open source! Please report bugs or request features directly on our{" "}
+                                    <a href="https://github.com/mels0n/tabletop_scheduler/issues" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                                        GitHub Repository
+                                    </a>.
+                                </span>
+                            }
+                        />
+                    </div>
                 </div>
             </div>
         </div>

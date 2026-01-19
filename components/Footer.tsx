@@ -43,27 +43,35 @@ export function Footer() {
                                 Blog
                             </Link>
                         </>
+                            <Link href="/blog" className="hover:text-indigo-400 transition-colors">
+                                Blog
+                            </Link>
+                        </>
                     )}
 
-                    <Link href="/faq" className="hover:text-indigo-400 transition-colors">
-                        FAQ
-                    </Link>
-                    <Link href="/privacy" className="hover:text-indigo-400 transition-colors">
-                        Privacy
-                    </Link>
+                <Link href="/developers" className="hover:text-indigo-400 transition-colors">
+                    Developers
+                </Link>
 
-                    <a
-                        href="https://github.com/mels0n/tabletop_scheduler"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:text-slate-200 transition-colors"
-                        aria-label="GitHub Repository"
-                    >
-                        <Github className="w-4 h-4" />
-                        <span className="hidden sm:inline">GitHub</span>
-                    </a>
-                </div>
+                <Link href="/faq" className="hover:text-indigo-400 transition-colors">
+                    FAQ
+                </Link>
+                <Link href="/privacy" className="hover:text-indigo-400 transition-colors">
+                    Privacy
+                </Link>
+
+                <a
+                    href="https://github.com/mels0n/tabletop_scheduler"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:text-slate-200 transition-colors"
+                    aria-label="GitHub Repository"
+                >
+                    <Github className="w-4 h-4" />
+                    <span className="hidden sm:inline">GitHub</span>
+                </a>
             </div>
-        </footer>
+        </div>
+        </footer >
     );
 }
