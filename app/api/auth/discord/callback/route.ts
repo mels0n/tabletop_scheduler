@@ -5,6 +5,12 @@ import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Auth:Discord");
 
+import { setAdminCookie } from "@/features/auth/server/actions";
+import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
+import { hashToken } from "@/shared/lib/token";
+import { v4 as uuidv4 } from "uuid";
+import prisma from "@/shared/lib/prisma";
+
 /**
  * @function GET
  * @description Handles the OAuth2 callback from Discord.
@@ -86,7 +92,6 @@ export async function GET(req: Request) {
     const cookieStore = cookies();
 
     // Intent: Use shared configuration for 400-day persistence
-    const { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } = await import("@/shared/lib/auth-cookie");
     const cookieOpts = {
         ...COOKIE_BASE_OPTIONS,
         maxAge: COOKIE_MAX_AGE,
@@ -108,20 +113,15 @@ export async function GET(req: Request) {
             const match = returnTo.match(/\/e\/([^\/]+)\/manage/);
             if (match && match[1]) {
                 const slug = match[1];
-                const { setAdminCookie } = await import("@/features/auth/server/actions");
-                const prisma = (await import("@/shared/lib/prisma")).default;
 
                 const event = await prisma.event.findUnique({ where: { slug } });
 
-                // Verify: Does this Discord User own this event?
                 // Verify: Does this Discord User own this event?
                 if (event && event.managerDiscordId === user.id) {
                     // Success! Restore the admin session.
                     // CRITICAL: We only have the HASH in the DB. We cannot set the cookie to the Hash,
                     // because verifyEventAdmin expects Cookie(Plaintext) -> Hash(Cookie) === DB(Hash).
                     // Solution: Rotate the token.
-                    const { hashToken } = await import("@/shared/lib/token");
-                    const { v4: uuidv4 } = await import("uuid");
 
                     const newToken = uuidv4();
                     const newHash = hashToken(newToken);
@@ -136,9 +136,6 @@ export async function GET(req: Request) {
                 } else if (event && !event.managerDiscordId) {
                     // Claiming: If no Discord ID is set but they are logging in via the Manage page...
                     // Allow the user to "Claim" this event as the manager since they had the admin link.
-                    const { hashToken } = await import("@/shared/lib/token");
-                    const { v4: uuidv4 } = await import("uuid");
-
                     const newToken = uuidv4();
                     const newHash = hashToken(newToken);
 
