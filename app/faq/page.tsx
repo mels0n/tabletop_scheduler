@@ -118,6 +118,7 @@ export default function FAQPage() {
                         }
                     />
                     <FAQItem
+                        question="Why did I make this tool?"
                         answer="I have a group of friends that plays Magic the Gathering - some of whom flat refuse to create an account at some data farming website. If I'm honest, I'd prefer to control my own data too. Also, some have families, some work strange hours, some have season tickets to sports, some have kids playing sports... trying to find a date that works for everyone is chaos."
                     />
 
