@@ -1,21 +1,22 @@
 ---
 projectId: tabletop_scheduler
 status: FINALIZED
-version: 1.1.0
+version: 1.2.0
 lastUpdated: 2026-01-19
 ---
 
-# Specification: Hosted Database Resilience
+# Specification: TypeScript Strictness
 
 ## 1. Goal
-Implement a robust backup and recovery system for the Hosted (Postgres) environment to prevent data loss and ensure business continuity.
+Achieve full TypeScript strictness (`"strict": true`) across the entire codebase to eliminate type-safety blind spots and reduce runtime errors.
 
 ## 2. Success Criteria
-- [ ] Automated daily backups for Hosted Postgres database (Verified via platform or script).
-- [ ] Verified recovery procedure (restore from backup).
-- [ ] Documentation for performing a restore operation.
+- [ ] `tsconfig.json` has `"strict": true` enabled.
+- [ ] `npm run build` passes with zero type errors.
+- [ ] No usage of `any` (explicit or implicit) in new code.
+- [ ] `eslint` configured to ban `any`.
 
 ## 3. Core Requirements
-- **Backup**: Mechanism to snapshot production data.
-- **Recovery**: Script or procedure to restore a specific snapshot.
-- **Scope**: Hosted mode only (Supabase/Postgres). Self-hosted (SQLite) is out of scope.
+- **Strict Null Checks**: Mandate handling of null/undefined.
+- **No Implicit Any**: Variables must have defined types.
+- **Strict Property Initialization**: Class properties must be initialized.
