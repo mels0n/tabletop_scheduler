@@ -85,7 +85,9 @@ function NewEventForm() {
                     minPlayers,
                     maxPlayers,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    slots
+                    slots,
+                    fromUrl: searchParams.get("fromUrl"),
+                    fromUrlId: searchParams.get("fromUrlId")
                 }),
             });
 

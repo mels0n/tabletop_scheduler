@@ -64,12 +64,17 @@ model Event {
   location        String?
   timezone        String        @default("UTC") // Captured from creator's browser
   
+  // External Integration
+  fromUrl         String?       // Callback URL for webhooks
+  fromUrlId       String?       // External Context ID
+  
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   
   // Relations
   timeSlots   TimeSlot[]
   participants Participant[]
+  webhooks    WebhookEvent[]
 }
 
 // Represents a voteable window of time.
@@ -131,5 +136,22 @@ model LoginToken {
   discordUsername String? // For display purposes
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// Webhook Delivery Queue
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  event       Event    @relation(fields: [eventId], references: [id])
+  eventId     Int
+  
+  url         String
+  payload     String   // JSON string
+  status      String   // PENDING, DELIVERED, FAILED
+  attempts    Int      @default(0)
+  nextAttempt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, nextAttempt])
 }
 
