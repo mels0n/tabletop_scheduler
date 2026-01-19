@@ -134,10 +134,15 @@ Retrieve read-only details about a specific event.
 - `houseId`: (Optional) Participant ID of the host.
 - `location`: (Optional) String text for location.
 
+**Response:**
+- **Success:** Redirects to the event management dashboard.
+- **Error:** Returns JSON with error details.
+
 ### Update Location
 **Endpoint:** `POST /api/event/[slug]/location`
 **Description:** Updates location string *after* finalization.
 **Body (JSON):** `{ "location": "New Place" }`
+**Response:** `{ "success": true, "location": "New Place" }`
 
 ### ICS Export
 **Endpoint:** `GET /api/event/[slug]/ics`
@@ -213,6 +218,11 @@ When creating an event, you can provide a `fromUrl` parameter. The system will p
 **Retry Policy:** 
 - Webhooks are retried every 5 minutes.
 - **Timeout:** 1 Hour (~12 attempts). After 1 hour of failures, the webhook is marked as FAILED and no further attempts are made.
+
+**Response Expectations:**
+- Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt.
+- The response body is ignored.
+- Any non-2xx status (or timeout) triggers the retry policy.
 
 #### 1. Event Created
 Sent immediately after `POST /api/event` success if `fromUrl` is present.

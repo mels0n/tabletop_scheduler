@@ -40,6 +40,10 @@ If you provide `fromUrl` during creation, Tabletop Scheduler will send `POST` re
 
 > **Reliability**: We attempt delivery every 5 minutes for up to **1 hour**. If your server is down for more than an hour, the webhook will fail permanently.
 
+### Response Expectations
+
+Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or timeout) triggers the retry policy.
+
 ### Event Created (`CREATED`)
 Sent immediately after the user effectively creates the event.
 
@@ -90,6 +94,7 @@ Sent if the organizer cancels the event.
   "eventId": 123,
   "fromUrlId": "raid-101",
   "slug": "8f8f8f8f",
+  "title": "Raid Night",
   "timestamp": "2023-11-29T09:00:00.000Z"
 }
 ```
