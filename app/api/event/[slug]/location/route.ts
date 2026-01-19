@@ -30,7 +30,7 @@ export async function POST(
     try {
         const { location } = await req.json();
 
-        const { verifyEventAdmin } = await import("@/app/actions");
+        const { verifyEventAdmin } = await import("@/features/auth/server/actions");
         if (!await verifyEventAdmin(params.slug)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }

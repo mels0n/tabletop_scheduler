@@ -41,7 +41,7 @@ export async function POST(
             return NextResponse.json({ error: "Missing Slot ID" }, { status: 400 });
         }
 
-        const { verifyEventAdmin } = await import("@/app/actions");
+        const { verifyEventAdmin } = await import("@/features/auth/server/actions");
         if (!await verifyEventAdmin(params.slug)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }

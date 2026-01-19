@@ -101,7 +101,7 @@ function NewEventForm() {
             // Step 2: Establish Administration Rights
             // We use a Server Action to set the cookie because we are in a Client Component
             // and want to ensure it's set as HTTP-Only/Secure on the domain.
-            const { setAdminCookie } = await import("@/app/actions");
+            const { setAdminCookie } = await import("@/features/auth/server/actions");
             if (data.adminToken) {
                 await setAdminCookie(data.slug, data.adminToken);
             }

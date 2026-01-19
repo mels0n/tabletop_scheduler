@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { recoverManagerLink, recoverDiscordManagerLink } from "@/app/actions";
+import { recoverManagerLink } from "@/features/event-management/server/recovery";
+import { recoverDiscordManagerLink } from "@/features/integrations/discord/server/actions";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 

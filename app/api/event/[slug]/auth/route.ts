@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { setAdminCookie } from "@/app/actions";
+import { setAdminCookie } from "@/features/auth/server/actions";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { getBaseUrl } from "@/shared/lib/url";

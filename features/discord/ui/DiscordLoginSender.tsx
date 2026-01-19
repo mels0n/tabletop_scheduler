@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { sendDiscordMagicLogin } from "@/app/actions";
+import { sendDiscordMagicLogin } from "@/features/integrations/discord/server/actions";
 import { Send, RefreshCw, Lock } from "lucide-react";
 
 export function DiscordLoginSender() {
