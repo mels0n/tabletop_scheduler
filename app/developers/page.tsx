@@ -49,9 +49,14 @@ export default function DevelopersPage() {
                     <div className="bg-black/50 p-3 rounded font-mono text-xs text-emerald-400 mb-4 overflow-x-auto">
                         ?userID=Chris&avatar=...
                     </div>
-                    <Link href="/docs/guides/ExternalIntegrations" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium">
+                    <a
+                        href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/guides/ExternalIntegrations.md"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                    >
                         Read Guide &rarr;
-                    </Link>
+                    </a>
                 </div>
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-indigo-500/50 transition-colors">
@@ -62,9 +67,14 @@ export default function DevelopersPage() {
                     <div className="bg-black/50 p-3 rounded font-mono text-xs text-emerald-400 mb-4">
                         POST /your-endpoint {"{ type: 'FINALIZED', ... }"}
                     </div>
-                    <Link href="/docs/guides/ExternalIntegrations" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium">
+                    <a
+                        href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/guides/ExternalIntegrations.md"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                    >
                         View Payloads &rarr;
-                    </Link>
+                    </a>
                 </div>
             </div>
 
