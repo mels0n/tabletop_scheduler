@@ -468,6 +468,30 @@ export async function cancelEvent(slug: string) {
             );
         }
 
+        // Intent: Trigger CANCELLED webhook if applicable
+        if (event.fromUrl) {
+            log.info("Queueing cancellation webhook", { slug, fromUrl: event.fromUrl });
+
+            const payload = {
+                type: "CANCELLED",
+                eventId: event.id,
+                fromUrlId: event.fromUrlId,
+                slug: event.slug,
+                title: event.title,
+                timestamp: new Date().toISOString()
+            };
+
+            await prisma.webhookEvent.create({
+                data: {
+                    eventId: event.id,
+                    url: event.fromUrl,
+                    payload: JSON.stringify(payload),
+                    status: "PENDING",
+                    nextAttempt: new Date()
+                }
+            });
+        }
+
         log.info("Event cancelled successfully", { slug });
         return { success: true };
     } catch (e) {
