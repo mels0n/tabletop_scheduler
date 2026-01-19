@@ -7,7 +7,7 @@
 - **Use Case:** Stabilizing Production Runtime
 
 ## Recent Accomplishments
-- **Runtime Stability:** Fixed "workers" error via conditional `output: 'standalone'` and `instrumentation.ts` safeties.
+- **Runtime Stability:** DISABLED `instrumentationHook` to eliminate "workers" error. Moved Telegram setup to `/api/telegram/setup`.
 - **Build Stability:** Fixed "Failed to find Server Action" via static imports.
 - **Observation:** `npm run build:hosted` passes. Vercel deployment should now be stable.
 

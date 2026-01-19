@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { getBaseUrl } from "@/shared/lib/url";
 import { buildFinalizedMessage } from "@/shared/lib/eventMessage";
-import { editMessageText } from "@/features/telegram";
+import { editMessageText } from "@/features/telegram/lib/telegram-client";
 import Logger from "@/shared/lib/logger";
 
 import { verifyEventAdmin } from "@/features/auth/server/actions";
