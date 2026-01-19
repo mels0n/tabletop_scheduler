@@ -5,6 +5,8 @@ import { buildFinalizedMessage } from "@/shared/lib/eventMessage";
 import { editMessageText } from "@/features/telegram";
 import Logger from "@/shared/lib/logger";
 
+import { verifyEventAdmin } from "@/features/auth/server/actions";
+
 const log = Logger.get("API:Location");
 
 /**
@@ -30,7 +32,6 @@ export async function POST(
     try {
         const { location } = await req.json();
 
-        const { verifyEventAdmin } = await import("@/features/auth/server/actions");
         if (!await verifyEventAdmin(params.slug)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
