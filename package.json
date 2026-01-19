@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "license": "CC-BY-NC-SA-4.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

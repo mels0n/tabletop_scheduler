@@ -2,7 +2,7 @@
 const nextConfig = {
     output: 'standalone',
     experimental: {
-        instrumentationHook: false,
+        instrumentationHook: true,
     },
     webpack: (config, { webpack }) => {
 
