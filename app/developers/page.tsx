@@ -15,7 +15,7 @@ export default function DevelopersPage() {
                 </h1>
                 <p className="text-xl text-slate-300 leading-relaxed">
                     Extend the power of our scheduling tools. Whether you are building a custom Discord bot,
-                    integrating with your guild's website, or creating automated workflows, our platform is designed to play nice with others.
+                    integrating with your guild&apos;s website, or creating automated workflows, our platform is designed to play nice with others.
                 </p>
             </div>
 
@@ -31,7 +31,7 @@ export default function DevelopersPage() {
                 </p>
                 <div className="bg-slate-900/50 p-4 rounded-lg border border-indigo-500/20">
                     <p className="text-indigo-200 font-medium">
-                        "Powered by <a href="https://tabletoptime.us" className="underline hover:text-white">Tabletoptime.us</a>"
+                        &quot;Powered by <a href="https://tabletoptime.us" className="underline hover:text-white">Tabletoptime.us</a>&quot;
                     </p>
                     <p className="text-xs text-slate-400 mt-2">
                         Must be a clickable backlink to <code>https://tabletoptime.us</code> visible to the end user.
