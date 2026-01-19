@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: 'standalone',
+    output: process.env.IS_DOCKER_BUILD === 'true' ? 'standalone' : undefined,
     experimental: {
         instrumentationHook: true,
     },

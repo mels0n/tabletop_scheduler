@@ -7,9 +7,9 @@
 - **Use Case:** Stabilizing Production Runtime
 
 ## Recent Accomplishments
-- **Runtime Stability:** Fixed "workers" error via `instrumentation.ts` safeties.
+- **Runtime Stability:** Fixed "workers" error via conditional `output: 'standalone'` and `instrumentation.ts` safeties.
 - **Build Stability:** Fixed "Failed to find Server Action" via static imports.
-- **Observation:** `npm run build:hosted` passes.
+- **Observation:** `npm run build:hosted` passes. Vercel deployment should now be stable.
 
 ## Next Steps
 - Monitor production deployment.
