@@ -5,6 +5,8 @@ import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:Finalize");
 
+import { verifyEventAdmin } from "@/features/auth/server/actions";
+
 /**
  * @function POST
  * @description Handles the "Finalize Event" action from the Manager Dashboard.
@@ -41,7 +43,6 @@ export async function POST(
             return NextResponse.json({ error: "Missing Slot ID" }, { status: 400 });
         }
 
-        const { verifyEventAdmin } = await import("@/features/auth/server/actions");
         if (!await verifyEventAdmin(params.slug)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
