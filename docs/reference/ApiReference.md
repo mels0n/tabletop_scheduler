@@ -22,7 +22,9 @@ Example: `https://tabletoptime.us/api/event`
   "minPlayers": 3,
   "slots": [
     { "startTime": "2023-11-01T18:00:00.000Z", "endTime": "2023-11-01T22:00:00.000Z" }
-  ]
+  ],
+  "fromUrl": "https://callback.com/webhook",
+  "fromUrlId": "ext-123"
 }
 ```
 
@@ -37,6 +39,8 @@ You can link users to the "Create Event" page with pre-filled values using query
 - `minPlayers` (number): Pre-fills minimum players (default 3)
 - `maxPlayers` (number): Pre-fills maximum players
 - `slots` (string): JSON stringified array of objects `[{startTime: ISO, endTime: ISO}]`
+- `fromUrl` (string): Webhook URL for callback events
+- `fromUrlId` (string): External ID to track this event context
 
 **Example:**
 `https://tabletoptime.us/new?title=Raid%20Night&maxPlayers=8&minPlayers=8`
@@ -200,3 +204,58 @@ Retrieve read-only details about a specific event.
 > - `/finalize` expects the **Slug** (string).
 > - `/vote` expects the **Event ID** (integer) despite the URL structure. 
 > Ensure your client sends the correct identifier for the specific action.
+
+## External Integrations
+
+### Integration Callbacks (Webhooks)
+When creating an event, you can provide a `fromUrl` parameter. The system will post JSON updates back to this URL when significant lifecycle events occur.
+
+**Retry Policy:** 
+- Webhooks are retried every 5 minutes.
+- **Timeout:** 1 Hour (~12 attempts). After 1 hour of failures, the webhook is marked as FAILED and no further attempts are made.
+
+#### 1. Event Created
+Sent immediately after `POST /api/event` success if `fromUrl` is present.
+
+**Payload:**
+```json
+{
+  "type": "CREATED",
+  "eventId": 123,
+  "fromUrlId": "external-id-123", // Mirrored from input
+  "slug": "8f8f8f8f",
+  "link": "https://tabletoptime.us/e/8f8f8f8f",
+  "title": "My Event",
+  "timestamp": "2023-11-25T14:00:00.000Z"
+}
+```
+
+#### 2. Event Finalized
+Sent when the event is successfully finalized.
+
+**Payload:**
+```json
+{
+  "type": "FINALIZED",
+  "eventId": 123,
+  "fromUrlId": "external-id-123",
+  "slug": "8f8f8f8f",
+  "link": "https://tabletoptime.us/e/8f8f8f8f",
+  "title": "My Event",
+  "finalizedSlot": {
+    "id": 456,
+    "startTime": "2023-12-01T18:00:00.000Z",
+    "endTime": "2023-12-01T22:00:00.000Z"
+  },
+  "attendees": ["Alice", "Bob"],
+  "waitlist": ["Charlie"],
+  "location": "Game Store A",
+  "timestamp": "2023-11-28T10:00:00.000Z"
+}
+```
+
+### Pre-fill & Deep Linking
+
+#### Voting Page (`/e/[slug]`)
+- **`userID`**: Pre-fills the "Your Name" input field for the voter.  
+  *Example:* `https://tabletoptime.us/e/abc-123?userID=PlayerOne`

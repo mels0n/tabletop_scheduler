@@ -5,7 +5,7 @@ import { format, parseISO } from "date-fns";
 import { ClientTimezone } from "./ClientDate";
 import { Check, HelpCircle, X, User as UserIcon, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 /**
  * @interface Slot
@@ -57,6 +57,7 @@ interface VotingInterfaceProps {
  */
 export function VotingInterface({ eventId, initialSlots, participants, minPlayers, serverParticipantId, discordIdentity }: VotingInterfaceProps) {
     const pathname = usePathname();
+    const searchParams = useSearchParams(); // Requires next/navigation import update below
 
     const [slots, setSlots] = useState(initialSlots);
     const [userName, setUserName] = useState("");
@@ -112,10 +113,12 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
         } else {
             // Intent: Fallback for new user - pre-fill from global user preferences if available.
             // Fix: Only overwrite if currently empty to prevent typing interruption if effect re-runs.
-            setUserName(prev => prev || localStorage.getItem('tabletop_username') || "");
+            // Upgrade: Check URL for 'userID' param to prefill name
+            const urlUserId = searchParams.get("userID");
+            setUserName(prev => prev || urlUserId || localStorage.getItem('tabletop_username') || "");
             setUserTelegram(prev => prev || localStorage.getItem('tabletop_telegram') || "");
         }
-    }, [serverParticipantId, eventId, participants, initialSlots]);
+    }, [serverParticipantId, eventId, participants, initialSlots, searchParams]);
 
     /**
      * Toggles vote preference for a specific slot.

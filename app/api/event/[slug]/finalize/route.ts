@@ -147,6 +147,42 @@ export async function POST(
                 });
             }
 
+            // If external URL provided, enqueue the webhook task immediately
+            // Capture slot details for the payload
+            const sTime = updatedEvent.timeSlots.find(s => s.id === updatedEvent.finalizedSlotId);
+
+            // If external URL provided, enqueue the webhook task immediately
+            if (updatedEvent.fromUrl) {
+                const { getBaseUrl } = await import("@/shared/lib/url");
+                const origin = getBaseUrl(req.headers);
+
+                await tx.webhookEvent.create({
+                    data: {
+                        eventId: updatedEvent.id,
+                        url: updatedEvent.fromUrl,
+                        status: "PENDING",
+                        nextAttempt: new Date(), // Process immediately
+                        payload: JSON.stringify({
+                            type: "FINALIZED",
+                            eventId: updatedEvent.id,
+                            fromUrlId: updatedEvent.fromUrlId || null,
+                            slug: updatedEvent.slug,
+                            link: `${origin}/e/${updatedEvent.slug}`,
+                            title: updatedEvent.title,
+                            finalizedSlot: {
+                                id: updatedEvent.finalizedSlotId,
+                                startTime: sTime?.startTime.toISOString(),
+                                endTime: sTime?.endTime.toISOString()
+                            },
+                            attendees: acceptedNames,
+                            waitlist: waitlistNames,
+                            location: updatedEvent.location,
+                            timestamp: new Date().toISOString()
+                        })
+                    }
+                });
+            }
+
             return updatedEvent;
         });
 

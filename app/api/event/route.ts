@@ -46,27 +46,63 @@ export async function POST(req: Request) {
         const hashedAdminToken = hashToken(rawAdminToken);
 
         // Action: transactional creation ensures we don't have an event without slots.
-        const event = await prisma.event.create({
-            data: {
-                slug,
-                title,
-                description,
-                adminToken: hashedAdminToken, // Store Hash
-                telegramLink,
-                timezone: body.timezone || "UTC",
-                minPlayers: minPlayers || 3,
-                maxPlayers: maxPlayers || null,
-                status: "DRAFT",
-                timeSlots: {
-                    create: slots.map((slot: any) => ({
-                        startTime: new Date(slot.startTime),
-                        endTime: new Date(slot.endTime),
-                    })),
+        // Extended Logic: Webhook Callback
+        const { fromUrl, fromUrlId } = body;
+
+        // Action: transactional creation ensures we don't have an event without slots.
+        // Prisma transaction is extended to include Webhook creation if needed.
+        const event = await prisma.$transaction(async (tx) => {
+            const newEvent = await tx.event.create({
+                data: {
+                    slug,
+                    title,
+                    description,
+                    adminToken: hashedAdminToken, // Store Hash
+                    telegramLink,
+                    timezone: body.timezone || "UTC",
+                    minPlayers: minPlayers || 3,
+                    maxPlayers: maxPlayers || null,
+                    status: "DRAFT",
+                    fromUrl: fromUrl || null,
+                    fromUrlId: fromUrlId || null,
+                    timeSlots: {
+                        create: slots.map((slot: any) => ({
+                            startTime: new Date(slot.startTime),
+                            endTime: new Date(slot.endTime),
+                        })),
+                    },
                 },
-            },
+            });
+
+            // If external URL provided, enqueue the webhook task immediately
+            if (fromUrl) {
+                const { getBaseUrl } = await import("@/shared/lib/url");
+                const origin = getBaseUrl(req.headers);
+                const votingLink = `${origin}/e/${slug}`;
+
+                await tx.webhookEvent.create({
+                    data: {
+                        eventId: newEvent.id,
+                        url: fromUrl,
+                        status: "PENDING",
+                        nextAttempt: new Date(), // Process immediately
+                        payload: JSON.stringify({
+                            type: "CREATED",
+                            eventId: newEvent.id,
+                            fromUrlId: fromUrlId || null,
+                            slug: newEvent.slug,
+                            link: votingLink,
+                            title: newEvent.title,
+                            timestamp: new Date().toISOString()
+                        })
+                    }
+                });
+            }
+
+            return newEvent;
         });
 
-        log.info("Event created successfully", { slug, id: event.id });
+        log.info("Event created successfully", { slug, id: event.id, hasWebhook: !!fromUrl });
         // Return Plaintext to user
         return NextResponse.json({ slug: event.slug, id: event.id, adminToken: rawAdminToken });
     } catch (error) {
