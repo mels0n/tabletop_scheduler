@@ -16,11 +16,6 @@
 # production
 /build
 
-# Agent & AI
-.agent/
-.cursorrules
-.windsurfrules
-composer.json
 
 # IDE & Editors
 .vscode/
@@ -59,13 +54,9 @@ next-env.d.ts
 *.db
 *.db-journal
 
-# Workflow
-EPIC_WORKFLOW.md
+
 
 # backups from refactoring
 *.old
 
 
-
-# AI Rules
-.cursorrules

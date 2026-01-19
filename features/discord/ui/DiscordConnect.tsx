@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { listDiscordChannels, connectDiscordChannel, checkEventStatus } from "@/app/actions";
+import { listDiscordChannels, connectDiscordChannel } from "@/features/integrations/discord/server/actions";
+import { checkEventStatus } from "@/features/event-management/server/actions";
 import { AlertCircle, CheckCircle, Loader2, Save, Send, LogOut } from "lucide-react";
 
 // Icon for internal use
@@ -117,7 +118,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
         try {
             // Lazy load or import at top (we need to be consistent, but let's lazy load mainly to avoid big bundles if not needed, 
             // though here it's small). Actually let's just dynamic import to match pattern.
-            const { dmDiscordManagerLink } = await import("@/app/actions");
+            const { dmDiscordManagerLink } = await import("@/features/integrations/discord/server/actions");
             const res = await dmDiscordManagerLink(slug);
 
             if (res.error) {

@@ -108,7 +108,7 @@ export async function GET(req: Request) {
             const match = returnTo.match(/\/e\/([^\/]+)\/manage/);
             if (match && match[1]) {
                 const slug = match[1];
-                const { setAdminCookie } = await import("@/app/actions");
+                const { setAdminCookie } = await import("@/features/auth/server/actions");
                 const prisma = (await import("@/shared/lib/prisma")).default;
 
                 const event = await prisma.event.findUnique({ where: { slug } });

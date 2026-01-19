@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteEvent, cancelEvent } from "@/app/actions";
+import { deleteEvent, cancelEvent } from "@/features/event-management/server/actions";
 import { Loader2, Trash2, AlertTriangle } from "lucide-react";
 
 /**
@@ -181,7 +181,7 @@ export function ManagerControls({
                                             // Using direct import from top level for now as it's cleaner.
                                             // But we are in a client component, so we imported the server action at top.
                                             // We need to import updateReminderSettings.
-                                            const { updateReminderSettings } = await import("@/app/actions");
+                                            const { updateReminderSettings } = await import("@/features/event-management/server/actions");
                                             const res = await updateReminderSettings(slug, reminderEnabled, reminderTime, reminderDays);
 
                                             setIsSavingReminders(false);

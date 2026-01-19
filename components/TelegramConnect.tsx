@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CopyLinkButton } from "./CopyLinkButton";
-import { updateTelegramInviteLink, checkEventStatus } from "@/app/actions";
+import { updateTelegramInviteLink, checkEventStatus } from "@/features/event-management/server/actions";
 import { AlertCircle, CheckCircle, HelpCircle, Loader2, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -82,7 +82,7 @@ export function TelegramConnect({
                 // Poll for Manager Status
                 if (!hasManagerChatId) {
                     // Lazy load action to avoid circular deps if any (though unlikely here)
-                    const { checkManagerStatus } = await import("@/app/actions");
+                    const { checkManagerStatus } = await import("@/features/event-management/server/actions");
                     const status = await checkManagerStatus(slug);
                     if (status.hasManagerChatId) {
                         setHasManagerChatId(true);
@@ -125,7 +125,7 @@ export function TelegramConnect({
         setError("");
 
         try {
-            const { dmManagerLink } = await import("@/app/actions");
+            const { dmManagerLink } = await import("@/features/event-management/server/recovery");
             const res = await dmManagerLink(slug);
             if (res.error) {
                 setError(res.error);
@@ -284,7 +284,7 @@ export function TelegramConnect({
                             onClick={async () => {
                                 setRegisterLoading(true);
                                 try {
-                                    const { generateShortRecoveryToken } = await import("@/app/actions");
+                                    const { generateShortRecoveryToken } = await import("@/features/event-management/server/recovery");
                                     const res = await generateShortRecoveryToken(slug);
                                     if (res.token) {
                                         window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');

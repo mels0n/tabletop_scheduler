@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, User as UserIcon, Calendar, Clock, RefreshCw, Send, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { sendGlobalMagicLink } from "@/app/actions";
+import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
 
 
 import { DiscordLoginSender } from "@/features/discord/ui/DiscordLoginSender";
