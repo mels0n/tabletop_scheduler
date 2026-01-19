@@ -60,3 +60,6 @@ next-env.d.ts
 *.old
 
 
+
+# Database Backups
+backups/

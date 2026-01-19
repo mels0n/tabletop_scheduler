@@ -6,28 +6,25 @@ updated: 2026-01-19
 
 # Roadmap
 
-> **Current Milestone:** v1.1 - Hosted Backup & Recovery
-> **Goal:** Ensure data resilience for the Hosted production environment.
+> **Current Milestone:** None
+> **Goal:** TBD
 
 ## Must-Haves (from SPEC)
-- [ ] Automated Backup Config/Verification
-- [ ] Recovery Runsheet (`docs/recovery.md`)
-- [ ] Backup/Restore Scripts
+- [ ] TBD
 
 ---
 
 ## Phases
 
-### Phase 1: Implementation
-**Status:** 🏗️ In Progress
-**Objective:** Create tools and documentation for managing hosted database backups.
+### Phase 1: TBD
+**Status:** ⬜ Not Started
+**Objective:** TBD
 
 **Tasks:**
-- [ ] Plan 1.1: Backup Scripts & Docs
+- [ ] TBD
 
 **Verification:**
-- [ ] Scripts execute successfully against a test db
-- [ ] Documentation exists
+- [ ] TBD
 
 ---
 
@@ -35,7 +32,7 @@ updated: 2026-01-19
 
 | Phase | Status | Tasks | Complete |
 |-------|--------|-------|----------|
-| 1 | ⬜ | 0/0 | — |
+| — | — | — | — |
 
 ---
 
@@ -43,4 +40,4 @@ updated: 2026-01-19
 
 | Phase | Started | Completed | Duration |
 |-------|---------|-----------|----------|
-| 1 | — | — | — |
+| — | — | — | — |

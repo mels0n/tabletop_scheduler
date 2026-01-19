@@ -8,12 +8,14 @@
     "build": "next build",
     "build:hosted": "prisma generate --schema=prisma/schema.hosted.prisma && next build",
     "build:selfhosted": "prisma generate --schema=prisma/schema.prisma && next build",
-    "db:deploy:hosted": "prisma migrate deploy --schema=prisma/schema.hosted.prisma",
-    "db:push:hosted": "prisma db push --schema=prisma/schema.hosted.prisma",
+    "db:deploy:hosted": "npm run db:backup && prisma migrate deploy --schema=prisma/schema.hosted.prisma",
+    "db:push:hosted": "npm run db:backup && prisma db push --schema=prisma/schema.hosted.prisma",
     "db:diff:hosted": "prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.hosted.prisma --script",
     "start": "next start",
     "test": "vitest",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:restore": "node scripts/db-restore.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
