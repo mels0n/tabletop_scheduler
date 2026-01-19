@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID } from "crypto";
-import { sendTelegramMessage, getBotUsername } from "@/features/telegram";
+import { sendTelegramMessage, getBotUsername } from "@/features/telegram/lib/telegram-client";
 
 const log = Logger.get("MagicLinkActions");
 

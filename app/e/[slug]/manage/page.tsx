@@ -9,7 +9,7 @@ import { HistoryTracker } from "@/components/HistoryTracker";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
 import { EditLocationModal } from "./EditLocationModal";
-import { getBotUsername } from "@/features/telegram";
+import { getBotUsername } from "@/features/telegram/lib/telegram-client";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
 import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
