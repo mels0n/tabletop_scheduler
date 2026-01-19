@@ -41,5 +41,29 @@ export async function verifyEventAdmin(slug: string): Promise<boolean> {
     if (!event) return false;
 
     // Check Hash OR Legacy Plaintext (Migration support)
-    return event.adminToken === tokenHash || event.adminToken === token;
+    if (token && event && (event.adminToken === tokenHash || event.adminToken === token)) {
+        return true;
+    }
+
+    // 2. Global Identity Fallback (Recovery/Magic Link)
+    // If the user has logged in via a Magic Link (setting a global user cookie),
+    // we verify if that global user is the declared manager of this event.
+    const globalChatId = cookieStore.get("tabletop_user_chat_id")?.value;
+    const globalDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
+
+    if (globalChatId || globalDiscordId) {
+        // Optimization: Refetch if we didn't fetch manager fields above, or just rely on a wider select initially.
+        // For safety/cleanliness, let's just query what we need if we fall back.
+        const eventManager = await prisma.event.findUnique({
+            where: { slug },
+            select: { managerChatId: true, managerDiscordId: true }
+        });
+
+        if (eventManager) {
+            if (globalChatId && eventManager.managerChatId === globalChatId) return true;
+            if (globalDiscordId && eventManager.managerDiscordId === globalDiscordId) return true;
+        }
+    }
+
+    return false;
 }
