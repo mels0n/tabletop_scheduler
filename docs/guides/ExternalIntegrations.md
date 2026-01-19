@@ -24,8 +24,8 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 | `description` | string | Optional description text. |
 | `minPlayers` | number | Minimum players required (default: 3). |
 | `maxPlayers` | number | Maximum players allowed. |
-| `fromUrl` | url | **Required for Webhooks**. The URL we will POST updates to. |
-| `fromUrlId` | string | Your system's unique ID for this context (e.g., a Discord Message ID or Database Row ID). |
+| `fromUrl` | url | **Required for Webhooks**. The generic HTTP endpoint we will POST JSON updates to (not Discord-specific). |
+| `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID). |
 
 ### Example Link
 ```text
@@ -77,6 +77,20 @@ Sent when the host locks in a time slot and location.
   "waitlist": ["Thrall"],
   "location": "Blackrock Depths",
   "timestamp": "2023-11-28T10:00:00.000Z"
+}
+```
+
+### Event Cancelled (`CANCELLED`)
+Sent if the organizer cancels the event.
+
+**Payload:**
+```json
+{
+  "type": "CANCELLED",
+  "eventId": 123,
+  "fromUrlId": "raid-101",
+  "slug": "8f8f8f8f",
+  "timestamp": "2023-11-29T09:00:00.000Z"
 }
 ```
 

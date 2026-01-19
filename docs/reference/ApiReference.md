@@ -254,6 +254,20 @@ Sent when the event is successfully finalized.
 }
 ```
 
+#### 3. Event Cancelled
+Sent if the organizer cancels the event.
+
+**Payload:**
+```json
+{
+  "type": "CANCELLED",
+  "eventId": 123,
+  "fromUrlId": "external-id-123",
+  "slug": "8f8f8f8f",
+  "timestamp": "2023-11-29T09:00:00.000Z"
+}
+```
+
 ### Pre-fill & Deep Linking
 
 #### Voting Page (`/e/[slug]`)
