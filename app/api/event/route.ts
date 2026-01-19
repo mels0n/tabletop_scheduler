@@ -75,12 +75,13 @@ export async function POST(req: Request) {
             });
 
             // If external URL provided, enqueue the webhook task immediately
+            let webhookId: string | null = null;
             if (fromUrl) {
                 const { getBaseUrl } = await import("@/shared/lib/url");
                 const origin = getBaseUrl(req.headers);
                 const votingLink = `${origin}/e/${slug}`;
 
-                await tx.webhookEvent.create({
+                const wh = await tx.webhookEvent.create({
                     data: {
                         eventId: newEvent.id,
                         url: fromUrl,
@@ -97,14 +98,22 @@ export async function POST(req: Request) {
                         })
                     }
                 });
+                webhookId = wh.id;
             }
 
-            return newEvent;
+            return { event: newEvent, webhookId };
         });
 
-        log.info("Event created successfully", { slug, id: event.id, hasWebhook: !!fromUrl });
+        // Trigger Webhook (Fire & Forget or Await? Decision: Await to ensure we log it, but don't fail the request)
+        if (event.webhookId) {
+            const { processWebhook } = await import("@/shared/lib/webhook-sender");
+            // We await it so we don't return before the process runs, as Vercel serverless functions might freeze background tasks
+            await processWebhook(event.webhookId);
+        }
+
+        log.info("Event created successfully", { slug, id: event.event.id, hasWebhook: !!fromUrl });
         // Return Plaintext to user
-        return NextResponse.json({ slug: event.slug, id: event.id, adminToken: rawAdminToken });
+        return NextResponse.json({ slug: event.event.slug, id: event.event.id, adminToken: rawAdminToken });
     } catch (error) {
         log.error("Failed to create event", error as Error);
         return NextResponse.json(

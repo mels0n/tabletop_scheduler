@@ -148,15 +148,17 @@ export async function POST(
             }
 
             // If external URL provided, enqueue the webhook task immediately
+            // If external URL provided, enqueue the webhook task immediately
             // Capture slot details for the payload
             const sTime = updatedEvent.timeSlots.find(s => s.id === updatedEvent.finalizedSlotId);
 
             // If external URL provided, enqueue the webhook task immediately
+            let webhookId: string | null = null;
             if (updatedEvent.fromUrl) {
                 const { getBaseUrl } = await import("@/shared/lib/url");
                 const origin = getBaseUrl(req.headers);
 
-                await tx.webhookEvent.create({
+                const wh = await tx.webhookEvent.create({
                     data: {
                         eventId: updatedEvent.id,
                         url: updatedEvent.fromUrl,
@@ -181,10 +183,17 @@ export async function POST(
                         })
                     }
                 });
+                webhookId = wh.id;
             }
 
-            return updatedEvent;
+            return { event: updatedEvent, webhookId };
         });
+
+        // Inline Hook Delivery
+        if (event.webhookId) {
+            const { processWebhook } = await import("@/shared/lib/webhook-sender");
+            await processWebhook(event.webhookId);
+        }
 
         const { getBaseUrl } = await import("@/shared/lib/url");
         const origin = getBaseUrl(req.headers);
