@@ -122,7 +122,7 @@ export async function POST(
         waitlistNames = allWaitlist.map(v => v.participant.name);
 
         // --- ATOMIC DB UPDATE ---
-        const event = await prisma.$transaction(async (tx) => {
+        const transactionResult = await prisma.$transaction(async (tx) => {
             // 1. Update Event
             const updatedEvent = await tx.event.update({
                 where: { slug: params.slug },
@@ -189,10 +189,12 @@ export async function POST(
             return { event: updatedEvent, webhookId };
         });
 
+        const { event: finalizedEvent, webhookId } = transactionResult;
+
         // Inline Hook Delivery
-        if (event.webhookId) {
+        if (webhookId) {
             const { processWebhook } = await import("@/shared/lib/webhook-sender");
-            await processWebhook(event.webhookId);
+            await processWebhook(webhookId);
         }
 
         const { getBaseUrl } = await import("@/shared/lib/url");
@@ -230,47 +232,47 @@ export async function POST(
         }
 
         // Action: Telegram Notification Cycle (Public Group)
-        if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
+        if (finalizedEvent.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
             const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
             const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-            const slotTime = event.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
+            const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
 
             // Step 1: Remove the previous voting message (dashboard).
             // Why? To remove clutter and prevent users from trying to vote on a closed event.
-            if (event.pinnedMessageId) {
-                await deleteMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
+            if (finalizedEvent.pinnedMessageId) {
+                await deleteMessage(finalizedEvent.telegramChatId, finalizedEvent.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
             }
 
             // Step 3: Construct & Send the "Finalized" message.
-            const msg = buildFinalizedMessage(event, slotTime, origin, acceptedNames, waitlistNames);
-            const msgId = await sendTelegramMessage(event.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
+            const msg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
+            const msgId = await sendTelegramMessage(finalizedEvent.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
 
             // Step 4: Pin the new message and track its ID.
             if (msgId) {
-                await pinChatMessage(event.telegramChatId, msgId, process.env.TELEGRAM_BOT_TOKEN);
+                await pinChatMessage(finalizedEvent.telegramChatId, msgId, process.env.TELEGRAM_BOT_TOKEN);
 
                 // CRITICAL: Update the pinnedMessageId in the database.
                 // Why? Allows subsequent updates (like Location Edit) to modify THIS exact message.
                 await prisma.event.update({
-                    where: { id: event.id },
+                    where: { id: finalizedEvent.id },
                     data: { pinnedMessageId: msgId }
                 });
             }
         }
 
         // Action: Discord Notification Cycle
-        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
+        if (finalizedEvent.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
             const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
             const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-            const slotTime = event.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
+            const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
 
             // Step 1: Unpin the previous voting message (dashboard).
-            if (event.discordMessageId) {
-                await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
+            if (finalizedEvent.discordMessageId) {
+                await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
             }
 
             // Step 3: Construct & Send the "Finalized" message.
-            const htmlMsg = buildFinalizedMessage(event, slotTime, origin, acceptedNames, waitlistNames);
+            const htmlMsg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
             // Convert HTML to Markdown for Discord
             const discordMsg = htmlMsg
                 .replace(/<b>(.*?)<\/b>/g, '**$1**')
@@ -279,15 +281,15 @@ export async function POST(
                 .replace(/<br\s*\/?>/g, '\n')
                 .replace(/&nbsp;/g, ' ');
 
-            const res = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
+            const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
             const msgId = res.id;
 
             // Step 4: Pin the new message and track its ID.
             if (msgId) {
-                await pinDiscordMessage(event.discordChannelId, msgId, process.env.DISCORD_BOT_TOKEN);
+                await pinDiscordMessage(finalizedEvent.discordChannelId, msgId, process.env.DISCORD_BOT_TOKEN);
 
                 await prisma.event.update({
-                    where: { id: event.id },
+                    where: { id: finalizedEvent.id },
                     data: { discordMessageId: msgId }
                 });
             } else {
