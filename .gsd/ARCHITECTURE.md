@@ -57,6 +57,18 @@ The `app/` directory uses the Next.js App Router:
 - [ ] Strict TypeScript compliance (current goal in `SPEC.md`).
 - [ ] Ensure all `import`s of Server Actions are static to avoid build manifest errors.
 
+## Privacy & Visibility Architecture (Privacy Integration)
+
+This system implements a strict **"Privacy via Architecture"** policy (Ref: ADR-001).
+
+### The Visibility Split
+| Surface Area | Content Type | Visibility | Mechanism |
+|--------------|--------------|------------|-----------|
+| **Marketing** | Landing, Blog, FAQ | **Public** | `sitemap.xml`, `robots.txt` Allow |
+| **Application** | Events (`/e/*`), Admin | **Private** | `noindex` Header, `robots.txt` Disallow |
+
+This ensures that while the **Tool** is visible to AI Agents (AEO), the **User's Data** is cryptographically (token) and architecturally (noindex) hidden.
+
 ## Conventions
 
 - **Naming**: camelCase for vars, PascalCase for components.

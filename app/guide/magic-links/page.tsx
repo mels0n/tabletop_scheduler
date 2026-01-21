@@ -19,11 +19,20 @@ export default function MagicLinksPage() {
         datePublished: new Date().toISOString() // Using current date as fallback, ideally should be static or from props
     });
 
+    const breadcrumbsLd = SchemaGenerator.breadcrumb([
+        { name: "Home", url: "/" },
+        { name: "Magic Links Guide", url: "/guide/magic-links" }
+    ]);
+
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 py-12 px-4 md:px-8">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
             />
 
             <div className="max-w-3xl mx-auto">

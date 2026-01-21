@@ -22,11 +22,18 @@ export default function robots(): MetadataRoute.Robots {
     }
 
     return {
-        rules: {
-            userAgent: '*',
-            allow: '/',
-            disallow: ['/api/', '/admin/'], // Protect API routes even in hosted mode
-        },
+        rules: [
+            {
+                userAgent: '*',
+                allow: '/',
+                disallow: ['/e/', '/api/', '/manage/', '/admin/'], // Private surfaces
+            },
+            {
+                userAgent: ['GPTBot', 'ClaudeBot', 'Google-Extended'],
+                allow: '/',
+                disallow: ['/e/', '/api/', '/manage/', '/admin/'],
+            }
+        ],
         sitemap: `${baseUrl}/sitemap.xml`,
     };
 }

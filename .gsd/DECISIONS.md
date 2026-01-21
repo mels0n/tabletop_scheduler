@@ -1,15 +1,26 @@
-# Decisions
+# Architecture Decision Records (ADR)
 
-## Phase 1 Decisions
+## ADR-001: Event Privacy & Visibility Strategy
 
-**Date:** 2026-01-19
+**Date:** 2026-01-20
+**Status:** Accepted
 
-### Scope
-- **Added:** Automated Testing Infrastructure (Vitest).
-- **Reason:** User requested improved automated testing of functions.
-- **Impact:** Phase 1 now includes setting up a test runner and writing unit tests for refactored actions.
+### Context
+We differentiate between the **Product** (marketing, documentation) and the **User Data** (events).
+- **Product** needs maximum visibility (AEO/SEO) to grow.
+- **User Data** (Events) is private by default. Users routinely share "Secret Links". Accidental indexing of these links would be a privacy breach.
 
-### Approach
-- **Chose:** Vitest.
-- **Reason:** Faster execution, better ESM support, and seamless integration with Next.js/Vite ecosystems compared to Jest.
-- **Strategy:** Build scaffolding first (Plan 1.1), then refactor with tests (Plan 1.2).
+### Decision
+1.  **Architecture Split:**
+    - **Public Surface:** Landing Page, Blog, Docs, FAQ. -> **Indexable**.
+    - **Private Surface:** `/e/[slug]`, `/manage`, `/api`. -> **NoIndex**.
+2.  **Enforcement:**
+    - `robots.ts` must implicitly disallow event paths even in explicit allow lists.
+    - `EventPage` (`/e/[slug]`) must include `x-robots-tag: noindex` header OR `meta name="robots" content="noindex"` as a defense-in-depth measure, regardless of `robots.txt`.
+3.  **Schema:**
+    - We will NOT implement `Schema.org/Event` on the event page to avoiding "Rich Snippet" scraping.
+
+### Consequences
+- **Positive:** Eliminates risk of user events appearing in search.
+- **Positive:** Future audits will ignore "missing event schema" as a feature.
+- **Negative:** Users cannot search Google for *their own* event (acceptable trade-off).
