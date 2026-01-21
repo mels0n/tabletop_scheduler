@@ -1,22 +1,27 @@
 ---
 projectId: tabletop_scheduler
 status: FINALIZED
-version: 1.2.0
-lastUpdated: 2026-01-19
+version: 1.4.0
+lastUpdated: 2026-01-20
 ---
 
-# Specification: TypeScript Strictness
+# Specification: GEO/SEO/AEO Visibility
 
 ## 1. Goal
-Achieve full TypeScript strictness (`"strict": true`) across the entire codebase to eliminate type-safety blind spots and reduce runtime errors.
+Audit and optimize the application for visibility in both traditional Search Engines (SEO) and Generative Engines (GEO/AEO). The goal is to maximize the "AI Visibility Score" by ensuring content is machine-parsable, semantically rich, and structured for answer retrieval.
 
 ## 2. Success Criteria
-- [ ] `tsconfig.json` has `"strict": true` enabled.
-- [ ] `npm run build` passes with zero type errors.
-- [ ] No usage of `any` (explicit or implicit) in new code.
-- [ ] `eslint` configured to ban `any`.
+- [ ] **Audit Completed**: A comprehensive report of current SEO/GEO gaps.
+- [ ] **Semantic Coverage**: Key entities (Event, Scheduler, Guide) have JSON-LD Schema.
+- [ ] **Technical Foundation**:
+    - [ ] `sitemap.xml` is valid and indexed.
+    - [ ] `robots.txt` is correct for Hosted vs Self-Hosted.
+    - [ ] `llms.txt` exists and follows protocols.
+    - [ ] Metadata (Title/Desc) is distinct for every page.
+- [ ] **Content Structure**: Public pages follow Q&A format for AEO snippets.
 
 ## 3. Core Requirements
-- **Strict Null Checks**: Mandate handling of null/undefined.
-- **No Implicit Any**: Variables must have defined types.
-- **Strict Property Initialization**: Class properties must be initialized.
+- **LLM Optimization**: Create `llms.txt` and `ai.txt` for crawler guidance.
+- **Schema.org**: Implement strict, validated JSON-LD for all public pages.
+- **Hosted vs Self-Hosted**: Ensure privacy rules (no-index) strictly apply to self-hosted builds, while hosted builds are maximally visible.
+- **Crawlability**: Ensure dynamic routes (`/e/[slug]`) are discoverable.
