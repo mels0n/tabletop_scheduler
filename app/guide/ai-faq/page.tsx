@@ -59,15 +59,26 @@ export default function AiFaqPage() {
         }
     ]);
 
+    const breadcrumbsLd = SchemaGenerator.breadcrumb([
+        { name: "Home", url: "/" },
+        { name: "AI FAQ", url: "/guide/ai-faq" }
+    ]);
+
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
             {isHosted && (
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-                />
+                <>
+                    <script
+                        type="application/ld+json"
+                        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    />
+                    <script
+                        type="application/ld+json"
+                        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
+                    />
+                </>
             )}
             <div className="max-w-3xl mx-auto space-y-12">
                 <div className="space-y-4">
@@ -82,7 +93,8 @@ export default function AiFaqPage() {
                 </div>
 
                 <section className="space-y-8">
-                    {jsonLd['@graph'][0].mainEntity.map((item: any, i: number) => (
+                    {/* @ts-ignore - schema-dts types are strict but we know the structure */}
+                    {(jsonLd.mainEntity as any[]).map((item: any, i: number) => (
                         <div key={i} className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
                             <h2 className="text-xl font-bold text-slate-200 mb-3 flex items-start gap-3">
                                 <HelpCircle className="w-6 h-6 text-indigo-500 shrink-0" />

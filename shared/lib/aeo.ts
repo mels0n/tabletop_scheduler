@@ -1,9 +1,17 @@
-
-import { Metadata } from 'next';
+import {
+    WithContext,
+    SoftwareApplication,
+    HowTo,
+    FAQPage,
+    Article,
+    BlogPosting,
+    BreadcrumbList
+} from 'schema-dts';
 
 // --- Types ---
+// Helper interfaces for input data (internal DTOs), not the final Schema Output
 
-export type SchemaOrgSoftwareApp = {
+export type AeoSoftwareApp = {
     name: string;
     description: string;
     applicationCategory: string;
@@ -12,35 +20,35 @@ export type SchemaOrgSoftwareApp = {
     currency?: string;
     alternateName?: string;
     disambiguatingDescription?: string;
-
 };
 
-export type SchemaOrgHowToStep = {
+export type AeoHowToStep = {
     name?: string;
     text: string;
     image?: string;
     url?: string;
 };
 
-export type SchemaOrgHowTo = {
+export type AeoHowTo = {
     name: string;
     description: string;
-    steps: SchemaOrgHowToStep[];
+    steps: AeoHowToStep[];
     image?: string;
     totalTime?: string; // ISO 8601 duration
 };
 
-export type SchemaOrgFAQItem = {
-    question: string; // The "name" of the Question
-    answer: string;   // The "text" of the Answer
+export type AeoFAQItem = {
+    question: string;
+    answer: string;
 };
 
-export type SchemaOrgArticle = {
+export type AeoArticle = {
     headline: string;
     description: string;
     image?: string;
     datePublished?: string;
     dateModified?: string;
+    slug?: string;
 };
 
 // --- Generator Class ---
@@ -49,34 +57,34 @@ export const SchemaGenerator = {
     /**
      * Generates a SoftwareApplication schema for the landing page.
      */
-    softwareApp(data: SchemaOrgSoftwareApp) {
+    softwareApp(data: AeoSoftwareApp): WithContext<SoftwareApplication> {
         return {
             "@context": "https://schema.org",
-            "@graph": [
-                {
-                    "@type": "SoftwareApplication",
-                    "name": data.name,
-                    "applicationCategory": data.applicationCategory,
-                    "operatingSystem": "Web",
-                    "offers": {
-                        "@type": "Offer",
-                        "price": data.price || "0.00",
-                        "priceCurrency": data.currency || "USD"
-                    },
-                    "description": data.description,
-                    "featureList": data.featureList,
-                    "alternateName": data.alternateName,
-                    "disambiguatingDescription": data.disambiguatingDescription,
-
-                }
-            ]
+            "@type": "SoftwareApplication",
+            "name": data.name,
+            "applicationCategory": data.applicationCategory,
+            "operatingSystem": "Web",
+            "offers": {
+                "@type": "Offer",
+                "price": data.price || "0.00",
+                "priceCurrency": data.currency || "USD"
+            },
+            "description": data.description,
+            "featureList": data.featureList,
+            "alternateName": data.alternateName,
+            "disambiguatingDescription": data.disambiguatingDescription,
+            "author": {
+                "@type": "Person",
+                "name": "Christopher Melson",
+                "url": "https://chris.melson.us/"
+            }
         };
     },
 
     /**
      * Generates a HowTo schema for guide pages.
      */
-    howTo(data: SchemaOrgHowTo) {
+    howTo(data: AeoHowTo): WithContext<HowTo> {
         return {
             "@context": "https://schema.org",
             "@type": "HowTo",
@@ -97,29 +105,25 @@ export const SchemaGenerator = {
     /**
      * Generates an FAQPage schema.
      */
-    faq(items: SchemaOrgFAQItem[]) {
+    faq(items: AeoFAQItem[]): WithContext<FAQPage> {
         return {
             "@context": "https://schema.org",
-            "@graph": [
-                {
-                    "@type": "FAQPage",
-                    "mainEntity": items.map(item => ({
-                        "@type": "Question",
-                        "name": item.question,
-                        "acceptedAnswer": {
-                            "@type": "Answer",
-                            "text": item.answer
-                        }
-                    }))
+            "@type": "FAQPage",
+            "mainEntity": items.map(item => ({
+                "@type": "Question",
+                "name": item.question,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": item.answer
                 }
-            ]
+            }))
         };
     },
 
     /**
      * Generates an Article schema for generic content pages.
      */
-    article(data: SchemaOrgArticle) {
+    article(data: AeoArticle): WithContext<Article> {
         return {
             "@context": "https://schema.org",
             "@type": "Article",
@@ -146,7 +150,7 @@ export const SchemaGenerator = {
     /**
      * Generates a BlogPosting schema.
      */
-    blogPosting(data: SchemaOrgArticle) {
+    blogPosting(data: AeoArticle): WithContext<BlogPosting> {
         return {
             "@context": "https://schema.org",
             "@type": "BlogPosting",
@@ -169,8 +173,26 @@ export const SchemaGenerator = {
             },
             "mainEntityOfPage": {
                 "@type": "WebPage",
-                "@id": `https://www.tabletoptime.us/blog/${data.headline.toLowerCase().replace(/ /g, '-')}` // Simplified ID generation, ideally passed in
+                "@id": data.slug
+                    ? `https://www.tabletoptime.us/blog/${data.slug}`
+                    : `https://www.tabletoptime.us/blog/${data.headline.toLowerCase().replace(/ /g, '-')}`
             }
+        };
+    },
+
+    /**
+     * Generates a BreadcrumbList schema.
+     */
+    breadcrumb(items: { name: string; url: string }[]): WithContext<BreadcrumbList> {
+        return {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": items.map((item, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "name": item.name,
+                "item": item.url.startsWith("http") ? item.url : `https://www.tabletoptime.us${item.url}`
+            }))
         };
     }
 };

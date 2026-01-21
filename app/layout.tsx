@@ -37,6 +37,15 @@ export const metadata: Metadata = {
         canonical: process.env.NEXT_PUBLIC_BASE_URL,
     },
     robots: isHosted ? "index, follow" : "noindex, nofollow",
+    applicationName: "Tabletop Scheduler",
+    appleWebApp: {
+        capable: true,
+        title: "Tabletop",
+        statusBarStyle: "black-translucent",
+    },
+    formatDetection: {
+        telephone: false,
+    },
     keywords: isHosted
         ? ["D&D session scheduler", "RPG game night planner", "Magic: The Gathering event scheduler", "MTG Commander night planner", "Tabletop game calendar", "D&D", "Board Games", "Event Planner"]
         : ["Tabletop Scheduler"],
