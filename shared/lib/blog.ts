@@ -11,6 +11,8 @@ export interface BlogPost {
     date: string;
     tags: string[];
     content: string;
+    itemList?: string[];
+    listTitle?: string;
 }
 
 export function getAllPosts(): BlogPost[] {
@@ -35,6 +37,8 @@ export function getAllPosts(): BlogPost[] {
                 description: data.description || '',
                 date: data.date || new Date().toISOString(),
                 tags: data.tags || [],
+                itemList: data.itemList || undefined,
+                listTitle: data.listTitle || undefined,
             };
         });
 
@@ -64,6 +68,8 @@ export function getPostBySlug(slug: string): BlogPost | null {
             description: data.description || '',
             date: data.date || new Date().toISOString(),
             tags: data.tags || [],
+            itemList: data.itemList || undefined,
+            listTitle: data.listTitle || undefined,
         };
     } catch (e) {
         return null;

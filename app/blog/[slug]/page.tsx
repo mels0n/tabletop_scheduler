@@ -53,11 +53,19 @@ export default function BlogPost({ params }: Props) {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
-                    __html: JSON.stringify(SchemaGenerator.blogPosting({
-                        headline: post.title,
-                        description: post.description,
-                        datePublished: post.date,
-                    }))
+                    __html: JSON.stringify([
+                        SchemaGenerator.blogPosting({
+                            headline: post.title,
+                            description: post.description,
+                            datePublished: post.date,
+                            slug: params.slug
+                        }),
+                        ...(post.itemList ? [SchemaGenerator.itemList({
+                            name: post.listTitle || `Items from: ${post.title}`,
+                            description: `A list of items recommended in the article: ${post.title}`,
+                            items: post.itemList
+                        })] : [])
+                    ])
                 }}
             />
             <div className="max-w-3xl mx-auto">

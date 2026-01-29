@@ -3,6 +3,8 @@ title: "West Marches & Draft Nights: Managing Rotating Casts of Players"
 description: "How to organize West Marches campaigns and Magic: The Gathering Draft nights where the player list changes every week."
 date: "2025-11-01"
 tags: ["West Marches", "D&D", "MTG Draft", "Event Organizing"]
+itemList: ["Broad Availability Polling", "Confirmation & Capping", "Waitlists"]
+listTitle: "Steps to Organize Variable Groups"
 ---
 
 # West Marches & Draft Nights: Managing Rotating Casts of Players

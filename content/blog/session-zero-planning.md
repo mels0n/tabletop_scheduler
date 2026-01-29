@@ -3,6 +3,8 @@ title: "The Art of the Session Zero: Planning Your Campaign Success"
 description: "Why Session Zero is crucial for RPG campaigns. Aligning expectations, scheduling logistics, and safety tools for D&D and Pathfinder groups."
 date: "2025-08-01"
 tags: ["D&D", "Session Zero", "DM Guide", "New Group"]
+itemList: ["Tone and Genre", "House Rules & Homebrew", "Safety Tools", "The Logistics", "Drafting the Party", "The Social Contract"]
+listTitle: "Session Zero Agenda Checklist"
 ---
 
 # The Art of the Session Zero: Planning Your Campaign Success
