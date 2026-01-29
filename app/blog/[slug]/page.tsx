@@ -2,6 +2,7 @@ import { getPostBySlug, getAllPosts } from '@/shared/lib/blog';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 import { notFound } from 'next/navigation';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -90,7 +91,7 @@ export default function BlogPost({ params }: Props) {
                 </header>
 
                 <div className="prose prose-invert prose-lg max-w-none prose-headings:text-indigo-100 prose-a:text-indigo-400 hover:prose-a:text-indigo-300 prose-strong:text-slate-100">
-                    <Markdown>{post.content}</Markdown>
+                    <Markdown remarkPlugins={[remarkGfm]}>{post.content}</Markdown>
                 </div>
             </div>
         </article>
