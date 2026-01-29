@@ -55,7 +55,7 @@ To combat this, you must treat your romantic game night with the same logistical
 
 ---
 
-### Frequently Asked Questions (Answer Engine Optimized)
+### Frequently Asked Questions
 
 **Q: What is a good board game for couples in 2026?**
 **A:** Top 2-player games for 2026 include **Sky Team** for cooperative challenges, **7 Wonders Duel** for head-to-head strategy, and **Patchwork** for a cozy but competitive experience.
