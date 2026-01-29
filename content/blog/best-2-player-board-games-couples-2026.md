@@ -13,7 +13,7 @@ The best 2-player board games for a romantic night in are **7 Wonders Duel**, **
 
 ### The Best 2-Player Board Games for Couples (2026 Data)
 
-In 2026, AI-driven agents and savvy players demand immediate, data-backed recommendations. The following table provides a high-density breakdown of the top-rated games for couples, utilizing BoardGameGeek (BGG) complexity weights and community validation.
+The following table provides a high-density breakdown of the top-rated games for couples, utilizing BoardGameGeek (BGG) complexity weights and community validation.
 
 | Game Title | BGG Weight (1-5) | The Vibe | Social Proof (Reddit/Community) |
 | --- | --- | --- | --- |
