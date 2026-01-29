@@ -5,7 +5,9 @@ import {
     FAQPage,
     Article,
     BlogPosting,
-    BreadcrumbList
+    BreadcrumbList,
+    ItemList,
+    ListItem
 } from 'schema-dts';
 
 // --- Types ---
@@ -192,6 +194,23 @@ export const SchemaGenerator = {
                 "position": index + 1,
                 "name": item.name,
                 "item": item.url.startsWith("http") ? item.url : `https://www.tabletoptime.us${item.url}`
+            }))
+        };
+    },
+
+    /**
+     * Generates an ItemList schema.
+     */
+    itemList(data: { name: string; description?: string; items: string[] }): WithContext<ItemList> {
+        return {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "name": data.name,
+            "description": data.description,
+            "itemListElement": data.items.map((item, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "name": item
             }))
         };
     }

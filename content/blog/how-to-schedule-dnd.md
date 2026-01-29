@@ -3,6 +3,8 @@ title: "How to Schedule D&D Sessions Without the Headache"
 description: "Master the art of scheduling Dungeons & Dragons sessions. Learn tools, quorum rules, and tips to keep your campaign alive."
 date: "2025-07-01"
 tags: ["D&D", "Scheduling", "DM Tips", "Tabletop"]
+itemList: ["Establish a Quorum Rule", "Use a Dedicated Scheduler", "The Same Time, Same Place Ideal", "Handle Flakes Gracefully", "Session Length Matters"]
+listTitle: "5 Tips for Scheduling D&D Sessions"
 ---
 
 # How to Schedule D&D Sessions Without the Headache
