@@ -30,45 +30,83 @@ export default async function ProfilePage() {
         if (chatId) {
             const managed = await prisma.event.findMany({
                 where: { managerChatId: chatId },
-                select: { id: true, slug: true, title: true, updatedAt: true },
+                select: {
+                    id: true,
+                    slug: true,
+                    title: true,
+                    updatedAt: true,
+                    status: true,
+                    finalizedSlotId: true,
+                    timeSlots: { select: { id: true, startTime: true } }
+                },
                 orderBy: { updatedAt: 'desc' }
             });
-            managed.forEach(e => eventMap.set(e.slug, {
-                slug: e.slug,
-                title: e.title,
-                role: 'MANAGER',
-                lastVisited: e.updatedAt.toISOString(),
-                source: 'telegram'
-            }));
+            managed.forEach(e => {
+                const finalizedSlot = e.timeSlots.find(s => s.id === e.finalizedSlotId);
+                eventMap.set(e.slug, {
+                    slug: e.slug,
+                    title: e.title,
+                    role: 'MANAGER',
+                    lastVisited: e.updatedAt.toISOString(),
+                    source: 'telegram',
+                    status: e.status,
+                    scheduledDate: finalizedSlot?.startTime.toISOString()
+                });
+            });
         }
 
         // 2. Fetch Managed Events (Discord)
         if (discordId) {
             const managedDiscord = await prisma.event.findMany({
                 where: { managerDiscordId: discordId },
-                select: { id: true, slug: true, title: true, updatedAt: true },
+                select: {
+                    id: true,
+                    slug: true,
+                    title: true,
+                    updatedAt: true,
+                    status: true,
+                    finalizedSlotId: true,
+                    timeSlots: { select: { id: true, startTime: true } }
+                },
                 orderBy: { updatedAt: 'desc' }
             });
-            managedDiscord.forEach(e => eventMap.set(e.slug, {
-                slug: e.slug,
-                title: e.title,
-                role: 'MANAGER',
-                lastVisited: e.updatedAt.toISOString(),
-                source: 'discord'
-            }));
+            managedDiscord.forEach(e => {
+                const finalizedSlot = e.timeSlots.find(s => s.id === e.finalizedSlotId);
+                eventMap.set(e.slug, {
+                    slug: e.slug,
+                    title: e.title,
+                    role: 'MANAGER',
+                    lastVisited: e.updatedAt.toISOString(),
+                    source: 'discord',
+                    status: e.status,
+                    scheduledDate: finalizedSlot?.startTime.toISOString()
+                });
+            });
         }
 
         // 3. Fetch Participated Events (Telegram)
         if (chatId) {
             const participated = await prisma.participant.findMany({
                 where: { chatId: chatId },
-                include: { event: { select: { id: true, slug: true, title: true, updatedAt: true } } },
+                include: {
+                    event: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            title: true,
+                            updatedAt: true,
+                            status: true,
+                            finalizedSlotId: true,
+                            timeSlots: { select: { id: true, startTime: true } }
+                        }
+                    }
+                },
                 orderBy: { event: { updatedAt: 'desc' } }
             });
             participated.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
-                // Manager role takes precedence
                 if (!existing || existing.role !== 'MANAGER') {
+                    const finalizedSlot = p.event.timeSlots.find(s => s.id === p.event.finalizedSlotId);
                     eventMap.set(p.event.slug, {
                         slug: p.event.slug,
                         title: p.event.title,
@@ -76,7 +114,9 @@ export default async function ProfilePage() {
                         lastVisited: p.event.updatedAt.toISOString(),
                         eventId: p.event.id,
                         participantId: p.id,
-                        source: 'telegram'
+                        source: 'telegram',
+                        status: p.event.status,
+                        scheduledDate: finalizedSlot?.startTime.toISOString()
                     });
                 }
             });
@@ -86,20 +126,34 @@ export default async function ProfilePage() {
         if (discordId) {
             const participatedDiscord = await prisma.participant.findMany({
                 where: { discordId: discordId },
-                include: { event: { select: { id: true, slug: true, title: true, updatedAt: true } } },
+                include: {
+                    event: {
+                        select: {
+                            id: true,
+                            slug: true,
+                            title: true,
+                            updatedAt: true,
+                            status: true,
+                            finalizedSlotId: true,
+                            timeSlots: { select: { id: true, startTime: true } }
+                        }
+                    }
+                },
                 orderBy: { event: { updatedAt: 'desc' } }
             });
             participatedDiscord.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (!existing || existing.role !== 'MANAGER') {
+                    const finalizedSlot = p.event.timeSlots.find(s => s.id === p.event.finalizedSlotId);
                     eventMap.set(p.event.slug, {
                         slug: p.event.slug,
                         title: p.event.title,
                         role: 'PARTICIPANT',
                         lastVisited: p.event.updatedAt.toISOString(),
-                        eventId: p.event.id,
                         participantId: p.id,
-                        source: 'discord'
+                        source: 'discord',
+                        status: p.event.status,
+                        scheduledDate: finalizedSlot?.startTime.toISOString()
                     });
                 }
             });

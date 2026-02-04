@@ -18,6 +18,8 @@ interface ServerEvent {
     eventId?: number;
     participantId?: number;
     source?: 'telegram' | 'discord';
+    status?: string;
+    scheduledDate?: string;
 }
 
 /**
@@ -57,7 +59,9 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
             const toSync = serverEvents.map(e => ({
                 slug: e.slug,
                 title: e.title,
-                lastVisited: new Date(e.lastVisited).getTime()
+                lastVisited: new Date(e.lastVisited).getTime(),
+                status: e.status,
+                scheduledDate: e.scheduledDate
             }));
             bulkMerge(toSync);
 
@@ -149,9 +153,17 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                                         <div>
                                             <h3 className="font-semibold text-lg group-hover:text-indigo-300 transition-colors flex items-center gap-2">
                                                 {event.title}
+                                                {event.status === 'CANCELLED' && (
+                                                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-800">
+                                                        Cancelled
+                                                    </span>
+                                                )}
                                             </h3>
                                             <p className="text-xs text-slate-500 font-mono mt-1">
-                                                {format(new Date(event.lastVisited), "MMM d, yyyy")}
+                                                {event.scheduledDate
+                                                    ? format(new Date(event.scheduledDate), "MMM d, yyyy")
+                                                    : (event.status === 'CANCELLED' ? "Original Date: " + format(new Date(event.lastVisited), "MMM d") : "Draft / Scheduling...")
+                                                }
                                             </p>
                                         </div>
                                         <ArrowRightIcon className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors" />
