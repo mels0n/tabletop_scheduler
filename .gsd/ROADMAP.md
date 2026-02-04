@@ -1,26 +1,30 @@
 ---
-milestone: TBD
-version: 1.5.0
-updated: 2026-01-20
+milestone: Maintenance-Feb-2026
+version: 1.5.1
+updated: 2026-02-04
 ---
 
 # Roadmap
 
-> **Current Milestone:** TBD
-> **Goal:** TBD
+> **Current Milestone:** Maintenance & Stability (v1.4.1)
+> **Goal:** Resolve critical bugs in Event Display and Data Cleanup.
 
 ## Must-Haves
-- [ ] TBD
+- [x] Fix "My Events" Date Display Logic (Stop showing "Today" for past events)
+- [x] Fix Cleanup Cron Job (Handle WebhookEvent FK constraint)
 
 ---
 
 ## Phases
 
-### Phase 1: TBD
-**Status:** 📅 Scheduled
-**Objective:** TBD
+### Phase 1: Event Display & Cron Fixes
+**Status:** ✅ Complete
+**Objective:** Correct UI misinformation and ensure data retention policies work.
 **Tasks:**
-- [ ] TBD
+- [x] Update `ProfilePage` to fetch `finalizedSlot.startTime` and `status`
+- [x] Update `ProfileDashboard` to render correct date and Cancelled status
+- [x] Update `cleanup/route.ts` to cascade delete `WebhookEvent` records
+- [x] Verify fix with `debug-inspect` or manual review
 
 ---
 
@@ -28,4 +32,4 @@ updated: 2026-01-20
 
 | Phase | Status | Tasks | Complete |
 |-------|--------|-------|----------|
-| 1 | 📅 | 0/0 | 0% |
+| 1 | ✅ | 4/4 | 100% |

@@ -6,6 +6,8 @@ export interface VisitedEvent {
     slug: string;
     title: string;
     lastVisited: number;
+    status?: string;
+    scheduledDate?: string;
 }
 
 /**
@@ -44,7 +46,7 @@ export function useEventHistory() {
         }
     }, []);
 
-    const bulkMerge = useCallback((events: { slug: string, title: string, lastVisited?: number }[]) => {
+    const bulkMerge = useCallback((events: { slug: string, title: string, lastVisited?: number, status?: string, scheduledDate?: string }[]) => {
         try {
             const current = JSON.parse(localStorage.getItem('tabletop_history') || "[]") as VisitedEvent[];
             const currentMap = new Map(current.map(e => [e.slug, e]));
@@ -56,14 +58,22 @@ export function useEventHistory() {
                     currentMap.set(e.slug, {
                         slug: e.slug,
                         title: e.title,
-                        lastVisited: e.lastVisited || Date.now()
+                        lastVisited: e.lastVisited || Date.now(),
+                        status: e.status,
+                        scheduledDate: e.scheduledDate
                     });
                     changed = true;
                 } else {
-                    // Update title if changed? Optional.
-                    // Update lastVisited? Maybe not, keep local usage.
-                    // But if server says it's newer?
-                    // Let's just ensure it exists.
+                    // Update if server info is fresher/available
+                    const existing = currentMap.get(e.slug)!;
+                    if (e.status && e.status !== existing.status) {
+                        existing.status = e.status;
+                        changed = true;
+                    }
+                    if (e.scheduledDate && e.scheduledDate !== existing.scheduledDate) {
+                        existing.scheduledDate = e.scheduledDate;
+                        changed = true;
+                    }
                 }
             });
 

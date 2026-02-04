@@ -116,8 +116,9 @@ export async function GET(req: Request) {
                     }
 
                     // Database Deletion
-                    // Uses local transaction to ensure safe, cascading cleanup.
                     await prisma.$transaction(async (tx) => {
+                        // Fix: Must delete WebhookEvents first (FK Constraint: WebhookEvent_eventId_fkey)
+                        await tx.webhookEvent.deleteMany({ where: { eventId: event.id } });
                         await tx.vote.deleteMany({ where: { timeSlot: { eventId: event.id } } });
                         await tx.timeSlot.deleteMany({ where: { eventId: event.id } });
                         await tx.participant.deleteMany({ where: { eventId: event.id } });

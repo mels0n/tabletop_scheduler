@@ -1,27 +1,23 @@
 ---
 projectId: tabletop_scheduler
 status: FINALIZED
-version: 1.4.0
-lastUpdated: 2026-01-20
+version: 1.4.1
+lastUpdated: 2026-02-04
 ---
 
-# Specification: GEO/SEO/AEO Visibility
+# Specification: Maintenance & Stability
 
 ## 1. Goal
-Audit and optimize the application for visibility in both traditional Search Engines (SEO) and Generative Engines (GEO/AEO). The goal is to maximize the "AI Visibility Score" by ensuring content is machine-parsable, semantically rich, and structured for answer retrieval.
+Address critical stability issues and UI inconsistencies reported in production. Specifically, resolve the "My Events" date display confusion and fix the failing Database Cleanup Cron Job.
 
 ## 2. Success Criteria
-- [ ] **Audit Completed**: A comprehensive report of current SEO/GEO gaps.
-- [ ] **Semantic Coverage**: Key entities (Event, Scheduler, Guide) have JSON-LD Schema.
-- [ ] **Technical Foundation**:
-    - [ ] `sitemap.xml` is valid and indexed.
-    - [ ] `robots.txt` is correct for Hosted vs Self-Hosted.
-    - [ ] `llms.txt` exists and follows protocols.
-    - [ ] Metadata (Title/Desc) is distinct for every page.
-- [ ] **Content Structure**: Public pages follow Q&A format for AEO snippets.
+- [ ] **UI Accuracy**: "My Events" page displays the *Scheduled Date* for finalized events, not the *Last Visited* date.
+- [ ] **Data Hygiene**: The Cleanup Cron runs successfully without FK violations.
+- [ ] **User Feedback**: Cancelled events are clearly marked and distinguishable from active events.
 
 ## 3. Core Requirements
-- **LLM Optimization**: Create `llms.txt` and `ai.txt` for crawler guidance.
-- **Schema.org**: Implement strict, validated JSON-LD for all public pages.
-- **Hosted vs Self-Hosted**: Ensure privacy rules (no-index) strictly apply to self-hosted builds, while hosted builds are maximally visible.
-- **Crawlability**: Ensure dynamic routes (`/e/[slug]`) are discoverable.
+- **Cron Fix**: Delete `WebhookEvent` and other dependencies before deleting `Event` to prevent Foreign Key constraints.
+- **UI Logic Update**:
+    - If `status == CANCELLED`, show "Cancelled" badge.
+    - If `finalizedSlot` exists, show its `startTime` as the event date.
+    - Fallback to "Draft" or "Scheduling..." for non-finalized events.
