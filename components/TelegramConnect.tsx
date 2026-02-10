@@ -220,6 +220,9 @@ export function TelegramConnect({
                                 <label className="text-sm text-slate-300 font-medium">
                                     First, what is the Group Invite Link?
                                 </label>
+                                <p className="text-xs text-slate-500 italic pb-1">
+                                    Desktop: ⋮ {'>'} Manage Group {'>'} Invite Links {'>'} Copy Link
+                                </p>
                                 <div className="flex gap-2">
                                     <input
                                         type="url"

@@ -194,10 +194,6 @@ function NewEventForm() {
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                            <label className="font-semibold text-slate-200">Propose Time Slots</label>
-                            <span className="text-sm text-slate-400">{slots.length} slots added</span>
-                        </div>
                         <TimeSlotPicker value={slots} onChange={setSlots} />
                     </div>
 
