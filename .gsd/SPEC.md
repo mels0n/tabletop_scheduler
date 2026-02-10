@@ -15,6 +15,9 @@ Address critical stability issues and UI inconsistencies reported in production.
 - [ ] **Data Hygiene**: The Cleanup Cron runs successfully without FK violations.
 - [ ] **User Feedback**: Cancelled events are clearly marked and distinguishable from active events.
 - [ ] **Content**: Footer years must be dynamic to avoid annual maintenance.
+- [ ] **UI Polish**: No duplicate "Propose Time Slots" headers on New Event page.
+- [ ] **UX**: Telegram "Connect Group" step provides specific instructions for finding the invite link.
+
 
 
 ## 3. Core Requirements
@@ -25,4 +28,8 @@ Address critical stability issues and UI inconsistencies reported in production.
     - Fallback to "Draft" or "Scheduling..." for non-finalized events.
 - **Content Update**:
     - Ensure footer year is `new Date().getFullYear()`.
+- **UI Cleanup**:
+    - Remove redundant header in `app/new/page.tsx`.
+- **Telegram UX**:
+    - Add help text: "Desktop: ⋮ > Manage Group > Invite Links > Copy Link".
 

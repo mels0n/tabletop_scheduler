@@ -29,10 +29,12 @@ updated: 2026-02-04
 ---
 
 ### Phase 2: Content Polish
-**Status:** ✅ Complete
-**Objective:** Ensure dynamic dates and correct copyright info.
+**Status:** 🚧 In Progress
+**Objective:** Ensure dynamic dates, correct copyright info, and polish UI/UX.
 **Tasks:**
 - [x] Update `Footer.tsx` to use dynamic year
+- [x] Remove duplicate "Propose Time Slots" header
+- [x] Add Telegram Group Ilink help text
 
 ---
 
@@ -41,5 +43,5 @@ updated: 2026-02-04
 | Phase | Status | Tasks | Complete |
 |-------|--------|-------|----------|
 | 1 | ✅ | 4/4 | 100% |
-| 2 | ✅ | 1/1 | 100% |
+| 2 | ✅ | 3/3 | 100% |
 
