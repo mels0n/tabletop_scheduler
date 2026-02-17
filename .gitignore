@@ -59,7 +59,13 @@ next-env.d.ts
 # backups from refactoring
 *.old
 
-
-
 # Database Backups
 backups/
+
+# AI Context & Memory
+.gsd/
+.brain/
+brain/
+.memory/
+memory/
+.gemini/
