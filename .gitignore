@@ -62,12 +62,18 @@ next-env.d.ts
 # Database Backups
 backups/
 
+
 # AI Context & Memory
 *.agent
 .agent/
+agent/
 .gsd/
+gsd/
+*.gsd
 .brain/
 brain/
+*.brain
 .memory/
 memory/
+*.memory
 .gemini/
