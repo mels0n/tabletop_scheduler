@@ -65,7 +65,8 @@ export default function BlogPost({ params }: Props) {
                             name: post.listTitle || `Items from: ${post.title}`,
                             description: `A list of items recommended in the article: ${post.title}`,
                             items: post.itemList
-                        })] : [])
+                        })] : []),
+                        ...(post.faq ? [SchemaGenerator.faq(post.faq)] : [])
                     ])
                 }}
             />
