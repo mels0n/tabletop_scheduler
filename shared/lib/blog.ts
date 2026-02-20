@@ -13,6 +13,7 @@ export interface BlogPost {
     content: string;
     itemList?: string[];
     listTitle?: string;
+    faq?: { question: string; answer: string }[];
 }
 
 export function getAllPosts(): BlogPost[] {
@@ -39,6 +40,7 @@ export function getAllPosts(): BlogPost[] {
                 tags: data.tags || [],
                 itemList: data.itemList || undefined,
                 listTitle: data.listTitle || undefined,
+                faq: data.faq || undefined,
             };
         });
 
@@ -70,6 +72,7 @@ export function getPostBySlug(slug: string): BlogPost | null {
             tags: data.tags || [],
             itemList: data.itemList || undefined,
             listTitle: data.listTitle || undefined,
+            faq: data.faq || undefined,
         };
     } catch (e) {
         return null;

@@ -36,12 +36,21 @@ export async function POST(
         // Legacy: Ideally strictly slug-based, but currently numeric ID is used in API calls.
         const eventId = parseInt(params.slug);
         const body = await req.json();
-        const { name, telegramId, votes, participantId, discordId, discordUsername } = body;
+        let { name, telegramId, votes, participantId, discordId, discordUsername } = body;
 
         if (!name || !votes || !Array.isArray(votes)) {
             log.warn("Invalid vote data", { eventId });
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
         }
+
+        const validVotes = votes.filter(v => v.preference === 'YES' || v.preference === 'NO' || v.preference === 'MAYBE');
+        if (validVotes.length !== votes.length) {
+            log.warn("Invalid vote preference found", { eventId, votes });
+            // For resilience, we just continue with valid votes or we can return 400
+            // Since frontend now filters it, any mismatch means malformed client. 
+            // We just re-assign votes to validVotes
+        }
+        votes = validVotes;
 
         // Check for Max Players Regulation (if Finalized)
         const targetEvent = await prisma.event.findUnique({

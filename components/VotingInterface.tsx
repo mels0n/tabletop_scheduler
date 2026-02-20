@@ -147,7 +147,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
      */
     const submitVotes = async () => {
         if (!userName) return alert("Please enter your name");
-        if (Object.keys(votes).length === 0) return alert("Please select at least one preference (or mark others as NO)");
+        if (Object.values(votes).filter(v => v !== undefined).length === 0) return alert("Please select at least one preference (or mark others as NO)");
 
         // Intent: Save profile globally for other events
         localStorage.setItem('tabletop_username', userName);
@@ -159,11 +159,13 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                 name: userName,
                 telegramId: userTelegram,
                 participantId, // Send if we have it (update existing), otherwise create new
-                votes: Object.entries(votes).map(([slotId, preference]) => ({
-                    slotId: parseInt(slotId),
-                    preference,
-                    canHost: canHost[parseInt(slotId)] || false
-                }))
+                votes: Object.entries(votes)
+                    .filter(([_, preference]) => preference !== undefined)
+                    .map(([slotId, preference]) => ({
+                        slotId: parseInt(slotId),
+                        preference,
+                        canHost: canHost[parseInt(slotId)] || false
+                    }))
             };
 
             const res = await fetch(`/api/event/${eventId}/vote`, {
@@ -347,10 +349,13 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
 
                 <button
                     onClick={submitVotes}
-                    disabled={isSubmitting}
-                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2"
+                    disabled={isSubmitting || Object.values(votes).filter(v => v !== undefined).length < slots.length}
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2"
                 >
-                    {isSubmitting ? <Loader2 className="animate-spin" /> : "Submit Votes"}
+                    {isSubmitting ? <Loader2 className="animate-spin" /> :
+                        Object.values(votes).filter(v => v !== undefined).length < slots.length
+                            ? "Select preferences for all times"
+                            : "Submit Votes"}
                 </button>
             </div>
 
