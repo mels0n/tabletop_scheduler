@@ -21,7 +21,6 @@ TabletopTime integrates with Discord to provide channel notifications, a live pi
 2. Setup **Redirects**:
    - Add your app's callback URL: `https://your-domain.com/api/auth/discord/callback`
    - For local development, add: `http://localhost:3000/api/auth/discord/callback`
-   - For local development, add: `http://localhost:3000/api/auth/discord/callback`
 3. **Reset the Client Secret**:
    - The Client Secret is hidden by default.
    - Click the **Reset Secret** button.
@@ -46,7 +45,6 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com
 2. Go to the **Manager Dashboard** (`/manage`).
 3. Scroll to **Connect Discord Notifications**.
 4. Click **Connect Discord Server**.
-   - This will open a window to invite the bot to your server.
    - This will open a window to invite the bot to your server.
    - You will be asked to **Authorize** the following permissions (required for the bot to function):
      - **View Channels**

@@ -11,6 +11,7 @@ TabletopTime uses environment variables for configuration. You can set these in 
 | `NODE_ENV` | No | `development` | Set to `production` for deployed environments. |
 | `LOG_LEVEL` | No | `info` | Logging verbosity. Options: `debug`, `info`, `warn`, `error`. Prisma queries are logged only in `debug`. |
 | `CRON_SECRET` | No | - | Secure token to authorize external calls to `/api/cron/cleanup`. Required if triggering cleanup from outside localhost. |
+| `IS_DOCKER_BUILD` | No | `false` | Set to `true` at Docker build time. Switches to `standalone` Next.js output mode. |
 
 
 ## Event Retention (Cleanup)
@@ -30,6 +31,7 @@ TabletopTime uses environment variables for configuration. You can set these in 
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `TELEGRAM_BOT_TOKEN` | No | - | The HTTP API Token from @BotFather. |
+| `TELEGRAM_BOT_USERNAME` | No | - | The bot's username (without @), used for constructing group invite links. |
 | `NEXT_PUBLIC_BASE_URL` | No | - | Public URL of the app (e.g. `https://myapp.vercel.app`). Setting this **ENABLES Webhook Mode** automatically. |
 
 
@@ -46,9 +48,8 @@ TabletopTime uses environment variables for configuration. You can set these in 
 
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
-| `NEXT_PUBLIC_GOOGLE_ADSENSE_ID` | No | - | Publisher ID for Google AdSense (e.g. `ca-pub-123...`). |
 | `NEXT_PUBLIC_GOOGLE_ANALYTICS_ID` | No | - | Measurement ID for Google Analytics 4 (e.g. `G-XYZ...`). |
-| `NEXT_PUBLIC_IS_HOSTED` | No | `false` | Set to `true` to enable "Hosted" specific features (Ads, Analytics, Sitemap). Leave unset or `false` for self-hosted privacy. |
+| `NEXT_PUBLIC_IS_HOSTED` | No | `false` | Set to `true` to enable "Hosted" specific features (Sitemap, AEO/SEO indexing). Leave unset or `false` for self-hosted privacy. |
 
 
 ## Example `.env` File

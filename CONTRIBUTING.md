@@ -12,7 +12,7 @@ Thank you for your interest in improving TabletopTime! This project is a self-ho
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - npm
 
 ### Local Development
@@ -54,8 +54,8 @@ Thank you for your interest in improving TabletopTime! This project is a self-ho
   - `app/e/[slug]/`: The main event page (voting).
   - `app/e/[slug]/manage/`: The admin dashboard for a specific event.
 - `components/`: Reusable React components.
-- `features/`: Vertical slices of business logic (FSD), e.g., `telegram/`.
-- `lib/`: Shared helpers (Telegram, URL logic, Prisma client).
+- `features/`: Self-contained vertical slices by business domain (VSA), e.g., `telegram/`, `discord/`, `event-management/`.
+- `shared/`: Core shared utilities (schema generators, URL helpers, Prisma client, logger).
 - `prisma/`: Database schema and migrations.
 
 ## Key Workflows

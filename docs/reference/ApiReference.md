@@ -71,30 +71,6 @@ Retrieve read-only details about a specific event.
 }
 ```
 
-### Create Event
-**Description:** Creates a new event with candidate time slots.
-
-**Request Body:**
-```json
-{
-  "title": "D&D Session 0",
-  "description": "Character creation night!",
-  "minPlayers": 3,
-  "slots": [
-    { "startTime": "2023-11-01T18:00:00.000Z", "endTime": "2023-11-01T22:00:00.000Z" }
-  ]
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "slug": "a1b2c3d4",
-  "id": 1,
-  "adminToken": "uuid-token-string"
-}
-```
-
 ### Submit Vote
 **Endpoint:** `POST /api/event/[eventId]/vote`
 **Description:** Records a participant's availability for specific slots.
@@ -196,10 +172,6 @@ Retrieve read-only details about a specific event.
 **Behavior:** 
 - If valid: Redirects to `/` (Homepage) or stored return URL.
 - If invalid: Redirects to `/login?error=InvalidToken`.
-
-### Static Assets
-**Endpoint:** `GET /ads.txt`
-**Description:** Serves the Google AdSense verification file based on `NEXT_PUBLIC_GOOGLE_ADSENSE_ID`.
 
 ---
 
