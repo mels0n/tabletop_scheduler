@@ -72,7 +72,7 @@ import Script from "next/script";
 /**
  * @component RootLayout
  * @description The root layout wrapper for the application.
- * Handles global styles, font injection, and global providers (Navbar, GoogleAdBar, etc.).
+ * Handles global styles, font injection, and global providers (Navbar, Footer, etc.).
  *
  * @param {Object} props - The component props.
  * @param {React.ReactNode} props.children - The child components (pages) to render.
