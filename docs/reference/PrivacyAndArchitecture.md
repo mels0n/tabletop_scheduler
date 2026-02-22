@@ -10,50 +10,22 @@ The application behaves differently based on the deployment environment. This is
 
 | Feature | Self-Hosted / Docker | Hosted (Cloud) |
 | :--- | :--- | :--- |
-| **Google Analytics** | **Disabled** (Code removed) | Enabled |
-| **Google AdSense** | **Disabled** (Code removed) | Enabled |
+| **Google Analytics** | **Disabled** | Enabled |
 | **Robots.txt** | `Disallow: /` (No Crawl) | `Allow: /` |
 | **Sitemap** | Hidden | Public |
 
-## Technical Implementation: The "NoOp" Pattern
+## Privacy Enforcement
 
-We don't just "hide" the analytics code with an `if` statement; we effectively remove it from the build entirely for Docker users.
-
-### Webpack Aliasing (Build Time)
-
-In `next.config.mjs`, we check if the build is running inside Docker (`IS_DOCKER_BUILD=true`). If so, we tell the bundler to replace the real Analytics and Ad components with a "Null Object" (NoOp).
-
-```javascript
-// next.config.mjs
-if (process.env.IS_DOCKER_BUILD === 'true') {
-    config.resolve.alias['@/components/GoogleAdBar'] = '@/components/NoOp';
-    config.resolve.alias['@/components/GoogleAnalytics'] = '@/components/NoOp';
-}
-```
-
-### The NoOp Component
-
-The `components/NoOp.tsx` file exports empty components that render nothing (`null`).
-
-```typescript
-// components/NoOp.tsx
-export const GoogleAnalytics = () => {
-    return null; // Renders nothing, executes no code
-};
-```
-
-### Benefit
-
-This ensures that:
-1.  **Zero Leakage**: The tracking scripts are not even present in the Javascript bundle sent to the client.
-2.  **Performance**: Self-hosted instances don't download unnecessary bytes.
-3.  **Trust**: You can verify the `Dockerfile` sets `IS_DOCKER_BUILD=true` to guarantee this behavior.
+For self-hosted (Docker) instances, privacy is enforced at the component and routing level:
+- Components check `NEXT_PUBLIC_IS_HOSTED` at runtime before loading any external scripts or analytics.
+- This ensures self-hosted instances never load external tracking scripts.
+- The `IS_DOCKER_BUILD=true` flag at build time switches Next.js to `standalone` output mode for containerized deployments.
 
 ## SEO and Privacy
 
 ### Robots.txt & Meta Tags
 For self-hosted (Docker) instances:
 -   `app/robots.ts` generates a file disallowing all User Agents (`Disallow: /`).
--   `app/layout.tsx` injects `<meta name="robots" content="noindex, nofollow" />` into every page header.
+-   `app/layout.tsx` injects `<meta name="robots" content="noindex, nofollow" />` into every page header via the `metadata.robots` field (controlled by `NEXT_PUBLIC_IS_HOSTED`).
 
 This ensures your private game schedule is explicitly blocked from Google Search results, keeping your instance private.

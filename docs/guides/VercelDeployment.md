@@ -19,6 +19,10 @@ Configure the following in your Vercel Project Settings:
 - `DISCORD_BOT_TOKEN`: From Discord Developer Portal.
 - `TELEGRAM_BOT_TOKEN`: (Optional) If using Telegram.
 
+### Hosted Mode (Optional)
+Only set these if running the public hosted version (tabletoptime.us):
+- `NEXT_PUBLIC_IS_HOSTED`: Set to `true` to enable hosted-specific behavior (public sitemap, SEO/AEO indexing).
+
 ## 3. Database Migration
 Since you validated with SQLite locally, you must switch to Postgres for production.
 
