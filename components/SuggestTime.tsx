@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, CalendarPlus, X } from "lucide-react";
+import { DateTimeRangeInputs } from "./DateTimeRangeInputs";
 
 interface SuggestTimeProps {
     slug: string;
@@ -138,33 +139,11 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
                         />
                     </div>
                     <div className="flex flex-wrap gap-4">
-                        <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
-                            <label className="text-xs text-slate-400">Date</label>
-                            <input
-                                type="date"
-                                className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 text-sm w-full"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                            <label className="text-xs text-slate-400">Start</label>
-                            <input
-                                type="time"
-                                className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 text-sm w-full"
-                                value={start}
-                                onChange={(e) => setStart(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                            <label className="text-xs text-slate-400">End</label>
-                            <input
-                                type="time"
-                                className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 text-sm w-full"
-                                value={end}
-                                onChange={(e) => setEnd(e.target.value)}
-                            />
-                        </div>
+                        <DateTimeRangeInputs
+                            date={date} setDate={setDate}
+                            start={start} setStart={setStart}
+                            end={end} setEnd={setEnd}
+                        />
                     </div>
 
                     <button

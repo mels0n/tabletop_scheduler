@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 interface ManageParticipantsProps {
     slug: string;
     participants: {
-        id: string;
+        id: number;
         name: string;
         telegramId?: string | null;
     }[];
@@ -14,10 +14,10 @@ interface ManageParticipantsProps {
 
 export function ManageParticipants({ slug, participants }: ManageParticipantsProps) {
     const router = useRouter();
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-    const handleDelete = async (participantId: string, participantName: string) => {
+    const handleDelete = async (participantId: number, participantName: string) => {
         if (!confirm(`Are you sure you want to remove ${participantName} and all their votes from this event?`)) {
             return;
         }

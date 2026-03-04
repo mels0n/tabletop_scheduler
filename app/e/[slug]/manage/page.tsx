@@ -211,6 +211,8 @@ export default async function ManageEventPage({ params }: PageProps) {
                             initialReminderTime={event.reminderTime}
                             initialReminderDays={event.reminderDays}
                         />
+
+                        <ManageParticipants slug={event.slug} participants={event.participants} />
                     </div>
 
                     {/* RIGHT COLUMN: Slots / Finalized State */}
