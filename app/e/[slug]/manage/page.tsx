@@ -211,8 +211,6 @@ export default async function ManageEventPage({ params }: PageProps) {
                             initialReminderTime={event.reminderTime}
                             initialReminderDays={event.reminderDays}
                         />
-
-                        <ManageSlots slug={event.slug} slots={event.timeSlots} />
                     </div>
 
                     {/* RIGHT COLUMN: Slots / Finalized State */}
@@ -422,6 +420,8 @@ export default async function ManageEventPage({ params }: PageProps) {
                                         </div>
                                     ))}
                                 </div>
+
+                                <ManageSlots slug={event.slug} slots={event.timeSlots} />
                             </div>
                         )}
                     </div>
