@@ -38,6 +38,10 @@ export async function PATCH(
             return NextResponse.json({ error: "Event not found" }, { status: 404 });
         }
 
+        if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
+            return NextResponse.json({ error: "Cannot modify slots on a finalized or cancelled event." }, { status: 400 });
+        }
+
         const existingSlot = eventInfo.timeSlots.find(s => s.id === slotIdInt);
         if (!existingSlot) {
             return NextResponse.json({ error: "Slot not found" }, { status: 404 });
@@ -90,6 +94,10 @@ export async function DELETE(
 
         if (!eventInfo) {
             return NextResponse.json({ error: "Event not found" }, { status: 404 });
+        }
+
+        if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
+            return NextResponse.json({ error: "Cannot modify slots on a finalized or cancelled event." }, { status: 400 });
         }
 
         const existingSlot = eventInfo.timeSlots.find(s => s.id === slotIdInt);

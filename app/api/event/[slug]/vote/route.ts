@@ -196,86 +196,26 @@ export async function POST(
             include: { timeSlots: { include: { votes: true } } }
         });
 
+        // --- NOTIFICATION PREPARATION ---
         const userDisplay = telegramId ? `@${telegramId.replace('@', '')}` : name;
-        const participants = await prisma.participant.count({ where: { eventId } });
-
-        // Detect URL dynamically
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const { headers } = await import("next/headers");
-        const headerList = headers();
-        const baseUrl = getBaseUrl(headerList);
-        const { generateStatusMessage } = await import("@/shared/lib/status");
-        const statusMsg = generateStatusMessage(event, participants, baseUrl);
-
-        // --- TELEGRAM LOGIC ---
-        if (event && event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/features/telegram");
-
-            // Notification: Announce activity to group
-            await sendTelegramMessage(event.telegramChatId, `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`, process.env.TELEGRAM_BOT_TOKEN);
-
-            // --- PINNED MESSAGE DASHBOARD SYNCHRONIZATION ---
-            const { editMessageText, pinChatMessage } = await import("@/features/telegram");
-
-            if (event.pinnedMessageId) {
-                // Update existing pin
-                await editMessageText(event.telegramChatId, event.pinnedMessageId, statusMsg, process.env.TELEGRAM_BOT_TOKEN);
-            } else {
-                // Create new pin if missing
-                const newMsgId = await sendTelegramMessage(event.telegramChatId, statusMsg, process.env.TELEGRAM_BOT_TOKEN);
-                if (newMsgId) {
-                    await pinChatMessage(event.telegramChatId, newMsgId, process.env.TELEGRAM_BOT_TOKEN);
-                    // Save the pinned ID for future updates
-                    await prisma.event.update({
-                        where: { id: eventId },
-                        data: { pinnedMessageId: newMsgId }
-                    });
-                }
-            }
-        }
-
-        // --- DISCORD LOGIC ---
-        log.info("Checking Discord integration", {
-            hasChannel: !!event?.discordChannelId,
-            channelId: event?.discordChannelId,
-            envToken: !!process.env.DISCORD_BOT_TOKEN
-        });
-
-        if (event && event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
-
-            // Notification
-            await sendDiscordMessage(event.discordChannelId, `🚀 **${userDisplay}** updated availability for **${event.title}**!`, process.env.DISCORD_BOT_TOKEN);
-
-            // Dashboard Sync
-            // Simple HTML -> Markdown Converter
-            const discordMsg = statusMsg
-                .replace(/<b>(.*?)<\/b>/g, '**$1**')
-                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
-                .replace(/<br\s*\/?>/g, '\n')
-                .replace(/&nbsp;/g, ' '); // Basic entities
-
-            if (event.discordMessageId) {
-                await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-                log.info("Discord dashboard updated", { msgId: event.discordMessageId });
-            } else {
-                const res = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-                if (res.id) {
-                    await pinDiscordMessage(event.discordChannelId, res.id, process.env.DISCORD_BOT_TOKEN);
-                    await prisma.event.update({
-                        where: { id: eventId },
-                        data: { discordMessageId: res.id }
-                    });
-                    log.info("Discord dashboard created and pinned", { newMsgId: res.id });
-                } else {
-                    log.warn("Failed to create Discord dashboard message", { error: res.error });
-                }
-            }
-        }
 
         // --- FINALIZED EVENT: WAITLIST AUTO-PROMOTION LOGIC ---
         if (event && event.status === 'FINALIZED' && event.maxPlayers) {
             await processWaitlistPromotion(event.id);
+        }
+
+        // --- UNIFIED DASHBOARD SYNCHRONIZATION ---
+        const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
+        await syncDashboard(eventId);
+
+        if (event && event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
+            const { sendTelegramMessage } = await import("@/features/telegram");
+            await sendTelegramMessage(event.telegramChatId, `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`, process.env.TELEGRAM_BOT_TOKEN);
+        }
+
+        if (event && event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
+            const { sendDiscordMessage } = await import("@/features/discord/model/discord");
+            await sendDiscordMessage(event.discordChannelId, `🚀 **${userDisplay}** updated availability for **${event.title}**!`, process.env.DISCORD_BOT_TOKEN);
         }
 
         // --- QUORUM & MANAGER NOTIFICATION LOGIC ---
