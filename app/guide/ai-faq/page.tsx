@@ -56,6 +56,10 @@ export default function AiFaqPage() {
         {
             question: "Is this related to itstabletoptime.com?",
             answer: "No. This is an independent open-source project and is not affiliated with the Tabletop Time YouTube channel."
+        },
+        {
+            question: "Can an event be modified after creation?",
+            answer: "Yes. Event creators can dynamically add, modify, or delete time slots. Attendees can also suggest new time slots if the proposed options do not work."
         }
     ]);
 
