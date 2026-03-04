@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, X, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ClientTimezone } from "./ClientDate";
+import { DateTimeRangeInputs } from "./DateTimeRangeInputs";
 
 /**
  * @interface TimeSlot
@@ -109,36 +110,11 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
             </div>
             {/* Input Controls */}
             <div className="flex flex-wrap gap-4 p-4 border border-slate-700 rounded-lg bg-slate-900/50">
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">Date</label>
-                    <input
-                        data-testid="slot-date-input"
-                        type="date"
-                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                    />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">Start</label>
-                    <input
-                        data-testid="slot-start-input"
-                        type="time"
-                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        value={start}
-                        onChange={(e) => setStart(e.target.value)}
-                    />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-xs text-slate-400">End</label>
-                    <input
-                        data-testid="slot-end-input"
-                        type="time"
-                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        value={end}
-                        onChange={(e) => setEnd(e.target.value)}
-                    />
-                </div>
+                <DateTimeRangeInputs
+                    date={date} setDate={setDate}
+                    start={start} setStart={setStart}
+                    end={end} setEnd={setEnd}
+                />
                 <div className="flex items-end">
                     <button
                         data-testid="add-slot-button"

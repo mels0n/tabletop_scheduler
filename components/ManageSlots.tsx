@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2, Edit2, Plus, X } from "lucide-react";
+import { DateTimeRangeInputs } from "./DateTimeRangeInputs";
 
 interface Slot {
     id: number;
@@ -15,10 +16,16 @@ interface ManageSlotsProps {
     slots: Slot[];
 }
 
-function formatDateForInput(dateStr: Date | string) {
+function getDateString(dateStr: Date | string) {
     const d = new Date(dateStr);
     const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function getTimeString(dateStr: Date | string) {
+    const d = new Date(dateStr);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function ManageSlots({ slug, slots }: ManageSlotsProps) {
@@ -29,13 +36,15 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
 
     // Edit State
     const [editingSlotId, setEditingSlotId] = useState<number | null>(null);
+    const [editDate, setEditDate] = useState("");
     const [editStart, setEditStart] = useState("");
     const [editEnd, setEditEnd] = useState("");
 
     // Add State
     const [isAdding, setIsAdding] = useState(false);
-    const [addStart, setAddStart] = useState("");
-    const [addEnd, setAddEnd] = useState("");
+    const [addDate, setAddDate] = useState("");
+    const [addStart, setAddStart] = useState("18:00");
+    const [addEnd, setAddEnd] = useState("22:00");
     const [isSaving, setIsSaving] = useState(false);
 
     const clearMessages = () => {
@@ -66,8 +75,16 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
 
     const handleSaveEdit = async () => {
         if (!editingSlotId) return;
-        if (!editStart || !editEnd) {
-            setErrorMsg("Start and End times are required.");
+        if (!editDate || !editStart || !editEnd) {
+            setErrorMsg("Date, Start, and End times are required.");
+            return;
+        }
+
+        const startDateTime = new Date(`${editDate}T${editStart}:00`);
+        const endDateTime = new Date(`${editDate}T${editEnd}:00`);
+
+        if (endDateTime <= startDateTime) {
+            setErrorMsg("End time must be after start time.");
             return;
         }
 
@@ -79,7 +96,7 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
             const res = await fetch(`/api/event/${slug}/slot/${editingSlotId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ startTime: editStart, endTime: editEnd })
+                body: JSON.stringify({ startTime: startDateTime.toISOString(), endTime: endDateTime.toISOString() })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to update slot");
@@ -95,8 +112,21 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
     };
 
     const handleAdd = async () => {
-        if (!addStart || !addEnd) {
-            setErrorMsg("Start and End times are required.");
+        if (!addDate || !addStart || !addEnd) {
+            setErrorMsg("Date, Start, and End times are required.");
+            return;
+        }
+
+        const startDateTime = new Date(`${addDate}T${addStart}:00`);
+        const endDateTime = new Date(`${addDate}T${addEnd}:00`);
+
+        if (startDateTime < new Date()) {
+            setErrorMsg("You cannot schedule events in the past.");
+            return;
+        }
+
+        if (endDateTime <= startDateTime) {
+            setErrorMsg("End time must be after start time.");
             return;
         }
 
@@ -106,15 +136,16 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
             const res = await fetch(`/api/event/${slug}/slot`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ startTime: addStart, endTime: addEnd })
+                body: JSON.stringify({ startTime: startDateTime.toISOString(), endTime: endDateTime.toISOString() })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to add slot");
 
             setSuccessMsg("Time slot added successfully.");
             setIsAdding(false);
-            setAddStart("");
-            setAddEnd("");
+            setAddDate("");
+            setAddStart("18:00");
+            setAddEnd("22:00");
             router.refresh();
         } catch (error: any) {
             setErrorMsg(error.message);
@@ -155,25 +186,12 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                         <span className="text-sm font-medium text-slate-200">New Time Option</span>
                         <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-200"><X size={16} /></button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs text-slate-400 mb-1">Start Time</label>
-                            <input
-                                type="datetime-local"
-                                value={addStart}
-                                onChange={(e) => setAddStart(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs text-slate-400 mb-1">End Time</label>
-                            <input
-                                type="datetime-local"
-                                value={addEnd}
-                                onChange={(e) => setAddEnd(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200"
-                            />
-                        </div>
+                    <div className="flex flex-wrap gap-4">
+                        <DateTimeRangeInputs
+                            date={addDate} setDate={setAddDate}
+                            start={addStart} setStart={setAddStart}
+                            end={addEnd} setEnd={setAddEnd}
+                        />
                     </div>
                     <button
                         onClick={handleAdd}
@@ -190,25 +208,12 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                     <div key={slot.id} className="p-3 bg-slate-800/20 border border-slate-800 rounded-lg flex flex-col gap-2">
                         {editingSlotId === slot.id ? (
                             <div className="space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs text-slate-400 mb-1">Start Time</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={editStart}
-                                            onChange={(e) => setEditStart(e.target.value)}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-slate-400 mb-1">End Time</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={editEnd}
-                                            onChange={(e) => setEditEnd(e.target.value)}
-                                            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200"
-                                        />
-                                    </div>
+                                <div className="flex flex-wrap gap-4">
+                                    <DateTimeRangeInputs
+                                        date={editDate} setDate={setEditDate}
+                                        start={editStart} setStart={setEditStart}
+                                        end={editEnd} setEnd={setEditEnd}
+                                    />
                                 </div>
                                 <div className="flex gap-2">
                                     <button
@@ -237,8 +242,9 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                                     <button
                                         onClick={() => {
                                             setEditingSlotId(slot.id);
-                                            setEditStart(formatDateForInput(slot.startTime));
-                                            setEditEnd(formatDateForInput(slot.endTime));
+                                            setEditDate(getDateString(slot.startTime));
+                                            setEditStart(getTimeString(slot.startTime));
+                                            setEditEnd(getTimeString(slot.endTime));
                                         }}
                                         className="p-1.5 text-slate-400 hover:text-indigo-400 bg-slate-800 hover:bg-indigo-900/30 rounded transition-colors"
                                         title="Edit Slot"
