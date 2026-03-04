@@ -30,6 +30,10 @@ export async function POST(
             return NextResponse.json({ error: "Event not found" }, { status: 404 });
         }
 
+        if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
+            return NextResponse.json({ error: "Cannot modify slots on a finalized or cancelled event." }, { status: 400 });
+        }
+
         const newSlot = await prisma.timeSlot.create({
             data: {
                 eventId: eventInfo.id,
