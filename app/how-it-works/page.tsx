@@ -80,7 +80,7 @@ export default function HowItWorksPage() {
                             title="Players Vote & Suggest"
                             desc={
                                 <span>
-                                    Players tap times they are free, or <b>suggest new times</b> if the proposed ones don't work.{" "}
+                                    Players tap times they are free, or <b>suggest new times</b> if the proposed ones don&apos;t work.{" "}
                                     <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
                                         Read the logic
                                     </Link>.
