@@ -47,6 +47,13 @@ updated: 2026-03-04
 
 ---
 
+### Phase 5: Dashboard Sync Integrity
+**Status:** ⬜ Not Started
+**Objective:** Update `syncDashboard` and `pushSlotUpdates` to respect `FINALIZED` event status, preserving the finalized itinerary instead of reverting to the voting table.
+**Depends on:** Phase 4
+
+---
+
 ## Progress Summary
 
 | Phase | Status | Description |
@@ -55,3 +62,4 @@ updated: 2026-03-04
 | 2 | ✅ | Enhanced Creator Controls |
 | 3 | ✅ | Dynamic Time Slots |
 | 4 | ✅ | Waitlist Auto-Promotion |
+| 5 | ⬜ | Dashboard Sync Integrity |
