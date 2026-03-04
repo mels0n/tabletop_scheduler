@@ -207,6 +207,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                         initialSlots={slotsWithCounts}
                         participants={event.participants}
                         minPlayers={event.minPlayers}
+                        slug={event.slug}
                         serverParticipantId={serverParticipantId}
                         discordIdentity={cookieStore.get("tabletop_user_discord_id")?.value ? {
                             id: cookieStore.get("tabletop_user_discord_id")!.value,
