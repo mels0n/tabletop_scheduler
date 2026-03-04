@@ -8,10 +8,10 @@
 TabletopTime helps you find the best time for your gaming group to meet. It is designed to be self-hosted on your home server (Synology, Unraid, Rasp Pi) and integrates deeply with Telegram for real-time coordination.
 
 ### Key Features
-- **Host**: Create events with multiple time slots, quorum rules (min players), and capacity limits (max players).
-- **Vote**: No login required. Simple "Yes", "If Needed", or "No" voting.
+- **Host**: Create, edit, and delete time slots dynamically. Manage quorum rules (min players) and capacity limits (max players). Remove accepted participants to trigger waitlist auto-promotion.
+- **Vote & Suggest**: No login required. Simple "Yes", "If Needed", or "No" voting. Attendees can also suggest new time slots if none work.
 - **Waitlist**: Automatic waitlist management with First-Come-First-Serve promotion when spots open up.
-- **Finalize**: Select a host/location and generate calendar invites (.ics / Google Calendar).
+- **Finalize**: Select a host/location and generate calendar invites (.ics / Google Calendar). Once finalized, slot management is locked.
 - **Telegram / Discord Bot**: 
   - Pins a live-updating dashboard in your group chat.
   - Notifies everyone when an event is finalized.

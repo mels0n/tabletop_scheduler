@@ -93,6 +93,24 @@ Retrieve read-only details about a specific event.
 { "success": true, "participantId": 456 }
 ```
 
+### Suggest Time Slot
+**Endpoint:** `POST /api/event/[slug]/slot/suggest`
+**Description:** Allows any attendee to suggest a new time slot when existing options do not work.
+
+**Request Body:**
+```json
+{
+  "suggesterName": "Jane Doe",
+  "startTime": "2023-11-05T18:00:00.000Z",
+  "endTime": "2023-11-05T22:00:00.000Z"
+}
+```
+
+**Response (200 OK):**
+```json
+{ "success": true }
+```
+
 ## Host Operations
 
 ### Magic Link Auth
@@ -113,6 +131,28 @@ Retrieve read-only details about a specific event.
 **Response:**
 - **Success:** Redirects to the event management dashboard.
 - **Error:** Returns JSON with error details.
+
+### Add Time Slot
+**Endpoint:** `POST /api/event/[slug]/slot`
+**Description:** Allows the event creator to add a new time slot dynamically. Cannot be called on a canceled or finalized event.
+**Body (JSON):** `{ "startTime": "ISO8601", "endTime": "ISO8601" }`
+**Response:** `{ "success": true, "slot": { ... } }`
+
+### Modify Time Slot
+**Endpoint:** `PATCH /api/event/[slug]/slot/[slotId]`
+**Description:** Allows the event creator to modify an existing time slot. Cannot be called on a canceled or finalized event.
+**Body (JSON):** `{ "startTime": "ISO8601", "endTime": "ISO8601" }`
+**Response:** `{ "success": true }`
+
+### Delete Time Slot
+**Endpoint:** `DELETE /api/event/[slug]/slot/[slotId]`
+**Description:** Allows the event creator to delete an existing time slot. Cannot be called on a canceled or finalized event.
+**Response:** `{ "success": true }`
+
+### Remove Participant
+**Endpoint:** `DELETE /api/event/[slug]/participant/[participantId]`
+**Description:** Allows the event creator to remove a participant. If the event is finalized and full, removing an ACCEPTED participant triggers waitlist auto-promotion.
+**Response:** `{ "success": true }`
 
 ### Update Location
 **Endpoint:** `POST /api/event/[slug]/location`

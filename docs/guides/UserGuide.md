@@ -27,6 +27,7 @@ This is the public page you share with your players.
         - ✅ **Yes**: I can play.
         - ⚠️ **If Needed**: Yes, but not my preference for day.
         - ❌ **No**: I cannot play.
+    - **Suggest a Time**: If none of the proposed times work for you, click "Suggest a Time" to add a new option for everyone to vote on.
     - **Submit**: Saves your votes. You can edit them later if you revisit the page on the same device.
 - **Best Slot**: The app automatically highlights the slot with the most "Yes" votes that meets the minimum player count.
 
@@ -40,6 +41,9 @@ As the organizer, you use this page to control the event.
     - **Setup Recovery**: If you haven't connected a group yet, click "Register for Magic Links" to let the bot capture your details. (See **[Magic Links](../docs/MAGIC_LINKS.md)** for details).
     - **DM Me Manager Link**: Once connected, use this to get a private login link sent to your Telegram DMs.
     - **Bot Status**: Shows if the Telegram bot is connected to your group.
+- **Manage Event Details**:
+    - **Participants**: You can remove attendees if they can no longer make it. If the event is finalized and full, removing an ACCEPTED participant will automatically promote the next person on the waitlist.
+    - **Time Slots**: You can add, edit, or delete time slots dynamically to adjust the options available for voting. (Note: Modifying slots is disabled once the event is finalized).
 - **Finalize Event**:
     - Select the winning time slot.
     - Pick a **Host** from the list of attendees (optional).
