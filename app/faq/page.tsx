@@ -52,7 +52,11 @@ export default function FAQPage() {
         },
         {
             question: "How does the waitlist work?",
-            answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked."
+            answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist and notify the group!"
+        },
+        {
+            question: "Can I suggest a different time?",
+            answer: "Absolutely! If none of the proposed times work for you, you can click 'Suggest a Time' on the voting dashboard to add a new option for everyone to vote on. Event creators can also add, edit, or delete time slots before the event is finalized."
         },
         {
             question: "How do timezones work?",
@@ -110,12 +114,16 @@ export default function FAQPage() {
                         question="How does the waitlist work?"
                         answer={
                             <span>
-                                Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough &quot;Yes&quot; votes to play, &quot;If Needed&quot; players will remain on the waitlist. Once finalized, the list is locked.{" "}
+                                Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough &quot;Yes&quot; votes to play, &quot;If Needed&quot; players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist and notify the group!{" "}
                                 <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
                                     See full logic & examples
                                 </Link>.
                             </span>
                         }
+                    />
+                    <FAQItem
+                        question="Can I suggest a different time?"
+                        answer="Absolutely! If none of the proposed times work for you, you can click 'Suggest a Time' on the voting dashboard to add a new option for everyone to vote on. Event creators can also add, edit, or delete time slots before the event is finalized."
                     />
                     <FAQItem
                         question="Why did I make this tool?"
