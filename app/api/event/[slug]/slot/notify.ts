@@ -74,7 +74,12 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
         // Discord
         if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
             const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
-            await sendDiscordMessage(event.discordChannelId, `📅 **Time Options Updated!**\n\n${messageSnippet} for **${event.title}**.`, process.env.DISCORD_BOT_TOKEN);
+
+            const discordSnippet = messageSnippet
+                .replace(/<b>(.*?)<\/b>/g, '**$1**')
+                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)');
+
+            await sendDiscordMessage(event.discordChannelId, `📅 **Time Options Updated!**\n\n${discordSnippet} for **${event.title}**.`, process.env.DISCORD_BOT_TOKEN);
 
             const discordMsg = statusMsg
                 .replace(/<b>(.*?)<\/b>/g, '**$1**')
