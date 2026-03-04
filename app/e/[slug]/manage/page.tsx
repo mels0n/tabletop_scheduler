@@ -389,9 +389,24 @@ export default async function ManageEventPage({ params }: PageProps) {
                                                         <ClientTimezone className="ml-1 text-slate-500 font-normal text-sm" />
                                                     </div>
                                                     <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
-                                                        <span className="text-green-400 font-medium">{slot.yesCount} Yes</span>
-                                                        <span className="text-yellow-500/80">{slot.maybeCount} If Needed</span>
-                                                        <span className="text-red-900/60">{slot.noCount} No</span>
+                                                        <span
+                                                            className="text-green-400 font-medium cursor-help"
+                                                            title={slot.votes.filter((v: any) => v.preference === 'YES').map((v: any) => v.participant.name).join(', ') || 'No Yes votes'}
+                                                        >
+                                                            {slot.yesCount} Yes
+                                                        </span>
+                                                        <span
+                                                            className="text-yellow-500/80 cursor-help"
+                                                            title={slot.votes.filter((v: any) => v.preference === 'MAYBE').map((v: any) => v.participant.name).join(', ') || 'No If Needed votes'}
+                                                        >
+                                                            {slot.maybeCount} If Needed
+                                                        </span>
+                                                        <span
+                                                            className="text-red-900/60 cursor-help"
+                                                            title={slot.votes.filter((v: any) => v.preference === 'NO').map((v: any) => v.participant.name).join(', ') || 'No No votes'}
+                                                        >
+                                                            {slot.noCount} No
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
