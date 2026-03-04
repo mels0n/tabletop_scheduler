@@ -14,6 +14,7 @@ import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
 import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
+import { ManageParticipants } from "@/components/ManageParticipants";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { generateShortRecoveryToken } from "@/features/event-management/server/recovery";
 

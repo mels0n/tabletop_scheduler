@@ -11,7 +11,7 @@ updated: 2026-03-04
 > **Goal:** Address open feature requests from GitHub to improve event management controls and user experience, plus add a donation link.
 
 ## Must-Haves
-- [ ] Add a donation button/option (e.g., PayPal, Venmo, or Ko-fi) to the UI.
+- [ ] ~~Add a donation button/option (e.g., PayPal, Venmo, or Ko-fi) to the UI.~~ (Skipped)
 - [ ] Allow Event Creators to remove a user (and their votes) from an event.
 - [ ] Add visibility for Event Creators to see exactly who voted for each option when hovering or viewing details.
 - [ ] Allow Event Creators to add, modify, or delete time slots after an event is created.
@@ -22,8 +22,8 @@ updated: 2026-03-04
 ## Phases
 
 ### Phase 1: Support the Project
-**Status:** ⬜ Not Started
-**Objective:** Add a donation button/option to the UI (#26).
+**Status:** ⏭️ Skipped
+**Objective:** Add a donation button/option to the UI (#26) - Skipped for now.
 
 ---
 
