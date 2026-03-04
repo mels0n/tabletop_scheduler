@@ -34,6 +34,11 @@ export async function DELETE(
                     slug: slug,
                 },
             },
+            include: {
+                event: {
+                    select: { status: true, title: true }
+                }
+            }
         });
 
         if (!participant) {
@@ -41,6 +46,30 @@ export async function DELETE(
                 { error: "Participant not found in this event." },
                 { status: 404 }
             );
+        }
+
+        // --- NOTIFICATION: Removed by Admin ---
+        if (participant.status === 'ACCEPTED' && participant.event.status === 'FINALIZED') {
+            if (participant.chatId && process.env.TELEGRAM_BOT_TOKEN) {
+                const { sendTelegramMessage } = await import("@/features/telegram");
+                await sendTelegramMessage(
+                    participant.chatId,
+                    `⚠️ <b>Event Update</b>\n\nYou have been removed from the finalized event <b>${participant.event.title}</b> by the organizer.`,
+                    process.env.TELEGRAM_BOT_TOKEN
+                ).catch(e => console.error("Failed to notify removed user via Telegram", e));
+            }
+
+            if (participant.discordId && process.env.DISCORD_BOT_TOKEN) {
+                const { createDMChannel, sendDiscordMessage } = await import("@/features/discord/model/discord");
+                try {
+                    const dm = await createDMChannel(participant.discordId, process.env.DISCORD_BOT_TOKEN);
+                    if (dm?.id) {
+                        await sendDiscordMessage(dm.id, `⚠️ **Event Update**\n\nYou have been removed from the finalized event **${participant.event.title}** by the organizer.`, process.env.DISCORD_BOT_TOKEN);
+                    }
+                } catch (e) {
+                    console.error("Failed to notify removed user via Discord", e);
+                }
+            }
         }
 
         // Wrap deletions in a transaction to ensure both or neither happen
@@ -54,6 +83,14 @@ export async function DELETE(
                 where: { id: participantIdInt },
             }),
         ]);
+
+        // Process Waitlist Promotion if someone was removed
+        const { processWaitlistPromotion } = await import("@/features/event-management/server/waitlist");
+        await processWaitlistPromotion(participant.eventId);
+
+        // Sync dashboard to reflect the removed votes and any new promotions
+        const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
+        await syncDashboard(participant.eventId);
 
         return NextResponse.json({ success: true });
     } catch (error) {
