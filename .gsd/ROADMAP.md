@@ -16,6 +16,7 @@ updated: 2026-03-04
 - [x] Add visibility for Event Creators to see exactly who voted for each option when hovering or viewing details.
 - [x] Allow Event Creators to add, modify, or delete time slots after an event is created.
 - [x] Allow attendees to suggest additional times to the Event Creator.
+- [ ] Extract waitlist auto-promotion logic into a shared service and trigger it on participant removal.
 
 ---
 
@@ -39,6 +40,13 @@ updated: 2026-03-04
 
 ---
 
+### Phase 4: Waitlist Auto-Promotion
+**Status:** ⬜ Not Started
+**Objective:** Extract waitlist auto-promotion logic into a shared service and trigger it when an accepted participant is removed from a finalized, capped event.
+**Depends on:** Phase 3
+
+---
+
 ## Progress Summary
 
 | Phase | Status | Description |
@@ -46,3 +54,4 @@ updated: 2026-03-04
 | 1 | ⏭️ | Support the Project (Donations) - Skipped |
 | 2 | ✅ | Enhanced Creator Controls |
 | 3 | ✅ | Dynamic Time Slots |
+| 4 | ⬜ | Waitlist Auto-Promotion |
