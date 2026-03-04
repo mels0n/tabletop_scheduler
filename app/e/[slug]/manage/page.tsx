@@ -15,6 +15,7 @@ import { TelegramConnect } from "@/components/TelegramConnect";
 import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
+import { ManageSlots } from "@/components/ManageSlots";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { generateShortRecoveryToken } from "@/features/event-management/server/recovery";
 
@@ -210,6 +211,8 @@ export default async function ManageEventPage({ params }: PageProps) {
                             initialReminderTime={event.reminderTime}
                             initialReminderDays={event.reminderDays}
                         />
+
+                        <ManageSlots slug={event.slug} slots={event.timeSlots} />
                     </div>
 
                     {/* RIGHT COLUMN: Slots / Finalized State */}

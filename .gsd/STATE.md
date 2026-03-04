@@ -4,13 +4,15 @@ updated: 2026-03-04
 
 ## Current Position
 - **Milestone**: Issues on Github (v1.7.0)
-- **Phase**: Not started
-- **Status**: Milestone planned
+- **Phase**: 3
+- **Task**: 1
+- **Status**: Execution
 
 ## What Was Accomplished
-- Reviewed GitHub issues #26, #27, #28, #29, #30
-- Defined Milestone 1.7.0 (Issues on Github) goals and phases.
-- Updated `SPEC.md` and `ROADMAP.md`
+- Completed Phase 2: Participant removal API and UI, plus vote breakdown hovers.
+- Created execution plans for Phase 3:
+  - Plan 3.1: Maintain Dynamic Time Slots (Creator)
+  - Plan 3.2: Attendee Slot Suggestion
 
 ## Next Steps
-- /plan 1 — Create Phase 1 execution plans
+- /execute 3.1 — Create Phase 3 execution plans
