@@ -14,8 +14,8 @@ updated: 2026-03-04
 - [x] ~~Add a donation button/option (e.g., PayPal, Venmo, or Ko-fi) to the UI.~~ (Skipped)
 - [x] Allow Event Creators to remove a user (and their votes) from an event.
 - [x] Add visibility for Event Creators to see exactly who voted for each option when hovering or viewing details.
-- [ ] Allow Event Creators to add, modify, or delete time slots after an event is created.
-- [ ] Allow attendees to suggest additional times to the Event Creator.
+- [x] Allow Event Creators to add, modify, or delete time slots after an event is created.
+- [x] Allow attendees to suggest additional times to the Event Creator.
 
 ---
 
@@ -34,7 +34,7 @@ updated: 2026-03-04
 ---
 
 ### Phase 3: Dynamic Time Slots
-**Status:** ⬜ Not Started
+**Status:** ✅ Complete
 **Objective:** Allow modifying time slots after event creation and adding attendee suggestions (#27, #28).
 
 ---
@@ -45,4 +45,4 @@ updated: 2026-03-04
 |-------|--------|-------------|
 | 1 | ⏭️ | Support the Project (Donations) - Skipped |
 | 2 | ✅ | Enhanced Creator Controls |
-| 3 | ⬜ | Dynamic Time Slots |
+| 3 | ✅ | Dynamic Time Slots |
