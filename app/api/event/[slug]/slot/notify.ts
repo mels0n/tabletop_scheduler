@@ -7,7 +7,10 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
     try {
         const event = await prisma.event.findUnique({
             where: { id: eventId },
-            include: { timeSlots: { include: { votes: true } } }
+            include: {
+                timeSlots: { include: { votes: true } },
+                finalizedHost: true
+            }
         });
 
         if (!event) return;
@@ -18,9 +21,39 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
         const { headers } = await import("next/headers");
         const headerList = headers();
         const baseUrl = getBaseUrl(headerList);
-        const { generateStatusMessage } = await import("@/shared/lib/status");
 
-        const statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
+        let statusMsg = "";
+
+        if (event.status === "FINALIZED" && event.finalizedSlotId) {
+            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
+            const slotTime = event.timeSlots.find(s => s.id === event.finalizedSlotId);
+
+            if (slotTime) {
+                const acceptedParticipants = await prisma.participant.findMany({
+                    where: { eventId, status: 'ACCEPTED' },
+                    orderBy: { createdAt: 'asc' },
+                    select: { name: true }
+                });
+                const waitlistParticipants = await prisma.participant.findMany({
+                    where: { eventId, status: 'WAITLIST' },
+                    orderBy: { createdAt: 'asc' },
+                    select: { name: true }
+                });
+                statusMsg = buildFinalizedMessage(
+                    event as any,
+                    slotTime as any,
+                    baseUrl,
+                    acceptedParticipants.map(p => p.name),
+                    waitlistParticipants.map(p => p.name)
+                );
+            } else {
+                const { generateStatusMessage } = await import("@/shared/lib/status");
+                statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
+            }
+        } else {
+            const { generateStatusMessage } = await import("@/shared/lib/status");
+            statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
+        }
 
         // Telegram
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
@@ -46,6 +79,7 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
             const discordMsg = statusMsg
                 .replace(/<b>(.*?)<\/b>/g, '**$1**')
                 .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
+                .replace(/ \| /g, ' • ')
                 .replace(/<br\s*\/?>/g, '\n')
                 .replace(/&nbsp;/g, ' ');
 
@@ -68,7 +102,10 @@ export async function syncDashboard(eventId: number) {
     try {
         const event = await prisma.event.findUnique({
             where: { id: eventId },
-            include: { timeSlots: { include: { votes: true } } }
+            include: {
+                timeSlots: { include: { votes: true } },
+                finalizedHost: true
+            }
         });
 
         if (!event) return;
@@ -79,9 +116,39 @@ export async function syncDashboard(eventId: number) {
         const { headers } = await import("next/headers");
         const headerList = headers();
         const baseUrl = getBaseUrl(headerList);
-        const { generateStatusMessage } = await import("@/shared/lib/status");
 
-        const statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
+        let statusMsg = "";
+
+        if (event.status === "FINALIZED" && event.finalizedSlotId) {
+            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
+            const slotTime = event.timeSlots.find(s => s.id === event.finalizedSlotId);
+
+            if (slotTime) {
+                const acceptedParticipants = await prisma.participant.findMany({
+                    where: { eventId, status: 'ACCEPTED' },
+                    orderBy: { createdAt: 'asc' },
+                    select: { name: true }
+                });
+                const waitlistParticipants = await prisma.participant.findMany({
+                    where: { eventId, status: 'WAITLIST' },
+                    orderBy: { createdAt: 'asc' },
+                    select: { name: true }
+                });
+                statusMsg = buildFinalizedMessage(
+                    event as any,
+                    slotTime as any,
+                    baseUrl,
+                    acceptedParticipants.map(p => p.name),
+                    waitlistParticipants.map(p => p.name)
+                );
+            } else {
+                const { generateStatusMessage } = await import("@/shared/lib/status");
+                statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
+            }
+        } else {
+            const { generateStatusMessage } = await import("@/shared/lib/status");
+            statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
+        }
 
         // Telegram
         if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
@@ -105,6 +172,7 @@ export async function syncDashboard(eventId: number) {
             const discordMsg = statusMsg
                 .replace(/<b>(.*?)<\/b>/g, '**$1**')
                 .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
+                .replace(/ \| /g, ' • ')
                 .replace(/<br\s*\/?>/g, '\n')
                 .replace(/&nbsp;/g, ' ');
 
