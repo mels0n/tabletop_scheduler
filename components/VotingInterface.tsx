@@ -6,6 +6,7 @@ import { ClientTimezone } from "./ClientDate";
 import { Check, HelpCircle, X, User as UserIcon, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
+import { SuggestTime } from "./SuggestTime";
 
 /**
  * @interface Slot
@@ -38,6 +39,7 @@ interface VotingInterfaceProps {
     initialSlots: Slot[];
     participants: any[];
     minPlayers: number;
+    slug: string;
     serverParticipantId?: number;
     discordIdentity?: { id: string, username: string };
 }
@@ -55,7 +57,7 @@ interface VotingInterfaceProps {
  * @param {VotingInterfaceProps} props - Component props.
  * @returns {JSX.Element} The voting dashboard.
  */
-export function VotingInterface({ eventId, initialSlots, participants, minPlayers, serverParticipantId, discordIdentity }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams(); // Requires next/navigation import update below
 
@@ -357,6 +359,12 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                             ? "Select preferences for all times"
                             : "Submit Votes"}
                 </button>
+
+                <SuggestTime
+                    slug={slug}
+                    serverParticipantId={participantId || undefined}
+                    participants={participants}
+                />
             </div>
 
             {/* Right Col: Participants List */}
