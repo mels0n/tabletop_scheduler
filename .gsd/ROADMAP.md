@@ -54,6 +54,13 @@ updated: 2026-03-04
 
 ---
 
+### Phase 6: Post-Audit Refinements
+**Status:** ⬜ Not Started
+**Objective:** Resolve lingering side-effects from Phases 2-4: remove rogue sync from `vote/route.ts` and block slot modifications on finalized events.
+**Depends on:** Phase 5
+
+---
+
 ## Progress Summary
 
 | Phase | Status | Description |
@@ -63,3 +70,4 @@ updated: 2026-03-04
 | 3 | ✅ | Dynamic Time Slots |
 | 4 | ✅ | Waitlist Auto-Promotion |
 | 5 | ✅ | Dashboard Sync Integrity |
+| 6 | ⬜ | Post-Audit Refinements |
