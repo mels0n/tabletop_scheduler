@@ -13,8 +13,9 @@ interface SuggestTimeProps {
 export function SuggestTime({ slug, serverParticipantId, participants }: SuggestTimeProps) {
     const router = useRouter();
     const [isExpanded, setIsExpanded] = useState(false);
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
+    const [date, setDate] = useState("");
+    const [start, setStart] = useState("18:00");
+    const [end, setEnd] = useState("22:00");
     const [name, setName] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
@@ -32,8 +33,22 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
     }, [serverParticipantId, participants]);
 
     const handleSuggest = async () => {
-        if (!startTime || !endTime || !name.trim()) {
+        if (!date || !start || !end || !name.trim()) {
             setErrorMsg("Please fill in all fields.");
+            return;
+        }
+
+        const startDateTime = new Date(`${date}T${start}:00`);
+        const endDateTime = new Date(`${date}T${end}:00`);
+        const now = new Date();
+
+        if (startDateTime < now) {
+            setErrorMsg("You cannot suggest a time in the past.");
+            return;
+        }
+
+        if (endDateTime <= startDateTime) {
+            setErrorMsg("End time must be after start time.");
             return;
         }
 
@@ -44,8 +59,8 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    startTime,
-                    endTime,
+                    startTime: startDateTime.toISOString(),
+                    endTime: endDateTime.toISOString(),
                     suggesterName: name.trim()
                 })
             });
@@ -55,8 +70,9 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
 
             localStorage.setItem("tabletop_user_name", name.trim());
             setSuccessMsg("Time suggested successfully! It has been added to the voting grid.");
-            setStartTime("");
-            setEndTime("");
+            setDate("");
+            setStart("18:00");
+            setEnd("22:00");
             setTimeout(() => {
                 setIsExpanded(false);
                 setSuccessMsg("");
@@ -121,23 +137,32 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
                             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm text-slate-400 mb-1">Start Time</label>
+                    <div className="flex flex-wrap gap-4">
+                        <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
+                            <label className="text-xs text-slate-400">Date</label>
                             <input
-                                type="datetime-local"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm"
+                                type="date"
+                                className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 text-sm w-full"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm text-slate-400 mb-1">End Time</label>
+                        <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
+                            <label className="text-xs text-slate-400">Start</label>
                             <input
-                                type="datetime-local"
-                                value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm"
+                                type="time"
+                                className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 text-sm w-full"
+                                value={start}
+                                onChange={(e) => setStart(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
+                            <label className="text-xs text-slate-400">End</label>
+                            <input
+                                type="time"
+                                className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500 text-sm w-full"
+                                value={end}
+                                onChange={(e) => setEnd(e.target.value)}
                             />
                         </div>
                     </div>
