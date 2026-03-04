@@ -12,10 +12,11 @@ export default function HowItWorksPage() {
         "@context": "https://schema.org",
         "@type": "HowTo",
         "name": "How to Schedule a D&D Session with Tabletop Time",
+        "dateModified": "2026-03-04",
         "step": [
             { "@type": "HowToStep", "text": "Create a new event and add available time slots" },
             { "@type": "HowToStep", "text": "Share the secure link with your gaming group via Discord or Telegram" },
-            { "@type": "HowToStep", "text": "Players vote on times they are available (No login required)" },
+            { "@type": "HowToStep", "text": "Players vote on times they are available, or suggest new times if none work" },
             { "@type": "HowToStep", "text": "System automatically identifies the best time slot where everyone is free" }
         ]
     };
@@ -76,10 +77,10 @@ export default function HowItWorksPage() {
                         />
                         <StepCard
                             step="3"
-                            title="Players Vote"
+                            title="Players Vote & Suggest"
                             desc={
                                 <span>
-                                    Your players click the link and tap the times they are free. No sign-ups, no passwords. It takes 10 seconds.{" "}
+                                    Players tap times they are free, or <b>suggest new times</b> if the proposed ones don't work.{" "}
                                     <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
                                         Read the logic
                                     </Link>.
