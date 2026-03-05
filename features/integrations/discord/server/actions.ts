@@ -157,7 +157,9 @@ export async function dmDiscordManagerLink(slug: string) {
     }
 
     // 2. Send Message
-    const magicLink = `${process.env.NEXT_PUBLIC_BASE_URL}/e/${slug}/manage?token=${token}`;
+    // Intent: Route through the auth endpoint so it validates the token and sets the admin
+    // cookie before redirecting to /manage. The /manage page itself ignores ?token= params.
+    const magicLink = `${process.env.NEXT_PUBLIC_BASE_URL}/api/event/${slug}/auth?token=${token}`;
     const msg = `**Magic Link Request**\nHere is your link to manage **${event.title}**:\n${magicLink}\n\n(This link expires in 1 hour)`;
 
     const sendRes = await sendDiscordMessage(dmRes.id, msg, tokenVal);
@@ -174,70 +176,94 @@ export async function dmDiscordManagerLink(slug: string) {
  * @param username The Discord username (or handle) to link.
  */
 export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const botToken = process.env.DISCORD_BOT_TOKEN;
 
-    if (!token) return { success: false, error: "Server Configuration Error: Discord Token missing" };
+    if (!botToken) return { success: false, error: "Server Configuration Error: Discord Token missing" };
     if (!username) return { success: false, error: "Please enter a username" };
 
-    const normalized = username.toLowerCase().replace('@', '');
+    const normalizedUsername = username.toLowerCase().replace('@', '');
+
+    let targetDiscordId: string | null = null;
+    let targetDiscordUsername: string | null = null;
 
     try {
-        // 1. Find User by Username (Case Insensitive-ish)
-        // We prioritize explicit Participant records where we captured identity.
-        const userRecords = await prisma.participant.findMany({
-            where: {
-                discordId: { not: null },
-                OR: [
-                    { discordUsername: { contains: normalized } },
-                    { name: { contains: normalized } }
-                ]
-            },
-            select: { discordId: true, discordUsername: true, name: true },
-            take: 1
-        });
+        const cookieStore = cookies();
+        const cookieDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
 
-        const match = userRecords[0];
-
-        let targetId = match?.discordId;
-        let targetUsername = match?.discordUsername;
-
-        // 2. Fallback: Check Event Manager records
-        if (!targetId) {
-            // Intent: If the user never voted but is an event manager (and we captured their username)
-            const managerRecords = await prisma.event.findMany({
-                where: {
-                    managerDiscordId: { not: null },
-                    managerDiscordUsername: { contains: normalized }
-                },
-                select: { managerDiscordId: true, managerDiscordUsername: true },
-                take: 1
+        // 1. Fast-path: Prioritize Discord ID from cookie (most reliable identity signal)
+        if (cookieDiscordId) {
+            // Check if they are a participant
+            const participantById = await prisma.participant.findFirst({
+                where: { discordId: cookieDiscordId },
+                select: { discordId: true, discordUsername: true }
             });
-
-            // Just take the first match
-            const mgr = managerRecords[0];
-            if (mgr) {
-                targetId = mgr.managerDiscordId;
-                targetUsername = mgr.managerDiscordUsername;
+            if (participantById) {
+                targetDiscordId = participantById.discordId;
+                targetDiscordUsername = participantById.discordUsername;
+            } else {
+                // Check if they are an event manager
+                const managerById = await prisma.event.findFirst({
+                    where: { managerDiscordId: cookieDiscordId },
+                    select: { managerDiscordId: true, managerDiscordUsername: true }
+                });
+                if (managerById) {
+                    targetDiscordId = managerById.managerDiscordId;
+                    targetDiscordUsername = managerById.managerDiscordUsername;
+                }
             }
         }
 
-        if (!targetId) {
+        // 2. Fallback: Find User by Username (if cookie ID didn't yield a match)
+        if (!targetDiscordId) {
+            // Search participant records by username
+            const participantByUsername = await prisma.participant.findFirst({
+                where: {
+                    discordId: { not: null },
+                    OR: [
+                        { discordUsername: { contains: normalizedUsername } },
+                        { name: { contains: normalizedUsername } }
+                    ]
+                },
+                select: { discordId: true, discordUsername: true }
+            });
+
+            if (participantByUsername) {
+                targetDiscordId = participantByUsername.discordId;
+                targetDiscordUsername = participantByUsername.discordUsername;
+            } else {
+                // Search event manager records by username
+                const managerByUsername = await prisma.event.findFirst({
+                    where: {
+                        managerDiscordId: { not: null },
+                        managerDiscordUsername: { contains: normalizedUsername }
+                    },
+                    select: { managerDiscordId: true, managerDiscordUsername: true }
+                });
+
+                if (managerByUsername) {
+                    targetDiscordId = managerByUsername.managerDiscordId;
+                    targetDiscordUsername = managerByUsername.managerDiscordUsername;
+                }
+            }
+        }
+
+        // 3. If no user found after all attempts
+        if (!targetDiscordId) {
             return { success: false, error: "We couldn't find a record for this username. Have you voted on an event using the 'Log in with Discord' button before?" };
         }
 
-        // 3. Generate Token
-        // Expiry: 15 minutes
+        // 4. Generate Token
         const rawToken = randomUUID();
         const tokenHash = hashToken(rawToken);
 
         const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+        expiresAt.setMinutes(expiresAt.getMinutes() + 15); // Valid for 15 minutes
 
         await prisma.loginToken.create({
             data: {
                 token: tokenHash,
-                discordId: targetId,
-                discordUsername: targetUsername || username,
+                discordId: targetDiscordId,
+                discordUsername: targetDiscordUsername || username, // Use found username or original input
                 expiresAt
             }
         });
@@ -245,14 +271,14 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
         const baseUrl = getBaseUrl(headers());
         const magicLink = `${baseUrl}/auth/login?token=${rawToken}`;
 
-        // 4. Create DM & Send
-        const channel = await createDMChannel(targetId, token);
+        // 5. Create DM & Send
+        const channel = await createDMChannel(targetDiscordId, botToken);
         if (channel.error || !channel.id) {
-            return { success: false, error: "Could not open a DM. Please check your privacy settings." };
+            return { success: false, error: "Could not open a DM. Please check your privacy settings or ensure the bot is not blocked." };
         }
 
         const msg = `🔐 **Magic Login**\n\nClick here to access **My Events**:\n${magicLink}\n\n(Valid for 15 minutes)`;
-        const sent = await sendDiscordMessage(channel.id, msg, token);
+        const sent = await sendDiscordMessage(channel.id, msg, botToken);
 
         if (sent.error) {
             return { success: false, error: "Failed to send DM. Check privacy settings." };
