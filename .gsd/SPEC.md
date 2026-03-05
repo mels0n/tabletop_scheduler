@@ -1,23 +1,21 @@
 ---
 projectId: tabletop_scheduler
 status: FINALIZED
-version: 1.7.0
-lastUpdated: 2026-03-04
+version: 1.8.0
+lastUpdated: 2026-03-05
 ---
 
-# Specification: Issues on Github
+# Specification: Features / Bug fixes from github issues
 
 ## 1. Goal
-Address open feature requests from GitHub to improve event management controls and user experience, plus add a donation link.
+Address the current backlog of open bug reports and UI feature requests from GitHub, specifically focusing on mobile responsiveness, UI clipping, and Discord Magic Link authentication bugs.
 
 ## 2. Success Criteria
-- [ ] **Phase 1: Support the Project**: A donation button/option (e.g., PayPal, Venmo, or Ko-fi) is added to the UI.
-- [ ] **Phase 2: Enhanced Creator Controls**: Event Creators can remove a user (and their votes) from an event.
-- [ ] **Phase 2: Enhanced Creator Controls**: Event Creators can see exactly who voted for each option when hovering or viewing details.
-- [ ] **Phase 3: Dynamic Time Slots**: Event Creators can add, modify, or delete time slots after an event is created (triggering Discord notifications).
-- [ ] **Phase 3: Dynamic Time Slots**: Attendees can suggest additional times to the Event Creator.
+- [ ] **Phase 1: Mobile & UI Polish**: Android horizontal scrolling is prevented. iOS Safari bottom/top white bars are removed. Recovery Access nav gradient is fixed.
+- [ ] **Phase 2: Magic Link Authentication**: Discord Magic links route via `/api/event/[slug]/auth` instead of `/manage` directly, allowing the admin cookie to be successfully set. Global Discord magic logins correctly identify accounts by username/ID without failing.
+- [ ] **Phase 3: Recover Access Text Update**: The recovery modal dynamically updates text to say "Discord" instead of "Telegram" when Discord is selected.
 
 ## 3. Core Requirements
-- **Phase 1**: Add a simple link or button in the footer or settings page.
-- **Phase 2**: Add a "remove user" functionality to the event management view. Show vote breakdowns per user on hover or click.
-- **Phase 3**: Rework the event edit flow to allow adding/removing time slots. Implement notification logic when slots change. Add a "Suggest Time" feature for attendees.
+- **Phase 1**: Update `app/globals.css` or `app/layout.tsx` for mobile viewport styling. Fix Tailwind gradient classes in `Navbar.tsx` or `ManagerRecovery.tsx`.
+- **Phase 2**: Fix `dmDiscordManagerLink` to use the auth endpoint. Improve username matching in `sendDiscordMagicLogin` to handle Discord IDs and usernames consistently and case-insensitively.
+- **Phase 3**: Change the hardcoded paragraph in `ManagerRecovery.tsx` to read the `platform` state before displaying the term "Telegram".
