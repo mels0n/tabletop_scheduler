@@ -21,7 +21,7 @@ export default function Home() {
    * Helps search engines understand the product context.
    */
   const jsonLd = SchemaGenerator.softwareApp({
-    name: "Tabletop Scheduler",
+    name: "Tabletop Time",
     applicationCategory: "GameApplication",
     description: "Coordinate D&D and board game sessions without the chaos.",
     featureList: [
