@@ -17,7 +17,6 @@ import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
-import { generateShortRecoveryToken } from "@/features/event-management/server/recovery";
 
 /**
  * @interface PageProps
