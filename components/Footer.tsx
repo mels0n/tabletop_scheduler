@@ -23,7 +23,7 @@ export function Footer() {
                 </div>
 
                 {/* Navigation Links */}
-                <div className="flex items-center gap-6">
+                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
                     <Link href="/features" className="hover:text-indigo-400 transition-colors">
                         Features
                     </Link>
