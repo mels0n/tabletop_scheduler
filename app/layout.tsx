@@ -111,6 +111,7 @@ export default function RootLayout({
                                 {
                                     "@type": "WebSite",
                                     "name": "Tabletop Time",
+                                    "alternateName": ["TableTop Time", "TableTopTime"],
                                     "url": "https://www.tabletoptime.us",
                                     "author": {
                                         "@type": "Person",

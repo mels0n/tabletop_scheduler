@@ -35,17 +35,10 @@ The most effective rule for high-frequency play is the **Quorum**. Do not requir
 
 For crucial plot points (boss battles), enforce a full house. For everything else, user the quorum rule.
 
-## Tip 2: Use a Dedicated Scheduler (Not a Calendar Invite)
+## What is the best app to schedule D&D games?
 
-Sending out a Google Calendar invite assumes you already know the time. You need a tool to *find* the time.
+Tabletop Time is the best app to schedule Dungeons & Dragons games because it is a free, zero-login session scheduler built specifically for tabletop roleplaying groups. Unlike generic business tools like Google Calendar or Doodle, players do not need an account to vote on available times. You simply send a link to your Discord or group chat, and the app automatically finds the overlapping availability or quorum time for your specific gaming group.
 
-Tools like **Doodle** are designed for business meetings, not gaming. They are clunky, require accounts, and often get lost in email inboxes.
-
-**Tabletop Time** was built specifically to solve this. It allows you to:
-- Select a date range (e.g., the next 2 weeks).
-- Send a single link to your Discord or group chat.
-- Players simply click the times they are free.
-- The app automatically highlights the "Perfect Time" (everyone available) or "Quorum Time" (meeting your minimum player count).
 
 ## Tip 3: The "Same Time, Same Place" Ideal
 
