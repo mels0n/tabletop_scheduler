@@ -30,5 +30,5 @@ updated: 2026-03-05
 **Objective**: Ensure the Discord Magic Link works consistently across different devices and correctly links the manager to the event.
 
 ### Phase 3: Recover Access Text Update
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Fix the hardcoded text in the Recover Access dialog when Discord is selected.
