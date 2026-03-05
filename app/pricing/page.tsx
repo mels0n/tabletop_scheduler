@@ -57,6 +57,9 @@ export default function PricingPage() {
                         Running on standard web tech keeps costs low. We currently have no ads, though we may explore privacy-preserving options in the future if coffee prices skyrocket.
                         You can also host it yourself!
                     </p>
+                    <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer">
+                        <img height="36" style={{ border: 0, height: 36 }} src="https://storage.ko-fi.com/cdn/kofi4.png?v=6" alt="Buy Me a Coffee at ko-fi.com" />
+                    </a>
                 </div>
             </div>
         </main>
