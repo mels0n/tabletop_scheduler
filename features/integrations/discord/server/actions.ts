@@ -13,7 +13,7 @@ import {
     getGuildChannels,
     createDMChannel
 } from "@/features/discord/model/discord";
-import { dmManagerLink, generateShortRecoveryToken } from "@/features/event-management/server/recovery";
+import { dmManagerLink, generateManagerMagicLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
 
 const log = Logger.get("DiscordActions");
@@ -140,8 +140,8 @@ export async function listDiscordChannels(guildId: string) {
 /**
  * Sends a Magic Link to the manager via Discord DM.
  *
- * Functionally identical to the Telegram `dmManagerLink` — the only difference
- * is the transport. Rotates `event.adminToken` and sends the auth-endpoint URL.
+ * Transport-only wrapper around `generateManagerMagicLink`.
+ * Identical in intent to the Telegram `dmManagerLink`.
  *
  * @param {string} slug - The event slug.
  */
@@ -151,26 +151,17 @@ export async function dmDiscordManagerLink(slug: string) {
 
     const botToken = process.env.DISCORD_BOT_TOKEN || "";
 
-    // Rotate the adminToken — identical to how Telegram recovery works.
-    // This ensures the auth endpoint can validate the token against event.adminToken.
-    const rawToken = randomUUID();
-    const tokenHash = hashToken(rawToken);
+    // 1. Generate link (rotates adminToken, builds auth-endpoint URL)
+    const magicLink = await generateManagerMagicLink(slug);
 
-    await prisma.event.update({
-        where: { id: event.id },
-        data: { adminToken: tokenHash }
-    });
-
-    // 1. Open DM Channel
+    // 2. Open DM Channel
     const dmRes = await createDMChannel(event.managerDiscordId, botToken);
     if (dmRes.error || !dmRes.id) {
         return { error: "Could not open DM channel. Bot might be blocked." };
     }
 
-    // 2. Send Message
-    const magicLink = `${process.env.NEXT_PUBLIC_BASE_URL}/api/event/${slug}/auth?token=${rawToken}`;
+    // 3. Send Message
     const msg = `**Magic Link Request**\nHere is your link to manage **${event.title}**:\n${magicLink}\n\n(This link expires when a new one is requested)`;
-
     const sendRes = await sendDiscordMessage(dmRes.id, msg, botToken);
 
     if (sendRes.error) {
