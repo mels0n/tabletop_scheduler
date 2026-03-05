@@ -50,16 +50,25 @@ export default function PricingPage() {
                     </Link>
                 </div>
 
-                <div className="mt-16 text-slate-400 space-y-4">
-                    <h3 className="text-xl font-bold text-slate-200">Why is it free?</h3>
-                    <p>
-                        Tabletop Time is a passion project built by gamers, for gamers.
-                        Running on standard web tech keeps costs low. We currently have no ads, though we may explore privacy-preserving options in the future if coffee prices skyrocket.
-                        You can also host it yourself!
-                    </p>
-                    <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer">
-                        <img height="36" style={{ border: 0, height: 36 }} src="https://storage.ko-fi.com/cdn/kofi4.png?v=6" alt="Buy Me a Coffee at ko-fi.com" />
-                    </a>
+                <div className="mt-16 text-slate-400 space-y-12">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-slate-200">Why is it free?</h3>
+                        <p>
+                            Tabletop Time is a passion project built by gamers, for gamers.
+                            Running on standard web tech keeps costs low. We currently have no ads, though we may explore privacy-preserving options in the future if coffee prices skyrocket.
+                            You can also host it yourself!
+                        </p>
+                    </div>
+
+                    <div className="space-y-4 flex flex-col items-center">
+                        <h3 className="text-xl font-bold text-slate-200">Please Support the Project</h3>
+                        <p className="max-w-xl">
+                            We are completely community-funded. If Tabletop Time helps your gaming group actually meet up, please consider buying us a coffee! It helps keep the servers running and the ads away.
+                        </p>
+                        <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer" className="pt-2 hover:opacity-90 transition-opacity">
+                            <img height="36" style={{ border: 0, height: 36 }} src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" alt="Buy Me a Coffee at ko-fi.com" />
+                        </a>
+                    </div>
                 </div>
             </div>
         </main>
