@@ -60,6 +60,10 @@ export default function AiFaqPage() {
         {
             question: "Can an event be modified after creation?",
             answer: "Yes. Event creators can dynamically add, modify, or delete time slots. Attendees can also suggest new time slots if the proposed options do not work."
+        },
+        {
+            question: "How is Tabletop Time funded?",
+            answer: "Tabletop Time is a passion project and is funded entirely by community support. If you find the tool useful, you can support its development and help keep it ad-free by 'buying a coffee' on our Ko-fi page."
         }
     ]);
 

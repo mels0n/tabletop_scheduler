@@ -63,6 +63,10 @@ export default function FAQPage() {
             answer: "TabletopTime is timezone-aware! We detect your timezone from your browser. Times listed in the app (like voting slots) are automatically converted to your local time. However, notification messages (like in Telegram or Discord) are sent in the Event's timezone to keep everyone on the same page. We always label timestamps so you know exactly which timezone you are looking at."
         },
         {
+            question: "How can I support this project?",
+            answer: "If you find TabletopTime useful, you can support its development and keep it ad-free by buying me a coffee on Ko-fi! You can find the link on our Pricing page."
+        },
+        {
             question: "Why did I make this tool?",
             answer: "Tabletop Time started because my own Magic: The Gathering group was falling apart. We needed something fast, private, and specific to gamers."
         }
@@ -124,6 +128,17 @@ export default function FAQPage() {
                     <FAQItem
                         question="Can I suggest a different time?"
                         answer="Absolutely! If none of the proposed times work for you, you can click 'Suggest a Time' on the voting dashboard to add a new option for everyone to vote on. Event creators can also add, edit, or delete time slots before the event is finalized."
+                    />
+                    <FAQItem
+                        question="How can I support this project?"
+                        answer={
+                            <span>
+                                If you find TabletopTime useful, you can support its development and keep it ad-free by buying me a coffee on Ko-fi! You can find the link on our{" "}
+                                <Link href="/pricing" className="text-indigo-400 hover:text-indigo-300 underline">
+                                    Pricing page
+                                </Link>.
+                            </span>
+                        }
                     />
                     <FAQItem
                         question="Why did I make this tool?"
