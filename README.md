@@ -3,7 +3,7 @@
 > **Ditch the group chat chaos.** A self-hosted, simplified scheduling tool for tabletop gamers.
 
 ![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)
-[![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?logo=ko-fi&logoColor=white)](https://ko-fi.com/N4N11VDWCU)
+<a href="https://ko-fi.com/N4N11VDWCU" target="_blank"><img height="36" src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" border="0" alt="Buy Me a Coffee at ko-fi.com" /></a>
 
 ## Overview
 TabletopTime helps you find the best time for your gaming group to meet. It is designed to be self-hosted on your home server (Synology, Unraid, Rasp Pi) and integrates deeply with Telegram for real-time coordination.
