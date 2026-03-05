@@ -160,6 +160,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             const payload = {
                 name: userName,
                 telegramId: userTelegram,
+                // Intent: Persist Discord identity on participant row so server can identify
+                // this user on future page loads without requiring a magic link (mirrors Telegram chatId).
+                discordId: discordIdentity?.id,
+                discordUsername: discordIdentity?.username,
                 participantId, // Send if we have it (update existing), otherwise create new
                 votes: Object.entries(votes)
                     .filter(([_, preference]) => preference !== undefined)

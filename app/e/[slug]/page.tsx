@@ -102,13 +102,19 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     // This allows the voting interface to pre-fill "You are interacting as X".
     const cookieStore = cookies();
     const userChatId = cookieStore.get("tabletop_user_chat_id")?.value;
+    const userDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
 
     let serverParticipantId: number | undefined;
-    if (userChatId && event?.participants) {
-        // Logic: Match the secure cookie ID against the participant list for this specific event.
-        const found = event.participants.find(p => p.chatId === userChatId);
-        if (found) {
-            serverParticipantId = found.id;
+    if (event?.participants) {
+        // Priority 1: Telegram chatId (set by bot after /start flow)
+        if (userChatId) {
+            const found = event.participants.find(p => p.chatId === userChatId);
+            if (found) serverParticipantId = found.id;
+        }
+        // Priority 2: Discord user ID (set by Discord OAuth cookie) — mirrors Telegram behaviour
+        if (!serverParticipantId && userDiscordId) {
+            const found = event.participants.find(p => p.discordId === userDiscordId);
+            if (found) serverParticipantId = found.id;
         }
     }
 
