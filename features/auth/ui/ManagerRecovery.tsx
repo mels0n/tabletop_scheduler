@@ -74,7 +74,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
     // State 2: Success Modal (Link Sent)
     if (successMsg) {
         return (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+            <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                 <div className="bg-slate-900 border border-green-800/50 p-6 rounded-xl max-w-sm w-full shadow-2xl animate-in fade-in zoom-in-95">
                     <div className="flex flex-col items-center text-center gap-4">
                         <div className="w-12 h-12 bg-green-900/20 rounded-full flex items-center justify-center text-green-500">
@@ -96,7 +96,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
 
     // State 3: Active Form Modal
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
             <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl max-w-sm w-full shadow-2xl">
                 <div className="flex items-center gap-2 mb-4 text-indigo-400">
                     <ShieldCheck className="w-6 h-6" />

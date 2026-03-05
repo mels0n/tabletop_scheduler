@@ -10,7 +10,7 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  @apply bg-gradient-to-b from-slate-900 via-slate-950 to-black min-h-screen;
+  @apply bg-gradient-to-b from-slate-900 via-slate-950 to-black min-h-screen overflow-x-hidden;
 }
 
 @layer utilities {
