@@ -104,7 +104,10 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                 </div>
 
                 <p className="text-slate-400 text-sm mb-4">
-                    Enter the Telegram Handle you provided when creating this event. We will verify it and send a <b>Magic Link</b> to your Telegram DMs.
+                    {platform === "telegram"
+                        ? <>Enter the Telegram Handle you provided when creating this event. We will verify it and send a <b>Magic Link</b> to your Telegram DMs.</>
+                        : <>Enter the Discord Username linked to this event. We will verify it and send a <b>Magic Link</b> to your Discord DMs.</>
+                    }
                 </p>
 
                 <form onSubmit={handleRecover} className="space-y-4">
