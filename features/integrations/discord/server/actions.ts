@@ -139,30 +139,39 @@ export async function listDiscordChannels(guildId: string) {
 
 /**
  * Sends a Magic Link to the manager via Discord DM.
+ *
+ * Functionally identical to the Telegram `dmManagerLink` — the only difference
+ * is the transport. Rotates `event.adminToken` and sends the auth-endpoint URL.
+ *
  * @param {string} slug - The event slug.
  */
 export async function dmDiscordManagerLink(slug: string) {
     const event = await prisma.event.findUnique({ where: { slug } });
     if (!event || !event.managerDiscordId) return { error: "No manager linked." };
 
-    const { token } = await generateShortRecoveryToken(slug);
-    if (!token) return { error: "Failed to generate token." };
+    const botToken = process.env.DISCORD_BOT_TOKEN || "";
 
-    const tokenVal = process.env.DISCORD_BOT_TOKEN || "";
+    // Rotate the adminToken — identical to how Telegram recovery works.
+    // This ensures the auth endpoint can validate the token against event.adminToken.
+    const rawToken = randomUUID();
+    const tokenHash = hashToken(rawToken);
+
+    await prisma.event.update({
+        where: { id: event.id },
+        data: { adminToken: tokenHash }
+    });
 
     // 1. Open DM Channel
-    const dmRes = await createDMChannel(event.managerDiscordId, tokenVal);
+    const dmRes = await createDMChannel(event.managerDiscordId, botToken);
     if (dmRes.error || !dmRes.id) {
         return { error: "Could not open DM channel. Bot might be blocked." };
     }
 
     // 2. Send Message
-    // Intent: Route through the auth endpoint so it validates the token and sets the admin
-    // cookie before redirecting to /manage. The /manage page itself ignores ?token= params.
-    const magicLink = `${process.env.NEXT_PUBLIC_BASE_URL}/api/event/${slug}/auth?token=${token}`;
-    const msg = `**Magic Link Request**\nHere is your link to manage **${event.title}**:\n${magicLink}\n\n(This link expires in 1 hour)`;
+    const magicLink = `${process.env.NEXT_PUBLIC_BASE_URL}/api/event/${slug}/auth?token=${rawToken}`;
+    const msg = `**Magic Link Request**\nHere is your link to manage **${event.title}**:\n${magicLink}\n\n(This link expires when a new one is requested)`;
 
-    const sendRes = await sendDiscordMessage(dmRes.id, msg, tokenVal);
+    const sendRes = await sendDiscordMessage(dmRes.id, msg, botToken);
 
     if (sendRes.error) {
         return { error: "Failed to send DM." };
@@ -170,6 +179,8 @@ export async function dmDiscordManagerLink(slug: string) {
 
     return { success: true };
 }
+
+
 
 /**
  * Generates a global magic link for Discord users to access "My Events".
