@@ -64,7 +64,7 @@ export async function GET(req: Request) {
                 OR: [
                     { status: 'FINALIZED' },
                     { status: 'CANCELLED' },
-                    { timeSlots: { some: {} } }
+                    { status: 'DRAFT' }
                 ]
             },
             include: {
@@ -106,13 +106,20 @@ export async function GET(req: Request) {
 
         if (eventsToDelete.length > 0) {
             const { unpinChatMessage } = await import("@/features/telegram");
-            const token = process.env.TELEGRAM_BOT_TOKEN;
+            const { unpinDiscordMessage } = await import("@/features/discord/model/discord");
+            const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+            const discordToken = process.env.DISCORD_BOT_TOKEN;
 
             for (const event of eventsToDelete) {
                 try {
                     // Cleanup Telegram pins
-                    if (event.telegramChatId && event.pinnedMessageId && token) {
-                        await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, token);
+                    if (event.telegramChatId && event.pinnedMessageId && tgToken) {
+                        await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, tgToken);
+                    }
+
+                    // Cleanup Discord Dashboard pins
+                    if (event.discordChannelId && event.discordMessageId && discordToken) {
+                        await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
                     }
 
                     // Database Deletion
