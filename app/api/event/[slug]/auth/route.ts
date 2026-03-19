@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { setAdminCookie } from "@/features/auth/server/actions";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { getBaseUrl } from "@/shared/lib/url";
+import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 
 const log = Logger.get("AuthRoute");
 
@@ -11,9 +13,14 @@ const log = Logger.get("AuthRoute");
  * @description Handles the "Magic Link" login flow for Event Managers.
  *
  * Flow:
- * 1. User clicks email/Telegram link (`/api/event/[slug]/auth?token=...`).
+ * 1. User clicks Telegram/Discord link (`/api/event/[slug]/auth?token=...`).
  * 2. System validates the `token` against the `adminToken` stored in the DB for that event.
- * 3. On Success: Sets a secure, HTTP-only cookie (`tabletop_admin_[slug]`) and redirects to `/manage`.
+ * 3. On Success:
+ *    a. Sets the event-specific admin cookie (`tabletop_admin_[slug]`).
+ *    b. Hydrates the Global Identity cookies (Discord/Telegram) from the event's
+ *       manager fields so the user is recognized across ALL pages (Voting, Profile, etc.),
+ *       not just the Manage page. This closes the "logged out on voting page" gap.
+ *    c. Redirects to `/manage`.
  * 4. On Failure: Redirects to the public event page with an error query param.
  *
  * @param {NextRequest} request - The incoming request containing the token query param.
@@ -49,11 +56,28 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
             return NextResponse.redirect(`${baseUrl}/e/${slug}?error=invalid_token`);
         }
 
-        // Set the cookie via the helper (which uses Next.js server actions / cookies())
-        // Intent: Authenticate the user session for subsequent requests.
+        // 1. Set the event-specific admin cookie for /manage access.
         await setAdminCookie(slug, token);
 
-        log.info("Magic Link login successful", { scope: "event", identifier: slug });
+        // 2. Hydrate Global Identity cookies from the event's manager fields.
+        // WHY: Without this, the user appears anonymous on the public Voting page
+        // because VotingInterface reads global cookies, not event-specific admin tokens.
+        // Uses the same cookie options as the Discord OAuth callback for consistency.
+        const cookieStore = cookies();
+        const cookieOpts = { ...COOKIE_BASE_OPTIONS, maxAge: COOKIE_MAX_AGE };
+
+        if (event.managerDiscordId) {
+            cookieStore.set("tabletop_user_discord_id", event.managerDiscordId, cookieOpts);
+            if (event.managerDiscordUsername) {
+                cookieStore.set("tabletop_user_discord_name", event.managerDiscordUsername, { ...cookieOpts, httpOnly: false });
+            }
+        }
+
+        if (event.managerChatId) {
+            cookieStore.set("tabletop_user_chat_id", event.managerChatId, cookieOpts);
+        }
+
+        log.info("Magic Link login successful (global identity synced)", { scope: "event", identifier: slug });
         return NextResponse.redirect(`${baseUrl}/e/${slug}/manage`);
 
     } catch (e) {
