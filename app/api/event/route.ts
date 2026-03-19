@@ -49,6 +49,30 @@ export async function POST(req: Request) {
         // Extended Logic: Webhook Callback
         const { fromUrl, fromUrlId } = body;
 
+        // Identity Pre-Sync: If user is logged in via Magic Link globally, auto-populate credentials
+        const { cookies } = await import("next/headers");
+        const cookieStore = cookies();
+        const globalChatId = cookieStore.get("tabletop_user_chat_id")?.value || null;
+        const globalDiscordId = cookieStore.get("tabletop_user_discord_id")?.value || null;
+        const globalDiscordName = cookieStore.get("tabletop_user_discord_name")?.value || null;
+        
+        // Auto-hydrate their Telegram Handle if we know their Chat ID from a past event.
+        let inferredTelegramHandle = null;
+        if (globalChatId) {
+            try {
+                const pastParticipant = await prisma.participant.findFirst({
+                    where: { chatId: globalChatId, telegramId: { not: null } },
+                    orderBy: { createdAt: 'desc' },
+                    select: { telegramId: true }
+                });
+                if (pastParticipant) {
+                    inferredTelegramHandle = pastParticipant.telegramId;
+                }
+            } catch (e) {
+                log.warn("Failed to infer telegram handle during event creation", { globalChatId });
+            }
+        }
+
         // Action: transactional creation ensures we don't have an event without slots.
         // Prisma transaction is extended to include Webhook creation if needed.
         const event = await prisma.$transaction(async (tx) => {
@@ -59,6 +83,10 @@ export async function POST(req: Request) {
                     description,
                     adminToken: hashedAdminToken, // Store Hash
                     telegramLink,
+                    managerChatId: globalChatId,
+                    managerTelegram: inferredTelegramHandle,
+                    managerDiscordId: globalDiscordId,
+                    managerDiscordUsername: globalDiscordName,
                     timezone: body.timezone || "UTC",
                     minPlayers: minPlayers || 3,
                     maxPlayers: maxPlayers || null,
