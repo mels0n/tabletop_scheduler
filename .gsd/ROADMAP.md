@@ -48,3 +48,14 @@ updated: 2026-03-19
 
 **Verification**:
 - TBD
+
+### Phase 6: Mobile Responsive UI
+**Status**: ⬜ Not Started
+**Objective**: Address UI draw issues on mobile (e.g. iOS), fix the bright white safe area bars, and resolve the horizontal overflow causing excessive right-side padding. (Closes #34)
+**Depends on**: Phase 5
+
+**Tasks**:
+- [ ] TBD (run /plan 6 to create)
+
+**Verification**:
+- TBD
