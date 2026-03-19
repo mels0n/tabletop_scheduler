@@ -39,7 +39,7 @@ updated: 2026-03-19
 **Objective**: Fix the persistent verification prompt for managers on the myevents screen and resolve the "Account Not Found" error for organizers attempting to sign in.
 
 ### Phase 5: Pre-Sync Organizer Inference
-**Status**: ⬜ Not Started
+**Status**: 🔄 In Progress
 **Objective**: If a user is already authenticated via Telegram or Discord and creates a new event, automatically record them as the event manager without requiring a separate linking step.
 **Depends on**: Phase 4
 
