@@ -8,9 +8,17 @@
   --background-end-rgb: 0, 0, 0;
 }
 
+html {
+  @apply bg-slate-900;
+}
+
+html, body {
+  @apply max-w-[100vw] overflow-x-hidden;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
-  @apply bg-gradient-to-b from-slate-900 via-slate-950 to-black min-h-screen overflow-x-hidden;
+  @apply bg-gradient-to-b from-slate-900 via-slate-950 to-black min-h-screen;
 }
 
 @layer utilities {

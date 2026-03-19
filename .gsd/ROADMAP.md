@@ -50,7 +50,7 @@ updated: 2026-03-19
 - TBD
 
 ### Phase 6: Mobile Responsive UI
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Address UI draw issues on mobile (e.g. iOS), fix the bright white safe area bars, and resolve the horizontal overflow causing excessive right-side padding. (Closes #34)
 **Depends on**: Phase 5
 
