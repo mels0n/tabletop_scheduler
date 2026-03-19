@@ -36,7 +36,7 @@ interface ServerEvent {
  * 3. Recovery:
  *    - Provides a "Magic Link" request form to elevate a session from Anonymous -> Authenticated.
  */
-export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean }) {
+export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
 
@@ -47,10 +47,19 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            setUserName(localStorage.getItem('tabletop_username') || "Guest");
+            const localName = localStorage.getItem('tabletop_username');
+            
+            // Intent: If the server knows their name (from Magic Link / DB), 
+            // and local storage is empty OR we want to force-sync the server's truth:
+            if (serverUserName && (!localName || localName === "Guest")) {
+                localStorage.setItem('tabletop_username', serverUserName);
+                setUserName(serverUserName);
+            } else {
+                setUserName(localName || "Guest");
+            }
             validateHistory();
         }
-    }, [validateHistory]);
+    }, [validateHistory, serverUserName]);
 
     // Sync Server Events & Identities to Local Storage
     useEffect(() => {
