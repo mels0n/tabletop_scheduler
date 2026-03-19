@@ -14,7 +14,7 @@ import {
     getGuildChannels,
     createDMChannel
 } from "@/features/discord/model/discord";
-import { dmManagerLink, generateManagerMagicLink } from "@/features/event-management/server/recovery";
+import { generateManagerMagicLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
 
 const log = Logger.get("DiscordActions");
@@ -49,7 +49,7 @@ export async function recoverDiscordManagerLink(slug: string, username: string) 
     }
 
     if (storedName === inputName) {
-        return await dmManagerLink(slug);
+        return await dmDiscordManagerLink(slug);
     }
 
     log.warn("Manager Discord recovery failed: Username mismatch", { slug, input: username, stored: storedName });
