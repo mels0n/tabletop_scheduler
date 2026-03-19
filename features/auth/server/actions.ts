@@ -28,20 +28,21 @@ export async function verifyEventAdmin(slug: string): Promise<boolean> {
     const cookieStore = cookies();
     const token = cookieStore.get(`tabletop_admin_${slug}`)?.value;
 
-    if (!token) return false;
+    let hasAdminTokenAccess = false;
 
-    // Security: Hash the cookie value before comparing to DB
-    const tokenHash = hashToken(token);
+    if (token) {
+        const tokenHash = hashToken(token);
+        const event = await prisma.event.findUnique({
+            where: { slug },
+            select: { adminToken: true }
+        });
 
-    const event = await prisma.event.findUnique({
-        where: { slug },
-        select: { adminToken: true }
-    });
+        if (event && (event.adminToken === tokenHash || event.adminToken === token)) {
+            hasAdminTokenAccess = true;
+        }
+    }
 
-    if (!event) return false;
-
-    // Check Hash OR Legacy Plaintext (Migration support)
-    if (token && event && (event.adminToken === tokenHash || event.adminToken === token)) {
+    if (hasAdminTokenAccess) {
         return true;
     }
 
@@ -52,8 +53,6 @@ export async function verifyEventAdmin(slug: string): Promise<boolean> {
     const globalDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
 
     if (globalChatId || globalDiscordId) {
-        // Optimization: Refetch if we didn't fetch manager fields above, or just rely on a wider select initially.
-        // For safety/cleanliness, let's just query what we need if we fall back.
         const eventManager = await prisma.event.findUnique({
             where: { slug },
             select: { managerChatId: true, managerDiscordId: true }
