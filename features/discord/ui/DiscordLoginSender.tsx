@@ -38,7 +38,7 @@ export function DiscordLoginSender() {
             <div className="flex flex-col gap-3">
                 <input
                     type="text"
-                    placeholder="Username"
+                    placeholder="Username (with or without @)"
                     value={handle}
                     onChange={(e) => setHandle(e.target.value)}
                     className="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:ring-2 focus:ring-[#5865F2] outline-none"

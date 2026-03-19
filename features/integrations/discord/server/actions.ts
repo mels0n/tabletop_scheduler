@@ -20,6 +20,7 @@ import { generateStatusMessage } from "@/shared/lib/status";
 const log = Logger.get("DiscordActions");
 
 export async function recoverDiscordManagerLink(slug: string, username: string) {
+    username = username.replace('@', '').trim();
     const event = await prisma.event.findUnique({ where: { slug } });
 
     if (!event || !event.managerDiscordId) {
@@ -179,6 +180,7 @@ export async function dmDiscordManagerLink(slug: string) {
  * @param username The Discord username (or handle) to link.
  */
 export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
+    username = username.replace('@', '').trim();
     const botToken = process.env.DISCORD_BOT_TOKEN;
 
     if (!botToken) return { success: false, error: "Server Configuration Error: Discord Token missing" };

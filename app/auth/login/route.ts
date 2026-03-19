@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         // MOVED TO CRON: We keep tokens valid until expiry to prevent "Link Preview" race conditions.
         // Automated previews consume the token immediately otherwise.
 
-        log.info("Global Magic Link login successful", { chatId: validToken.chatId });
+        log.info("Magic Link login successful", { scope: "global", identifier: validToken.chatId || validToken.discordId });
         return NextResponse.redirect(`${baseUrl}/profile?success=logged_in`);
 
     } catch (e) {
