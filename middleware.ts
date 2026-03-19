@@ -64,9 +64,13 @@ export function middleware(request: NextRequest) {
 
         if (slug) {
             const adminToken = request.cookies.get(`tabletop_admin_${slug}`)?.value;
+            const globalChatId = request.cookies.get('tabletop_user_chat_id')?.value;
+            const globalDiscordId = request.cookies.get('tabletop_user_discord_id')?.value;
 
-            if (!adminToken) {
+            if (!adminToken && !globalChatId && !globalDiscordId) {
                 // Intent: Redirect unauthorized users back to the public event page.
+                // If they have a global auth cookie, we let them through to the page where
+                // `verifyEventAdmin` will securely check the database to see if they own THIS specific event.
                 return NextResponse.redirect(new URL(`/e/${slug}?action=login`, request.url));
             }
         }
