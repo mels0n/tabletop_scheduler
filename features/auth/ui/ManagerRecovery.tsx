@@ -143,8 +143,8 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                         />
                         <p className="text-[10px] text-slate-500">
                             {platform === "telegram"
-                                ? "Enter the handle you used to create the event."
-                                : "Enter the username of the linked Discord account."}
+                                ? "Enter the handle you used to create the event (with or without @)."
+                                : "Enter the username of the linked Discord account (with or without @)."}
                         </p>
                     </div>
 

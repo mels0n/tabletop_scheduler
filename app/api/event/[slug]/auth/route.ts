@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
         // Intent: Authenticate the user session for subsequent requests.
         await setAdminCookie(slug, token);
 
-        log.info("Magic Link login successful", { slug });
+        log.info("Magic Link login successful", { scope: "event", identifier: slug });
         return NextResponse.redirect(`${baseUrl}/e/${slug}/manage`);
 
     } catch (e) {

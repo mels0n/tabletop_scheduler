@@ -1,4 +1,5 @@
 import Logger from "@/shared/lib/logger";
+import { reliableFetch } from "@/shared/lib/fetch";
 
 const log = Logger.get("Telegram");
 
@@ -21,7 +22,7 @@ export async function sendTelegramMessage(chatId: string | number, text: string,
     log.debug(`Sending message to ${chatId}`, { textSnippet: text.substring(0, 50) });
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -60,7 +61,7 @@ export async function unpinChatMessage(chatId: string | number, messageId: numbe
     log.debug(`Attempting to UNPIN message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/unpinChatMessage`;
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -96,7 +97,7 @@ export async function pinChatMessage(chatId: string | number, messageId: number,
     log.debug(`Attempting to pin message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/pinChatMessage`;
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -143,7 +144,7 @@ export async function editMessageText(chatId: string | number, messageId: number
     log.debug(`Editing message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -179,7 +180,7 @@ export async function deleteMessage(chatId: string | number, messageId: number, 
     log.debug(`Deleting message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/deleteMessage`;
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -213,7 +214,7 @@ export async function deleteMessage(chatId: string | number, messageId: number, 
 export async function getBotUsername(token: string): Promise<string | null> {
     const url = `https://api.telegram.org/bot${token}/getMe`;
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'GET',
             next: { revalidate: 3600 } // Intent: Cache for 1 hour as username rarely changes.
         });
@@ -242,7 +243,7 @@ export async function getBotUsername(token: string): Promise<string | null> {
 export async function deleteWebhook(token: string) {
     const url = `https://api.telegram.org/bot${token}/deleteWebhook`;
     try {
-        const res = await fetch(url);
+        const res = await reliableFetch(url);
         const data = await res.json();
 
         if (!res.ok || !data.ok) {
@@ -274,7 +275,7 @@ export async function ensureWebhook(domain: string, token: string) {
     log.info(`Setting Webhook to: ${webhookUrl}`);
 
     try {
-        const res = await fetch(url);
+        const res = await reliableFetch(url);
         const data = await res.json();
 
         if (!res.ok || !data.ok) {

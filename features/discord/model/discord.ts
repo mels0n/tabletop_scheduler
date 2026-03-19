@@ -1,4 +1,5 @@
 import Logger from "@/shared/lib/logger";
+import { reliableFetch } from "@/shared/lib/fetch";
 
 const log = Logger.get("Discord");
 
@@ -18,7 +19,7 @@ export async function sendDiscordMessage(channelId: string, content: string | an
     const body: any = typeof content === 'string' ? { content } : content;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -57,7 +58,7 @@ export async function editDiscordMessage(channelId: string, messageId: string, c
     const body: any = typeof content === 'string' ? { content } : content;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'PATCH', // PATCH for edit
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -89,7 +90,7 @@ export async function pinDiscordMessage(channelId: string, messageId: string, to
     const url = `https://discord.com/api/v10/channels/${channelId}/pins/${messageId}`;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -119,7 +120,7 @@ export async function unpinDiscordMessage(channelId: string, messageId: string, 
     const url = `https://discord.com/api/v10/channels/${channelId}/pins/${messageId}`;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -149,7 +150,7 @@ export async function getGuildChannels(guildId: string, token: string): Promise<
     const url = `https://discord.com/api/v10/guilds/${guildId}/channels`;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -183,7 +184,7 @@ export async function createDMChannel(userId: string, token: string): Promise<{ 
     const url = `https://discord.com/api/v10/users/@me/channels`;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'POST',
             headers: {
                 'Authorization': `Bot ${token}`,
@@ -218,7 +219,7 @@ export async function getDiscordUser(userId: string, token: string): Promise<{ i
     const url = `https://discord.com/api/v10/users/${userId}`;
 
     try {
-        const res = await fetch(url, {
+        const res = await reliableFetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bot ${token}`,

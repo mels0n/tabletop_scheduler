@@ -45,8 +45,10 @@ export async function recoverManagerLink(slug: string, handle: string) {
 
     const normalize = (h: string) => h.toLowerCase().replace('@', '').trim();
 
+    const formattedHandle = handle.startsWith("@") ? handle : `@${handle}`;
+
     if (normalize(event.managerTelegram) !== normalize(handle)) {
-        log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: handle });
+        log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: formattedHandle });
         return { error: "Telegram handle does not match our records." };
     }
 
