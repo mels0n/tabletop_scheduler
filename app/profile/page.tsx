@@ -21,8 +21,10 @@ export default async function ProfilePage() {
     const cookieStore = cookies();
     const telegramChatId = cookieStore.get("tabletop_user_chat_id")?.value;
     const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
+    const discordUserName = cookieStore.get("tabletop_user_discord_name")?.value;
 
     let serverEvents: any[] = [];
+    let serverUserName: string | null = discordUserName || null;
     const eventMap = new Map();
 
     const fetchEvents = async (chatId: string | undefined, discordId: string | undefined) => {
@@ -103,6 +105,11 @@ export default async function ProfilePage() {
                 },
                 orderBy: { event: { updatedAt: 'desc' } }
             });
+            
+            if (participated.length > 0 && !serverUserName) {
+                serverUserName = participated[0].name;
+            }
+
             participated.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (!existing || existing.role !== 'MANAGER') {
@@ -141,6 +148,11 @@ export default async function ProfilePage() {
                 },
                 orderBy: { event: { updatedAt: 'desc' } }
             });
+            
+            if (participatedDiscord.length > 0 && !serverUserName) {
+                serverUserName = participatedDiscord[0].name;
+            }
+
             participatedDiscord.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (!existing || existing.role !== 'MANAGER') {
@@ -168,5 +180,5 @@ export default async function ProfilePage() {
         console.error("Failed to fetch server events", e);
     }
 
-    return <ProfileDashboard serverEvents={serverEvents} isTelegramSynced={!!telegramChatId} isDiscordSynced={!!discordUserId} />;
+    return <ProfileDashboard serverEvents={serverEvents} isTelegramSynced={!!telegramChatId} isDiscordSynced={!!discordUserId} serverUserName={serverUserName || undefined} />;
 }
