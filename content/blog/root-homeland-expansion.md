@@ -29,28 +29,40 @@ Here is everything you need to know to get ready for your next game night.
 The expansion fundamentally changes the political landscape of the woodland by introducing three new challengers: the amphibians (Lilypad Diaspora), the politicians (Twilight Council), and the scoundrels (Knaves of the Deepwood). 
 
 ### How does the Lilypad Diaspora (Frogs) play?
-The Lilypad Diaspora represents a displaced people returning to their ancestral home, requiring a careful balance of dual-nature gameplay. At their core, they prefer to be a peaceful, passive presence. By remaining passive, they score victory points efficiently and spread across the board. When pushed by aggressive neighbors, the frogs can pivot into highly militant combatants to defend themselves. They also introduce a brand-new set of "frog cards" with special crafting symbols for a unique economic engine.
+The Lilypad Diaspora represents a displaced people returning to their ancestral home, requiring a careful balance of dual-nature gameplay. At their core, they prefer to be a peaceful, passive presence. By remaining passive, they score victory points efficiently and spread across the board. When pushed by aggressive neighbors, the frogs can pivot into highly militant combatants to defend themselves. Crucially, they introduce a completely **new suit to the map and cards**. Using special custom frog clearing markers, they can "Coexist" or "Replace" existing clearings, alongside a brand-new set of "frog cards" with special crafting symbols for a unique economic engine.
 
 ### What are the mechanics of the Twilight Council (Bats)?
-The Twilight Council operates as political manipulators who host "assemblies" to suppress warfare and force political debate. Instead of building massive armies, you manipulate the board state through legislation. They declare powerful **edicts** that shift enemies' incentives, shut down specific rules in target clearings, and tax other players' cards. If you love playing the meta-game and talking your way into a victory, this is your faction.
+Sickened by the enduring conflict, the Twilight Council operates as political manipulators who host "assemblies" to suppress warfare and force political debate. Instead of building massive armies, you emphasize political connections over pure numbers of warriors. They declare powerful **edicts** that shift enemies' incentives, shut down specific rules in target clearings, and tax other players' cards. If you love playing the meta-game and talking your way into a victory, this is your faction.
 
 ### Who are the Knaves of the Deepwood (Skunks)?
-The Knaves of the Deepwood are a band of miscreants that creatively re-use your existing Vagabond components, meaning they cannot be played in the same game as a traditional Vagabond. Controlled by three distinct Captains who roam the board independently, they don't rule clearings. Instead, they raid factions, sow chaos, and literally drag enemy warriors into the forests as "hostages" to hold for ransom. 
+The Knaves of the Deepwood are a band of miscreants that creatively re-use your existing Vagabond components, meaning they cannot be played in the same game as a traditional Vagabond. In fact, the expansion includes three more unique character cards and meeples that can be used with this faction *or* as the solo Vagabond. Roaming the board independently, they don't rule clearings. Instead, they raid supply trains, sow chaos, and literally drag enemy warriors into the forests as "hostages" to hold for ransom. 
 
 ---
 
-## What new maps are included in The Homeland Expansion?
+## What new maps and components are included?
 
-*The Homeland Expansion* introduces major geographical overhauls to keep veterans on their toes, specifically introducing the Gorge Map and the Marsh Map alongside new core components.
+*The Homeland Expansion* introduces major geographical overhauls to keep veterans on their toes, alongside new core components and Hirelings.
 
 ### How does the Gorge Map change Root?
-The Gorge Map is defined by tough, natural chokepoints that restrict movement and concentrate warfare into highly contested clearings. It’s a claustrophobic, combative environment specifically designed for aggressive, high-conflict playstyles.
+The Gorge Map has a wild geography defined by tough, natural chokepoints. This restricts movement and concentrates warfare into the central clearings, further emphasizing the importance of map position.
 
 ### Why is the Marsh Map significant?
-The Marsh Map features a revolutionary dynamic setup that can easily expand to 12 or more clearings. This finally provides a perfectly scaled map explicitly designed to accommodate massive 5-6 player games without feeling incredibly cramped.
+The Marsh Map features a revolutionary dynamic setup that can easily expand to 12 or more clearings. This finally provides a perfectly scaled map explicitly designed to accommodate massive 5-6 player games without feeling incredibly cramped. To enable this, the expansion includes three new Landmarks—Foxburrow, Mousehold, and Rabbit-town—which can actually be used on *any* Root map!
 
 ### What is the Squires & Disciples Deck?
-The Squires & Disciples Deck is a full replacement deck for the base game, packed with entirely new abilities and crafting effects designed to definitively shake up the established *Root* meta.
+The Squires & Disciples Deck is a full replacement deck for the base game, packed with entirely new abilities and crafting effects. It includes cards inspired by the Marauder and Homeland factions, featuring abilities that depend on your hand composition with a dash of "shenanigans." If you've ever wanted to change when the game ends or how Dominance cards work, this deck allows exactly that.
+
+### Who are the new Homeland Hirelings?
+Three new hirelings enter the fray: the **Freshwater Refugees**, the **Heartwood Peacemakers**, and the neutral **Prosperous Farmers** (who let you draw cards for farm buildings you rule, and battle with farmer meeples). Each comes with a double-sided tarot card and new meeples to add incredible variety to your lower player-count games.
+
+---
+
+## Must-Have Campaign Add-Ons
+If you are diving headfirst into the expansion, you might want to look at the incredibly popular physical add-ons available in the pledge manager:
+*   **Double-Sided Neoprene Mat:** A deluxe 3mm-thick Marsh/Gorge playmat.
+*   **Deluxe Frog Clearing Markers:** Resin markers designed to stack on top of existing deluxe markers when the Lilypad Diaspora overrides a clearing suit.
+*   **Cardstock Faction Boards:** Thinner boards to aid in game storage (saves 15mm of box space!).
+*   **Eyrie Plushie:** Because every game group needs Billie the bird watching over their dice rolls.
 
 ---
 
