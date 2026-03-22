@@ -49,7 +49,7 @@ export default async function Home() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-24 md:py-32 text-slate-50 selection:bg-indigo-500/30">
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 pt-12 pb-24 md:pt-16 md:pb-32 text-slate-50 selection:bg-indigo-500/30">
       {/* Intent: Inject JSON-LD only in hosted mode to boost SEO for the public instance */}
       {isHosted && (
         <script
