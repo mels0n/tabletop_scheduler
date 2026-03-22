@@ -7,7 +7,8 @@ import {
     BlogPosting,
     BreadcrumbList,
     ItemList,
-    ListItem
+    ListItem,
+    Review
 } from 'schema-dts';
 
 // --- Types ---
@@ -22,6 +23,15 @@ export type AeoSoftwareApp = {
     currency?: string;
     alternateName?: string;
     disambiguatingDescription?: string;
+    /** Optional donation-based reviews for social proof schema (ADR-002/003) */
+    reviews?: AeoDonationReview[];
+};
+
+/** Donation-derived review data for Schema.org Review generation */
+export type AeoDonationReview = {
+    name: string;
+    message: string;
+    date: string; // ISO 8601
 };
 
 export type AeoHowToStep = {
@@ -60,6 +70,29 @@ export const SchemaGenerator = {
      * Generates a SoftwareApplication schema for the landing page.
      */
     softwareApp(data: AeoSoftwareApp): WithContext<SoftwareApplication> {
+        // Build review schema from donation data.
+        // Every donation to a free service is inherently a 5-star endorsement.
+        const reviewsWithMessages = (data.reviews || []).filter(r => r.message);
+        const reviewSchema = reviewsWithMessages.length > 0 ? {
+            "review": reviewsWithMessages.map(r => ({
+                "@type": "Review" as const,
+                "author": { "@type": "Person" as const, "name": r.name },
+                "datePublished": r.date,
+                "reviewBody": r.message,
+                "reviewRating": {
+                    "@type": "Rating" as const,
+                    "ratingValue": 5,
+                    "bestRating": 5
+                }
+            })),
+            "aggregateRating": {
+                "@type": "AggregateRating" as const,
+                "ratingValue": 5,
+                "ratingCount": reviewsWithMessages.length,
+                "bestRating": 5
+            }
+        } : {};
+
         return {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
@@ -79,7 +112,8 @@ export const SchemaGenerator = {
                 "@type": "Person",
                 "name": "Christopher Melson",
                 "url": "https://chris.melson.us/"
-            }
+            },
+            ...reviewSchema
         };
     },
 
