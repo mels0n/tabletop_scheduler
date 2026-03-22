@@ -25,4 +25,14 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Donation ticker — CSS-only infinite scrolling marquee */
+  @keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .ticker-track {
+    animation: ticker-scroll 30s linear infinite;
+  }
 }
