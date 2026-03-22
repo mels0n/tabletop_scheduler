@@ -74,4 +74,4 @@ When our tabletop group gets together to play, we always use the [Root Automated
 
 Between that tool and using **Tabletop Time** to get everyone's schedules aligned, bringing this massive expansion to the table has never been easier.
 
-**Which of the new factions are you most excited to play? Are you Team Frog, Team Bat, or Team Skunk? Let us know in the comments below!**
+**Which of the new factions are you most excited to play? Send this post to your tabletop group and start claiming your factions now!**
