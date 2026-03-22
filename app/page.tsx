@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Copy, PlusCircle, ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
 import { SchemaGenerator } from "@/shared/lib/aeo";
+import { getDonations } from "@/lib/donations";
+import DonationTicker from "@/components/DonationTicker";
 
 
 /**
@@ -11,9 +13,12 @@ import { SchemaGenerator } from "@/shared/lib/aeo";
  *
  * @returns {JSX.Element} The rendered landing page.
  */
-export default function Home() {
+export default async function Home() {
   // Intent: Determine deployment mode to toggle text/features (e.g., "Free & Open" vs "Self Hosted").
   const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+
+  // Fetch public donations for the ticker — only in hosted mode to preserve self-hosted static generation.
+  const donations = isHosted ? await getDonations(20) : [];
 
   /**
    * @constant jsonLd
@@ -83,6 +88,13 @@ export default function Home() {
             GitHub
           </a>
         </div>
+
+        {/* Donation ticker — compact scrolling social proof strip (ADR-003) */}
+        {isHosted && donations.length > 0 && (
+          <div className="mt-16 w-screen relative left-1/2 -translate-x-1/2">
+            <DonationTicker donations={donations} />
+          </div>
+        )}
       </div>
 
       {isHosted && (
