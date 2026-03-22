@@ -91,7 +91,7 @@ export default async function Home() {
 
         {/* Donation ticker — compact scrolling social proof strip (ADR-003) */}
         {isHosted && donations.length > 0 && (
-          <div className="mt-16 w-screen relative left-1/2 -translate-x-1/2">
+          <div className="mt-12 w-full max-w-5xl">
             <DonationTicker donations={donations} />
           </div>
         )}
