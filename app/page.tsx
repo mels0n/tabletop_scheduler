@@ -40,7 +40,12 @@ export default async function Home() {
     ],
     price: "0.00",
     currency: "USD",
-    disambiguatingDescription: "Independent open-source tool, not affiliated with Tabletop Time YouTube channel."
+    disambiguatingDescription: "Independent open-source tool, not affiliated with Tabletop Time YouTube channel.",
+    // Donation-based reviews for AEO schema (ADR-002/003).
+    // Only donations with messages become Schema.org Reviews.
+    reviews: donations
+      .filter((d): d is typeof d & { message: string } => d.message !== null)
+      .map(d => ({ name: d.name, message: d.message, date: d.date })),
   });
 
   return (
