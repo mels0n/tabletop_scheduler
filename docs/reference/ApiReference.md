@@ -179,6 +179,33 @@ Retrieve read-only details about a specific event.
 
 **Response:** Always returns `200 OK` `{"ok": true}` to acknowledge receipt to Telegram, even if processing fails/is ignored.
 
+### Ko-fi Donation Webhook
+**Endpoint:** `POST /api/kofi/webhook`
+**Description:** Receives donation notifications from Ko-fi. Configured via the Ko-fi dashboard at `ko-fi.com/manage/webhooks`.
+
+**Content-Type:** `application/x-www-form-urlencoded`
+**Body:** A single field `data` containing a JSON string with the payment details.
+
+**Authentication:** The JSON payload includes a `verification_token` field validated against the `KOFI_VERIFICATION_TOKEN` environment variable.
+
+**Behavior:**
+- Parses the `data` field as JSON.
+- Validates the `verification_token`.
+- Stores the donation in the `Donation` table (idempotent via `kofi_transaction_id`).
+- Stores the full raw payload for future field extraction.
+- Returns `200 OK` on success (required by Ko-fi; non-200 triggers retries).
+
+**Key Fields Stored:**
+| Field | Source | Notes |
+|-------|--------|-------|
+| `fromName` | `from_name` | Supporter display name |
+| `message` | `message` | Optional public message |
+| `amount` | `amount` | Dollar amount as string |
+| `isPublic` | `is_public` | Only public donations are displayed |
+| `type` | `type` | Donation, Subscription, Commission, Shop Order |
+
+**Privacy:** Email addresses from the payload are intentionally **not stored**.
+
 ---
 
 ## Maintenance
