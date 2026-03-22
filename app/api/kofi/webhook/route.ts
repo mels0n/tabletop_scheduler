@@ -13,28 +13,29 @@ import prisma from '@/shared/lib/prisma';
  * @see https://ko-fi.com/manage/webhooks (requires login)
  */
 
-// --- Types representing the Ko-fi webhook payload ---
-// These are best-effort based on documentation + community sources.
-// Will be refined after receiving the first test webhook from Ko-fi.
+// --- Verified Ko-fi webhook payload shape ---
+// Confirmed via "Send Single Donation Test" on 2026-03-22.
+// Content-Type: application/x-www-form-urlencoded, field: "data" (JSON string).
 interface KofiWebhookPayload {
   verification_token: string;
   message_id: string;
-  timestamp: string;
+  timestamp: string;                    // ISO 8601 (e.g., "2026-03-22T20:00:41Z")
   type: 'Donation' | 'Subscription' | 'Commission' | 'Shop Order';
   is_public: boolean;
-  from_name: string;
-  message: string | null;
-  amount: string;
-  url: string;
-  email: string;
-  currency: string;
+  from_name: string;                    // Supporter display name
+  message: string | null;               // Optional public message
+  amount: string;                       // Dollar amount (e.g., "3.00")
+  url: string;                          // Ko-fi transaction URL
+  email: string;                        // Supporter email — NEVER stored or displayed
+  currency: string;                     // "USD", "GBP", etc.
   is_subscription_payment: boolean;
   is_first_subscription_payment: boolean;
-  kofi_transaction_id: string;
-  // Fields that may or may not exist — captured in rawPayload for discovery
-  shop_items?: unknown[];
-  tier_name?: string | null;
-  [key: string]: unknown; // Allow unknown fields for forward compatibility
+  kofi_transaction_id: string;          // Unique transaction ID for deduplication
+  shop_items: unknown[] | null;         // Non-null for Shop Order type
+  tier_name: string | null;             // Non-null for membership tier subscriptions
+  shipping: unknown | null;             // Non-null for physical item orders
+  discord_username: string | null;      // Supporter's Discord tag (e.g., "Jo#4105")
+  discord_userid: string | null;        // Supporter's Discord user ID
 }
 
 export async function POST(request: Request) {
