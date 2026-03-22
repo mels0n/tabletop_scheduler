@@ -58,6 +58,8 @@ The Squires & Disciples Deck is a full replacement deck for the base game, packe
 
 With *The Homeland Expansion* finally shipping to backers, game groups everywhere are about to experience the biggest meta-shift *Root* has seen in years. Whether you are holding hostages as the Skunks, passing laws as the Bats, or defending your ancestral home as the Frogs, the woodland has never been more vibrant (or deadly). 
 
-Don't forget to use **Tabletop Time** to schedule your upcoming *Root* night—with so many new factions and rules to teach, you'll want to make sure your group actually shows up on time!
+When our tabletop group gets together to play, we always use the [Root Automated Setup and Drafting Tool](https://ewendc.github.io/root-automated-setup/) to draft our factions and generate our map configurations. It is an incredible community resource that is already fully updated with the Homeland Expansion content, taking all the logistical friction out of game night. 
+
+Between that tool and using **Tabletop Time** to get everyone's schedules aligned, bringing this massive expansion to the table has never been easier.
 
 **Which of the new factions are you most excited to play? Are you Team Frog, Team Bat, or Team Skunk? Let us know in the comments below!**
