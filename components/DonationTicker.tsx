@@ -15,12 +15,27 @@ import type { DonorComment } from '@/lib/donations';
 const KOFI_URL = 'https://ko-fi.com/N4N11VDWCU';
 
 /**
- * Derives coffee emoji string from coffee count.
- * Shows individual ☕ up to 5, then "☕×N" for larger amounts.
+ * Renders cross-platform SVG coffee cups instead of native emojis
+ * (Windows native emoji for coffee is famously hard to read).
  */
-function coffeeEmojis(count: number): string {
-  if (count <= 5) return '☕'.repeat(count);
-  return '☕'.repeat(5) + '+';
+function CoffeeIcons({ count }: { count: number }) {
+  const displayCount = Math.min(count, 5);
+  const showPlus = count > 5;
+  
+  return (
+    <span className="inline-flex items-center gap-0.5 text-amber-500" aria-label={`${count} coffees`}>
+      {Array.from({ length: displayCount }).map((_, i) => (
+        <svg key={i} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+          <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+          <line x1="6" x2="6" y1="2" y2="4"/>
+          <line x1="10" x2="10" y1="2" y2="4"/>
+          <line x1="14" x2="14" y1="2" y2="4"/>
+        </svg>
+      ))}
+      {showPlus && <span className="text-xs font-bold leading-none ml-0.5">+</span>}
+    </span>
+  );
 }
 
 /**
@@ -49,9 +64,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
       {d.message && (
         <em className="text-slate-400 font-normal">— &ldquo;{truncate(d.message)}&rdquo;</em>
       )}
-      <span className="text-amber-400" aria-label={`${d.coffees} coffees`}>
-        {coffeeEmojis(d.coffees)}
-      </span>
+      <CoffeeIcons count={d.coffees} />
     </span>
   ));
 
