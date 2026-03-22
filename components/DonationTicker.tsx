@@ -43,7 +43,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
   const chips = donations.map((d, i) => (
     <span
       key={i}
-      className="inline-flex items-center gap-2 px-5 py-2 bg-white/[0.05] border border-white/10 rounded-full text-sm whitespace-nowrap flex-shrink-0"
+      className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/[0.05] border border-white/10 rounded-full text-xs whitespace-nowrap flex-shrink-0"
     >
       <strong className="text-slate-200 font-semibold">{d.name}</strong>
       {d.message && (
@@ -60,7 +60,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
       href={KOFI_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="block ticker-wrapper relative overflow-hidden py-4 cursor-pointer group"
+      className="block ticker-wrapper relative overflow-hidden py-2 cursor-pointer group"
       aria-label="Support Tabletop Time on Ko-fi"
     >
       {/* Gradient fade — left edge */}
