@@ -155,3 +155,20 @@ model WebhookEvent {
   @@index([status, nextAttempt])
 }
 
+// Ko-fi donation records received via webhook.
+// Used for social proof display ("Wall of Love") on the landing page.
+// Only stores public-safe fields — email is intentionally excluded.
+model Donation {
+  id                  String   @id @default(uuid())
+  kofiTransactionId   String   @unique // Deduplication key from Ko-fi webhook payload
+  fromName            String           // Supporter's display name
+  message             String?          // Optional public message left by the supporter
+  amount              String           // Dollar amount as string (e.g., "5.00")
+  currency            String   @default("USD")
+  isPublic            Boolean  @default(true) // Only display if supporter opted for public visibility
+  type                String   @default("Donation") // Donation, Subscription, Commission, Shop Order
+  rawPayload          String?          // Full JSON payload for debugging and future field extraction
+  donatedAt           DateTime         // Timestamp from Ko-fi
+  createdAt           DateTime @default(now())
+}
+

@@ -18,6 +18,7 @@ Configure the following in your Vercel Project Settings:
 - `DISCORD_CLIENT_SECRET`: From Discord Developer Portal.
 - `DISCORD_BOT_TOKEN`: From Discord Developer Portal.
 - `TELEGRAM_BOT_TOKEN`: (Optional) If using Telegram.
+- `KOFI_VERIFICATION_TOKEN`: (Optional) Verification token from [Ko-fi Webhooks](https://ko-fi.com/manage/webhooks). Required for the donation social proof feature. If missing, the webhook endpoint will reject all requests.
 
 ### Hosted Mode (Optional)
 Only set these if running the public hosted version (tabletoptime.us):
