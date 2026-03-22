@@ -105,7 +105,7 @@ export default async function Home() {
       {isHosted && (
         <>
           {/* Supported Games Section */}
-          <section className="mt-40 max-w-7xl mx-auto text-center px-4 w-full">
+          <section className="mt-24 max-w-7xl mx-auto text-center px-4 w-full">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-200 mb-6 tracking-tight">Built for Every Tabletop Experience</h2>
             <p className="text-slate-400 mb-16 max-w-2xl mx-auto text-lg leading-relaxed">
               Whether you are crawling dungeons, tapping mana, or trading resources, we handle the logistics.
@@ -163,7 +163,7 @@ export default async function Home() {
           </section>
 
           {/* Features Section */}
-          <section className="mt-40 max-w-4xl text-center space-y-12">
+          <section className="mt-24 max-w-4xl text-center space-y-12">
             <h2 className="text-3xl md:text-5xl font-bold text-slate-200 tracking-tight">Why Gamers Choose Tabletop Time</h2>
             <div className="text-slate-400 leading-loose space-y-8 text-lg md:text-xl font-light">
               <p>
@@ -186,7 +186,7 @@ export default async function Home() {
         </>
       )}
 
-      <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl text-left w-full">
+      <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl text-left w-full">
         <FeatureCard
           icon={<Copy className="w-6 h-6 text-indigo-400" />}
           title={isHosted ? "Frictionless Voting" : "No Login Required"}
