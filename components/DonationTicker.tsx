@@ -73,7 +73,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
       href={KOFI_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="block ticker-wrapper relative overflow-hidden py-2 cursor-pointer group"
+      className="block w-full min-w-0 ticker-wrapper relative overflow-hidden py-2 cursor-pointer group"
       aria-label="Support Tabletop Time on Ko-fi"
     >
       {/* Gradient fade — left edge */}
