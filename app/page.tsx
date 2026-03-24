@@ -57,7 +57,7 @@ export default async function Home() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <div className="relative flex flex-col place-items-center text-center max-w-5xl mx-auto">
+      <div className="relative flex flex-col place-items-center text-center w-full min-w-0 max-w-5xl mx-auto">
         {/* Hero Section */}
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent pb-2">
           Tabletop Time
@@ -75,7 +75,7 @@ export default async function Home() {
         </p>
 
 
-        <div className="mt-12 flex gap-6">
+        <div className="mt-12 flex flex-wrap justify-center gap-4">
           <Link
             href="/new"
             className="flex items-center gap-2 px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.6)] hover:scale-105"
@@ -96,7 +96,7 @@ export default async function Home() {
 
         {/* Donation ticker — compact scrolling social proof strip (ADR-003) */}
         {isHosted && donations.length > 0 && (
-          <div className="mt-12 w-full max-w-5xl">
+          <div className="mt-12 w-full min-w-0">
             <DonationTicker donations={donations} />
           </div>
         )}
@@ -163,7 +163,7 @@ export default async function Home() {
           </section>
 
           {/* Features Section */}
-          <section className="mt-24 max-w-4xl text-center space-y-12">
+          <section className="mt-24 w-full max-w-4xl text-center space-y-12">
             <h2 className="text-3xl md:text-5xl font-bold text-slate-200 tracking-tight">Why Gamers Choose Tabletop Time</h2>
             <div className="text-slate-400 leading-loose space-y-8 text-lg md:text-xl font-light">
               <p>
