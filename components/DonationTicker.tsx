@@ -54,8 +54,14 @@ interface DonationTickerProps {
 export default function DonationTicker({ donations }: DonationTickerProps) {
   if (donations.length === 0) return null;
 
+  // Ensure one "set" always overflows the viewport so the -50% loop is seamless.
+  // With few donations the chips may be narrower than the screen, causing a visible
+  // gap before the duplicate set appears. Repeating until we have ≥6 chips prevents this.
+  const minRepeat = Math.max(1, Math.ceil(6 / donations.length));
+  const paddedDonations = Array.from({ length: minRepeat }, () => donations).flat();
+
   // Render chips once, duplicate the set for seamless CSS loop
-  const chips = donations.map((d, i) => (
+  const chips = paddedDonations.map((d, i) => (
     <span
       key={i}
       className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/[0.05] border border-white/10 rounded-full text-xs whitespace-nowrap flex-shrink-0"
