@@ -90,8 +90,12 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
         }}
       />
 
-      {/* Scrolling track — two copies for seamless loop */}
-      <div className="ticker-track inline-flex gap-4 group-hover:[animation-play-state:paused]">
+      {/* Scrolling track — two copies for seamless loop.
+          Duration scales with chip count to keep a consistent ~7s-per-chip pace. */}
+      <div
+        className="ticker-track inline-flex gap-4 group-hover:[animation-play-state:paused]"
+        style={{ '--ticker-duration': `${paddedDonations.length * 7}s` } as React.CSSProperties}
+      >
         {chips}
         {/* Duplicate for seamless wrap-around */}
         {chips.map((chip, i) => (
