@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import prisma from '@/shared/lib/prisma';
 
@@ -109,6 +110,9 @@ export async function POST(request: Request) {
       console.log(
         `[Ko-fi Webhook] Stored donation from "${payload.from_name}" — $${payload.amount} ${payload.currency} (${payload.type}, public: ${payload.is_public})`
       );
+
+      // Trigger ISR revalidation so the landing page reflects the new donation immediately.
+      revalidatePath('/');
     } catch (dbError) {
       console.error('[Ko-fi Webhook] Database error:', dbError);
       // Still return 200 to prevent Ko-fi from retrying endlessly on DB issues
