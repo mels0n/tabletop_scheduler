@@ -26,8 +26,9 @@ export default function DevelopersPage() {
                     ⚖️ Usage & Attribution
                 </h2>
                 <p className="text-slate-300 mb-4">
-                    Our API and integration points are free to use for community projects.
-                    However, we require that any public-facing integration provides clear credit.
+                    Our API and integration points are free to use for <strong>non-commercial community projects</strong>.
+                    Commercial use — including integrations embedded in paid products, SaaS platforms, or services that generate revenue — is not permitted without prior written agreement.
+                    We also require that any public-facing integration provides clear credit.
                 </p>
                 <div className="bg-slate-900/50 p-4 rounded-lg border border-indigo-500/20">
                     <p className="text-indigo-200 font-medium">

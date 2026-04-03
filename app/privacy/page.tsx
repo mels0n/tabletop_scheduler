@@ -75,6 +75,13 @@ export default function PrivacyPage() {
                         </div>
 
                         <div className="pt-8">
+                            <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: How is my data deleted?</h3>
+                            <p className="text-slate-300">
+                                <strong className="text-white">Automatically.</strong> On the hosted version, events are purged daily once they are older than 24 hours. There is no manual step required — old events, votes, and participant names are wiped from our database on a recurring schedule. If you want immediate deletion, you can close the event early as the host, or simply self-host and control the data lifecycle yourself.
+                            </p>
+                        </div>
+
+                        <div className="pt-8">
                             <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: Is it Self-Hostable?</h3>
                             <p className="text-slate-300">
                                 <strong className="text-white">Yes.</strong> If you want 100% control, you can host Tabletop Scheduler on your own server using our Docker image. In this mode, no data ever leaves your network.

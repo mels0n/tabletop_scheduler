@@ -64,7 +64,7 @@ export default function FAQPage() {
         },
         {
             question: "How can I support this project?",
-            answer: "If you find TabletopTime useful, you can support its development and keep it ad-free by buying me a coffee on Ko-fi! You can find the link on our Pricing page."
+            answer: "If you find TabletopTime useful, you can support its development and keep it ad-free by buying me a coffee on Ko-fi: https://ko-fi.com/N4N11VDWCU"
         },
         {
             question: "Why did I make this tool?",
@@ -133,10 +133,10 @@ export default function FAQPage() {
                         question="How can I support this project?"
                         answer={
                             <span>
-                                If you find TabletopTime useful, you can support its development and keep it ad-free by buying me a coffee on Ko-fi! You can find the link on our{" "}
-                                <Link href="/pricing" className="text-indigo-400 hover:text-indigo-300 underline">
-                                    Pricing page
-                                </Link>.
+                                If you find TabletopTime useful, you can support its development and keep it ad-free by{" "}
+                                <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                                    buying me a coffee on Ko-fi
+                                </a>!
                             </span>
                         }
                     />
