@@ -24,6 +24,7 @@ export function DataTooltip() {
                     <li>Participant Names</li>
                     <li>Availability Votes</li>
                 </ul>
+                <span className="block mt-2 text-slate-500 italic">Auto-deleted after 24 hours.</span>
                 <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-slate-900 border-b border-r border-slate-700 rotate-45"></span>
             </span>
         </span>
