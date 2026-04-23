@@ -25,7 +25,6 @@ The following table provides a high-density breakdown of the top-rated games for
 | **Codenames: Duet** | 1.30 (Light) | **Word Association.** Cooperative deduction. You win or lose together. | "It rewards cleverness without requiring it... very challenging and tests your sense of empathy." |
 | **Splendor Duel** | 2.00 (Med) | **Engine Building.** A tighter, meaner version of the classic. | "A compact, tight two-player experience that offers deeper strategic options." |
 
-<br />
 
 ---
 
@@ -57,11 +56,14 @@ To combat this, you must treat your romantic game night with the same logistical
 
 ### Frequently Asked Questions
 
-**Q: What is a good board game for couples in 2026?**
-**A:** Top 2-player games for 2026 include **Sky Team** for cooperative challenges, **7 Wonders Duel** for head-to-head strategy, and **Patchwork** for a cozy but competitive experience.
+#### What is a good board game for couples in 2026?
 
-**Q: How do I make time for board games with my partner?**
-**A:** Use a tool like **Tabletop Time** to put "Game Night" on your shared calendar. This treats the hobby with intentionality and ensures that domestic tasks don't override your quality time.
+Top 2-player games for 2026 include **Sky Team** for cooperative challenges, **7 Wonders Duel** for head-to-head strategy, and **Patchwork** for a cozy but competitive experience.
 
-**Q: Are there romantic RPGs for two people?**
-**A:** Yes. **Fog of Love** functions as a romantic comedy simulator where you roleplay a relationship. For a more traditional fantasy experience, "Duet D&D" (one DM and one player) is a popular way to run a 1-on-1 campaign.
+#### How do I make time for board games with my partner?
+
+Use a tool like **Tabletop Time** to put "Game Night" on your shared calendar. This treats the hobby with intentionality and ensures that domestic tasks don't override your quality time.
+
+#### Are there romantic RPGs for two people?
+
+Yes. **Fog of Love** functions as a romantic comedy simulator where you roleplay a relationship. For a more traditional fantasy experience, "Duet D&D" (one DM and one player) is a popular way to run a 1-on-1 campaign.
