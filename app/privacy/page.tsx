@@ -6,6 +6,9 @@ import { SchemaGenerator } from '@/shared/lib/aeo';
 export const metadata: Metadata = {
     title: 'No Ads, No Tracking — Schedule Board Games Privately | Tabletop Time',
     description: 'Schedule game nights with zero tracking, no ads, and no account required. Free, open-source scheduler for board games, D&D, MTG, and tabletop gaming groups.',
+    alternates: {
+        canonical: '/privacy',
+    },
 };
 
 const schema = SchemaGenerator.faq([

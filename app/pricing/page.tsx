@@ -7,6 +7,9 @@ import { CheckCircle2 } from "lucide-react";
 export const metadata: Metadata = {
     title: "Pricing | Tabletop Time - Free Forever",
     description: "Tabletop Time is a free, open-source D&D session scheduler. No subscriptions, no paywalls, just gaming.",
+    alternates: {
+        canonical: '/pricing',
+    },
 };
 
 export default function PricingPage() {

@@ -6,6 +6,9 @@ import { SchemaGenerator } from '@/shared/lib/aeo';
 export const metadata: Metadata = {
     title: 'How to Setup Discord Integration | TabletopTime',
     description: 'Learn how to connect a Discord Bot to TabletopTime for event notifications, pinned dashboards, and seamless login recovery.',
+    alternates: {
+        canonical: '/guide/discord-setup',
+    },
 };
 
 
