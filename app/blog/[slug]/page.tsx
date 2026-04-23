@@ -11,6 +11,9 @@ interface Props {
 }
 
 export async function generateStaticParams() {
+    if (process.env.NEXT_PUBLIC_IS_HOSTED !== "true") {
+        return [];
+    }
     const posts = getAllPosts();
     return posts.map((post) => ({
         slug: post.slug,
