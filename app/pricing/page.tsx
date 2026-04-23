@@ -58,8 +58,7 @@ export default function PricingPage() {
                         <h3 className="text-xl font-bold text-slate-200">Why is it free?</h3>
                         <p>
                             Tabletop Time is a passion project built by gamers, for gamers.
-                            Running on standard web tech keeps costs low. We currently have no ads, though we may explore privacy-preserving options in the future if coffee prices skyrocket.
-                            You can also host it yourself!
+                            Running on standard web tech keeps costs low. <a href="https://chris.melson.us" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">I</a> cover the costs for my own use, and sometimes people buy me a coffee to help. We won&apos;t ever show ads. You can also host it yourself!
                         </p>
                     </div>
 
