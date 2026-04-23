@@ -7,6 +7,9 @@ import { ShieldCheck, Users, Code2, ArrowRight } from "lucide-react";
 export const metadata: Metadata = {
     title: "About Tabletop Time | Mission & Privacy",
     description: "We are a privacy-first, open-source collective dedicated to solving the hardest problem in tabletop gaming: Scheduling.",
+    alternates: {
+        canonical: '/about',
+    },
 };
 
 export default function AboutPage() {

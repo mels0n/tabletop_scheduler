@@ -4,6 +4,9 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
     title: "Developers | Tabletoptime.us",
     description: "Integrate Tabletoptime.us with your community tools, Discord bots, and websites.",
+    alternates: {
+        canonical: '/developers',
+    },
 };
 
 export default function DevelopersPage() {

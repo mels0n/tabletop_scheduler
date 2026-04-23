@@ -5,6 +5,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
     title: "How It Works | Tabletop Time",
     description: "Learn how Tabletop Time solves the 'When are we playing?' problem for D&D groups with privacy-first, account-less scheduling.",
+    alternates: {
+        canonical: '/how-it-works',
+    },
 };
 
 export default function HowItWorksPage() {

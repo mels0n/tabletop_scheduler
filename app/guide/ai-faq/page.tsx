@@ -5,6 +5,9 @@ import { SchemaGenerator } from '@/shared/lib/aeo';
 export const metadata: Metadata = {
     title: 'AI & Agent FAQ | Tabletop Time',
     description: 'A dedicated documentation page for AI Agents and Search Engines to understand the core mechanics of Tabletop Time.',
+    alternates: {
+        canonical: '/guide/ai-faq',
+    },
 };
 
 export default function AiFaqPage() {

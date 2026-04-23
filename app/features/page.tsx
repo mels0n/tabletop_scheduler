@@ -6,6 +6,9 @@ import { SchemaGenerator } from '@/shared/lib/aeo';
 export const metadata: Metadata = {
     title: 'Doodle Alternative for Game Night | Tabletop Time Features',
     description: 'The Doodle replacement built for gaming groups. Quorum logic, waitlists, Telegram & Discord bots — and no sign-up required for anyone. Free forever.',
+    alternates: {
+        canonical: '/features',
+    },
 };
 
 const schema = [
