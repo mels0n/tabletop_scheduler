@@ -16,7 +16,7 @@ export default function MagicLinksPage() {
     const jsonLd = SchemaGenerator.article({
         headline: "Understanding Magic Links: Passwordless Auth for Tabletop Time",
         description: "How Tabletop Time uses secure links instead of passwords to keep your account safe and frictionless.",
-        datePublished: new Date().toISOString() // Using current date as fallback, ideally should be static or from props
+        datePublished: "2026-03-04T00:00:00.000Z" // Static date for SEO freshness consistency
     });
 
     const breadcrumbsLd = SchemaGenerator.breadcrumb([
