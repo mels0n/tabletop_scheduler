@@ -1,15 +1,47 @@
-import { Shield, Lock, EyeOff, Github, Server } from 'lucide-react';
+import { Shield, EyeOff, Github, Server, Ban } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'Privacy Shield | Tabletop Time',
-    description: 'We do not track you. Our code is open source. Our analytics are non-existent. Read our "Zero Tracking" manifesto.',
+    title: 'No Ads, No Tracking — Schedule Board Games Privately | Tabletop Time',
+    description: 'Schedule game nights with zero tracking, no ads, and no account required. Free, open-source scheduler for board games, D&D, MTG, and tabletop gaming groups.',
 };
+
+const schema = SchemaGenerator.faq([
+    {
+        question: 'Does Tabletop Time have ads?',
+        answer: 'No. Tabletop Time has zero ads on any version of the app. There are no Google Analytics scripts, no ad networks, and no monetization of user data. It is completely ad-free.',
+    },
+    {
+        question: 'Do I need an account to schedule a board game night?',
+        answer: 'Absolutely not. You can schedule, vote, and manage events as a guest. Tabletop Time does not require an email or password from anyone — organizer or participant. Optionally, link Telegram or Discord for cross-device session recovery.',
+    },
+    {
+        question: 'What data does Tabletop Time collect when scheduling games?',
+        answer: 'Only the minimum needed: proposed dates, the display names participants provide (no verification required), and availability votes. No email, no account, no behavioral profiling, and no advertising identifiers.',
+    },
+    {
+        question: 'How is game night data deleted?',
+        answer: 'Automatically. On the hosted version, events are purged daily once they are older than 24 hours. Old events, votes, and participant names are wiped from the database on a recurring schedule — no manual deletion required.',
+    },
+    {
+        question: 'Can I self-host this board game scheduler with no data leaving my network?',
+        answer: 'Yes. Tabletop Time is open source and available as a Docker image. In self-hosted mode, all data stays on your own server with no third-party involvement.',
+    },
+    {
+        question: 'Is Tabletop Time really free with no catch?',
+        answer: 'Yes. Tabletop Time is free, has no ads, requires no account, and does not sell data. It is funded by optional Ko-fi donations. The source code is public on GitHub.',
+    },
+]);
 
 export default function PrivacyPage() {
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+            />
             <div className="max-w-4xl mx-auto space-y-16">
 
                 {/* Header */}
@@ -21,7 +53,7 @@ export default function PrivacyPage() {
                         The &quot;Zero Tracking&quot; Promise
                     </h1>
                     <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-                        We believe that organizing a board game night shouldn&apos;t require you to surrender your personal data.
+                        We believe that scheduling a board game night shouldn&apos;t require surrendering your personal data — or sitting through ads.
                     </p>
                 </div>
 
@@ -36,6 +68,14 @@ export default function PrivacyPage() {
                     </div>
 
                     <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                        <Ban className="w-8 h-8 text-amber-400" />
+                        <h2 className="text-2xl font-bold text-slate-200">No Ads. Ever.</h2>
+                        <p className="text-slate-400 leading-relaxed">
+                            There are no ads on any page of Tabletop Time — no banners, no sponsored results, no promoted listings. Scheduling a board game, D&amp;D session, or MTG draft night should not come with an ad tax.
+                        </p>
+                    </div>
+
+                    <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
                         <Github className="w-8 h-8 text-slate-100" />
                         <h2 className="text-2xl font-bold text-slate-200">The Code IS the Audit</h2>
                         <p className="text-slate-400 leading-relaxed">
@@ -44,6 +84,14 @@ export default function PrivacyPage() {
                         <a href="https://github.com/mels0n/tabletop_scheduler" className="inline-flex items-center text-emerald-400 hover:text-emerald-300 font-medium">
                             Audit the Code &rarr;
                         </a>
+                    </div>
+
+                    <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                        <Server className="w-8 h-8 text-indigo-400" />
+                        <h2 className="text-2xl font-bold text-slate-200">Self-Hostable</h2>
+                        <p className="text-slate-400 leading-relaxed">
+                            Want 100% control? Host Tabletop Scheduler on your own server using our Docker image. In self-hosted mode, no data ever leaves your network — not even anonymized telemetry.
+                        </p>
                     </div>
                 </div>
 

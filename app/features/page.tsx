@@ -1,15 +1,56 @@
 import { Zap, Users, Trophy, Calendar, Bot, Check, X, Shield, Clock } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'Not Just a Poll | Tabletop Time',
-    description: 'Why we are better than a simple poll. Quorum logic, Waitlists, Telegram Bots, and more.',
+    title: 'Doodle Alternative for Game Night | Tabletop Time Features',
+    description: 'The Doodle replacement built for gaming groups. Quorum logic, waitlists, Telegram & Discord bots — and no sign-up required for anyone. Free forever.',
 };
+
+const schema = [
+    SchemaGenerator.softwareApp({
+        name: 'Tabletop Time',
+        description: 'A free, no-sign-up game night scheduler for tabletop gaming groups. Doodle alternative with quorum logic, waitlists, and native Telegram & Discord bot integration.',
+        applicationCategory: 'UtilitiesApplication',
+        alternateName: 'Tabletop Scheduler',
+        featureList: [
+            'No sign-up required for organizers or participants',
+            'Quorum logic — automatically highlights dates that meet minimum player count',
+            'Waitlists and player capacity limits',
+            'Telegram bot integration — live availability in group chat',
+            'Discord bot integration — scheduling inside your server',
+            'One-click Google Calendar and ICS event export',
+            'Zero ads, zero tracking, open source',
+        ],
+    }),
+    SchemaGenerator.faq([
+        {
+            question: 'Is Tabletop Time a Doodle replacement for game nights?',
+            answer: 'Yes. Tabletop Time replaces Doodle for gaming groups with features Doodle does not have: no sign-up required for anyone, quorum logic for minimum player counts, waitlists, and native Telegram and Discord bot integration — all completely free with no ads.',
+        },
+        {
+            question: 'What is the difference between Tabletop Time and Doodle?',
+            answer: 'Unlike Doodle, Tabletop Time requires no account to create or vote on events. It adds gaming-specific features like quorum logic (minimum player thresholds), player capacity limits, waitlists, and live bot integration for Telegram and Discord. It also has no ads and no data tracking.',
+        },
+        {
+            question: 'Can I use Tabletop Time instead of Doodle?',
+            answer: 'Yes, and it is completely free with no ads. For gaming groups, Tabletop Time is a better Doodle alternative because it understands game night logistics: minimum player counts, waitlists when events fill up, and integration with Telegram and Discord where gaming communities already live.',
+        },
+        {
+            question: 'Does Tabletop Time work for large groups?',
+            answer: 'Yes. Tabletop Time is designed for groups of any size. Set a maximum player count and it automatically manages a first-come-first-serve waitlist that promotes players when spots open.',
+        },
+    ]),
+];
 
 export default function FeaturesPage() {
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+            />
             <div className="max-w-7xl mx-auto space-y-24">
 
                 {/* Hero */}
@@ -46,27 +87,29 @@ export default function FeaturesPage() {
                 <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 md:p-8 overflow-hidden">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold text-white mb-4">Why Switch?</h2>
-                        <p className="text-slate-400">See how we stack up against the general-purpose tools.</p>
+                        <p className="text-slate-400">See how we stack up against the general-purpose tools — including Doodle.</p>
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[800px]">
+                        <table className="w-full text-left border-collapse min-w-[900px]">
                             <thead>
                                 <tr className="border-b border-slate-700 text-slate-400 text-sm">
-                                    <th className="py-4 pl-4 font-normal w-1/4">Feature</th>
-                                    <th className="py-4 px-2 font-bold text-indigo-400 text-lg w-1/6 bg-indigo-500/10 rounded-t-lg">Tabletop Time</th>
-                                    <th className="py-4 px-2 font-normal w-1/6">When2meet</th>
-                                    <th className="py-4 px-2 font-normal w-1/6">Calendly</th>
-                                    <th className="py-4 px-2 font-normal w-1/6">Calendar Apps</th>
-                                    <th className="py-4 px-2 font-normal w-1/6">Group Chats</th>
+                                    <th className="py-4 pl-4 font-normal w-1/5">Feature</th>
+                                    <th className="py-4 px-2 font-bold text-indigo-400 text-lg bg-indigo-500/10 rounded-t-lg">Tabletop Time</th>
+                                    <th className="py-4 px-2 font-normal">Doodle</th>
+                                    <th className="py-4 px-2 font-normal">When2meet</th>
+                                    <th className="py-4 px-2 font-normal">Calendly</th>
+                                    <th className="py-4 px-2 font-normal">Calendar Apps</th>
+                                    <th className="py-4 px-2 font-normal">Group Chats</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800 text-slate-300 text-sm md:text-base">
-                                <Row label="No Sign-Up Needed" checkTT={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Quorum (Min Players)" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Waitlist & Capacity" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Optional Chatbots" checkTT={true} checkW2M={false} checkCal={false} checkApps={false} checkChat={true} noteChat="Native Polls" />
-                                <Row label="Works for Large Groups" checkTT={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={true} />
+                                <Row label="No Sign-Up Needed" checkTT={true} checkDoodle={false} checkW2M={true} checkCal={false} checkApps={false} checkChat={false} />
+                                <Row label="No Ads" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
+                                <Row label="Quorum (Min Players)" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
+                                <Row label="Waitlist & Capacity" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
+                                <Row label="Optional Chatbots" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={true} noteChat="Native Polls" />
+                                <Row label="Works for Large Groups" checkTT={true} checkDoodle={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={true} />
                             </tbody>
                         </table>
                     </div>
@@ -123,12 +166,15 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
     );
 }
 
-function Row({ label, checkTT, checkW2M, checkCal, checkApps, checkChat, noteChat, good = true }: any) {
+function Row({ label, checkTT, checkDoodle, checkW2M, checkCal, checkApps, checkChat, noteChat, good = true }: any) {
     return (
         <tr className="hover:bg-slate-800/20 transition-colors">
             <td className="py-4 pl-4 font-medium">{label}</td>
             <td className="py-4 px-2 bg-indigo-500/5 font-bold text-indigo-300">
                 {checkTT === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
+            </td>
+            <td className="py-4 px-2">
+                {checkDoodle === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
             </td>
             <td className="py-4 px-2">
                 {checkW2M === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
@@ -145,5 +191,5 @@ function Row({ label, checkTT, checkW2M, checkCal, checkApps, checkChat, noteCha
                 )}
             </td>
         </tr>
-    )
+    );
 }
