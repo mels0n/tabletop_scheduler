@@ -138,6 +138,15 @@ export default function PrivacyPage() {
                                 <strong className="text-white">Yes.</strong> If you want 100% control, you can host Tabletop Scheduler on your own server using our Docker image. In this mode, no data ever leaves your network.
                             </p>
                         </div>
+
+                        {process.env.NEXT_PUBLIC_IS_HOSTED === "true" && (
+                            <div className="pt-8">
+                                <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: To comply with various global privacy laws, does TableTop Time have a Formal Privacy Policy?</h3>
+                                <p className="text-slate-300">
+                                    <strong className="text-white">Yes.</strong> For detailed legal compliance information, please see our <Link href="/legal" className="text-emerald-400 hover:text-emerald-300 underline">Legal page</Link>.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 

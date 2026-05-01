@@ -57,6 +57,12 @@ export function Footer() {
                         Privacy
                     </Link>
 
+                    {isHosted && (
+                        <Link href="/legal" className="hover:text-indigo-400 transition-colors">
+                            Legal
+                        </Link>
+                    )}
+
                     <a
                         href="https://github.com/mels0n/tabletop_scheduler"
                         target="_blank"
