@@ -33,7 +33,13 @@ ls -ld /app/data
 
 # Action: Migrations
 echo "⚙️ Running database migrations..."
-npx prisma migrate deploy
+if printf '%s\n' "$DATABASE_URL" | grep -qE '^(file:|sqlite:)'; then
+    echo "⚙️ SQLite detected; applying schema with prisma db push..."
+    npx prisma db push --schema=./prisma/schema.prisma
+else
+    echo "⚙️ Non-SQLite database detected; running prisma migrate deploy..."
+    npx prisma migrate deploy
+fi
 
 # Action: Cron Loop (Cleanup)
 echo "⏰ Setting up internal cleanup loop..."
