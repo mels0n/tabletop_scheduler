@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Copy, PlusCircle, ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
 import { SchemaGenerator } from "@/shared/lib/aeo";
 import { getDonations } from "@/lib/donations";
+import { getEventStats } from "@/lib/event-stats";
 import DonationTicker from "@/components/DonationTicker";
 
 
@@ -19,6 +20,9 @@ export default async function Home() {
 
   // Fetch public donations for the ticker — only in hosted mode to preserve self-hosted static generation.
   const donations = isHosted ? await getDonations(20) : [];
+
+  // Fetch live event stats for badges — only in hosted mode.
+  const eventStats = isHosted ? await getEventStats() : null;
 
   /**
    * @constant jsonLd
@@ -101,6 +105,41 @@ export default async function Home() {
           </div>
         )}
       </div>
+
+      {/* Live Event Stats Badges — Social proof for hosted version */}
+      {isHosted && eventStats && (
+        <div className="mt-16 flex flex-col items-center gap-4">
+          <div className="flex flex-wrap justify-center gap-6">
+            <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-slate-900/50 backdrop-blur-sm border border-slate-700">
+              <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+              <span className="text-slate-300 font-medium">
+                {eventStats.totalEvents.toLocaleString()} Events Active
+              </span>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-slate-900/50 backdrop-blur-sm border border-slate-700">
+              <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+              <span className="text-slate-300 font-medium">
+                {eventStats.activeEvents} Voting Open
+              </span>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-slate-900/50 backdrop-blur-sm border border-slate-700">
+              <div className="w-3 h-3 rounded-full bg-purple-400"></div>
+              <span className="text-slate-300 font-medium">
+                {eventStats.totalParticipants.toLocaleString()} Players Active
+              </span>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-slate-900/50 backdrop-blur-sm border border-slate-700">
+              <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+              <span className="text-slate-300 font-medium">
+                {eventStats.finalizedEvents} Games Locked In
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 text-center max-w-lg mt-2">
+            * We automatically delete expired events for your privacy. These stats reflect the currently active community.
+          </p>
+        </div>
+      )}
 
       {isHosted && (
         <>
