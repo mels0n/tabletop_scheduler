@@ -104,6 +104,8 @@ export async function GET(req: Request) {
         let deletedCount = 0;
         let errors = 0;
 
+        let deletedLoginTokens = 0;
+
         if (eventsToDelete.length > 0) {
             const { unpinChatMessage } = await import("@/features/telegram");
             const { unpinDiscordMessage } = await import("@/features/discord/model/discord");
@@ -141,9 +143,19 @@ export async function GET(req: Request) {
             }
         }
 
+        try {
+            deletedLoginTokens = await prisma.loginToken.deleteMany({
+                where: { expiresAt: { lt: new Date() } }
+            }).then(result => result.count);
+            log.info(`Deleted expired LoginToken rows: ${deletedLoginTokens}`);
+        } catch (cleanupError) {
+            log.warn("Failed to delete expired LoginToken rows", cleanupError as Error);
+        }
+
         return NextResponse.json({
             success: true,
             deleted: deletedCount,
+            deletedLoginTokens,
             errors,
             scanned: candidateEvents.length
         });

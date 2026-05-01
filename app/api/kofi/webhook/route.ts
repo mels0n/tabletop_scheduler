@@ -87,8 +87,16 @@ export async function POST(request: Request) {
       donatedAt = new Date();
     }
 
-    // --- Persist to database (idempotent via unique kofiTransactionId) ---
+    // --- Persist public donations only ---
+    const isPublic = payload.is_public ?? true;
     const transactionId = payload.kofi_transaction_id || payload.message_id || `unknown-${Date.now()}`;
+
+    if (!isPublic) {
+      console.log(
+        `[Ko-fi Webhook] Skipping private donation from "${payload.from_name}" — $${payload.amount} ${payload.currency} (${payload.type})`
+      );
+      return NextResponse.json({ status: 'ok', skipped: true });
+    }
 
     try {
       await prisma.donation.upsert({
@@ -100,7 +108,7 @@ export async function POST(request: Request) {
           message: payload.message || null,
           amount: payload.amount || '0.00',
           currency: payload.currency || 'USD',
-          isPublic: payload.is_public ?? true,
+          isPublic,
           type: payload.type || 'Donation',
           rawPayload: rawData, // Store full payload for future field extraction
           donatedAt,
@@ -108,7 +116,7 @@ export async function POST(request: Request) {
       });
 
       console.log(
-        `[Ko-fi Webhook] Stored donation from "${payload.from_name}" — $${payload.amount} ${payload.currency} (${payload.type}, public: ${payload.is_public})`
+        `[Ko-fi Webhook] Stored donation from "${payload.from_name}" — $${payload.amount} ${payload.currency} (${payload.type}, public: ${isPublic})`
       );
 
       // Trigger ISR revalidation so the landing page reflects the new donation immediately.
