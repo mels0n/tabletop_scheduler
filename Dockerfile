@@ -69,8 +69,8 @@ ENV NODE_ENV=production
 
 ENV NEXT_PUBLIC_IS_HOSTED=false
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl libc6-compat
+# Install OpenSSL for Prisma and healthcheck tooling
+RUN apk add --no-cache openssl libc6-compat wget
 
 
 # IO LAYER: Persistent Storage
