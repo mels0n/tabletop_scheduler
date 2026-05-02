@@ -20,13 +20,14 @@ import prisma from "@/shared/lib/prisma";
  * @returns {NextResponse} Redirects the user to the return URL or error page.
  */
 export async function GET(req: Request) {
+    const baseUrl = getBaseUrl(req.headers);
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
     const stateStr = searchParams.get("state");
     const error = searchParams.get("error");
 
     if (error) {
-        return NextResponse.redirect(new URL("/?error=discord_auth_failed", req.url));
+        return NextResponse.redirect(new URL("/?error=discord_auth_failed", baseUrl));
     }
 
     if (!code || !stateStr) {
@@ -43,7 +44,6 @@ export async function GET(req: Request) {
     const { returnTo, flow } = state;
     const clientId = process.env.DISCORD_APP_ID;
     const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-    const baseUrl = getBaseUrl(req.headers);
     const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
     if (!clientId || !clientSecret) {
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     if (!tokenRes.ok) {
         const err = await tokenRes.text();
         log.error("Token Exchange Failed", { error: err });
-        return NextResponse.redirect(new URL(`${returnTo}?error=token_failed`, req.url));
+        return NextResponse.redirect(new URL(`${returnTo}?error=token_failed`, baseUrl));
     }
 
     const tokenData = await tokenRes.json();
@@ -83,7 +83,7 @@ export async function GET(req: Request) {
     });
 
     if (!userRes.ok) {
-        return NextResponse.redirect(new URL(`${returnTo}?error=profile_failed`, req.url));
+        return NextResponse.redirect(new URL(`${returnTo}?error=profile_failed`, baseUrl));
     }
 
     const user = await userRes.json();
@@ -156,7 +156,7 @@ export async function GET(req: Request) {
             }
         }
 
-        return NextResponse.redirect(new URL(returnTo, req.url));
+        return NextResponse.redirect(new URL(returnTo, baseUrl));
     }
     else if (flow === "connect") {
         // --- CONNECT FLOW (Add Bot) ---
@@ -174,8 +174,8 @@ export async function GET(req: Request) {
         cookieStore.set("tabletop_user_discord_id", user.id, cookieOpts);
         cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false });
 
-        return NextResponse.redirect(new URL(`${returnTo}?discord_connected=true${guildParam}`, req.url));
+        return NextResponse.redirect(new URL(`${returnTo}?discord_connected=true${guildParam}`, baseUrl));
     }
 
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/", baseUrl));
 }
