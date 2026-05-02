@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Github } from "lucide-react";
+import UntapBadge from "./UntapBadge";
 
 /**
  * @component Footer
@@ -11,16 +12,7 @@ export function Footer() {
 
     return (
         <footer className="border-t border-slate-800 bg-slate-950/50 mt-auto">
-            <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500">
-
-                {/* Copyright / Brand */}
-                <div className="flex items-center gap-1">
-                    {isHosted ? (
-                        <span>&copy; {new Date().getFullYear()} <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer author me" className="hover:text-indigo-400 transition-colors">Christopher Melson</a>. All rights reserved.</span>
-                    ) : (
-                        <span>&copy; {new Date().getFullYear()} Tabletop Time</span>
-                    )}
-                </div>
+            <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-6 text-sm text-slate-500">
 
                 {/* Navigation Links */}
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
@@ -92,6 +84,18 @@ export function Footer() {
                             <span className="hidden sm:inline">Buy Me a Coffee</span>
                         </a>
                     )}
+                </div>
+
+                {/* Copyright / Brand */}
+                <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-1 text-center">
+                        {isHosted ? (
+                            <span>&copy; {new Date().getFullYear()} <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer author me" className="hover:text-indigo-400 transition-colors">Christopher Melson</a>. All rights reserved.</span>
+                        ) : (
+                            <span>&copy; {new Date().getFullYear()} Tabletop Time</span>
+                        )}
+                    </div>
+                    {isHosted && <UntapBadge type="Powered" />}
                 </div>
             </div>
         </footer >
