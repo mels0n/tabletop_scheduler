@@ -78,7 +78,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
             if (isDuplicate) continue;
 
             newSlots.push({
-                id: self.crypto.randomUUID(),
+                id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36),
                 startTime: startDateTime.toISOString(),
                 endTime: endDateTime.toISOString(),
             });
@@ -123,7 +123,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                         type="button"
                         data-testid="slot-date-input"
                         onClick={() => setShowCalendar((v) => !v)}
-                        className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full transition-colors hover:border-slate-600"
+                        className="flex items-center gap-2 px-3 py-3 min-h-[44px] bg-slate-800 border border-slate-700 rounded text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full transition-colors hover:border-slate-600"
                     >
                         <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
                         <span className={dateLabel ? "text-slate-200 text-sm" : "text-slate-500 text-sm"}>
@@ -132,7 +132,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                     </button>
 
                     {showCalendar && (
-                        <div className="absolute top-full left-0 z-50 mt-1 p-3 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-72">
+                        <div className="absolute top-full left-0 z-50 mt-1 p-3 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-80">
                             <MultiDayCalendar
                                 selectedDates={selectedDates}
                                 onDatesChange={setSelectedDates}
@@ -147,7 +147,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                     <input
                         type="time"
                         data-testid="slot-start-input"
-                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                        className="px-3 py-3 min-h-[44px] bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
                         value={start}
                         onChange={(e) => setStart(e.target.value)}
                     />
@@ -157,7 +157,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                     <input
                         type="time"
                         data-testid="slot-end-input"
-                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                        className="px-3 py-3 min-h-[44px] bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
                         value={end}
                         onChange={(e) => setEnd(e.target.value)}
                     />
@@ -169,7 +169,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                         type="button"
                         onClick={addSlot}
                         disabled={selectedDates.length === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 min-h-[44px] bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
                     >
                         <Plus className="w-4 h-4" />
                         {selectedDates.length > 1 ? `Add ${selectedDates.length} Slots` : "Add Slot"}

@@ -3,20 +3,12 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ClientTimezone } from "./ClientDate";
-import { Check, HelpCircle, X, User as UserIcon, Loader2 } from "lucide-react";
+import { Check, HelpCircle, X, User as UserIcon, Loader2, LayoutList, CalendarDays } from "lucide-react";
 import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
+import { QuickSelectionCalendar } from "./QuickSelectionCalendar";
 
-/**
- * @interface Slot
- * @description Represents a time slot with aggregated voting data.
- * @property {number} id - Unique slot ID.
- * @property {Date} startTime - Start time object.
- * @property {Date} endTime - End time object.
- * @property {Object} counts - Aggregated vote counts.
- * @property {any[]} votes - Array of detailed vote objects.
- */
 interface Slot {
     id: number;
     startTime: Date;
@@ -25,15 +17,6 @@ interface Slot {
     votes: any[];
 }
 
-/**
- * @interface VotingInterfaceProps
- * @description Props for the VotingInterface component.
- * @property {number} eventId - Unique event identifier.
- * @property {Slot[]} initialSlots - List of time slots with current vote data.
- * @property {any[]} participants - List of current participants.
- * @property {number} minPlayers - Minimum quorum required for a viable slot.
- * @property {number} [serverParticipantId] - Optional participant ID from server (e.g., via magic link).
- */
 interface VotingInterfaceProps {
     eventId: number;
     initialSlots: Slot[];
@@ -44,38 +27,23 @@ interface VotingInterfaceProps {
     discordIdentity?: { id: string, username: string };
 }
 
-/**
- * @component VotingInterface
- * @description The core interactive component for participants.
- * Responsibilities:
- * 1. Collects User Identity (Name, Telegram Handle).
- * 2. Displays available Time Slots with current global vote counts.
- * 3. Allows users to cast votes (YES/MAYBE/NO).
- * 4. "Can Host" toggle for logistic facilitation.
- * 5. Persists identity to LocalStorage for seamless "re-login" on the same device.
- *
- * @param {VotingInterfaceProps} props - Component props.
- * @returns {JSX.Element} The voting dashboard.
- */
+type ViewMode = "detailed" | "quick";
+
 export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity }: VotingInterfaceProps) {
     const pathname = usePathname();
-    const searchParams = useSearchParams(); // Requires next/navigation import update below
+    const searchParams = useSearchParams();
 
     const [slots, setSlots] = useState(initialSlots);
     const [userName, setUserName] = useState("");
     const [userTelegram, setUserTelegram] = useState("");
-    // Intent: Store local votes before submission. undefined means 'no vote selected yet'.
-    const [votes, setVotes] = useState<Record<number, string | undefined>>({}); // slotId -> preference
-    const [canHost, setCanHost] = useState<Record<number, boolean>>({}); // slotId -> canHost
+    const [votes, setVotes] = useState<Record<number, string | undefined>>({});
+    const [canHost, setCanHost] = useState<Record<number, boolean>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasVoted, setHasVoted] = useState(false);
     const [participantId, setParticipantId] = useState<number | null>(null);
+    const [viewMode, setViewMode] = useState<ViewMode>("quick");
 
-    // Intent: Hydrate state (Server > LocalStorage) to restore user session.
-    // Critical for UX so users don't have to re-enter their name every time they visit.
     useEffect(() => {
-        // Priority 1: Server Identity (passed via Magic Link cookie)
-        // Priority 2: Local Storage (returning user on same device)
         let pid = serverParticipantId;
         if (!pid) {
             const saved = localStorage.getItem(`tabletop_participant_${eventId}`);
@@ -85,19 +53,15 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
         if (pid) {
             setParticipantId(pid);
 
-            // Intent: If we have a server ID, ensure local storage matches (Auto-Sync)
-            // This 'logs them in' on this device for future visits without the magic link.
             if (serverParticipantId) {
                 localStorage.setItem(`tabletop_participant_${eventId}`, pid.toString());
             }
 
-            // Hydrate fields from existing participant data
             const existing = participants.find(p => p.id === pid);
             if (existing) {
                 setUserName(existing.name);
                 setUserTelegram(existing.telegramId || "");
 
-                // Reconstruct voting state from server data
                 const myVotes: Record<number, string> = {};
                 const myHosting: Record<number, boolean> = {};
 
@@ -113,19 +77,12 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                 setCanHost(myHosting);
             }
         } else {
-            // Intent: Fallback for new user - pre-fill from global user preferences if available.
-            // Fix: Only overwrite if currently empty to prevent typing interruption if effect re-runs.
-            // Upgrade: Check URL for 'userID' param to prefill name
             const urlUserId = searchParams.get("userID");
             setUserName(prev => prev || urlUserId || localStorage.getItem('tabletop_username') || "");
             setUserTelegram(prev => prev || localStorage.getItem('tabletop_telegram') || "");
         }
     }, [serverParticipantId, eventId, participants, initialSlots, searchParams]);
 
-    /**
-     * Toggles vote preference for a specific slot.
-     * Clicking the same preference again deselects it.
-     */
     const handleVote = (slotId: number, preference: string) => {
         setVotes(prev => ({
             ...prev,
@@ -133,25 +90,19 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
         }));
     };
 
-    /**
-     * Toggles the "Can Host" status. Only available if vote is YES or MAYBE.
-     */
     const toggleHost = (slotId: number) => {
-        setCanHost(prev => ({
-            ...prev,
-            [slotId]: !prev[slotId]
-        }));
-    }
+        setCanHost(prev => ({ ...prev, [slotId]: !prev[slotId] }));
+    };
 
-    /**
-     * Submits votes to the server.
-     * Validates input, saves global profile to localStorage, and handles API interaction.
-     */
-    const submitVotes = async () => {
+    // Accepts an optional override so quick view can pass in NOs-filled map
+    // without hitting React's async state update timing issue.
+    const submitVotes = async (votesOverride?: Record<number, string | undefined>) => {
+        const effectiveVotes = votesOverride ?? votes;
+
         if (!userName) return alert("Please enter your name");
-        if (Object.values(votes).filter(v => v !== undefined).length === 0) return alert("Please select at least one preference (or mark others as NO)");
+        if (Object.values(effectiveVotes).filter(v => v !== undefined).length === 0)
+            return alert("Please select at least one preference (or mark others as NO)");
 
-        // Intent: Save profile globally for other events
         localStorage.setItem('tabletop_username', userName);
         localStorage.setItem('tabletop_telegram', userTelegram);
 
@@ -160,12 +111,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             const payload = {
                 name: userName,
                 telegramId: userTelegram,
-                // Intent: Persist Discord identity on participant row so server can identify
-                // this user on future page loads without requiring a magic link (mirrors Telegram chatId).
                 discordId: discordIdentity?.id,
                 discordUsername: discordIdentity?.username,
-                participantId, // Send if we have it (update existing), otherwise create new
-                votes: Object.entries(votes)
+                participantId,
+                votes: Object.entries(effectiveVotes)
                     .filter(([_, preference]) => preference !== undefined)
                     .map(([slotId, preference]) => ({
                         slotId: parseInt(slotId),
@@ -183,12 +132,9 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             if (res.ok) {
                 const data = await res.json();
                 if (data.participantId) {
-                    // Cache the new participant ID
                     localStorage.setItem(`tabletop_participant_${eventId}`, data.participantId.toString());
                 }
-
                 setHasVoted(true);
-                // Intent: Force full page reload to reflect updated state and optimistic UI isn't fully implemented.
                 window.location.reload();
             } else {
                 alert("Failed to save votes");
@@ -201,13 +147,19 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
         }
     };
 
+    // Called by QuickSelectionCalendar — fills NOs then submits
+    const handleQuickSave = (completeVotes: Record<number, string | undefined>) => {
+        setVotes(completeVotes); // sync so detailed view reflects them if user switches back
+        submitVotes(completeVotes);
+    };
+
     if (hasVoted) {
         return (
             <div className="p-8 text-center border border-green-800 bg-green-900/20 rounded-xl">
                 <h3 className="text-2xl font-bold text-green-400 mb-2">Votes Saved!</h3>
                 <p className="text-slate-400">Thanks for helping us schedule this game.</p>
             </div>
-        )
+        );
     }
 
     return (
@@ -215,6 +167,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             {/* Left Col: Voting Form */}
             <div className="lg:col-span-2 space-y-6">
 
+                {/* Identity card */}
                 <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
@@ -224,7 +177,6 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
 
                         {discordIdentity ? (
                             <div className="flex items-center gap-2 text-xs bg-[#5865F2]/20 text-[#5865F2] px-2 py-1 rounded border border-[#5865F2]/50">
-                                {/* Simple Discord Logo */}
                                 <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
                                 <span>{discordIdentity.username}</span>
                             </div>
@@ -257,118 +209,161 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    {/* Legend for Mobile/Desktop clarity */}
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 text-xs text-slate-400 bg-slate-900/30 p-3 rounded-lg border border-slate-800/50">
-                        <div className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-green-500" />
-                            <span><b>Available:</b> Perfect for me</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <HelpCircle className="w-4 h-4 text-yellow-500" />
-                            <span><b>If Needed:</b> Yes, not a preference</span>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[10px] text-slate-500 px-1">
-                        <Loader2 className="w-3 h-3" />
-                        <span>Prioritization applies at Finalization. Confirmed spots are locked.</span>
-                    </div>
-
-                    {slots.map(slot => {
-                        const start = new Date(slot.startTime);
-                        const end = new Date(slot.endTime);
-                        const myVote = votes[slot.id];
-
-                        // Check if this slot meets quorum based on EXISTING votes + potentially my vote (optimistic not implemented here for brevity)
-                        const totalYes = slot.counts.yes;
-                        const isViable = totalYes >= minPlayers;
-
-                        return (
-                            <div key={slot.id} className={clsx(
-                                "relative p-4 rounded-xl border transition-all",
-                                myVote === 'YES' ? "bg-green-950/30 border-green-600/50" :
-                                    myVote === 'NO' ? "bg-red-950/10 border-red-900/30 opacity-60" :
-                                        myVote === 'MAYBE' ? "bg-yellow-950/20 border-yellow-700/50" :
-                                            "bg-slate-900/40 border-slate-800"
-                            )}>
-                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                    <div className="text-center sm:text-left">
-                                        <div className="font-semibold text-lg text-slate-200">
-                                            {format(start, "EEEE, MMMM do")}
-                                        </div>
-                                        <p className="text-sm text-indigo-200">
-                                            {format(start, "h:mm a")} - {format(end, "h:mm a")} <ClientTimezone className="text-indigo-300/70 ml-1" />
-                                        </p>
-                                        <div className="mt-2 flex gap-2 text-xs">
-                                            <span className="text-green-400">{slot.counts.yes} Yes</span>
-                                            <span className="text-yellow-400">{slot.counts.maybe} If Needed</span>
-                                            <span className="text-red-400">{slot.counts.no} No</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 p-1 bg-slate-950 rounded-lg border border-slate-800">
-                                        <VoteButton
-                                            active={myVote === 'YES'}
-                                            onClick={() => handleVote(slot.id, 'YES')}
-                                            color="green"
-                                            icon={<Check className="w-5 h-5" />}
-                                            label="Available"
-                                            title="Yes, I can make it"
-                                        />
-                                        <VoteButton
-                                            active={myVote === 'MAYBE'}
-                                            onClick={() => handleVote(slot.id, 'MAYBE')}
-                                            color="yellow"
-                                            icon={<HelpCircle className="w-5 h-5" />}
-                                            label="If Needed"
-                                            title="I'll be there if you need me."
-                                        />
-                                        <VoteButton
-                                            active={myVote === 'NO'}
-                                            onClick={() => handleVote(slot.id, 'NO')}
-                                            color="red"
-                                            icon={<X className="w-5 h-5" />}
-                                            label="No"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Hosting Toggle */}
-                                {(myVote === 'YES' || myVote === 'MAYBE') && (
-                                    <div className="mt-3 pt-3 border-t border-slate-800/50 flex items-center justify-end gap-2">
-                                        <label className="text-sm text-slate-400 cursor-pointer select-none flex items-center gap-2 hover:text-indigo-400 transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
-                                                checked={canHost[slot.id] || false}
-                                                onChange={() => toggleHost(slot.id)}
-                                            />
-                                            I can host at my place
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
+                {/* ── View toggle ── */}
+                <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("quick")}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2.5 flex-1 justify-center text-sm font-medium transition-colors",
+                            viewMode === "quick"
+                                ? "bg-slate-700 text-slate-200"
+                                : "bg-slate-900/50 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                        )}
+                    >
+                        <CalendarDays className="w-4 h-4" />
+                        Quick Calendar
+                    </button>
+                    <div className="w-px bg-slate-700" />
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("detailed")}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2.5 flex-1 justify-center text-sm font-medium transition-colors",
+                            viewMode === "detailed"
+                                ? "bg-slate-700 text-slate-200"
+                                : "bg-slate-900/50 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                        )}
+                    >
+                        <LayoutList className="w-4 h-4" />
+                        Detailed
+                    </button>
                 </div>
 
-                <button
-                    onClick={submitVotes}
-                    disabled={isSubmitting || Object.values(votes).filter(v => v !== undefined).length < slots.length}
-                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2"
-                >
-                    {isSubmitting ? <Loader2 className="animate-spin" /> :
-                        Object.values(votes).filter(v => v !== undefined).length < slots.length
-                            ? "Select preferences for all times"
-                            : "Submit Votes"}
-                </button>
+                {/* ── Detailed view ── */}
+                {viewMode === "detailed" && (
+                    <div className="space-y-4">
+                        {/* Legend */}
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 text-xs text-slate-400 bg-slate-900/30 p-3 rounded-lg border border-slate-800/50">
+                            <div className="flex items-center gap-2">
+                                <Check className="w-4 h-4 text-green-500" />
+                                <span><b>Available:</b> Perfect for me</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <HelpCircle className="w-4 h-4 text-yellow-500" />
+                                <span><b>If Needed:</b> Yes, not a preference</span>
+                            </div>
+                        </div>
 
-                <SuggestTime
-                    slug={slug}
-                    serverParticipantId={participantId || undefined}
-                    participants={participants}
-                />
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 px-1">
+                            <Loader2 className="w-3 h-3" />
+                            <span>Prioritization applies at Finalization. Confirmed spots are locked.</span>
+                        </div>
+
+                        {slots.map(slot => {
+                            const start = new Date(slot.startTime);
+                            const end = new Date(slot.endTime);
+                            const myVote = votes[slot.id];
+                            const totalYes = slot.counts.yes;
+                            const isViable = totalYes >= minPlayers;
+
+                            return (
+                                <div key={slot.id} className={clsx(
+                                    "relative p-4 rounded-xl border transition-all",
+                                    myVote === 'YES' ? "bg-green-950/30 border-green-600/50" :
+                                        myVote === 'NO' ? "bg-red-950/10 border-red-900/30 opacity-60" :
+                                            myVote === 'MAYBE' ? "bg-yellow-950/20 border-yellow-700/50" :
+                                                "bg-slate-900/40 border-slate-800"
+                                )}>
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                        <div className="text-center sm:text-left">
+                                            <div className="font-semibold text-lg text-slate-200">
+                                                {format(start, "EEEE, MMMM do")}
+                                            </div>
+                                            <p className="text-sm text-indigo-200">
+                                                {format(start, "h:mm a")} - {format(end, "h:mm a")} <ClientTimezone className="text-indigo-300/70 ml-1" />
+                                            </p>
+                                            <div className="mt-2 flex gap-2 text-xs">
+                                                <span className="text-green-400">{slot.counts.yes} Yes</span>
+                                                <span className="text-yellow-400">{slot.counts.maybe} If Needed</span>
+                                                <span className="text-red-400">{slot.counts.no} No</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 p-1 bg-slate-950 rounded-lg border border-slate-800">
+                                            <VoteButton
+                                                active={myVote === 'YES'}
+                                                onClick={() => handleVote(slot.id, 'YES')}
+                                                color="green"
+                                                icon={<Check className="w-5 h-5" />}
+                                                label="Available"
+                                                title="Yes, I can make it"
+                                            />
+                                            <VoteButton
+                                                active={myVote === 'MAYBE'}
+                                                onClick={() => handleVote(slot.id, 'MAYBE')}
+                                                color="yellow"
+                                                icon={<HelpCircle className="w-5 h-5" />}
+                                                label="If Needed"
+                                                title="I'll be there if you need me."
+                                            />
+                                            <VoteButton
+                                                active={myVote === 'NO'}
+                                                onClick={() => handleVote(slot.id, 'NO')}
+                                                color="red"
+                                                icon={<X className="w-5 h-5" />}
+                                                label="No"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {(myVote === 'YES' || myVote === 'MAYBE') && (
+                                        <div className="mt-3 pt-3 border-t border-slate-800/50 flex items-center justify-end gap-2">
+                                            <label className="text-sm text-slate-400 cursor-pointer select-none flex items-center gap-2 hover:text-indigo-400 transition-colors">
+                                                <input
+                                                    type="checkbox"
+                                                    className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                                                    checked={canHost[slot.id] || false}
+                                                    onChange={() => toggleHost(slot.id)}
+                                                />
+                                                I can host at my place
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        <button
+                            onClick={() => submitVotes()}
+                            disabled={isSubmitting || Object.values(votes).filter(v => v !== undefined).length < slots.length}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin" /> :
+                                Object.values(votes).filter(v => v !== undefined).length < slots.length
+                                    ? "Select preferences for all times"
+                                    : "Submit Votes"}
+                        </button>
+
+                        <SuggestTime
+                            slug={slug}
+                            serverParticipantId={participantId || undefined}
+                            participants={participants}
+                        />
+                    </div>
+                )}
+
+                {/* ── Quick Calendar view ── */}
+                {viewMode === "quick" && (
+                    <QuickSelectionCalendar
+                        slots={slots}
+                        votes={votes}
+                        onVotesChange={setVotes}
+                        onSave={handleQuickSave}
+                        isSubmitting={isSubmitting}
+                        userName={userName}
+                    />
+                )}
             </div>
 
             {/* Right Col: Participants List */}
@@ -390,17 +385,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                     </ul>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
 
-/**
- * @component VoteButton
- * @description Helper component for an individual vote option (YES/MAYBE/NO).
- *
- * @param {Object} props - implicit any, needs cleanup in future.
- * @returns {JSX.Element} The button.
- */
 function VoteButton({ active, onClick, color, icon, label, title }: any) {
     const activeClasses: any = {
         green: "bg-green-600 text-white shadow-green-900/20",
@@ -421,5 +409,5 @@ function VoteButton({ active, onClick, color, icon, label, title }: any) {
             {icon}
             <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
         </button>
-    )
+    );
 }
