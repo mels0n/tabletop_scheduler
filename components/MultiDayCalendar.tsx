@@ -64,7 +64,7 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                 <button
                     type="button"
                     onClick={() => setViewDate((d) => subMonths(d, 1))}
-                    className="p-2 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
                     aria-label="Previous month"
                 >
                     <ChevronLeft className="w-4 h-4" />
@@ -75,7 +75,7 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                 <button
                     type="button"
                     onClick={() => setViewDate((d) => addMonths(d, 1))}
-                    className="p-2 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
                     aria-label="Next month"
                 >
                     <ChevronRight className="w-4 h-4" />
@@ -91,8 +91,12 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                 ))}
             </div>
 
-            {/* Day grid — pointer-move fires here so drag stays smooth */}
-            <div className="grid grid-cols-7 gap-0.5" onPointerMove={handlePointerMove}>
+            {/* Day grid — touch-action:none prevents scroll from fighting drag */}
+            <div
+                className="grid grid-cols-7 gap-0.5"
+                style={{ touchAction: "none" }}
+                onPointerMove={handlePointerMove}
+            >
                 {Array.from({ length: firstDayOfWeek }).map((_, i) => (
                     <div key={`empty-${i}`} />
                 ))}
@@ -109,7 +113,7 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                             data-date={isPast ? undefined : dateStr}
                             onPointerDown={isPast ? undefined : (e) => handlePointerDown(e, dateStr)}
                             className={[
-                                "aspect-square flex items-center justify-center rounded-md text-sm transition-colors",
+                                "min-h-[44px] flex items-center justify-center rounded-md text-sm transition-colors",
                                 isPast
                                     ? "text-slate-700 cursor-not-allowed"
                                     : "cursor-pointer",
