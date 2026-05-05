@@ -5,6 +5,8 @@ import { getDonations } from "@/lib/donations";
 import { getEventStats } from "@/lib/event-stats";
 import DonationTicker from "@/components/DonationTicker";
 
+export const revalidate = 43200; // 12 hours
+
 
 /**
  * @component Home
@@ -136,7 +138,7 @@ export default async function Home() {
             </div>
           </div>
           <p className="text-xs text-slate-500 text-center max-w-lg mt-2">
-            * We automatically delete expired events for your privacy. These stats reflect the currently active community.
+            * Stats refresh every 12 hours and reflect the currently active community. We automatically delete expired events for your privacy.
           </p>
         </div>
       )}
