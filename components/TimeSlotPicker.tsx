@@ -1,98 +1,102 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, X, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ClientTimezone } from "./ClientDate";
-import { DateTimeRangeInputs } from "./DateTimeRangeInputs";
+import { MultiDayCalendar } from "./MultiDayCalendar";
 
-/**
- * @interface TimeSlot
- * @description Structure for a proposed event time slot.
- * @property {string} id - Temporary unique ID for UI management.
- * @property {string} startTime - ISO 8601 string for start time.
- * @property {string} endTime - ISO 8601 string for end time.
- */
 export interface TimeSlot {
-    id: string; // temp id for UI
-    startTime: string; // ISO string
-    endTime: string; // ISO string
+    id: string;
+    startTime: string;
+    endTime: string;
 }
 
-/**
- * @interface TimeSlotPickerProps
- * @description Props for the TimeSlotPicker component.
- * @property {TimeSlot[]} value - Current list of selected slots.
- * @property {function} onChange - Callback when slots list changes.
- */
 interface TimeSlotPickerProps {
     value: TimeSlot[];
     onChange: (slots: TimeSlot[]) => void;
 }
 
-/**
- * @component TimeSlotPicker
- * @description A complex UI component for defining multiple date/time ranges for an event.
- * Features:
- * 1. Date + Start Time + End Time input group.
- * 2. Validation: Past events, End < Start, Duplicates.
- * 3. List display of currently added slots with removal capability.
- *
- * @param {TimeSlotPickerProps} props - Component props.
- * @returns {JSX.Element} The interactive picker UI.
- */
 export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
-    const [date, setDate] = useState("");
+    const [selectedDates, setSelectedDates] = useState<string[]>([]);
+    const [showCalendar, setShowCalendar] = useState(false);
     const [start, setStart] = useState("18:00");
     const [end, setEnd] = useState("22:00");
+    const datePickerRef = useRef<HTMLDivElement>(null);
 
-    /**
-     * Validates and adds the current input state as a new time slot.
-     */
-    const addSlot = () => {
-        if (!date || !start || !end) return;
-
-        // Intent: Construct full ISO strings from local inputs.
-        // We use native Date parsing which handles local timezone automatically (browser context).
-        const startDateTime = new Date(`${date}T${start}:00`);
-        const endDateTime = new Date(`${date}T${end}:00`);
-        const now = new Date();
-
-        // Validation Rule 1: No past events
-        if (startDateTime < now) {
-            alert("You cannot schedule events in the past.");
-            return;
-        }
-
-        // Validation Rule 2: Chronological order
-        if (endDateTime <= startDateTime) {
-            alert("End time must be after start time");
-            return;
-        }
-
-        // Validation Rule 3: Uniqueness check
-        const isDuplicate = value.some(slot =>
-            slot.startTime === startDateTime.toISOString() &&
-            slot.endTime === endDateTime.toISOString()
-        );
-
-        if (isDuplicate) {
-            alert("This time slot has already been added");
-            return;
-        }
-
-        const newSlot: TimeSlot = {
-            id: self.crypto.randomUUID(),
-            startTime: startDateTime.toISOString(),
-            endTime: endDateTime.toISOString(),
+    // Close calendar on outside click or Escape
+    useEffect(() => {
+        const handleOutside = (e: MouseEvent) => {
+            if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+                setShowCalendar(false);
+            }
         };
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setShowCalendar(false);
+        };
+        document.addEventListener("mousedown", handleOutside);
+        document.addEventListener("keydown", handleEscape);
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
 
-        onChange([...value, newSlot]);
+    const dateLabel =
+        selectedDates.length === 0
+            ? null
+            : selectedDates.length === 1
+                ? format(new Date(selectedDates[0] + "T00:00:00"), "MMM d, yyyy")
+                : `${selectedDates.length} days selected`;
+
+    const addSlot = () => {
+        if (selectedDates.length === 0 || !start || !end) return;
+
+        const now = new Date();
+        const newSlots: TimeSlot[] = [];
+        const skipped: string[] = [];
+
+        for (const date of selectedDates) {
+            const startDateTime = new Date(`${date}T${start}:00`);
+            const endDateTime = new Date(`${date}T${end}:00`);
+
+            if (endDateTime <= startDateTime) {
+                alert("End time must be after start time.");
+                return;
+            }
+
+            if (startDateTime < now) {
+                skipped.push(date);
+                continue;
+            }
+
+            const isDuplicate = value.some(
+                (slot) =>
+                    slot.startTime === startDateTime.toISOString() &&
+                    slot.endTime === endDateTime.toISOString()
+            );
+            if (isDuplicate) continue;
+
+            newSlots.push({
+                id: self.crypto.randomUUID(),
+                startTime: startDateTime.toISOString(),
+                endTime: endDateTime.toISOString(),
+            });
+        }
+
+        if (newSlots.length > 0) {
+            onChange([...value, ...newSlots]);
+            setSelectedDates([]);
+            setShowCalendar(false);
+        }
+
+        if (skipped.length > 0) {
+            alert(
+                `${skipped.length} date${skipped.length !== 1 ? "s" : ""} skipped — they are in the past.`
+            );
+        }
     };
 
-    /**
-     * Removes a slot by its temporary ID.
-     */
     const removeSlot = (id: string) => {
         onChange(value.filter((s) => s.id !== id));
     };
@@ -108,21 +112,67 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                 </div>
                 <span className="text-sm text-slate-400">{value.length} slots added</span>
             </div>
-            {/* Input Controls */}
+
+            {/* Input Controls — original row layout restored */}
             <div className="flex flex-wrap gap-4 p-4 border border-slate-700 rounded-lg bg-slate-900/50">
-                <DateTimeRangeInputs
-                    date={date} setDate={setDate}
-                    start={start} setStart={setStart}
-                    end={end} setEnd={setEnd}
-                />
+
+                {/* Date field — opens multi-day calendar popover */}
+                <div className="flex flex-col gap-1 flex-1 min-w-[160px] relative" ref={datePickerRef}>
+                    <label className="text-xs text-slate-400">Date</label>
+                    <button
+                        type="button"
+                        data-testid="slot-date-input"
+                        onClick={() => setShowCalendar((v) => !v)}
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full transition-colors hover:border-slate-600"
+                    >
+                        <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className={dateLabel ? "text-slate-200 text-sm" : "text-slate-500 text-sm"}>
+                            {dateLabel ?? "mm/dd/yyyy"}
+                        </span>
+                    </button>
+
+                    {showCalendar && (
+                        <div className="absolute top-full left-0 z-50 mt-1 p-3 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-72">
+                            <MultiDayCalendar
+                                selectedDates={selectedDates}
+                                onDatesChange={setSelectedDates}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Time inputs — unchanged */}
+                <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
+                    <label className="text-xs text-slate-400">Start</label>
+                    <input
+                        type="time"
+                        data-testid="slot-start-input"
+                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                        value={start}
+                        onChange={(e) => setStart(e.target.value)}
+                    />
+                </div>
+                <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
+                    <label className="text-xs text-slate-400">End</label>
+                    <input
+                        type="time"
+                        data-testid="slot-end-input"
+                        className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                        value={end}
+                        onChange={(e) => setEnd(e.target.value)}
+                    />
+                </div>
+
                 <div className="flex items-end">
                     <button
                         data-testid="add-slot-button"
                         type="button"
                         onClick={addSlot}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium transition-colors"
+                        disabled={selectedDates.length === 0}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
                     >
-                        <Plus className="w-4 h-4" /> Add Slot
+                        <Plus className="w-4 h-4" />
+                        {selectedDates.length > 1 ? `Add ${selectedDates.length} Slots` : "Add Slot"}
                     </button>
                 </div>
             </div>
