@@ -5,7 +5,7 @@ import {
     format, startOfMonth, endOfMonth, eachDayOfInterval,
     getDay, addMonths, subMonths, isBefore, isAfter,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Check, HelpCircle, X, Info, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, HelpCircle, X, Info, Loader2, Home } from "lucide-react";
 import { clsx } from "clsx";
 
 interface Slot {
@@ -25,6 +25,8 @@ interface QuickSelectionCalendarProps {
     onSave: (completeVotes: Record<number, string | undefined>) => void;
     isSubmitting: boolean;
     userName: string;
+    canHost: Record<number, boolean>;
+    onCanHostChange: (h: Record<number, boolean>) => void;
 }
 
 const BRUSH_CONFIG: { pref: Preference; label: string; sub: string; icon: React.ReactNode; active: string; inactive: string }[] = [
@@ -70,8 +72,11 @@ export function QuickSelectionCalendar({
     onSave,
     isSubmitting,
     userName,
+    canHost,
+    onCanHostChange,
 }: QuickSelectionCalendarProps) {
     const [brush, setBrush] = useState<Preference>("YES");
+    const [hostBrush, setHostBrush] = useState(false);
     const [viewDate, setViewDate] = useState(() => {
         if (slots.length > 0) return startOfMonth(new Date(slots[0].startTime));
         return startOfMonth(new Date());
@@ -83,6 +88,10 @@ export function QuickSelectionCalendar({
     votesRef.current = votes;
     const brushRef = useRef(brush);
     brushRef.current = brush;
+    const hostBrushRef = useRef(hostBrush);
+    hostBrushRef.current = hostBrush;
+    const canHostRef = useRef(canHost);
+    canHostRef.current = canHost;
 
     // Group slots by calendar date, sorted earliest-first within each day
     const slotsByDay = new Map<string, Slot[]>();
@@ -130,12 +139,29 @@ export function QuickSelectionCalendar({
     const applyBrush = (slotId: number) => {
         const next = { ...votesRef.current, [slotId]: brushRef.current };
         onVotesChange(next);
+
+        const nextHost = { ...canHostRef.current };
+        if (brushRef.current === "NO" || !hostBrushRef.current) {
+            delete nextHost[slotId];
+        } else {
+            nextHost[slotId] = true;
+        }
+        onCanHostChange(nextHost);
     };
 
     const handleSlotPointerDown = (e: React.PointerEvent, slotId: number) => {
         e.preventDefault();
         isPaintingRef.current = true;
-        applyBrush(slotId);
+        if (votesRef.current[slotId] === brushRef.current) {
+            // Tapping the same preference deselects; dragging always paints
+            const next = { ...votesRef.current, [slotId]: undefined };
+            onVotesChange(next);
+            const nextHost = { ...canHostRef.current };
+            delete nextHost[slotId];
+            onCanHostChange(nextHost);
+        } else {
+            applyBrush(slotId);
+        }
     };
 
     const handleGridPointerMove = (e: React.PointerEvent) => {
@@ -180,7 +206,10 @@ export function QuickSelectionCalendar({
                         <button
                             key={pref}
                             type="button"
-                            onClick={() => setBrush(pref)}
+                            onClick={() => {
+                                setBrush(pref);
+                                if (pref === "NO") setHostBrush(false);
+                            }}
                             className={clsx(
                                 "flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all min-h-[44px]",
                                 brush === pref ? active : inactive
@@ -193,6 +222,28 @@ export function QuickSelectionCalendar({
                             </span>
                         </button>
                     ))}
+                </div>
+                <div className="flex items-center gap-3 pt-1 border-t border-slate-800/50">
+                    <button
+                        type="button"
+                        disabled={brush === "NO"}
+                        onClick={() => setHostBrush(h => !h)}
+                        className={clsx(
+                            "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all min-h-[36px]",
+                            hostBrush && brush !== "NO"
+                                ? "bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900"
+                                : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200",
+                            brush === "NO" && "opacity-40 cursor-not-allowed"
+                        )}
+                    >
+                        <Home className="w-3.5 h-3.5" />
+                        <span>Can Host</span>
+                    </button>
+                    <span className="text-xs text-slate-500">
+                        {hostBrush && brush !== "NO"
+                            ? "Painted slots will include hosting"
+                            : "Enable to mark you can host as you paint"}
+                    </span>
                 </div>
             </div>
 
