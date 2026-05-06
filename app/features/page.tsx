@@ -1,4 +1,4 @@
-import { Zap, Users, Trophy, Calendar, Bot, Check, X, Shield, Clock } from 'lucide-react';
+import { Zap, Users, Trophy, Calendar, CalendarDays, Bot, Check, X, Shield, Clock } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
@@ -83,6 +83,11 @@ export default function FeaturesPage() {
                         icon={<Bot className="w-8 h-8 text-cyan-400" />}
                         title="Chat Integration"
                         description="Don't leave the group chat. Our Telegram & Discord bots assist with voting, reminders, and managing the event directly from your DM."
+                    />
+                    <FeatureCard
+                        icon={<CalendarDays className="w-8 h-8 text-violet-400" />}
+                        title="Campaign / Multi-Session Scheduling"
+                        description="Running a D&D campaign, Legacy series, or recurring game night? Campaign mode groups candidate dates by shared player availability so you can see at a glance which run of sessions works for your whole table. Click the group that fits, tick the dates you want, and confirm — all inline, no extra steps. Per-session Google, Outlook, and .ics calendar buttons are generated automatically."
                     />
                 </div>
 

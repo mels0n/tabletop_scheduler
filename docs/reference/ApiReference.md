@@ -24,9 +24,17 @@ Example: `https://tabletoptime.us/api/event`
     { "startTime": "2023-11-01T18:00:00.000Z", "endTime": "2023-11-01T22:00:00.000Z" }
   ],
   "fromUrl": "https://callback.com/webhook",
-  "fromUrlId": "ext-123"
+  "fromUrlId": "ext-123",
+  "eventType": "ONE_SHOT",
+  "minSessions": 3
 }
 ```
+
+**Campaign Fields:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `eventType` | string | `"ONE_SHOT"` | `"ONE_SHOT"` for a single session event, `"CAMPAIGN"` for a multi-session series (D&D campaigns, Legacy games, recurring nights). |
+| `minSessions` | integer | — | Required when `eventType` is `"CAMPAIGN"`. The minimum number of sessions that must be locked in when finalizing. |
 
 ### Pre-fill Creation Form
 You can link users to the "Create Event" page with pre-filled values using query parameters.
@@ -121,16 +129,40 @@ Retrieve read-only details about a specific event.
 
 ### Finalize Event
 **Endpoint:** `POST /api/event/[slug]/finalize`
-**Description:** Selects a final time slot and locks the event.
-**Headers:** `Content-Type: multipart/form-data`
-**Body:**
-- `slotId`: ID of the TimeSlot.
-- `houseId`: (Optional) Participant ID of the host.
-- `location`: (Optional) String text for location.
+**Description:** Selects a final time slot (or multiple sessions for campaigns) and locks the event.
 
-**Response:**
-- **Success:** Redirects to the event management dashboard.
-- **Error:** Returns JSON with error details.
+**ONE_SHOT events:**
+- **Headers:** `Content-Type: multipart/form-data`
+- **Body:**
+  - `slotId`: ID of the TimeSlot.
+  - `houseId`: (Optional) Participant ID of the host.
+  - `location`: (Optional) String text for location.
+- **Response (Success):** Redirects to the event management dashboard.
+- **Response (Error):** Returns JSON with error details.
+
+**CAMPAIGN events:**
+- **Headers:** `Content-Type: application/json`
+- **Body:**
+```json
+{
+  "slotIds": [101, 104, 107],
+  "houseId": "42",
+  "location": "John's House"
+}
+```
+- `slotIds` (required): Array of TimeSlot IDs to lock as confirmed sessions.
+- `houseId` (optional): Participant ID of the host as a string.
+- `location` (optional): String text for location.
+- **Response (Success):**
+```json
+{
+  "success": true,
+  "sessionCount": 3,
+  "warning": "Fewer sessions selected than the minimum."
+}
+```
+  - `sessionCount`: Number of sessions that were locked in.
+  - `warning` (optional): Returned (non-blocking) if `slotIds.length` is less than the event's `minSessions` value. The finalization still succeeds.
 
 ### Add Time Slot
 **Endpoint:** `POST /api/event/[slug]/slot`
@@ -282,7 +314,7 @@ Sent immediately after `POST /api/event` success if `fromUrl` is present.
 #### 2. Event Finalized
 Sent when the event is successfully finalized.
 
-**Payload:**
+**Payload (ONE_SHOT):**
 ```json
 {
   "type": "FINALIZED",
@@ -296,6 +328,31 @@ Sent when the event is successfully finalized.
     "startTime": "2023-12-01T18:00:00.000Z",
     "endTime": "2023-12-01T22:00:00.000Z"
   },
+  "attendees": ["Alice", "Bob"],
+  "waitlist": ["Charlie"],
+  "location": "Game Store A",
+  "timestamp": "2023-11-28T10:00:00.000Z"
+}
+```
+
+**Payload (CAMPAIGN):**
+
+CAMPAIGN events send `eventType: "CAMPAIGN"` and a `finalizedSessions` array instead of `finalizedSlot`. Each entry in `finalizedSessions` represents one locked session. ONE_SHOT events continue to use the `finalizedSlot` key and do not include `eventType`.
+
+```json
+{
+  "type": "FINALIZED",
+  "eventType": "CAMPAIGN",
+  "eventId": 123,
+  "fromUrlId": "external-id-123",
+  "slug": "8f8f8f8f",
+  "link": "https://tabletoptime.us/e/8f8f8f8f",
+  "title": "My Campaign",
+  "finalizedSessions": [
+    { "id": 101, "startTime": "2023-12-01T18:00:00.000Z", "endTime": "2023-12-01T22:00:00.000Z" },
+    { "id": 104, "startTime": "2023-12-08T18:00:00.000Z", "endTime": "2023-12-08T22:00:00.000Z" },
+    { "id": 107, "startTime": "2023-12-15T18:00:00.000Z", "endTime": "2023-12-15T22:00:00.000Z" }
+  ],
   "attendees": ["Alice", "Bob"],
   "waitlist": ["Charlie"],
   "location": "Game Store A",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { TimeSlotPicker, TimeSlot } from "@/components/TimeSlotPicker";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import { setAdminCookie } from "@/features/auth/server/actions";
 
 /**
@@ -60,6 +60,14 @@ function NewEventForm() {
         return [];
     });
 
+    const [eventType, setEventType] = useState<"ONE_SHOT" | "CAMPAIGN">("ONE_SHOT");
+    const [minSessions, setMinSessions] = useState(4);
+
+    // Tooltip visibility state
+    const [showOneShotTooltip, setShowOneShotTooltip] = useState(false);
+    const [showCampaignTooltip, setShowCampaignTooltip] = useState(false);
+    const [showMinSessionsTooltip, setShowMinSessionsTooltip] = useState(false);
+
     // Intent: Track success state to prevent UI reset during navigation delay
     const [success, setSuccess] = useState(false);
 
@@ -85,6 +93,8 @@ function NewEventForm() {
                     // They can be added later in the Manager Dashboard.
                     minPlayers,
                     maxPlayers,
+                    eventType,
+                    ...(eventType === "CAMPAIGN" ? { minSessions } : {}),
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     slots,
                     fromUrl: searchParams.get("fromUrl"),
@@ -133,6 +143,115 @@ function NewEventForm() {
                 </h1>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Event Type Selector */}
+                    <div className="space-y-3">
+                        <label className="font-semibold text-slate-200">Event Type</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* One-Shot Card */}
+                            <button
+                                type="button"
+                                onClick={() => setEventType("ONE_SHOT")}
+                                className={`text-left p-4 rounded-lg border-2 transition-all bg-slate-900 ${
+                                    eventType === "ONE_SHOT"
+                                        ? "border-indigo-500 ring-1 ring-indigo-500/40"
+                                        : "border-slate-700 hover:border-slate-500"
+                                }`}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <p className={`font-semibold text-sm ${eventType === "ONE_SHOT" ? "text-indigo-400" : "text-slate-200"}`}>
+                                            One-Shot Session
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            A single session scheduled from your candidate dates
+                                        </p>
+                                    </div>
+                                    <div className="relative flex-shrink-0 mt-0.5">
+                                        <Info
+                                            size={15}
+                                            className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                                            onMouseEnter={() => setShowOneShotTooltip(true)}
+                                            onMouseLeave={() => setShowOneShotTooltip(false)}
+                                        />
+                                        {showOneShotTooltip && (
+                                            <div className="absolute right-0 top-6 z-10 w-56 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
+                                                Best for one-time events, conventions, or trying a new game with a group
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </button>
+
+                            {/* Campaign Card */}
+                            <button
+                                type="button"
+                                onClick={() => setEventType("CAMPAIGN")}
+                                className={`text-left p-4 rounded-lg border-2 transition-all bg-slate-900 ${
+                                    eventType === "CAMPAIGN"
+                                        ? "border-indigo-500 ring-1 ring-indigo-500/40"
+                                        : "border-slate-700 hover:border-slate-500"
+                                }`}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <p className={`font-semibold text-sm ${eventType === "CAMPAIGN" ? "text-indigo-400" : "text-slate-200"}`}>
+                                            Campaign / Series
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            Schedule multiple sessions for an ongoing campaign or game night series
+                                        </p>
+                                    </div>
+                                    <div className="relative flex-shrink-0 mt-0.5">
+                                        <Info
+                                            size={15}
+                                            className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                                            onMouseEnter={() => setShowCampaignTooltip(true)}
+                                            onMouseLeave={() => setShowCampaignTooltip(false)}
+                                        />
+                                        {showCampaignTooltip && (
+                                            <div className="absolute right-0 top-6 z-10 w-64 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
+                                                Best for D&amp;D campaigns, ongoing board game series, or recurring game nights where you need to lock in multiple sessions
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Minimum Sessions — shown only for Campaign */}
+                        {eventType === "CAMPAIGN" && (
+                            <div className="flex flex-col gap-2 pt-1">
+                                <div className="flex items-center gap-2">
+                                    <label className="font-semibold text-slate-200 text-sm">Minimum Sessions</label>
+                                    <div className="relative">
+                                        <Info
+                                            size={14}
+                                            className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                                            onMouseEnter={() => setShowMinSessionsTooltip(true)}
+                                            onMouseLeave={() => setShowMinSessionsTooltip(false)}
+                                        />
+                                        {showMinSessionsTooltip && (
+                                            <div className="absolute left-0 top-5 z-10 w-72 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
+                                                You&apos;ll see a warning during finalization if you haven&apos;t selected enough dates. This is a guide — it won&apos;t block you.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-slate-400">
+                                    The minimum number of sessions you&apos;re trying to schedule for this campaign
+                                </p>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="52"
+                                    className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full md:w-40 text-base"
+                                    value={minSessions}
+                                    onChange={(e) => setMinSessions(parseInt(e.target.value) || 1)}
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <div className="space-y-4">
                         <div className="flex flex-col gap-2">
                             <label className="font-semibold text-slate-200">Event Title</label>
@@ -195,6 +314,11 @@ function NewEventForm() {
 
                     <div className="space-y-4">
                         <TimeSlotPicker value={slots} onChange={setSlots} />
+                        {eventType === "CAMPAIGN" && (
+                            <p className="text-xs text-slate-400 mt-1">
+                                Add all candidate dates — players will vote on each one
+                            </p>
+                        )}
                     </div>
 
                     <div className="pt-6 border-t border-slate-800">

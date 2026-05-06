@@ -35,7 +35,63 @@ export async function GET(
             include: { timeSlots: true, finalizedHost: true }
         });
 
-        if (!event || event.status !== 'FINALIZED' || !event.finalizedSlotId) {
+        if (!event || event.status !== 'FINALIZED') {
+            return newResponse("Event not finalized or not found", 404);
+        }
+
+        // Determine Base URL purely for the Description link
+        const { getBaseUrl } = await import("@/shared/lib/url");
+        const origin = getBaseUrl(req.headers);
+        const url = `${origin}/e/${event.slug}`;
+        const dtstamp = formatDateICS(new Date());
+
+        // Campaign: ?slot=<slotId> downloads a single session; no param downloads all sessions.
+        if (event.eventType === 'CAMPAIGN') {
+            const slotParam = new URL(req.url).searchParams.get('slot');
+
+            const sessions = await prisma.finalizedSession.findMany({
+                where: {
+                    eventId: event.id,
+                    ...(slotParam ? { timeSlotId: parseInt(slotParam) } : {})
+                },
+                include: { timeSlot: true },
+                orderBy: { timeSlot: { startTime: 'asc' } }
+            });
+
+            if (sessions.length === 0) {
+                return newResponse("Session not found", 404);
+            }
+
+            const participants = await prisma.participant.findMany({
+                where: { eventId: event.id, status: 'ACCEPTED' },
+                select: { name: true }
+            });
+            const playerList = participants.length > 0
+                ? `Players: ${participants.map((p: { name: string }) => p.name).join(', ')}\\n\\n`
+                : '';
+
+            const baseDesc = `${event.description ? event.description + '\\n\\n' : ''}Hosted by ${event.finalizedHost?.name || 'TBD'}.\\nView Event: ${url}`;
+
+            const allSessions = await prisma.finalizedSession.findMany({ where: { eventId: event.id }, orderBy: { timeSlot: { startTime: 'asc' } }, include: { timeSlot: true } });
+
+            const vevents = sessions.map((session: any) => {
+                const sessionNumber = allSessions.findIndex((s: any) => s.id === session.id) + 1;
+                const start = formatDateICS(new Date(session.timeSlot.startTime));
+                const end = formatDateICS(new Date(session.timeSlot.endTime));
+                return `BEGIN:VEVENT\nUID:${event.slug}-session-${sessionNumber}@tabletoptime.local\nDTSTAMP:${dtstamp}\nDTSTART:${start}\nDTEND:${end}\nSUMMARY:${event.title} — Session ${sessionNumber}\nDESCRIPTION:${playerList}${baseDesc}\nEND:VEVENT`;
+            }).join('\n');
+
+            const filename = slotParam
+                ? `${event.slug}-session-${sessions[0] ? allSessions.findIndex((s: any) => s.id === sessions[0].id) + 1 : 1}.ics`
+                : `${event.slug}-campaign.ics`;
+
+            return new NextResponse(`BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TabletopTime//EN\n${vevents}\nEND:VCALENDAR`.trim(), {
+                headers: { "Content-Type": "text/calendar", "Content-Disposition": `attachment; filename="${filename}"` }
+            });
+        }
+
+        // Intent: ONE_SHOT — existing single-slot logic.
+        if (!event.finalizedSlotId) {
             return newResponse("Event not finalized or not found", 404);
         }
 
@@ -46,11 +102,6 @@ export async function GET(
         const start = formatDateICS(new Date(slot.startTime));
         const end = formatDateICS(new Date(slot.endTime));
 
-        // Determine Base URL purely for the Description link
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const origin = getBaseUrl(req.headers);
-        const url = `${origin}/e/${event.slug}`;
-
         // Intent: Escape newlines for ICS format compatibility
         const descText = `${event.description ? event.description + '\\n\\n' : ''}Hosted by ${event.finalizedHost?.name || 'TBD'}.\\nView Event: ${url}`;
 
@@ -59,7 +110,7 @@ VERSION:2.0
 PRODID:-//TabletopTime//EN
 BEGIN:VEVENT
 UID:${event.slug}@tabletoptime.local
-DTSTAMP:${formatDateICS(new Date())}
+DTSTAMP:${dtstamp}
 DTSTART:${start}
 DTEND:${end}
 SUMMARY:${event.title}

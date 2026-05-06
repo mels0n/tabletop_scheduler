@@ -234,9 +234,9 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                         ) : (
                             <div className="flex items-center justify-between">
                                 <div className="text-sm text-slate-300">
-                                    {new Date(slot.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                    <span suppressHydrationWarning>{new Date(slot.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
                                     <span className="text-slate-500 mx-2">to</span>
-                                    {new Date(slot.endTime).toLocaleString([], { timeStyle: 'short' })}
+                                    <span suppressHydrationWarning>{new Date(slot.endTime).toLocaleString([], { timeStyle: 'short' })}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button

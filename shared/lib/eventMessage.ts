@@ -89,3 +89,62 @@ export function buildFinalizedMessage(
 
     return `🎉 <b>Event Finalized!</b>\n\n<b>${event.title}</b> is happening on:\n📅 ${dateString}\n⏰ ${timeString}${hostString}${locString}${listString}\n\n<a href="${eventUrl}">🔗 View Event Details</a>\n<a href="${googleLink}">📅 Google Calendar</a> | <a href="${outlookLink}">📧 Outlook</a> | <a href="${icsLink}">📎 ICS</a>\n\nSee you there!`;
 }
+
+/**
+ * @function buildCampaignFinalizedMessage
+ * @description Constructs a rich HTML formatted Telegram message for a finalized campaign.
+ * Lists every session with its date and time. No per-session calendar provider links —
+ * just a single bulk ICS download and an event link.
+ *
+ * @param {EventData} event - The event details.
+ * @param {SlotData[]} slots - All finalized session slots, sorted by startTime.
+ * @param {string} origin - The base URL origin.
+ * @param {string[]} [attendees] - List of accepted participant names.
+ * @param {string[]} [waitlist] - List of waitlisted participant names.
+ * @returns {string} HTML string compatible with Telegram's parse_mode='HTML'.
+ */
+export function buildCampaignFinalizedMessage(
+    event: EventData,
+    slots: SlotData[],
+    origin: string,
+    attendees: string[] = [],
+    waitlist: string[] = []
+): string {
+    const icsLink = `${origin}/api/event/${event.slug}/ics`;
+    const eventUrl = `${origin}/e/${event.slug}`;
+
+    const tz = event.timezone || 'UTC';
+
+    // Intent: Build a numbered session list with date and time for each slot.
+    const sessionLines = slots.map((slot, i) => {
+        const slotTime = new Date(slot.startTime);
+
+        const dateString = slotTime.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            timeZone: tz
+        });
+
+        const timeString = slotTime.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: tz,
+            timeZoneName: 'short'
+        });
+
+        return `  ${i + 1}. 📅 ${dateString} ⏰ ${timeString}`;
+    }).join('\n');
+
+    let hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
+    let locString = event.location ? `\n📍 ${event.location}` : "";
+
+    // Intent: Add Attendee Lists if applicable (Max Players logic)
+    let listString = "";
+    if (waitlist.length > 0) {
+        listString += `\n\n👥 <b>Attendees:</b>\n${attendees.map(a => `- ${a}`).join('\n')}`;
+        listString += `\n\n⚠️ <b>Waitlist (Next Up):</b>\n${waitlist.map(w => `- ${w}`).join('\n')}`;
+    }
+
+    return `🎉 <b>Campaign Finalized!</b>\n\n<b>${event.title}</b>\n\n${sessionLines}${hostString}${locString}${listString}\n\n<a href="${eventUrl}">🔗 View Event Details</a> | <a href="${icsLink}">📎 Download ICS</a>\n\nSee you there!`;
+}

@@ -23,12 +23,15 @@ export async function getEventStats(): Promise<EventStats> {
   try {
     // Parallel COUNT queries on indexed fields (eventId, status)
     // These are very fast even on SQLite with moderate data volumes
-    const [totalEvents, activeEvents, totalParticipants, finalizedEvents] = await Promise.all([
+    // finalizedEvents: one-shots count as 1 each; campaigns count each locked FinalizedSession as 1
+    const [totalEvents, activeEvents, totalParticipants, oneShotFinalized, campaignSessions] = await Promise.all([
       prisma.event.count(), // Fast: no WHERE clause
       prisma.event.count({ where: { status: 'DRAFT' } }), // Fast: indexed status field
       prisma.participant.count(), // Fast: no WHERE clause
-      prisma.event.count({ where: { status: 'FINALIZED' } }), // Fast: indexed status field
+      prisma.event.count({ where: { status: 'FINALIZED', eventType: 'ONE_SHOT' } }), // Fast: indexed status + eventType
+      prisma.finalizedSession.count(), // Fast: no WHERE clause
     ]);
+    const finalizedEvents = oneShotFinalized + campaignSessions;
 
     return {
       totalEvents,
