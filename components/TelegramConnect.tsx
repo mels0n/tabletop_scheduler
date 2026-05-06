@@ -64,8 +64,12 @@ export function TelegramConnect({
     // Intent: Define wizard steps for the connection flow.
     const [step, setStep] = useState<'initial' | 'bot_not_in_group' | 'bot_in_group' | 'link_saved'>('initial');
 
+    // Only poll after the user has taken an action that expects a Telegram response.
+    const [isPolling, setIsPolling] = useState(false);
+
     // Intent: Poll for status update when not connected to provide real-time feedback.
     useEffect(() => {
+        if (!isPolling) return;
         if (hasChatId && hasManagerChatId) return;
 
         const interval = setInterval(async () => {
@@ -96,7 +100,7 @@ export function TelegramConnect({
         }, 3000);
 
         return () => clearInterval(interval);
-    }, [hasChatId, hasManagerChatId, slug, router]);
+    }, [isPolling, hasChatId, hasManagerChatId, slug, router]);
 
     const handleSaveLink = async () => {
         if (!telegramLink) return;
@@ -170,7 +174,7 @@ export function TelegramConnect({
                             </p>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => setStep('bot_in_group')}
+                                    onClick={() => { setStep('bot_in_group'); setIsPolling(true); }}
                                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors"
                                 >
                                     Yes, it is
@@ -291,6 +295,7 @@ export function TelegramConnect({
                                     const res = await generateShortRecoveryToken(slug);
                                     if (res.token) {
                                         window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
+                                        setIsPolling(true);
                                     } else {
                                         // Silent error or retry?
                                     }
