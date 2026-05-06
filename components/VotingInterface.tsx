@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ClientTimezone } from "./ClientDate";
-import { Check, HelpCircle, X, User as UserIcon, Loader2, LayoutList, CalendarDays } from "lucide-react";
+import { Check, HelpCircle, X, User as UserIcon, Loader2, LayoutList, CalendarDays, CalendarRange, Info } from "lucide-react";
 import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
@@ -25,11 +25,12 @@ interface VotingInterfaceProps {
     slug: string;
     serverParticipantId?: number;
     discordIdentity?: { id: string, username: string };
+    eventType?: "ONE_SHOT" | "CAMPAIGN";
 }
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, eventType = "ONE_SHOT" }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
@@ -42,6 +43,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
     const [hasVoted, setHasVoted] = useState(false);
     const [participantId, setParticipantId] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>("quick");
+    const [campaignTooltipOpen, setCampaignTooltipOpen] = useState(false);
 
     useEffect(() => {
         let pid = serverParticipantId;
@@ -209,6 +211,32 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                     </div>
                 </div>
 
+                {/* ── Campaign context banner ── */}
+                {eventType === "CAMPAIGN" && (
+                    <div className="bg-indigo-950/50 border border-indigo-800/50 rounded-lg p-3 flex items-start gap-3">
+                        <CalendarRange className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 text-sm text-indigo-200">
+                            This is a multi-session campaign. Vote on every date you&apos;re available — the organizer will lock in multiple sessions.
+                        </div>
+                        <div className="relative shrink-0">
+                            <button
+                                type="button"
+                                aria-label="More info about campaign voting"
+                                onClick={() => setCampaignTooltipOpen(prev => !prev)}
+                                onBlur={() => setCampaignTooltipOpen(false)}
+                                className="text-indigo-400 hover:text-indigo-300 transition-colors focus:outline-none"
+                            >
+                                <Info className="w-4 h-4" />
+                            </button>
+                            {campaignTooltipOpen && (
+                                <div className="absolute right-0 top-6 z-10 w-64 bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 shadow-lg">
+                                    Your votes help the organizer find the best set of dates. Vote YES for any date you can make, even if you can only attend some sessions.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* ── View toggle ── */}
                 <div className="flex rounded-lg border border-slate-700 overflow-hidden">
                     <button
@@ -362,6 +390,8 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                         onSave={handleQuickSave}
                         isSubmitting={isSubmitting}
                         userName={userName}
+                        canHost={canHost}
+                        onCanHostChange={setCanHost}
                     />
                 )}
             </div>

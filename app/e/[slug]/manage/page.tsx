@@ -8,6 +8,8 @@ import { ManagerControls } from "@/components/ManagerControls";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
+import { CampaignFinalizeModal } from "./CampaignFinalizeModal";
+import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
 import { getBotUsername } from "@/features/telegram/lib/telegram-client";
 import { AddToCalendar } from "@/components/AddToCalendar";
@@ -17,6 +19,7 @@ import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 
 /**
  * @interface PageProps
@@ -53,7 +56,11 @@ async function getEventWithVotes(slug: string) {
                 orderBy: { startTime: 'asc' }
             },
             participants: true,
-            finalizedHost: true
+            finalizedHost: true,
+            finalizedSessions: {
+                include: { timeSlot: true },
+                orderBy: { timeSlot: { startTime: 'asc' } }
+            }
         },
     });
     return event;
@@ -146,7 +153,118 @@ export default async function ManageEventPage({ params }: PageProps) {
     });
 
     const isFinalized = event.status === 'FINALIZED';
-    const finalizedSlot = isFinalized ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
+    const isCampaign = event.eventType === 'CAMPAIGN';
+    const finalizedSlot = isFinalized && !isCampaign ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
+    const finalizedSessions = event.finalizedSessions ?? [];
+
+    // Campaign session grouping — order-independent algorithm:
+    // 1. Compute pairwise intersections across all voted sessions to find candidate group keys
+    // 2. Rank candidate keys by size DESC then coverage DESC
+    // 3. Greedily assign each session to the largest key it qualifies for
+    // This correctly handles "same 4 + bonus player" as one group, and doesn't break
+    // when sessions have overlapping but not identical attendee sets.
+    const campaignSessionGroups = isCampaign && !isFinalized ? (() => {
+        const min = event.minPlayers;
+
+        const slotEntries = slots.map(slot => {
+            const attendees = slot.votes
+                .filter(v => v.preference === 'YES' || v.preference === 'MAYBE')
+                .map(v => ({ id: v.participant.id, name: v.participant.name, preference: v.preference as 'YES' | 'MAYBE' }))
+                .sort((a, b) => a.name.localeCompare(b.name));
+            const attendeeIds = new Set(attendees.map(a => a.id));
+            const hasHost = slot.votes.some(v => (v.preference === 'YES' || v.preference === 'MAYBE') && v.canHost);
+            return { slot: { ...slot, hasHost }, attendees, attendeeIds };
+        });
+
+        const withVotes = slotEntries.filter(e => e.attendees.length > 0);
+        const noVotes   = slotEntries.filter(e => e.attendees.length === 0);
+
+        // Step 1: collect every pairwise intersection as a candidate group key
+        const candidateMap = new Map<string, { key: Set<number>; keyAttendees: typeof withVotes[0]['attendees'] }>();
+        for (let i = 0; i < withVotes.length; i++) {
+            for (let j = i + 1; j < withVotes.length; j++) {
+                const intersection = withVotes[i].attendees.filter(a => withVotes[j].attendeeIds.has(a.id));
+                if (intersection.length === 0) continue;
+                const sig = intersection.map(a => a.id).sort((x, y) => x - y).join(',');
+                if (!candidateMap.has(sig)) {
+                    candidateMap.set(sig, { key: new Set(intersection.map(a => a.id)), keyAttendees: intersection });
+                }
+            }
+        }
+
+        // Step 2: for each candidate key, collect ALL sessions that qualify —
+        //         sessions can and should appear in multiple groups (a date with 5 players
+        //         is valid for both the 4-player group and any 2-player subset groups).
+        //         Keep groups with ≥ 2 qualifying sessions; sort largest key first.
+        type Group = { sig: string; key: Set<number>; keyAttendees: typeof withVotes[0]['attendees']; slots: Array<typeof withVotes[0]['slot']> };
+        const groups: Group[] = Array.from(candidateMap.entries())
+            .map(([sig, { key, keyAttendees }]) => ({
+                sig, key, keyAttendees,
+                slots: withVotes
+                    .filter(e => Array.from(key).every(id => e.attendeeIds.has(id)))
+                    .map(e => e.slot),
+            }))
+            .filter(g => g.slots.length >= 2)
+            .sort((a, b) => b.key.size - a.key.size || b.slots.length - a.slots.length);
+
+        // Sessions that don't appear in any group → singleton (unique player combo, no overlap)
+        const appearsInGroup = new Set(groups.flatMap(g => g.slots.map(s => s.id)));
+        for (const { slot, attendees, attendeeIds } of withVotes) {
+            if (appearsInGroup.has(slot.id)) continue;
+            const sig = Array.from(attendeeIds).sort((a, b) => a - b).join(',');
+            const existing = groups.find(g => g.sig === sig);
+            if (existing) existing.slots.push(slot);
+            else groups.push({ sig, key: attendeeIds, keyAttendees: attendees, slots: [slot] });
+        }
+
+        const minSessions = event.minSessions ?? 1;
+        const maxPlayers  = event.maxPlayers  ?? Infinity;
+
+        const result = groups
+            .map(g => {
+                const sortedSlots = g.slots.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+                const coreYesCount = Array.from(g.key).filter(id =>
+                    sortedSlots.some(s => s.votes.some((v: { participant: { id: number }; preference: string }) => v.participant.id === id && v.preference === 'YES'))
+                ).length;
+                return {
+                    attendees: g.keyAttendees,
+                    coreIds: g.key,
+                    slots: sortedSlots,
+                    meetsQuorum: g.key.size >= min,
+                    meetsMinDates: g.slots.length >= minSessions,
+                    playerCount: g.key.size,
+                    coreYesCount,
+                    noVotes: false,
+                };
+            })
+            .sort((a, b) => {
+                // 1. Groups that meet the minimum session target first
+                if (a.meetsMinDates !== b.meetsMinDates) return a.meetsMinDates ? -1 : 1;
+                // 2. Within those: most players, capped at maxPlayers (extra players beyond cap add no value)
+                const aCapped = Math.min(a.playerCount, maxPlayers);
+                const bCapped = Math.min(b.playerCount, maxPlayers);
+                if (bCapped !== aCapped) return bCapped - aCapped;
+                // 3. Most core players with a hard YES (not MAYBE) on at least one slot
+                if (b.coreYesCount !== a.coreYesCount) return b.coreYesCount - a.coreYesCount;
+                // 4. Tiebreak: most dates
+                return b.slots.length - a.slots.length;
+            });
+
+        if (noVotes.length > 0) {
+            result.push({
+                attendees: [],
+                coreIds: new Set<number>(),
+                slots: noVotes.map(e => e.slot).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+                meetsQuorum: false,
+                meetsMinDates: false,
+                playerCount: 0,
+                coreYesCount: 0,
+                noVotes: true,
+            });
+        }
+
+        return result;
+    })() : [];
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
@@ -216,8 +334,125 @@ export default async function ManageEventPage({ params }: PageProps) {
 
                     {/* RIGHT COLUMN: Slots / Finalized State */}
                     <div className="lg:col-span-7 space-y-6">
-                        {isFinalized && finalizedSlot ? (
-                            /* FINALIZED STATE UI */
+                        {isFinalized && isCampaign ? (
+                            /* CAMPAIGN FINALIZED STATE */
+                            <>
+                                <div className="p-8 rounded-2xl bg-gradient-to-br from-indigo-900/20 to-slate-900/40 border border-indigo-800/50 space-y-6">
+                                    <div className="text-center">
+                                        <h2 className="text-2xl font-bold text-indigo-300 mb-1">Campaign Finalized!</h2>
+                                        <p className="text-slate-400 text-sm">{finalizedSessions.length} session{finalizedSessions.length !== 1 ? 's' : ''} locked in</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {finalizedSessions.map((fs, i) => {
+                                            const calEvent = {
+                                                title: `${event.title} — Session ${i + 1}`,
+                                                description: event.description ?? undefined,
+                                                location: event.location ?? undefined,
+                                                slug: event.slug,
+                                            };
+                                            const gUrl = googleCalendarUrl(calEvent, new Date(fs.timeSlot.startTime), new Date(fs.timeSlot.endTime));
+                                            const oUrl = outlookCalendarUrl(calEvent, new Date(fs.timeSlot.startTime), new Date(fs.timeSlot.endTime));
+                                            return (
+                                                <div key={fs.id} className="flex items-center gap-3 p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
+                                                    <span className="text-xs font-bold text-indigo-400 bg-indigo-900/30 rounded px-1.5 py-0.5 min-w-[28px] text-center shrink-0">
+                                                        {i + 1}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <ClientDate date={fs.timeSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-white text-sm" />
+                                                        <span className="text-slate-400 text-sm"> at </span>
+                                                        <ClientDate date={fs.timeSlot.startTime} formatStr="h:mm a" className="font-semibold text-white text-sm" />
+                                                        <ClientTimezone className="ml-1.5 text-slate-500 font-normal text-xs" />
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <a href={gUrl} target="_blank" rel="noopener noreferrer" title="Add to Google Calendar" className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors whitespace-nowrap">
+                                                            📅 Google
+                                                        </a>
+                                                        <a href={oUrl} target="_blank" rel="noopener noreferrer" title="Add to Outlook" className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors whitespace-nowrap">
+                                                            📧 Outlook
+                                                        </a>
+                                                        <a href={`/api/event/${event.slug}/ics?slot=${fs.timeSlot.id}`} title="Download this session as .ics" className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors whitespace-nowrap">
+                                                            📎 .ics
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {(event.finalizedHost || event.location) && (
+                                        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 text-sm space-y-2">
+                                            {event.finalizedHost && (
+                                                <div className="flex items-center gap-2 text-slate-300">
+                                                    <span className="text-base">🏠</span>
+                                                    <span>Hosted by <span className="font-semibold text-white">{event.finalizedHost.name}</span></span>
+                                                </div>
+                                            )}
+                                            {event.location ? (
+                                                <div className="flex items-start gap-2 text-slate-300">
+                                                    <span className="text-base mt-0.5">📍</span>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                            <EditLocationModal slug={event.slug} initialLocation={event.location} />
+                                                        </div>
+                                                        <div className="text-white">{event.location}</div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-start gap-2 text-slate-300">
+                                                    <span className="text-base mt-0.5">📍</span>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                            <EditLocationModal slug={event.slug} initialLocation={null} />
+                                                        </div>
+                                                        <div className="text-slate-500 italic">TBD</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Campaign Attendees */}
+                                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                                    <h3 className="text-lg font-semibold text-slate-300 mb-4">Campaign Group</h3>
+                                    <ul className="space-y-3 mb-4">
+                                        {event.participants.filter(p => p.status === 'ACCEPTED').map(p => (
+                                            <li key={p.id} className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs ring-2 ring-slate-900">
+                                                    {p.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="font-medium text-slate-200">
+                                                    {p.name}
+                                                    {p.telegramId && <span className="ml-2 text-xs text-indigo-400 font-normal">{p.telegramId}</span>}
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {event.participants.some(p => p.status === 'WAITLIST') && (
+                                        <div className="border-t border-slate-800 pt-4">
+                                            <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
+                                                Subs / Waitlist
+                                                <span className="bg-yellow-900/30 text-yellow-500 px-2 py-0.5 rounded text-xs border border-yellow-900/50">
+                                                    {event.participants.filter(p => p.status === 'WAITLIST').length}
+                                                </span>
+                                            </h3>
+                                            <ul className="space-y-2">
+                                                {event.participants.filter(p => p.status === 'WAITLIST').map(p => (
+                                                    <li key={p.id} className="flex items-center gap-3 opacity-60">
+                                                        <div className="w-8 h-8 rounded-full bg-yellow-900/20 flex items-center justify-center text-yellow-600 font-bold text-xs ring-1 ring-yellow-900/50">
+                                                            {p.name.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div className="font-medium text-slate-400">{p.name}</div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        ) : isFinalized && finalizedSlot ? (
+                            /* ONE-SHOT FINALIZED STATE UI */
                             <>
                                 <div className="p-8 rounded-2xl bg-gradient-to-br from-green-900/20 to-slate-900/40 border border-green-800/50 text-center space-y-6">
                                     <div>
@@ -359,71 +594,102 @@ export default async function ManageEventPage({ params }: PageProps) {
                             </div>
                         ) : (
                             /* VOTING STATE UI */
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold text-slate-200">Proposed Slots</h2>
-                                    <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">Best Options First</span>
-                                </div>
-
-                                <ManagerVoteWarning
-                                    eventId={event.id}
-                                    participants={event.participants}
-                                    slug={event.slug}
-                                />
-
-                                <div className="grid gap-3">
-                                    {slots.length === 0 ? (
-                                        <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                                            No time slots proposed yet.
+                            isCampaign ? (
+                                /* CAMPAIGN VOTING: grouped by attendee set */
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between flex-wrap gap-3">
+                                        <div>
+                                            <h2 className="text-xl font-semibold text-slate-200">Candidate Sessions</h2>
+                                            <p className="text-xs text-slate-500 mt-0.5">Click a group to select it and finalize</p>
                                         </div>
-                                    ) : slots.map(slot => (
-                                        <div key={slot.id} className="group relative p-4 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors flex flex-col sm:flex-row items-center justify-between gap-4">
-                                            <div className="flex items-center gap-4 w-full sm:w-auto">
-                                                <div className="text-center min-w-[60px] shrink-0">
-                                                    {slot.perfect && <div className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1 bg-green-900/20 px-1.5 py-0.5 rounded">Perfect</div>}
-                                                    {!slot.hasHost && <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1 bg-orange-900/20 px-1.5 py-0.5 rounded">No Host</div>}
-                                                    {slot.viable && !slot.perfect && slot.hasHost && <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 bg-indigo-900/20 px-1.5 py-0.5 rounded">Viable</div>}
-                                                    {!slot.viable && <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1 bg-slate-800/50 px-1.5 py-0.5 rounded">Low T/O</div>}
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold text-base text-slate-200">
-                                                        <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
-                                                        <ClientTimezone className="ml-1 text-slate-500 font-normal text-sm" />
-                                                    </div>
-                                                    <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
-                                                        <span
-                                                            className="text-green-400 font-medium cursor-help"
-                                                            title={slot.votes.filter((v: any) => v.preference === 'YES').map((v: any) => v.participant.name).join(', ') || 'No Yes votes'}
-                                                        >
-                                                            {slot.yesCount} Yes
-                                                        </span>
-                                                        <span
-                                                            className="text-yellow-500/80 cursor-help"
-                                                            title={slot.votes.filter((v: any) => v.preference === 'MAYBE').map((v: any) => v.participant.name).join(', ') || 'No If Needed votes'}
-                                                        >
-                                                            {slot.maybeCount} If Needed
-                                                        </span>
-                                                        <span
-                                                            className="text-red-900/60 cursor-help"
-                                                            title={slot.votes.filter((v: any) => v.preference === 'NO').map((v: any) => v.participant.name).join(', ') || 'No No votes'}
-                                                        >
-                                                            {slot.noCount} No
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                    </div>
+
+                                    <CampaignSessionsView
+                                        slug={event.slug}
+                                        minPlayers={event.minPlayers}
+                                        groups={campaignSessionGroups.map(g => ({
+                                            attendees: g.attendees,
+                                            coreIds: Array.from(g.coreIds),
+                                            meetsQuorum: g.meetsQuorum,
+                                            meetsMinDates: g.meetsMinDates,
+                                            playerCount: g.playerCount,
+                                            noVotes: g.noVotes,
+                                            slots: g.slots.map(s => ({
+                                                id: s.id,
+                                                startTime: new Date(s.startTime).toISOString(),
+                                                hasHost: s.hasHost,
+                                                votes: s.votes
+                                                    .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
+                                                    .map((v: any) => ({
+                                                        participantId: v.participantId,
+                                                        preference: v.preference,
+                                                        canHost: v.canHost ?? false,
+                                                        participant: { id: v.participant.id, name: v.participant.name },
+                                                    })),
+                                            })),
+                                        }))}
+                                    />
+
+                                    <ManageSlots slug={event.slug} slots={event.timeSlots} />
+                                </div>
+                            ) : (
+                                /* ONE-SHOT VOTING: sorted slot cards */
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-xl font-semibold text-slate-200">Proposed Slots</h2>
+                                        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">Best Options First</span>
+                                    </div>
+
+                                    <ManagerVoteWarning
+                                        eventId={event.id}
+                                        participants={event.participants}
+                                        slug={event.slug}
+                                    />
+
+                                    <div className="grid gap-3">
+                                        {slots.length === 0 ? (
+                                            <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                                                No time slots proposed yet.
                                             </div>
+                                        ) : slots.map(slot => (
+                                            <div key={slot.id} className="group relative p-4 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                                    <div className="text-center min-w-[60px] shrink-0">
+                                                        {slot.perfect && <div className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1 bg-green-900/20 px-1.5 py-0.5 rounded">Perfect</div>}
+                                                        {!slot.hasHost && <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1 bg-orange-900/20 px-1.5 py-0.5 rounded">No Host</div>}
+                                                        {slot.viable && !slot.perfect && slot.hasHost && <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 bg-indigo-900/20 px-1.5 py-0.5 rounded">Viable</div>}
+                                                        {!slot.viable && <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1 bg-slate-800/50 px-1.5 py-0.5 rounded">Low T/O</div>}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold text-base text-slate-200">
+                                                            <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
+                                                            <ClientTimezone className="ml-1 text-slate-500 font-normal text-sm" />
+                                                        </div>
+                                                        <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
+                                                            <span className="text-green-400 font-medium cursor-help" title={slot.votes.filter((v: any) => v.preference === 'YES').map((v: any) => v.participant.name).join(', ') || 'No Yes votes'}>
+                                                                {slot.yesCount} Yes
+                                                            </span>
+                                                            <span className="text-yellow-500/80 cursor-help" title={slot.votes.filter((v: any) => v.preference === 'MAYBE').map((v: any) => v.participant.name).join(', ') || 'No If Needed votes'}>
+                                                                {slot.maybeCount} If Needed
+                                                            </span>
+                                                            <span className="text-red-900/60 cursor-help" title={slot.votes.filter((v: any) => v.preference === 'NO').map((v: any) => v.participant.name).join(', ') || 'No No votes'}>
+                                                                {slot.noCount} No
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <FinalizeEventModal
+                                                    slug={event.slug}
+                                                    slotId={slot.id}
+                                                    potentialHosts={slot.potentialHosts}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
 
-                                            <FinalizeEventModal
-                                                slug={event.slug}
-                                                slotId={slot.id}
-                                                potentialHosts={slot.potentialHosts}
-                                            />
-                                        </div>
-                                    ))}
+                                    <ManageSlots slug={event.slug} slots={event.timeSlots} />
                                 </div>
-
-                                <ManageSlots slug={event.slug} slots={event.timeSlots} />
-                            </div>
+                            )
                         )}
                     </div>
                 </div>

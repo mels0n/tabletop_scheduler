@@ -87,3 +87,99 @@ Your personal history of events.
 - **Sync**: Use the "Sync & Recover" tool to merge events from your Telegram or Discord account.
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.
 - **Cleanup**: The list automatically removes events that have been deleted from the server.
+
+---
+
+## 7. Campaign Events (Multi-Session Scheduling)
+
+### When to Use Campaign Mode
+
+Campaign mode is designed for any group that needs to schedule **multiple sessions of the same series** in one go — not just a single game night. Good use cases include:
+
+- **D&D or TTRPG campaigns** — lock in a run of sessions (e.g. six Fridays) so the whole group can plan ahead.
+- **Legacy board game series** — Pandemic Legacy, Gloomhaven, and similar games where the same players need to show up repeatedly.
+- **Recurring game night blocks** — schedule the next month of sessions while everyone has the availability poll open.
+
+If you only need to find a date for a single session, a standard **One-Shot** event is simpler and works exactly as before.
+
+---
+
+### Creating a Campaign Event
+
+**Page:** `/new`
+
+The event creation page shows two cards at the top: **One-Shot Session** and **Campaign / Series**. Hover over either card for a tooltip describing the difference. Selecting **Campaign / Series** reveals an additional field:
+
+- **Minimum Sessions**: The fewest number of sessions you intend to lock in (defaults to 4). This is used as a soft target during finalization — you will see a warning if you finalize with fewer sessions than this number, but it does not block the action.
+
+The slot picker label also changes to **"Add candidate dates"** as a reminder that you are collecting options, not committing to specific dates yet. Add as many candidates as you like — more options give the algorithm more combinations to work with.
+
+To create a Campaign event via the API, set `eventType: "CAMPAIGN"` and include `minSessions` in the request body.
+
+---
+
+### What Voters See
+
+The voting interface works the same way as a standard event. Players mark each candidate date as **Yes**, **If Needed**, or **No**. On a Campaign event, the voting page shows a **Campaign** badge next to the event title and displays an informational banner:
+
+> "This is a multi-session campaign. Vote on every date you're available — the organizer will lock in multiple sessions."
+
+Players do not need to take any special action — they simply vote on every slot they can make.
+
+---
+
+### Finalization: Grouped View and Inline Selection
+
+**Page:** `/e/[slug]/manage`
+
+Campaign finalization happens entirely inline on the manage page — there is no separate modal. The dashboard displays candidate dates grouped by **shared player availability**:
+
+**How groups are formed:**
+- Players are grouped by the set of dates they can all attend together (pairwise intersection of YES/If-Needed votes).
+- Groups are ordered by: groups that meet the Minimum Sessions count first, then by most players (up to the event's max player cap), then by most dates.
+
+**Reading a group header:**
+Each group header shows:
+- **Player pills** — green for YES votes, yellow for If Needed.
+- A **Quorum** or **Low T/O** badge indicating whether the group meets the minimum player count.
+- A **player count ratio** (e.g. `4/4`) showing players in the group vs. the max player cap.
+- The number of candidate dates the group can attend.
+
+**Reading individual date rows:**
+Each date within a group shows two rows:
+- **Row 1:** Date/time + the core player pills (same players shown in the header).
+- **Row 2:** "also free:" + dimmed pills for extra players who are available on this specific date but are not part of the core group. Click an extra player pill to toggle them into the session.
+- Per-date badges: **Host ✓** (indigo) if a volunteer host is available on that date, or **No Host** (orange) if not.
+
+A banner above the groups reads: *"Click a group to select it and finalize."*
+
+---
+
+### Completing Finalization
+
+1. **Click a group header** — the group enters "Selecting" mode with an indigo border. All dates in the group are pre-ticked.
+2. **Uncheck any dates** you want to exclude using the checkboxes that appear on each row. Extra players you toggled on remain selected.
+3. A **finalization panel** expands at the bottom of the selected group with:
+   - **Host selector** — radio pills listing players who volunteered to host and are available on at least one checked date.
+   - **Location input** — free-text field for an address or venue name.
+   - **"Confirm X Sessions" button** — X updates live as you check/uncheck dates.
+4. Click **Confirm** to lock all checked sessions simultaneously.
+
+If the number of checked sessions is below your Minimum Sessions count, finalization still succeeds but the API response includes a non-blocking `warning` field.
+
+---
+
+### After Finalization
+
+The finalized campaign view shows:
+- A **numbered session list** with each confirmed date/time and per-session calendar buttons: Google Calendar, Outlook, and `.ics` download.
+- A **Host and location card**.
+- A footer note: *".ics downloads all N sessions at once"* — a single file you can import once to add every session to your calendar.
+- A **Campaign Group section** listing accepted players and a Subs/Waitlist section for players who want to fill in if someone drops out.
+
+---
+
+### Stats Counting
+
+- Each finalized campaign session counts as **1 locked game** in stats.
+- An active (unfinalized) campaign counts as **1 active event**.

@@ -7,7 +7,9 @@ import { Calendar, Users } from "lucide-react";
 import { ManagerRecovery } from "@/features/auth/ui/ManagerRecovery";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
+import { CampaignStatusBanner } from "@/components/CampaignStatusBanner";
 import Link from "next/link";
+import { format } from "date-fns";
 
 interface PageProps {
     params: { slug: string };
@@ -74,6 +76,12 @@ async function getEvent(slug: string) {
             },
             participants: true,
             finalizedHost: true,
+            finalizedSessions: {
+                include: {
+                    timeSlot: true
+                },
+                orderBy: { createdAt: 'asc' }
+            },
         },
     });
 
@@ -130,9 +138,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         return { ...slot, counts: { yes, maybe, no } };
     });
 
-    // Determine finalized slot if applicable
-    const isFinalized = event.status === 'FINALIZED' && event.finalizedSlotId;
-    const finalizedSlot = isFinalized ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
+    // Determine finalized slot/sessions if applicable
+    const isFinalized = event.status === 'FINALIZED';
+    const isCampaignFinalized = isFinalized && event.eventType === 'CAMPAIGN' && event.finalizedSessions.length > 0;
+    const isOneShotFinalized = isFinalized && event.finalizedSlotId;
+    const finalizedSlot = isOneShotFinalized ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
@@ -146,9 +156,17 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                         <span className="font-mono text-sm uppercase tracking-wider">Scheduling Event</span>
                     </div>
 
-                    <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                        {event.title}
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                            {event.title}
+                        </h1>
+                        {event.eventType === "CAMPAIGN" && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950 border border-indigo-700/60 text-indigo-300 text-xs font-semibold uppercase tracking-wider shrink-0">
+                                <Calendar className="w-3 h-3" />
+                                Campaign
+                            </span>
+                        )}
+                    </div>
 
                     {event.description && (
                         <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">
@@ -197,7 +215,109 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                             </Link>
                         </div>
                     </div>
-                ) : isFinalized && finalizedSlot ? (
+                ) : isCampaignFinalized ? (
+                    (() => {
+                        return (
+                            <div className="space-y-4">
+                                {/* Personal status banner — reads localStorage so works for all browser-identified voters */}
+                                <CampaignStatusBanner
+                                    eventId={event.id}
+                                    acceptedIds={event.participants.filter((p: any) => p.status === 'ACCEPTED').map((p: any) => p.id)}
+                                    waitlistIds={event.participants.filter((p: any) => p.status === 'WAITLIST').map((p: any) => p.id)}
+                                    serverParticipantId={serverParticipantId}
+                                />
+
+                                <div className="bg-gradient-to-br from-indigo-900/20 to-slate-900 border border-indigo-800/50 rounded-2xl p-6 md:p-8 space-y-4">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-white mb-1">Campaign Sessions Locked In!</h2>
+                                        <p className="text-indigo-300 text-sm">{event.finalizedSessions.length} session{event.finalizedSessions.length !== 1 ? 's' : ''} scheduled</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {event.finalizedSessions.map((session: any, index: number) => {
+                                            const start = new Date(session.timeSlot.startTime);
+                                            const end = new Date(session.timeSlot.endTime);
+                                            return (
+                                                <div key={session.id} className="bg-slate-950/50 rounded-xl p-3 flex items-center gap-3 border border-slate-800">
+                                                    <div className="w-7 h-7 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-semibold text-slate-200 text-sm">
+                                                            {format(start, "EEEE, MMMM do, yyyy")}
+                                                        </div>
+                                                        <div className="text-xs text-indigo-300">
+                                                            {format(start, "h:mm a")} – {format(end, "h:mm a")}
+                                                        </div>
+                                                    </div>
+                                                    <a
+                                                        href={`/api/event/${event.slug}/ics?slot=${session.timeSlot.id}`}
+                                                        title="Download this session (.ics)"
+                                                        className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors shrink-0"
+                                                    >
+                                                        📎 .ics
+                                                    </a>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {event.location && (
+                                        <div className="flex items-center gap-2 text-slate-400 text-sm border-t border-slate-700/50 pt-4">
+                                            <Calendar className="w-4 h-4 text-indigo-400" />
+                                            <span>{event.location}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Campaign group — always public */}
+                                {(() => {
+                                    const acceptedPlayers = event.participants.filter((p: any) => p.status === 'ACCEPTED');
+                                    const waitlistPlayers = event.participants.filter((p: any) => p.status === 'WAITLIST');
+                                    if (acceptedPlayers.length === 0) return null;
+                                    return (
+                                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-5 space-y-4">
+                                            <div>
+                                                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Campaign Group</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {acceptedPlayers.map((p: any) => (
+                                                        <span
+                                                            key={p.id}
+                                                            className={`text-sm px-3 py-1 rounded-full border font-medium ${
+                                                                p.id === serverParticipantId
+                                                                    ? 'bg-indigo-600/20 border-indigo-500/60 text-indigo-200'
+                                                                    : 'bg-slate-800 border-slate-700 text-slate-300'
+                                                            }`}
+                                                        >
+                                                            {p.id === serverParticipantId ? `${p.name} (you)` : p.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {waitlistPlayers.length > 0 && (
+                                                <div className="border-t border-slate-800 pt-4">
+                                                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Subs / Waitlist</h3>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {waitlistPlayers.map((p: any) => (
+                                                            <span
+                                                                key={p.id}
+                                                                className={`text-sm px-3 py-1 rounded-full border font-medium opacity-60 ${
+                                                                    p.id === serverParticipantId
+                                                                        ? 'bg-yellow-900/20 border-yellow-700/50 text-yellow-300'
+                                                                        : 'bg-slate-800/50 border-slate-700 text-slate-400'
+                                                                }`}
+                                                            >
+                                                                {p.id === serverParticipantId ? `${p.name} (you)` : p.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        );
+                    })()
+                ) : isOneShotFinalized && finalizedSlot ? (
                     <FinalizedEventView
                         event={event}
                         finalizedSlot={finalizedSlot}
@@ -215,6 +335,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                         minPlayers={event.minPlayers}
                         slug={event.slug}
                         serverParticipantId={serverParticipantId}
+                        eventType={event.eventType as "ONE_SHOT" | "CAMPAIGN"}
                         discordIdentity={cookieStore.get("tabletop_user_discord_id")?.value ? {
                             id: cookieStore.get("tabletop_user_discord_id")!.value,
                             username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"

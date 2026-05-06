@@ -55,6 +55,8 @@ model Event {
   // Game Configuration
   minPlayers  Int           @default(3)
   maxPlayers  Int?
+  eventType   String        @default("ONE_SHOT") // ONE_SHOT | CAMPAIGN
+  minSessions Int?          // Minimum sessions to schedule (campaigns only)
   status      String        @default("DRAFT") // DRAFT -> ACTIVE -> FINALIZED
   
   // Finalization State
@@ -72,9 +74,10 @@ model Event {
   updatedAt   DateTime      @updatedAt
   
   // Relations
-  timeSlots   TimeSlot[]
-  participants Participant[]
-  webhooks    WebhookEvent[]
+  timeSlots         TimeSlot[]
+  participants      Participant[]
+  finalizedSessions FinalizedSession[]
+  webhooks          WebhookEvent[]
 }
 
 // Represents a voteable window of time.
@@ -84,7 +87,8 @@ model TimeSlot {
   eventId   Int
   startTime DateTime
   endTime   DateTime
-  votes     Vote[]
+  votes            Vote[]
+  finalizedSession FinalizedSession?
 
   @@index([eventId])
 }
@@ -126,6 +130,19 @@ model Vote {
   @@unique([participantId, timeSlotId])
   @@index([participantId])
   @@index([timeSlotId])
+}
+
+// Tracks individual locked sessions for Campaign-type events.
+// One-shot events use Event.finalizedSlotId instead.
+model FinalizedSession {
+  id         Int      @id @default(autoincrement())
+  eventId    Int
+  timeSlotId Int      @unique
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  timeSlot   TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([eventId])
 }
 
 // Temporary tokens for global "My Events" login

@@ -29,6 +29,15 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { title, description, minPlayers, maxPlayers, slots, telegramLink } = body;
 
+        const VALID_EVENT_TYPES = ["ONE_SHOT", "CAMPAIGN"];
+        const eventType: string = VALID_EVENT_TYPES.includes(body.eventType) ? body.eventType : "ONE_SHOT";
+        const minSessions: number | undefined = body.minSessions !== undefined ? Number(body.minSessions) : undefined;
+
+        if (eventType === "CAMPAIGN" && (minSessions === undefined || isNaN(minSessions) || minSessions < 1)) {
+            log.warn("CAMPAIGN event missing valid minSessions", { minSessions });
+            return NextResponse.json({ error: "CAMPAIGN events require minSessions to be a number greater than 0" }, { status: 400 });
+        }
+
         log.debug("Request received", { title });
 
         if (!title || !slots || !Array.isArray(slots) || slots.length === 0) {
@@ -93,6 +102,8 @@ export async function POST(req: Request) {
                     status: "DRAFT",
                     fromUrl: fromUrl || null,
                     fromUrlId: fromUrlId || null,
+                    eventType,
+                    minSessions: minSessions ?? null,
                     timeSlots: {
                         create: slots.map((slot: any) => ({
                             startTime: new Date(slot.startTime),
