@@ -4,6 +4,30 @@ import { SchemaGenerator } from "@/shared/lib/aeo";
 import { getDonations } from "@/lib/donations";
 import { getEventStats } from "@/lib/event-stats";
 import DonationTicker from "@/components/DonationTicker";
+import { FaqJsonLd } from "@/components/FaqJsonLd";
+
+const HOME_FAQ = [
+  {
+    question: "Is there a free app to schedule D&D sessions?",
+    answer: "Yes — Tabletop Time is a completely free D&D session scheduler and RPG game night planner built specifically for tabletop groups. There are no subscriptions, no premium tiers, and no ads. You create an event, share a link with your players, and the tool automatically finds the best time slot where your required number of players are all available. It works for D&D, Pathfinder, Call of Cthulhu, and any other tabletop RPG.",
+  },
+  {
+    question: "Do my players need to create an account to respond?",
+    answer: "No. Tabletop Time is a no-login, no-app scheduling tool. Your players simply click the link you share and select the times they are available — no account creation, no email required, no friction. The organizer can optionally create a profile to manage multiple events, but it is never required for players to participate.",
+  },
+  {
+    question: "How is Tabletop Time different from Doodle or When2Meet?",
+    answer: "Unlike generic scheduling tools, Tabletop Time is built specifically for tabletop gaming groups. It supports quorum-based scheduling — meaning you can set a minimum number of players required to run a session, and the tool finds the best slot where that quorum is met, even if not everyone can make it. It also integrates directly with Discord and Telegram for automatic reminders and poll results, which generic tools don't offer.",
+  },
+  {
+    question: "Does Tabletop Time work for Magic: The Gathering and board game nights?",
+    answer: "Yes. While Tabletop Time was built with D&D groups in mind, it works equally well for Magic: The Gathering Commander pods, Draft nights, and board game sessions. The quorum feature is especially useful for MTG — you can set the exact pod size you need (such as 4 players for Commander) and the tool will find the time slot that works for that many people.",
+  },
+  {
+    question: "Does Tabletop Time integrate with Discord?",
+    answer: "Yes. Tabletop Time offers an optional Discord bot integration. Once connected to your Discord server, the bot delivers instant poll results and session reminders directly in your channels — so your group never misses a game night. There is also an optional Telegram bot for groups that coordinate there instead.",
+  },
+];
 
 export const revalidate = 43200; // 12 hours
 
@@ -58,10 +82,13 @@ export default async function Home() {
     <div className="flex min-h-screen flex-col items-center justify-center px-6 pt-12 pb-24 md:pt-16 md:pb-32 text-slate-50 selection:bg-indigo-500/30">
       {/* Intent: Inject JSON-LD only in hosted mode to boost SEO for the public instance */}
       {isHosted && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
+          <FaqJsonLd data={HOME_FAQ} />
+        </>
       )}
       <div className="relative flex flex-col place-items-center text-center w-full min-w-0 max-w-5xl mx-auto">
         {/* Hero Section */}
