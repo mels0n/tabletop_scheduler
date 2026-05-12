@@ -83,11 +83,11 @@ export default function VsWhen2MeetPage() {
                     <h1 className="text-4xl md:text-5xl font-bold leading-tight">
                         Tabletop Time vs When2Meet
                         <span className="block text-slate-400 text-2xl md:text-3xl font-normal mt-2">
-                            When2Meet is great. Here's what it's missing for game night.
+                            When2Meet is great. Here&apos;s what it&apos;s missing for game night.
                         </span>
                     </h1>
                     <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
-                        When2Meet has a devoted following among gamers for good reason: it's fast, it's free, and it requires no account. If you're using it to schedule your sessions, you've already made a better choice than Doodle. But there are a few gaps that matter a lot when you're the DM trying to hold a group together.
+                        When2Meet has a devoted following among gamers for good reason: it&apos;s fast, it&apos;s free, and it requires no account. If you&apos;re using it to schedule your sessions, you&apos;ve already made a better choice than Doodle. But there are a few gaps that matter a lot when you&apos;re the DM trying to hold a group together.
                     </p>
                     <Link
                         href="/new"
@@ -104,10 +104,10 @@ export default function VsWhen2MeetPage() {
                         What When2Meet Gets Right
                     </div>
                     <p className="text-slate-300 leading-relaxed">
-                        When2Meet's hourly availability grid is genuinely elegant. You drag across time blocks, the overlap heat-map appears instantly, and everyone sees the same picture. No account required on either side. It's been solving the "when is everyone free?" problem cleanly since 2006.
+                        When2Meet&apos;s hourly availability grid is genuinely elegant. You drag across time blocks, the overlap heat-map appears instantly, and everyone sees the same picture. No account required on either side. It&apos;s been solving the &ldquo;when is everyone free?&rdquo; problem cleanly since 2006.
                     </p>
                     <p className="text-slate-300 leading-relaxed">
-                        If you need to find a two-hour window on a specific day — say, a one-shot on Saturday where start time matters — When2Meet's grid is hard to beat.
+                        If you need to find a two-hour window on a specific day — say, a one-shot on Saturday where start time matters — When2Meet&apos;s grid is hard to beat.
                     </p>
                 </section>
 
@@ -189,10 +189,10 @@ export default function VsWhen2MeetPage() {
                 <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-white">The If-Needed Vote State</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        When2Meet treats availability as binary: you're free or you're not. Real group dynamics are messier. The Cleric can make Saturday, but she'd really rather Sunday. The Ranger is technically available but is flying back that morning and will be useless.
+                        When2Meet treats availability as binary: you&apos;re free or you&apos;re not. Real group dynamics are messier. The Cleric can make Saturday, but she&apos;d really rather Sunday. The Ranger is technically available but is flying back that morning and will be useless.
                     </p>
                     <p className="text-slate-400 leading-relaxed">
-                        Tabletop Time uses a three-state system: <strong className="text-white">Yes</strong>, <strong className="text-white">If Needed</strong>, and <strong className="text-white">No</strong>. The quorum algorithm counts "If Needed" as a soft yes — enough to hit quorum if no better option exists, but deprioritized when a date with all hard yeses is available. You get honest availability data, not forced binary answers.
+                        Tabletop Time uses a three-state system: <strong className="text-white">Yes</strong>, <strong className="text-white">If Needed</strong>, and <strong className="text-white">No</strong>. The quorum algorithm counts &ldquo;If Needed&rdquo; as a soft yes — enough to hit quorum if no better option exists, but deprioritized when a date with all hard yeses is available. You get honest availability data, not forced binary answers.
                     </p>
                 </section>
 
@@ -200,10 +200,10 @@ export default function VsWhen2MeetPage() {
                 <section className="space-y-4">
                     <h2 className="text-2xl font-bold text-white">When to Still Use When2Meet</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        When2Meet's strength is hourly granularity within a day. If you're running a one-shot and need to know whether 7pm or 8pm start works better for a specific Saturday, When2Meet's drag-to-select hour grid is the right tool. Tabletop Time uses date-level slots, not hour-level grids.
+                        When2Meet&apos;s strength is hourly granularity within a day. If you&apos;re running a one-shot and need to know whether 7pm or 8pm start works better for a specific Saturday, When2Meet&apos;s drag-to-select hour grid is the right tool. Tabletop Time uses date-level slots, not hour-level grids.
                     </p>
                     <p className="text-slate-400 leading-relaxed">
-                        For campaigns and recurring sessions where the question is "which of these three Saturdays in June works for everyone," Tabletop Time is the better fit.
+                        For campaigns and recurring sessions where the question is &ldquo;which of these three Saturdays in June works for everyone,&rdquo; Tabletop Time is the better fit.
                     </p>
                 </section>
 
@@ -211,7 +211,7 @@ export default function VsWhen2MeetPage() {
                 <section className="space-y-6">
                     <h2 className="text-2xl font-bold text-white">Adding the Missing Pieces Takes Two Minutes</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        If you're already in the habit of sharing a When2Meet link, the switch is trivial. Go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, name your event, add candidate dates, and optionally set a quorum. Share the link. Your players get an experience similar to what they're used to — click a date, mark availability — with the added context of knowing which dates actually have enough players to happen.
+                        If you&apos;re already in the habit of sharing a When2Meet link, the switch is trivial. Go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, name your event, add candidate dates, and optionally set a quorum. Share the link. Your players get an experience similar to what they&apos;re used to — click a date, mark availability — with the added context of knowing which dates actually have enough players to happen.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <Link

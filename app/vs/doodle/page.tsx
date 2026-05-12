@@ -167,7 +167,7 @@ export default function VsDoodlePage() {
                 <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-white">The Feature Doodle Will Never Build</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        Quorum logic is the single most game-night-specific feature a scheduler can have. It answers the question Doodle can't: <em>"Is this date viable?"</em> — not just "who's free," but "do we have enough players to actually play?"
+                        Quorum logic is the single most game-night-specific feature a scheduler can have. It answers the question Doodle can&apos;t: <em>&ldquo;Is this date viable?&rdquo;</em> — not just &ldquo;who&apos;s free,&rdquo; but &ldquo;do we have enough players to actually play?&rdquo;
                     </p>
                     <p className="text-slate-400 leading-relaxed">
                         Set a minimum player count (e.g., need at least 4 for a Commander pod). Tabletop Time highlights in green the dates that hit that threshold. Dates below it are shown in amber. You see the viable windows at a glance without counting cells in a spreadsheet.
@@ -181,7 +181,7 @@ export default function VsDoodlePage() {
                 <section className="space-y-6">
                     <h2 className="text-2xl font-bold text-white">Switching Takes Two Minutes</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        There's no migration path because there's nothing to migrate. You don't have an account to transfer. Just go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, give your event a name, add some candidate dates, set a quorum if you want one, and share the link. Your players click, vote, and you're done.
+                        There&apos;s no migration path because there&apos;s nothing to migrate. You don&apos;t have an account to transfer. Just go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, give your event a name, add some candidate dates, set a quorum if you want one, and share the link. Your players click, vote, and you&apos;re done.
                     </p>
                     <p className="text-slate-400 leading-relaxed">
                         No account for you. No account for them. No ads on the vote page they see. Works on any device with a browser.
