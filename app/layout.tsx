@@ -122,7 +122,7 @@ export default function RootLayout({
                                     "@type": "WebSite",
                                     "name": "Tabletop Time",
                                     "alternateName": ["TableTop Time", "TableTopTime"],
-                                    "url": "https://www.tabletoptime.us",
+                                    "url": "https://tabletoptime.us",
                                     "author": {
                                         "@type": "Person",
                                         "name": "Christopher Melson",
@@ -132,7 +132,7 @@ export default function RootLayout({
                                         "@type": "SearchAction",
                                         "target": {
                                             "@type": "EntryPoint",
-                                            "urlTemplate": "https://www.tabletoptime.us/blog?q={search_term_string}"
+                                            "urlTemplate": "https://tabletoptime.us/blog?q={search_term_string}"
                                         },
                                         "query-input": "required name=search_term_string"
                                     }
@@ -140,13 +140,13 @@ export default function RootLayout({
                                 {
                                     "@type": "Organization",
                                     "name": "Tabletop Time",
-                                    "url": "https://www.tabletoptime.us",
+                                    "url": "https://tabletoptime.us",
                                     "sameAs": [
                                         "https://github.com/mels0n/tabletop_scheduler"
                                     ],
                                     "logo": {
                                         "@type": "ImageObject",
-                                        "url": "https://www.tabletoptime.us/icon.png"
+                                        "url": "https://tabletoptime.us/icon.png"
                                     }
                                 }
                             ]

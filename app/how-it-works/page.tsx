@@ -16,8 +16,8 @@ export default function HowItWorksPage() {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             "itemListElement": [
-                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.tabletoptime.us" },
-                { "@type": "ListItem", "position": 2, "name": "How It Works", "item": "https://www.tabletoptime.us/how-it-works" }
+                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tabletoptime.us" },
+                { "@type": "ListItem", "position": 2, "name": "How It Works", "item": "https://tabletoptime.us/how-it-works" }
             ]
         },
         {
@@ -25,13 +25,13 @@ export default function HowItWorksPage() {
             "@type": "WebPage",
             "name": "How Tabletop Time Works",
             "description": "Tabletop Time is a free, account-less D&D session scheduler. Organizers create an event with candidate dates, share a private link, and players vote with Yes / If-Needed / No. Quorum logic then highlights the best slot automatically.",
-            "url": "https://www.tabletoptime.us/how-it-works",
+            "url": "https://tabletoptime.us/how-it-works",
             "dateModified": "2026-03-04",
             "breadcrumb": {
                 "@type": "BreadcrumbList",
                 "itemListElement": [
-                    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.tabletoptime.us" },
-                    { "@type": "ListItem", "position": 2, "name": "How It Works", "item": "https://www.tabletoptime.us/how-it-works" }
+                    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tabletoptime.us" },
+                    { "@type": "ListItem", "position": 2, "name": "How It Works", "item": "https://tabletoptime.us/how-it-works" }
                 ]
             }
         }

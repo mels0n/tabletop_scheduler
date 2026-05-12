@@ -38,7 +38,7 @@ Each of these points loses participants. By the time you've threaded together en
 
 ## What Frictionless Game Night Scheduling Looks Like
 
-Here's the full flow using [Tabletop Time](https://www.tabletoptime.us):
+Here's the full flow using [Tabletop Time](https://tabletoptime.us):
 
 1. **You create an event** — Name it, add 3-5 possible dates, optionally set a player minimum. Takes about 60 seconds. No account required.
 2. **You share one link** — Paste it in Discord, text it, drop it in Telegram. One URL.
@@ -66,7 +66,7 @@ This matters most for casual players — the ones who *want* to come but won't j
 
 The next time game night scheduling threatens to swallow your entire week, try this instead:
 
-1. Go to [TabletopTime.us](https://www.tabletoptime.us)
+1. Go to [TabletopTime.us](https://tabletoptime.us)
 2. Create an event — name it, pick 3-5 dates, set a player minimum
 3. Copy the voting link
 4. Paste it in your group chat
