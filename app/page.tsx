@@ -94,17 +94,12 @@ export default async function Home() {
         {/* Hero Section */}
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent pb-2">
           Tabletop Time
-          <br className="hidden md:block" />
-          <span className="text-2xl md:text-5xl text-slate-400 block mt-6 font-medium tracking-wide">
-            Free D&D Session Scheduler <br className="md:hidden" />& RPG Game Night Planner
-          </span>
-          {isHosted && <span className="sr-only">: The Ultimate Game Night Session Scheduler</span>}
         </h1>
-        <p className="mt-8 max-w-2xl text-slate-400 text-lg md:text-xl leading-relaxed">
-          {isHosted
-            ? "The \"When are we playing?\" dance is over. Coordinate your D&D sessions, board game nights, and RPG campaigns without the group chat chaos."
-            : "Coordinate your D&D sessions, board game nights, and RPG campaigns without the group chat chaos."
-          }
+        <h2 className="text-xl md:text-2xl text-slate-300 mt-5 font-medium tracking-wide max-w-2xl">
+          Free Session Scheduler: the privacy-first way to plan your D&D, RPG, MTG, and board game sessions.
+        </h2>
+        <p className="mt-6 max-w-2xl text-slate-400 text-lg md:text-xl leading-relaxed">
+          {`The "When are we playing?" dance is over. Coordinate your Tabletop gaming without group chat chaos.`}
         </p>
 
 
