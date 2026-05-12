@@ -29,7 +29,7 @@ TabletopTime helps you find the best time for your gaming group to meet. It is d
 
 Don't want to manage a server? We host a free version for the community.
 
-[**Launch TabletopTime Cloud**](https://www.tabletoptime.us/)
+[**Launch TabletopTime Cloud**](https://tabletoptime.us/)
 
 ## Quick Start (Docker)
 

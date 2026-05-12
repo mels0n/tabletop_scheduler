@@ -113,7 +113,7 @@ Here's the true final boss of every home draft: getting enough humans to agree o
 
 A draft requires a critical mass. You need at least 4 players — ideally 8. If you're coordinating 8 adults with jobs, families, and other hobbies, the group chat becomes a multi-day mess within minutes of the first message.
 
-Use [Tabletop Time](https://www.tabletoptime.us) to handle this:
+Use [Tabletop Time](https://tabletoptime.us) to handle this:
 
 1. **Create a free event** — name it "MTG Draft Night," add a few possible dates
 2. **Set the quorum** — enter 4 (for a small pod) or 8 (for a full pod) as the minimum players

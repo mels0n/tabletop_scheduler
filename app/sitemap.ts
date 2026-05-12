@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { getAllPosts } from '@/shared/lib/blog';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tabletoptime.us';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tabletoptime.us';
 
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 

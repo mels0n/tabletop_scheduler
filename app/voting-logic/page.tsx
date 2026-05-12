@@ -31,7 +31,7 @@ export default function VotingLogicPage() {
                                 "name": "Tabletop Time",
                                 "logo": {
                                     "@type": "ImageObject",
-                                    "url": "https://www.tabletoptime.us/logo.png"
+                                    "url": "https://tabletoptime.us/logo.png"
                                 }
                             }
                         })

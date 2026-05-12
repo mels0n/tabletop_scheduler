@@ -8,7 +8,7 @@ export function FaqJsonLd({ data }: { data: { question: string; answer: string }
     const jsonLd = {
         "@context": "https://schema.org",
         "@type": "FAQPage",
-        "@id": "https://www.tabletoptime.us/#faq",
+        "@id": "https://tabletoptime.us/#faq",
         "mainEntity": data.map(item => ({
             "@type": "Question",
             "name": item.question,

@@ -38,7 +38,7 @@ A shared Google Sheet with everyone's availability for the month. This actually 
 
 This is how people who play consistently actually book their friends for games: a tool that exists specifically to solve this problem.
 
-[Tabletop Time](https://www.tabletoptime.us) works like this:
+[Tabletop Time](https://tabletoptime.us) works like this:
 
 1. Create an event with your proposed dates and optional player minimum
 2. Share one link with your group — no account needed to vote
@@ -93,4 +93,4 @@ When someone asks *how do people book their friends for games*, the honest answe
 
 The people who play consistently use a link-based scheduler, share it without friction, and let the availability math happen automatically. They live in Telegram and Discord, so they use the bots. And they don't trade their privacy for the privilege of scheduling a board game.
 
-[Book your next game night at TabletopTime.us →](https://www.tabletoptime.us/new)
+[Book your next game night at TabletopTime.us →](https://tabletoptime.us/new)

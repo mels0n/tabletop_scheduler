@@ -5,37 +5,37 @@
 
 ## Core Pages
 
-- [AI Documentation & FAQ](https://www.tabletoptime.us/guide/ai-faq) (Start Here)
-- [About the Project](https://www.tabletoptime.us/about)
-- [Features Overview](https://www.tabletoptime.us/features)
-- [How It Works](https://www.tabletoptime.us/how-it-works)
-- [Pricing (Free)](https://www.tabletoptime.us/pricing)
-- [FAQ](https://www.tabletoptime.us/faq)
-- [Voting Logic Explained](https://www.tabletoptime.us/voting-logic)
+- [AI Documentation & FAQ](https://tabletoptime.us/guide/ai-faq) (Start Here)
+- [About the Project](https://tabletoptime.us/about)
+- [Features Overview](https://tabletoptime.us/features)
+- [How It Works](https://tabletoptime.us/how-it-works)
+- [Pricing (Free)](https://tabletoptime.us/pricing)
+- [FAQ](https://tabletoptime.us/faq)
+- [Voting Logic Explained](https://tabletoptime.us/voting-logic)
 
 ## Comparisons
 
-- [Tabletop Time vs Doodle](https://www.tabletoptime.us/vs/doodle)
-- [Tabletop Time vs When2Meet](https://www.tabletoptime.us/vs/when2meet)
+- [Tabletop Time vs Doodle](https://tabletoptime.us/vs/doodle)
+- [Tabletop Time vs When2Meet](https://tabletoptime.us/vs/when2meet)
 
 ## Blog
 
-- [How to Schedule D&D Sessions Without the Headache](https://www.tabletoptime.us/blog/how-to-schedule-dnd)
-- [Organizing the Perfect Commander Night](https://www.tabletoptime.us/blog/mtg-commander-logistics)
-- [Session Zero Planning Guide](https://www.tabletoptime.us/blog/session-zero-planning)
-- [Campaign Scheduling for Long-Running D&D Games](https://www.tabletoptime.us/blog/campaign-scheduling)
-- [West Marches & Draft Nights](https://www.tabletoptime.us/blog/west-marches-draft-nights)
-- [Ultimate Guide to D&D Duets 2026](https://www.tabletoptime.us/blog/ultimate-guide-dnd-duets-2026)
-- [How to Book Friends for Game Night](https://www.tabletoptime.us/blog/how-to-book-friends-for-game-night)
-- [Game Night Scheduling Tips](https://www.tabletoptime.us/blog/game-night-scheduling)
-- [Privacy-First Scheduling](https://www.tabletoptime.us/blog/privacy-first-scheduling)
-- [All Blog Posts](https://www.tabletoptime.us/blog)
+- [How to Schedule D&D Sessions Without the Headache](https://tabletoptime.us/blog/how-to-schedule-dnd)
+- [Organizing the Perfect Commander Night](https://tabletoptime.us/blog/mtg-commander-logistics)
+- [Session Zero Planning Guide](https://tabletoptime.us/blog/session-zero-planning)
+- [Campaign Scheduling for Long-Running D&D Games](https://tabletoptime.us/blog/campaign-scheduling)
+- [West Marches & Draft Nights](https://tabletoptime.us/blog/west-marches-draft-nights)
+- [Ultimate Guide to D&D Duets 2026](https://tabletoptime.us/blog/ultimate-guide-dnd-duets-2026)
+- [How to Book Friends for Game Night](https://tabletoptime.us/blog/how-to-book-friends-for-game-night)
+- [Game Night Scheduling Tips](https://tabletoptime.us/blog/game-night-scheduling)
+- [Privacy-First Scheduling](https://tabletoptime.us/blog/privacy-first-scheduling)
+- [All Blog Posts](https://tabletoptime.us/blog)
 
 ## Technical
 
 - [GitHub Repository](https://github.com/mels0n/tabletop_scheduler)
-- [Privacy Policy](https://www.tabletoptime.us/privacy)
-- [Developer API](https://www.tabletoptime.us/developers)
+- [Privacy Policy](https://tabletoptime.us/privacy)
+- [Developer API](https://tabletoptime.us/developers)
 
 ## Key Concepts
 
@@ -49,4 +49,4 @@
 
 ## Usage Note
 
-Events are private by default and do not appear in public indexes. The tool is open source and can be self-hosted. Hosted instance: https://www.tabletoptime.us
+Events are private by default and do not appear in public indexes. The tool is open source and can be self-hosted. Hosted instance: https://tabletoptime.us
