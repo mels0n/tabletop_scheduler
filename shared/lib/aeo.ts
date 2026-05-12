@@ -96,6 +96,7 @@ export const SchemaGenerator = {
         return {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
+            "@id": "https://tabletoptime.us/#software",
             "name": data.name,
             "applicationCategory": data.applicationCategory,
             "operatingSystem": "Web",
@@ -141,10 +142,11 @@ export const SchemaGenerator = {
     /**
      * Generates an FAQPage schema.
      */
-    faq(items: AeoFAQItem[]): WithContext<FAQPage> {
+    faq(items: AeoFAQItem[], url = "https://tabletoptime.us/faq"): WithContext<FAQPage> {
         return {
             "@context": "https://schema.org",
             "@type": "FAQPage",
+            "@id": url,
             "mainEntity": items.map(item => ({
                 "@type": "Question",
                 "name": item.question,
@@ -177,7 +179,7 @@ export const SchemaGenerator = {
                 "name": "Tabletop Time",
                 "logo": {
                     "@type": "ImageObject",
-                    "url": "https://www.tabletoptime.us/icon.png"
+                    "url": "https://tabletoptime.us/icon.png"
                 }
             }
         };
@@ -206,14 +208,14 @@ export const SchemaGenerator = {
                 "name": "Tabletop Time",
                 "logo": {
                     "@type": "ImageObject",
-                    "url": "https://www.tabletoptime.us/icon.png"
+                    "url": "https://tabletoptime.us/icon.png"
                 }
             },
             "mainEntityOfPage": {
                 "@type": "WebPage",
                 "@id": data.slug
-                    ? `https://www.tabletoptime.us/blog/${data.slug}`
-                    : `https://www.tabletoptime.us/blog/${data.headline.toLowerCase().replace(/ /g, '-')}`
+                    ? `https://tabletoptime.us/blog/${data.slug}`
+                    : `https://tabletoptime.us/blog/${data.headline.toLowerCase().replace(/ /g, '-')}`
             }
         };
     },
@@ -229,7 +231,7 @@ export const SchemaGenerator = {
                 "@type": "ListItem",
                 "position": index + 1,
                 "name": item.name,
-                "item": item.url.startsWith("http") ? item.url : `https://www.tabletoptime.us${item.url}`
+                "item": item.url.startsWith("http") ? item.url : `https://tabletoptime.us${item.url}`
             }))
         };
     },
