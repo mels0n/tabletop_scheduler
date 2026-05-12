@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle, AlertCircle, Clock, ShieldCheck, UserCheck } fr
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Voting Logic Explained | Tabletop Time",
+    title: "Voting Logic Explained",
     description: "A deep dive into how Tabletop Time handles RSVPs, Waitlists, and Auto-Promotions.",
     alternates: {
         canonical: '/voting-logic',

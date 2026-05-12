@@ -4,7 +4,7 @@ import { getAllPosts } from '@/shared/lib/blog';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Tabletop Time Blog | D&D Scheduling Tips & MTG Logistics',
+    title: 'Blog — D&D Scheduling Tips & MTG Logistics',
     description: 'Articles, guides, and tips for scheduling D&D sessions, organizing Magic: The Gathering nights, and managing tabletop groups.',
     alternates: {
         canonical: '/blog',

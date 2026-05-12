@@ -24,11 +24,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const post = getPostBySlug(params.slug);
     if (!post) {
         return {
-            title: 'Post Not Found | Tabletop Time',
+            title: 'Post Not Found',
         };
     }
     return {
-        title: `${post.title} | Tabletop Time Blog`,
+        title: post.title,
         description: post.description,
         alternates: {
             canonical: `/blog/${params.slug}`,
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             title: post.title,
             description: post.description,
             type: 'article',
-            authors: ['Tabletop Time Team'],
+            authors: ['Christopher Melson'],
         },
     };
 }
@@ -86,6 +86,18 @@ export default function BlogPost({ params }: Props) {
                         {post.title}
                     </h1>
                     <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-mono">
+                        <span className="flex items-center gap-2">
+                            By{' '}
+                            <a
+                                href="https://chris.melson.us/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-indigo-400 hover:text-indigo-300 not-italic"
+                            >
+                                Christopher Melson
+                            </a>
+                        </span>
+                        <span aria-hidden>·</span>
                         <time dateTime={post.date}>
                             {new Date(post.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                         </time>

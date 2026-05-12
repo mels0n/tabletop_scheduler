@@ -127,6 +127,14 @@ export default function RootLayout({
                                         "@type": "Person",
                                         "name": "Christopher Melson",
                                         "url": "https://chris.melson.us/"
+                                    },
+                                    "potentialAction": {
+                                        "@type": "SearchAction",
+                                        "target": {
+                                            "@type": "EntryPoint",
+                                            "urlTemplate": "https://www.tabletoptime.us/blog?q={search_term_string}"
+                                        },
+                                        "query-input": "required name=search_term_string"
                                     }
                                 },
                                 {

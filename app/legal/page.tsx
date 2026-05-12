@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-    title: 'Legal - Terms of Service & Privacy Policy | Tabletop Time',
+    title: 'Legal — Terms of Service & Privacy Policy',
     description: 'Terms of Service and Formal Privacy Disclosures for Tabletop Time. Learn about our policies for using the free, open-source game scheduling tool.',
     alternates: {
         canonical: '/legal',
