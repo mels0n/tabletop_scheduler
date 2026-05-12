@@ -5,11 +5,26 @@ import { notFound } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Pricing | Tabletop Time - Free Forever",
+    title: "Pricing — Free Forever",
     description: "Tabletop Time is a free, open-source D&D session scheduler. No subscriptions, no paywalls, just gaming.",
     alternates: {
         canonical: '/pricing',
     },
+};
+
+const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Tabletop Time",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free forever — no subscriptions, no paywalls.",
+        "availability": "https://schema.org/InStock"
+    }
 };
 
 export default function PricingPage() {
@@ -22,6 +37,10 @@ export default function PricingPage() {
 
     return (
         <main className="min-h-screen pt-24 pb-16 px-4 bg-slate-950 text-slate-50">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <div className="max-w-3xl mx-auto text-center space-y-8">
                 <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
                     Simple, Transparent Pricing

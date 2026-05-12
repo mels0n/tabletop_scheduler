@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle, Shield, Users, Calendar, Zap } from "lucide-rea
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "How It Works | Tabletop Time",
+    title: "How It Works",
     description: "Learn how Tabletop Time solves the 'When are we playing?' problem for D&D groups with privacy-first, account-less scheduling.",
     alternates: {
         canonical: '/how-it-works',
@@ -11,18 +11,31 @@ export const metadata: Metadata = {
 };
 
 export default function HowItWorksPage() {
-    const jsonLd = {
-        "@context": "https://schema.org",
-        "@type": "HowTo",
-        "name": "How to Schedule a D&D Session with Tabletop Time",
-        "dateModified": "2026-03-04",
-        "step": [
-            { "@type": "HowToStep", "text": "Create a new event and add available time slots" },
-            { "@type": "HowToStep", "text": "Share the secure link with your gaming group via Discord or Telegram" },
-            { "@type": "HowToStep", "text": "Players vote on times they are available, or suggest new times if none work" },
-            { "@type": "HowToStep", "text": "System automatically identifies the best time slot where everyone is free" }
-        ]
-    };
+    const jsonLd = [
+        {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.tabletoptime.us" },
+                { "@type": "ListItem", "position": 2, "name": "How It Works", "item": "https://www.tabletoptime.us/how-it-works" }
+            ]
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "How Tabletop Time Works",
+            "description": "Tabletop Time is a free, account-less D&D session scheduler. Organizers create an event with candidate dates, share a private link, and players vote with Yes / If-Needed / No. Quorum logic then highlights the best slot automatically.",
+            "url": "https://www.tabletoptime.us/how-it-works",
+            "dateModified": "2026-03-04",
+            "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.tabletoptime.us" },
+                    { "@type": "ListItem", "position": 2, "name": "How It Works", "item": "https://www.tabletoptime.us/how-it-works" }
+                ]
+            }
+        }
+    ];
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">

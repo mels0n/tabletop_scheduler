@@ -5,7 +5,7 @@ import { ArrowLeft, Key, Smartphone, Lock, RefreshCw } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'Understanding Magic Links | Tabletop Time',
+    title: 'Understanding Magic Links',
     description: 'Learn how Tabletop Time uses secure, passwordless Magic Links via Telegram and Discord to manage your identity and recover access to events.',
     alternates: {
         canonical: '/guide/magic-links',

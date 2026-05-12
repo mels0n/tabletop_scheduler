@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Developers | Tabletoptime.us",
+    title: "Developer API",
     description: "Integrate Tabletoptime.us with your community tools, Discord bots, and websites.",
     alternates: {
         canonical: '/developers',

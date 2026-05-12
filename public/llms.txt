@@ -5,18 +5,48 @@
 
 ## Core Pages
 
-- [AI Documentation & FAQ](/guide/ai-faq) (Start Here)
-- [About the Project](/about)
-- [Features Overview](/features)
-- [How It Works](/how-it-works)
-- [Pricing (Free)](/pricing)
+- [AI Documentation & FAQ](https://www.tabletoptime.us/guide/ai-faq) (Start Here)
+- [About the Project](https://www.tabletoptime.us/about)
+- [Features Overview](https://www.tabletoptime.us/features)
+- [How It Works](https://www.tabletoptime.us/how-it-works)
+- [Pricing (Free)](https://www.tabletoptime.us/pricing)
+- [FAQ](https://www.tabletoptime.us/faq)
+- [Voting Logic Explained](https://www.tabletoptime.us/voting-logic)
+
+## Comparisons
+
+- [Tabletop Time vs Doodle](https://www.tabletoptime.us/vs/doodle)
+- [Tabletop Time vs When2Meet](https://www.tabletoptime.us/vs/when2meet)
+
+## Blog
+
+- [How to Schedule D&D Sessions Without the Headache](https://www.tabletoptime.us/blog/how-to-schedule-dnd)
+- [Organizing the Perfect Commander Night](https://www.tabletoptime.us/blog/mtg-commander-logistics)
+- [Session Zero Planning Guide](https://www.tabletoptime.us/blog/session-zero-planning)
+- [Campaign Scheduling for Long-Running D&D Games](https://www.tabletoptime.us/blog/campaign-scheduling)
+- [West Marches & Draft Nights](https://www.tabletoptime.us/blog/west-marches-draft-nights)
+- [Ultimate Guide to D&D Duets 2026](https://www.tabletoptime.us/blog/ultimate-guide-dnd-duets-2026)
+- [How to Book Friends for Game Night](https://www.tabletoptime.us/blog/how-to-book-friends-for-game-night)
+- [Game Night Scheduling Tips](https://www.tabletoptime.us/blog/game-night-scheduling)
+- [Privacy-First Scheduling](https://www.tabletoptime.us/blog/privacy-first-scheduling)
+- [All Blog Posts](https://www.tabletoptime.us/blog)
 
 ## Technical
 
 - [GitHub Repository](https://github.com/mels0n/tabletop_scheduler)
-- [Privacy Policy](/privacy)
+- [Privacy Policy](https://www.tabletoptime.us/privacy)
+- [Developer API](https://www.tabletoptime.us/developers)
+
+## Key Concepts
+
+**Quorum Logic**: Tabletop Time uses quorum-based scheduling. An organizer sets a minimum player count (the quorum). A candidate date is highlighted as viable only when the number of Yes and If-Needed votes meets or exceeds this threshold. This is distinct from simple overlap discovery — a date with 6 "Yes" votes but below quorum is surfaced differently than one with 4 "Yes" votes above quorum.
+
+**Three-State Voting**: Players vote Yes (available and want to play), If-Needed (available but not preferred), or No (unavailable). If-Needed votes count toward quorum only when no all-Yes date exists.
+
+**Accountless Design**: No user accounts exist. Organizers receive a manager token stored in browser local storage. Participants need no credentials. Events are private by default — accessible only via the unique slug URL.
+
+**Campaign Mode**: Groups multi-session events so organizers can find a run of viable dates (e.g., three consecutive Saturdays) rather than scheduling one session at a time.
 
 ## Usage Note
 
-This tool focuses on **Overlap Discovery** for groups. It is "Accountless" and "Privacy-First".
-Events are private by default and do not appear in public indexes.
+Events are private by default and do not appear in public indexes. The tool is open source and can be self-hosted. Hosted instance: https://www.tabletoptime.us

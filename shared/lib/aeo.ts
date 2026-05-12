@@ -196,8 +196,10 @@ export const SchemaGenerator = {
             "datePublished": data.datePublished,
             "dateModified": data.dateModified,
             "author": {
-                "@type": "Organization",
-                "name": "Tabletop Time"
+                "@type": "Person",
+                "name": "Christopher Melson",
+                "url": "https://chris.melson.us/",
+                "sameAs": ["https://chris.melson.us/", "https://github.com/mels0n"]
             },
             "publisher": {
                 "@type": "Organization",

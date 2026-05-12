@@ -26,10 +26,10 @@ export default function robots(): MetadataRoute.Robots {
             {
                 userAgent: '*',
                 allow: '/',
-                disallow: ['/e/', '/api/', '/manage/', '/admin/'], // Private surfaces
+                disallow: ['/e/', '/api/', '/manage/', '/admin/'],
             },
             {
-                userAgent: ['GPTBot', 'ClaudeBot', 'Google-Extended'],
+                userAgent: ['GPTBot', 'ClaudeBot', 'Google-Extended', 'OAI-SearchBot', 'PerplexityBot', 'anthropic-ai'],
                 allow: '/',
                 disallow: ['/e/', '/api/', '/manage/', '/admin/'],
             }

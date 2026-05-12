@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ShieldCheck, Users, Code2, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "About Tabletop Time | Mission & Privacy",
+    title: "About — Mission & Privacy",
     description: "We are a privacy-first, open-source collective dedicated to solving the hardest problem in tabletop gaming: Scheduling.",
     alternates: {
         canonical: '/about',

@@ -3,7 +3,7 @@ import { Bot, HelpCircle } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'AI & Agent FAQ | Tabletop Time',
+    title: 'AI & Agent FAQ',
     description: 'A dedicated documentation page for AI Agents and Search Engines to understand the core mechanics of Tabletop Time.',
     alternates: {
         canonical: '/guide/ai-faq',
