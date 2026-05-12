@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": "https://www.tabletoptime.us/#software",
     "name": "Tabletop Time",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "Web",
