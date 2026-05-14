@@ -81,3 +81,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more comprehensive dev instructions.
 ## License
 CC-BY-NC-SA 4.0
 
+[Hosted by UntapWeb](https://untapweb.com)
+
