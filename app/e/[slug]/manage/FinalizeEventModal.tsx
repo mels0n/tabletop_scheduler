@@ -13,6 +13,7 @@ interface FinalizeEventModalProps {
     slug: string;
     slotId: number;
     potentialHosts: Participant[];
+    prominent?: boolean;
 }
 
 /**
@@ -30,7 +31,7 @@ interface FinalizeEventModalProps {
  * - Displays a warning if NO ONE volunteered to host.
  * - Handles form submission with loading states and global router refresh.
  */
-export function FinalizeEventModal({ slug, slotId, potentialHosts }: FinalizeEventModalProps) {
+export function FinalizeEventModal({ slug, slotId, potentialHosts, prominent = false }: FinalizeEventModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     // Intent: Auto-select if there's only one potential host to save clicks.
     const [selectedHostId, setSelectedHostId] = useState<string>(
@@ -70,7 +71,10 @@ export function FinalizeEventModal({ slug, slotId, potentialHosts }: FinalizeEve
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 hover:border-indigo-500 font-medium text-sm transition-all"
+                className={prominent
+                    ? "shrink-0 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-900/40 hover:shadow-indigo-900/60"
+                    : "shrink-0 px-4 py-1.5 rounded-lg border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 text-xs font-medium transition-all"
+                }
             >
                 Finalize
             </button>

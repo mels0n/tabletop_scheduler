@@ -107,7 +107,7 @@ export function ManagerControls({
     const hasAnyConnection = isTelegramConnected || isDiscordConnected;
 
     return (
-        <div className="mt-6 space-y-4">
+        <div className="space-y-4">
 
             {/* Reminder Scheduler - Only if Connected */}
             {hasAnyConnection ? (

@@ -53,7 +53,7 @@ export function ManageParticipants({ slug, participants }: ManageParticipantsPro
     }
 
     return (
-        <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 mt-8">
+        <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800">
             <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
                 <span>Manage Participants</span>
                 <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">
