@@ -271,65 +271,72 @@ export default async function ManageEventPage({ params }: PageProps) {
             <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
-                    {/* LEFT COLUMN: Event Info & Controls */}
+                    {/* LEFT COLUMN */}
                     <div className="lg:col-span-5 space-y-8">
-                        <div className="border-b border-slate-800 pb-6">
-                            <div className="flex justify-between items-start gap-4">
-                                <div>
-                                    <h1 className="text-3xl font-bold mb-2 break-words">Manage: {event.title}</h1>
-                                    <p className="text-slate-400">Pick the best time and notify your players.</p>
-                                </div>
+
+                        {/* Event header */}
+                        <div>
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                                <h1 className="text-2xl font-bold text-slate-50 break-words leading-snug">{event.title}</h1>
                                 <Link
                                     href={`/e/${event.slug}`}
-                                    className="shrink-0 px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-900 transition-colors text-xs whitespace-nowrap hidden md:inline-block"
+                                    className="shrink-0 px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-900 transition-colors text-xs whitespace-nowrap"
                                 >
                                     View as Player
                                 </Link>
                             </div>
-
-                            <div className="mt-4 flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500">Share:</span>
                                 <CopyLinkButton url={`/e/${event.slug}`} />
-                                <Link
-                                    href={`/e/${event.slug}`}
-                                    className="px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-900 transition-colors text-xs whitespace-nowrap md:hidden"
-                                >
-                                    View as Player
-                                </Link>
                             </div>
                         </div>
 
-                        {/* Client-side navigation history update */}
                         <HistoryTracker slug={event.slug} title={event.title} />
 
-                        <TelegramConnect
-                            slug={event.slug}
-                            botUsername={botUsername || 'TabletopSchedulerBot'}
-                            initialTelegramLink={event.telegramLink}
-                            hasChatId={!!event.telegramChatId}
-                            initialHandle={event.managerTelegram}
-                            hasManagerChatId={!!event.managerChatId}
-                        />
+                        {/* Notifications */}
+                        <div className="space-y-3">
+                            <SidebarLabel>Notifications</SidebarLabel>
+                            <TelegramConnect
+                                slug={event.slug}
+                                botUsername={botUsername || 'TabletopSchedulerBot'}
+                                initialTelegramLink={event.telegramLink}
+                                hasChatId={!!event.telegramChatId}
+                                initialHandle={event.managerTelegram}
+                                hasManagerChatId={!!event.managerChatId}
+                            />
+                            <DiscordConnect
+                                slug={event.slug}
+                                hasChannel={!!event.discordChannelId}
+                                guildId={event.discordGuildId}
+                                channelId={event.discordChannelId}
+                                hasManagerDiscordId={!!event.managerDiscordId}
+                            />
+                        </div>
 
-                        <DiscordConnect
-                            slug={event.slug}
-                            hasChannel={!!event.discordChannelId}
-                            guildId={event.discordGuildId}
-                            channelId={event.discordChannelId}
-                            hasManagerDiscordId={!!event.managerDiscordId}
-                        />
+                        {/* Event Settings */}
+                        <div className="space-y-3">
+                            <SidebarLabel>Event Settings</SidebarLabel>
+                            <ManagerControls
+                                slug={event.slug}
+                                isFinalized={event.status === "FINALIZED"}
+                                isCancelled={event.status === "CANCELLED"}
+                                isTelegramConnected={!!event.telegramChatId}
+                                isDiscordConnected={!!event.discordChannelId}
+                                initialReminderEnabled={event.reminderEnabled}
+                                initialReminderTime={event.reminderTime}
+                                initialReminderDays={event.reminderDays}
+                            />
+                        </div>
 
-                        <ManagerControls
-                            slug={event.slug}
-                            isFinalized={event.status === "FINALIZED"}
-                            isCancelled={event.status === "CANCELLED"}
-                            isTelegramConnected={!!event.telegramChatId}
-                            isDiscordConnected={!!event.discordChannelId}
-                            initialReminderEnabled={event.reminderEnabled}
-                            initialReminderTime={event.reminderTime}
-                            initialReminderDays={event.reminderDays}
-                        />
-
-                        <ManageParticipants slug={event.slug} participants={event.participants} />
+                        {/* Players */}
+                        <div className="space-y-3">
+                            <SidebarLabel>Players</SidebarLabel>
+                            {event.participants.length > 0 ? (
+                                <ManageParticipants slug={event.slug} participants={event.participants} />
+                            ) : (
+                                <p className="text-xs text-slate-500 py-1">No players have voted yet.</p>
+                            )}
+                        </div>
                     </div>
 
                     {/* RIGHT COLUMN: Slots / Finalized State */}
@@ -646,45 +653,72 @@ export default async function ManageEventPage({ params }: PageProps) {
                                         slug={event.slug}
                                     />
 
-                                    <div className="grid gap-3">
+                                    <div className="grid gap-2">
                                         {slots.length === 0 ? (
                                             <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
                                                 No time slots proposed yet.
                                             </div>
-                                        ) : slots.map(slot => (
-                                            <div key={slot.id} className="group relative p-4 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors flex flex-col sm:flex-row items-center justify-between gap-4">
-                                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                                    <div className="text-center min-w-[60px] shrink-0">
-                                                        {slot.perfect && <div className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1 bg-green-900/20 px-1.5 py-0.5 rounded">Perfect</div>}
-                                                        {!slot.hasHost && <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1 bg-orange-900/20 px-1.5 py-0.5 rounded">No Host</div>}
-                                                        {slot.viable && !slot.perfect && slot.hasHost && <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 bg-indigo-900/20 px-1.5 py-0.5 rounded">Viable</div>}
-                                                        {!slot.viable && <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1 bg-slate-800/50 px-1.5 py-0.5 rounded">Low T/O</div>}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-semibold text-base text-slate-200">
-                                                            <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
-                                                            <ClientTimezone className="ml-1 text-slate-500 font-normal text-sm" />
+                                        ) : slots.map((slot, index) => {
+                                            const totalParticipants = event.participants.length;
+                                            const yesVoters = slot.votes.filter((v: any) => v.preference === 'YES');
+                                            const maybeVoters = slot.votes.filter((v: any) => v.preference === 'MAYBE');
+                                            const noVoters = slot.votes.filter((v: any) => v.preference === 'NO');
+                                            const unvotedCount = Math.max(0, totalParticipants - yesVoters.length - maybeVoters.length - noVoters.length);
+
+                                            const cardClass = slot.perfect
+                                                ? "border-green-800/40 bg-green-950/10"
+                                                : !slot.viable
+                                                ? "border-slate-800/30 bg-slate-900/20 opacity-60"
+                                                : !slot.hasHost
+                                                ? "border-amber-900/30 bg-slate-900/40"
+                                                : "border-slate-700/60 bg-slate-900/40";
+
+                                            return (
+                                                <div key={slot.id} className={`rounded-xl border p-4 transition-all ${cardClass}`}>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap mb-2">
+                                                                <span className="font-semibold text-slate-100 text-sm">
+                                                                    <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
+                                                                    <ClientTimezone className="ml-1 text-slate-500 font-normal" />
+                                                                </span>
+                                                                {slot.perfect && (
+                                                                    <span className="text-xs font-medium text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full">Perfect</span>
+                                                                )}
+                                                                {!slot.hasHost && (
+                                                                    <span className="text-xs font-medium text-amber-500/90 bg-amber-900/10 px-2 py-0.5 rounded-full">No host</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-1 flex-wrap">
+                                                                {yesVoters.map((v: any) => (
+                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-green-500/80 cursor-help shrink-0" />
+                                                                ))}
+                                                                {maybeVoters.map((v: any) => (
+                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-amber-500/70 cursor-help shrink-0" />
+                                                                ))}
+                                                                {noVoters.map((v: any) => (
+                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-red-800/50 cursor-help shrink-0" />
+                                                                ))}
+                                                                {Array.from({ length: unvotedCount }).map((_, i) => (
+                                                                    <span key={`u-${i}`} className="w-3 h-3 rounded-full bg-slate-700/80 shrink-0" />
+                                                                ))}
+                                                                <span className="ml-2 text-xs text-slate-500">
+                                                                    {slot.yesCount} yes
+                                                                    {slot.maybeCount > 0 && ` · ${slot.maybeCount} maybe`}
+                                                                    {slot.noCount > 0 && ` · ${slot.noCount} no`}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className="text-sm text-slate-400 flex gap-3 mt-0.5">
-                                                            <span className="text-green-400 font-medium cursor-help" title={slot.votes.filter((v: any) => v.preference === 'YES').map((v: any) => v.participant.name).join(', ') || 'No Yes votes'}>
-                                                                {slot.yesCount} Yes
-                                                            </span>
-                                                            <span className="text-yellow-500/80 cursor-help" title={slot.votes.filter((v: any) => v.preference === 'MAYBE').map((v: any) => v.participant.name).join(', ') || 'No If Needed votes'}>
-                                                                {slot.maybeCount} If Needed
-                                                            </span>
-                                                            <span className="text-red-900/60 cursor-help" title={slot.votes.filter((v: any) => v.preference === 'NO').map((v: any) => v.participant.name).join(', ') || 'No No votes'}>
-                                                                {slot.noCount} No
-                                                            </span>
-                                                        </div>
+                                                        <FinalizeEventModal
+                                                            slug={event.slug}
+                                                            slotId={slot.id}
+                                                            potentialHosts={slot.potentialHosts}
+                                                            prominent={index === 0}
+                                                        />
                                                     </div>
                                                 </div>
-                                                <FinalizeEventModal
-                                                    slug={event.slug}
-                                                    slotId={slot.id}
-                                                    potentialHosts={slot.potentialHosts}
-                                                />
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
 
                                     <ManageSlots slug={event.slug} slots={event.timeSlots} />
@@ -695,5 +729,14 @@ export default async function ManageEventPage({ params }: PageProps) {
                 </div>
             </div>
         </div >
+    );
+}
+
+function SidebarLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="flex items-center gap-3">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest whitespace-nowrap">{children}</span>
+            <div className="flex-1 h-px bg-slate-800" />
+        </div>
     );
 }
