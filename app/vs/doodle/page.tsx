@@ -80,10 +80,10 @@ export default function VsDoodlePage() {
                     <p className="text-indigo-400 font-mono text-sm uppercase tracking-widest">Doodle Alternative</p>
                     <h1 className="text-4xl md:text-5xl font-bold leading-tight">
                         Tabletop Time vs Doodle
-                        <span className="block text-slate-400 text-2xl md:text-3xl font-normal mt-2">
-                            The scheduling tool that actually gets game night.
-                        </span>
                     </h1>
+                    <p className="text-slate-400 text-2xl md:text-3xl font-normal">
+                        The scheduling tool that actually gets game night.
+                    </p>
                     <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
                         Doodle is designed for scheduling business meetings — calendar polling, corporate SSO, and 20-participant polls with ad banners in between. It works. But for a six-person D&D group trying to nail down a Saturday night, it misses everything that actually matters.
                     </p>

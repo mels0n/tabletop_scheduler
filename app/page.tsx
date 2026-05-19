@@ -88,6 +88,26 @@ export default async function Home() {
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           />
           <FaqJsonLd data={HOME_FAQ} />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "@id": "https://tabletoptime.us/#website",
+                "url": "https://tabletoptime.us",
+                "name": "Tabletop Time",
+                "potentialAction": {
+                  "@type": "SearchAction",
+                  "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": "https://tabletoptime.us/blog?q={search_term_string}"
+                  },
+                  "query-input": "required name=search_term_string"
+                }
+              })
+            }}
+          />
         </>
       )}
       <div className="relative flex flex-col place-items-center text-center w-full min-w-0 max-w-5xl mx-auto">
