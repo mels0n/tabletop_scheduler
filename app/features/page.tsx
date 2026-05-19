@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'Doodle Alternative for Game Night',
+    title: 'Features — Game Night Scheduling Built for Tabletop Groups',
     description: 'The Doodle replacement built for gaming groups. Quorum logic, waitlists, Telegram & Discord bots — and no sign-up required for anyone. Free forever.',
     alternates: {
         canonical: '/features',

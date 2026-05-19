@@ -82,10 +82,10 @@ export default function VsWhen2MeetPage() {
                     <p className="text-indigo-400 font-mono text-sm uppercase tracking-widest">When2Meet Alternative</p>
                     <h1 className="text-4xl md:text-5xl font-bold leading-tight">
                         Tabletop Time vs When2Meet
-                        <span className="block text-slate-400 text-2xl md:text-3xl font-normal mt-2">
-                            When2Meet is great. Here&apos;s what it&apos;s missing for game night.
-                        </span>
                     </h1>
+                    <p className="text-slate-400 text-2xl md:text-3xl font-normal">
+                        When2Meet is great. Here&apos;s what it&apos;s missing for game night.
+                    </p>
                     <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
                         When2Meet has a devoted following among gamers for good reason: it&apos;s fast, it&apos;s free, and it requires no account. If you&apos;re using it to schedule your sessions, you&apos;ve already made a better choice than Doodle. But there are a few gaps that matter a lot when you&apos;re the DM trying to hold a group together.
                     </p>

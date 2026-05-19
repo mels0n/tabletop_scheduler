@@ -20,8 +20,33 @@ export default function BlogIndex() {
 
     const posts = getAllPosts();
 
+    const blogSchema = {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        "@id": "https://tabletoptime.us/blog#blog",
+        "name": "Tabletop Time Blog",
+        "description": "Guides, tips, and articles about scheduling D&D sessions, organizing Magic: The Gathering nights, and managing tabletop gaming groups.",
+        "url": "https://tabletoptime.us/blog",
+        "publisher": {
+            "@type": "Person",
+            "name": "Christopher Melson",
+            "url": "https://chris.melson.us/"
+        },
+        "blogPost": posts.map(post => ({
+            "@type": "BlogPosting",
+            "headline": post.title,
+            "description": post.description,
+            "url": `https://tabletoptime.us/blog/${post.slug}`,
+            "datePublished": post.date,
+        })),
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(blogSchema) }}
+            />
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
                     Tabletop Time Blog
