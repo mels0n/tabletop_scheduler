@@ -1,4 +1,4 @@
-import { Zap, Users, Trophy, Calendar, CalendarDays, Bot, Check, X, Shield, Clock } from 'lucide-react';
+import { Users, Trophy, Calendar, CalendarDays, Bot, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
@@ -99,32 +99,33 @@ export default function FeaturesPage() {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[900px]">
+                        <table className="w-full text-left border-collapse min-w-[1100px]">
                             <thead>
                                 <tr className="border-b border-slate-700 text-slate-400 text-sm">
                                     <th className="py-4 pl-4 font-normal w-1/5">Feature</th>
                                     <th className="py-4 px-2 font-bold text-indigo-400 text-lg bg-indigo-500/10 rounded-t-lg">Tabletop Time</th>
-                                    <th className="py-4 px-2 font-normal">Doodle</th>
-                                    <th className="py-4 px-2 font-normal">When2meet</th>
-                                    <th className="py-4 px-2 font-normal">Calendly</th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/doodle" className="hover:text-white transition-colors">Doodle</Link></th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/when2meet" className="hover:text-white transition-colors">When2Meet</Link></th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/lettucemeet" className="hover:text-white transition-colors">LettuceMeet</Link></th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/rallly" className="hover:text-white transition-colors">Rallly</Link></th>
                                     <th className="py-4 px-2 font-normal">Calendar Apps</th>
                                     <th className="py-4 px-2 font-normal">Group Chats</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800 text-slate-300 text-sm md:text-base">
-                                <Row label="No Sign-Up Needed" checkTT={true} checkDoodle={false} checkW2M={true} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="No Ads" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Quorum (Min Players)" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Waitlist & Capacity" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={false} />
-                                <Row label="Optional Chatbots" checkTT={true} checkDoodle={false} checkW2M={false} checkCal={false} checkApps={false} checkChat={true} noteChat="Native Polls" />
-                                <Row label="Works for Large Groups" checkTT={true} checkDoodle={true} checkW2M={true} checkCal={false} checkApps={false} checkChat={true} />
+                                <Row label="No Sign-Up Needed" checkTT={true} checkDoodle={false} checkW2M={true} checkLM={false} checkRallly="Optional" checkApps={false} checkChat={false} />
+                                <Row label="No Ads" checkTT={true} checkDoodle={false} checkW2M={false} checkLM={true} checkRallly={true} checkApps={false} checkChat={false} />
+                                <Row label="Quorum (Min Players)" checkTT={true} checkDoodle={false} checkW2M={false} checkLM={false} checkRallly={false} checkApps={false} checkChat={false} />
+                                <Row label="Waitlist & Capacity" checkTT={true} checkDoodle={false} checkW2M={false} checkLM={false} checkRallly={false} checkApps={false} checkChat={false} />
+                                <Row label="Discord / Telegram Bots" checkTT={true} checkDoodle={false} checkW2M={false} checkLM={false} checkRallly={false} checkApps={false} checkChat={true} noteChat="Native Polls" />
+                                <Row label="Works for Large Groups" checkTT={true} checkDoodle={true} checkW2M={true} checkLM={true} checkRallly={true} checkApps={false} checkChat={true} />
                             </tbody>
                         </table>
                     </div>
                     <div className="mt-4 text-center text-xs text-slate-500">
-                        * Comparison based on standard &quot;Free&quot; tiers of respective services.
+                        * Comparison based on standard free tiers as of 2026.
                         <br />
-                        * &quot;Group Chats&quot; refers to Signal, WhatsApp, Discord, etc.
+                        * &quot;Group Chats&quot; refers to Signal, WhatsApp, Discord, etc. LettuceMeet requires Google login to create events.
                     </div>
                 </div>
 
@@ -174,30 +175,38 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
     );
 }
 
-function Row({ label, checkTT, checkDoodle, checkW2M, checkCal, checkApps, checkChat, noteChat, good = true }: any) {
+function Cell({ value, note, good = true }: { value: boolean | string; note?: string; good?: boolean }) {
+    if (typeof value === 'string') return <span className="text-xs text-amber-400">{value}</span>;
+    return value === good
+        ? <Check className="w-5 h-5 text-emerald-400 inline" />
+        : note
+            ? <span className="text-xs text-amber-400">{note}</span>
+            : <X className="w-5 h-5 text-rose-500 inline" />;
+}
+
+function Row({ label, checkTT, checkDoodle, checkW2M, checkLM, checkRallly, checkApps, checkChat, noteChat }: {
+    label: string;
+    checkTT: boolean | string;
+    checkDoodle: boolean | string;
+    checkW2M: boolean | string;
+    checkLM: boolean | string;
+    checkRallly: boolean | string;
+    checkApps: boolean | string;
+    checkChat: boolean | string;
+    noteChat?: string;
+}) {
     return (
         <tr className="hover:bg-slate-800/20 transition-colors">
             <td className="py-4 pl-4 font-medium">{label}</td>
             <td className="py-4 px-2 bg-indigo-500/5 font-bold text-indigo-300">
-                {checkTT === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
+                <Cell value={checkTT} />
             </td>
-            <td className="py-4 px-2">
-                {checkDoodle === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
-            </td>
-            <td className="py-4 px-2">
-                {checkW2M === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
-            </td>
-            <td className="py-4 px-2">
-                {checkCal === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
-            </td>
-            <td className="py-4 px-2">
-                {checkApps === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : <X className="w-5 h-5 text-rose-500 inline" />}
-            </td>
-            <td className="py-4 px-2">
-                {checkChat === good ? <Check className="w-5 h-5 text-emerald-400 inline" /> : (
-                    noteChat ? <span className="text-xs text-amber-400">{noteChat}</span> : <X className="w-5 h-5 text-rose-500 inline" />
-                )}
-            </td>
+            <td className="py-4 px-2"><Cell value={checkDoodle} /></td>
+            <td className="py-4 px-2"><Cell value={checkW2M} /></td>
+            <td className="py-4 px-2"><Cell value={checkLM} /></td>
+            <td className="py-4 px-2"><Cell value={checkRallly} /></td>
+            <td className="py-4 px-2"><Cell value={checkApps} /></td>
+            <td className="py-4 px-2"><Cell value={checkChat} note={noteChat} /></td>
         </tr>
     );
 }
