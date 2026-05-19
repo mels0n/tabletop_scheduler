@@ -176,17 +176,17 @@ A 2022 SlyFlourish poll of 2,600 D&D players revealed the uncomfortable truth ab
   <rect width="360" height="360" fill="#1e293b" rx="10"/>
   <text x="180" y="28" text-anchor="middle" fill="#f1f5f9" font-size="13" font-family="sans-serif" font-weight="600">Do Campaigns Reach a Satisfying Ending?</text>
   <text x="180" y="46" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="sans-serif">SlyFlourish poll · 2,600 respondents · 2022</text>
-  <!-- Donut segments (cx=180, cy=195, r=90, inner r=52) -->
-  <!-- Almost Never 26% = 93.6deg, start 0 -->
-  <path d="M180,105 A90,90 0 0,1 263.7,146.8 L227.2,164.1 A52,52 0 0,0 180,143 Z" fill="#ef4444"/>
-  <!-- Rarely 21% = 75.6deg, start 93.6 -->
-  <path d="M263.7,146.8 A90,90 0 0,1 248.7,276.5 L215.8,247.1 A52,52 0 0,0 227.2,164.1 Z" fill="#f97316"/>
-  <!-- Sometimes 31% = 111.6deg, start 169.2 -->
-  <path d="M248.7,276.5 A90,90 0 0,1 91.5,270.1 L131.0,246.2 A52,52 0 0,0 215.8,247.1 Z" fill="#f59e0b"/>
-  <!-- Often 14% = 50.4deg, start 280.8 -->
-  <path d="M91.5,270.1 A90,90 0 0,1 107.1,112.3 L143.5,143.9 A52,52 0 0,0 131.0,246.2 Z" fill="#22c55e"/>
-  <!-- Almost Always 7% = 25.2deg, start 331.2 -->
-  <path d="M107.1,112.3 A90,90 0 0,1 180,105 L180,143 A52,52 0 0,0 143.5,143.9 Z" fill="#6366f1"/>
+  <!-- cx=180 cy=195 R=90 r=52 | x=cx+R·sin(θ) y=cy-R·cos(θ) -->
+  <!-- Almost Never 26% (0° → 93.6°) -->
+  <path d="M 180,105 A 90,90 0 0,1 269.8,200.7 L 231.9,198.3 A 52,52 0 0,0 180,143 Z" fill="#ef4444"/>
+  <!-- Rarely 21% (93.6° → 169.2°) -->
+  <path d="M 269.8,200.7 A 90,90 0 0,1 196.9,283.4 L 189.7,246.1 A 52,52 0 0,0 231.9,198.3 Z" fill="#f97316"/>
+  <!-- Sometimes 32% (169.2° → 284.4°) -->
+  <path d="M 196.9,283.4 A 90,90 0 0,1 92.8,172.6 L 129.6,182.1 A 52,52 0 0,0 189.7,246.1 Z" fill="#f59e0b"/>
+  <!-- Often 14% (284.4° → 334.8°) -->
+  <path d="M 92.8,172.6 A 90,90 0 0,1 141.7,113.6 L 157.9,147.9 A 52,52 0 0,0 129.6,182.1 Z" fill="#22c55e"/>
+  <!-- Almost Always 7% (334.8° → 360°) -->
+  <path d="M 141.7,113.6 A 90,90 0 0,1 180,105 L 180,143 A 52,52 0 0,0 157.9,147.9 Z" fill="#6366f1"/>
   <!-- Center label -->
   <text x="180" y="190" text-anchor="middle" fill="#f1f5f9" font-size="11" font-family="sans-serif" font-weight="600">47%</text>
   <text x="180" y="205" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="sans-serif">rarely/never</text>
