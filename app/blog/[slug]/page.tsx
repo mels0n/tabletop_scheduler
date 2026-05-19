@@ -3,6 +3,7 @@ import { SchemaGenerator } from '@/shared/lib/aeo';
 import { notFound } from 'next/navigation';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -110,7 +111,16 @@ export default function BlogPost({ params }: Props) {
                 </header>
 
                 <div className="prose prose-invert prose-lg max-w-none prose-headings:text-indigo-100 prose-a:text-indigo-400 hover:prose-a:text-indigo-300 prose-strong:text-slate-100">
-                    <Markdown remarkPlugins={[remarkGfm]}>{post.content}</Markdown>
+                    <Markdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                            h1: ({ children }) => <h2>{children}</h2>,
+                            img: ({ src, alt }) => (
+                                <img src={src} alt={alt ?? ''} className="w-full rounded-lg my-6" />
+                            ),
+                        }}
+                    >{post.content}</Markdown>
                 </div>
             </div>
         </article>
