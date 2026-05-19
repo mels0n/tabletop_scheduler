@@ -216,6 +216,8 @@ export default function VsDoodlePage() {
                 <div className="border-t border-slate-800 pt-8 flex flex-wrap gap-6 text-sm text-slate-500">
                     <Link href="/features" className="hover:text-indigo-400 transition-colors">Full Feature List</Link>
                     <Link href="/vs/when2meet" className="hover:text-indigo-400 transition-colors">vs When2Meet</Link>
+                    <Link href="/vs/lettucemeet" className="hover:text-indigo-400 transition-colors">vs LettuceMeet</Link>
+                    <Link href="/vs/rallly" className="hover:text-indigo-400 transition-colors">vs Rallly</Link>
                     <Link href="/pricing" className="hover:text-indigo-400 transition-colors">Pricing (Free)</Link>
                     <Link href="/new" className="hover:text-indigo-400 transition-colors">Create an Event</Link>
                 </div>
