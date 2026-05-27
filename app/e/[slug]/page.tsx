@@ -9,7 +9,7 @@ import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
 import { CampaignStatusBanner } from "@/components/CampaignStatusBanner";
 import Link from "next/link";
-import { format } from "date-fns";
+import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 
 interface PageProps {
     params: { slug: string };
@@ -234,8 +234,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                                     </div>
                                     <div className="space-y-2">
                                         {event.finalizedSessions.map((session: any, index: number) => {
-                                            const start = new Date(session.timeSlot.startTime);
-                                            const end = new Date(session.timeSlot.endTime);
                                             return (
                                                 <div key={session.id} className="bg-slate-950/50 rounded-xl p-3 flex items-center gap-3 border border-slate-800">
                                                     <div className="w-7 h-7 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
@@ -243,10 +241,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="font-semibold text-slate-200 text-sm">
-                                                            {format(start, "EEEE, MMMM do, yyyy")}
+                                                            <ClientDate date={session.timeSlot.startTime} formatStr="EEEE, MMMM do, yyyy" />
                                                         </div>
                                                         <div className="text-xs text-indigo-300">
-                                                            {format(start, "h:mm a")} – {format(end, "h:mm a")}
+                                                            <ClientDate date={session.timeSlot.startTime} formatStr="h:mm a" /> – <ClientDate date={session.timeSlot.endTime} formatStr="h:mm a" />
+                                                            <ClientTimezone className="ml-1 text-indigo-300/70" />
                                                         </div>
                                                     </div>
                                                     <a

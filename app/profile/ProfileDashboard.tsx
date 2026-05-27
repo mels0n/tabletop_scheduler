@@ -4,7 +4,7 @@ import { useEventHistory } from "@/hooks/useEventHistory";
 import Link from "next/link";
 import { ArrowLeft, User as UserIcon, Calendar, Clock, RefreshCw, Send, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { ClientDate } from "@/components/ClientDate";
 import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
 
 
@@ -170,8 +170,10 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                                             </h3>
                                             <p className="text-xs text-slate-500 font-mono mt-1">
                                                 {event.scheduledDate
-                                                    ? format(new Date(event.scheduledDate), "MMM d, yyyy")
-                                                    : (event.status === 'CANCELLED' ? "Original Date: " + format(new Date(event.lastVisited), "MMM d") : "Draft / Scheduling...")
+                                                    ? <ClientDate date={event.scheduledDate} formatStr="MMM d, yyyy" />
+                                                    : (event.status === 'CANCELLED'
+                                                        ? <>Original Date: <ClientDate date={event.lastVisited} formatStr="MMM d" /></>
+                                                        : "Draft / Scheduling...")
                                                 }
                                             </p>
                                         </div>
