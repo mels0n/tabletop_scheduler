@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2, Edit2, Plus, X } from "lucide-react";
 import { DateTimeRangeInputs } from "./DateTimeRangeInputs";
+import { ClientDate, ClientTimezone } from "./ClientDate";
 
 interface Slot {
     id: number;
@@ -234,9 +235,10 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                         ) : (
                             <div className="flex items-center justify-between">
                                 <div className="text-sm text-slate-300">
-                                    <span suppressHydrationWarning>{new Date(slot.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                    <ClientDate date={slot.startTime} formatStr="P, p" />
                                     <span className="text-slate-500 mx-2">to</span>
-                                    <span suppressHydrationWarning>{new Date(slot.endTime).toLocaleString([], { timeStyle: 'short' })}</span>
+                                    <ClientDate date={slot.endTime} formatStr="p" />
+                                    <ClientTimezone className="ml-1 text-slate-500" />
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button
