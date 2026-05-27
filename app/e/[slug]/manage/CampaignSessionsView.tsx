@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { ClientDate, ClientTimezone } from '@/components/ClientDate';
 import { Check, MapPin, User, Loader2, X } from 'lucide-react';
 
 type Voter = {
@@ -282,13 +282,10 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                                 </button>
                                             )}
                                             <div className="text-sm shrink-0 mr-1">
-                                                <span className="font-medium text-slate-200" suppressHydrationWarning>
-                                                    {format(new Date(slot.startTime), 'EEE, MMM d')}
-                                                </span>
+                                                <ClientDate date={slot.startTime} formatStr="EEE, MMM d" className="font-medium text-slate-200" />
                                                 <span className="text-slate-500 mx-1.5">@</span>
-                                                <span className="text-slate-300" suppressHydrationWarning>
-                                                    {format(new Date(slot.startTime), 'h:mm a')}
-                                                </span>
+                                                <ClientDate date={slot.startTime} formatStr="h:mm a" className="text-slate-300" />
+                                                <ClientTimezone className="ml-1 text-slate-500" />
                                             </div>
                                             <div className="flex flex-wrap gap-1 flex-1">
                                                 {coreVoters.map(v => (

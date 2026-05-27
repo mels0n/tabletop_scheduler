@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
-import { ClientTimezone } from "./ClientDate";
+import { ClientDate, ClientTimezone } from "./ClientDate";
 import { Check, HelpCircle, X, User as UserIcon, Loader2, LayoutList, CalendarDays, CalendarRange, Info } from "lucide-react";
 import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -289,8 +288,6 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                         </div>
 
                         {slots.map(slot => {
-                            const start = new Date(slot.startTime);
-                            const end = new Date(slot.endTime);
                             const myVote = votes[slot.id];
                             const totalYes = slot.counts.yes;
                             const isViable = totalYes >= minPlayers;
@@ -306,10 +303,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                         <div className="text-center sm:text-left">
                                             <div className="font-semibold text-lg text-slate-200">
-                                                {format(start, "EEEE, MMMM do")}
+                                                <ClientDate date={slot.startTime} formatStr="EEEE, MMMM do" />
                                             </div>
                                             <p className="text-sm text-indigo-200">
-                                                {format(start, "h:mm a")} - {format(end, "h:mm a")} <ClientTimezone className="text-indigo-300/70 ml-1" />
+                                                <ClientDate date={slot.startTime} formatStr="h:mm a" /> - <ClientDate date={slot.endTime} formatStr="h:mm a" /> <ClientTimezone className="text-indigo-300/70 ml-1" />
                                             </p>
                                             <div className="mt-2 flex gap-2 text-xs">
                                                 <span className="text-green-400">{slot.counts.yes} Yes</span>
