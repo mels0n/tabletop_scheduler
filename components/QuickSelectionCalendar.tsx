@@ -7,6 +7,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Check, HelpCircle, X, Info, Loader2, Home } from "lucide-react";
 import { clsx } from "clsx";
+import { ClientDate, ClientTimezone } from "./ClientDate";
 
 interface Slot {
     id: number;
@@ -284,6 +285,7 @@ export function QuickSelectionCalendar({
 
                     <span className="text-sm font-semibold text-slate-200 shrink-0">
                         {format(viewDate, "MMMM yyyy")}
+                        <ClientTimezone className="ml-1.5 text-[10px] font-normal text-slate-500" />
                     </span>
 
                     {/* Next month button */}
@@ -358,7 +360,6 @@ export function QuickSelectionCalendar({
                                                 key={slot.id}
                                                 data-slot-id={slot.id}
                                                 onPointerDown={(e) => handleSlotPointerDown(e, slot.id)}
-                                                suppressHydrationWarning
                                                 className={clsx(
                                                     "flex-1 flex items-center justify-center",
                                                     "rounded text-[9px] sm:text-[10px] font-medium cursor-pointer transition-colors",
@@ -366,7 +367,7 @@ export function QuickSelectionCalendar({
                                                     slotColor(votes[slot.id])
                                                 )}
                                             >
-                                                {format(new Date(slot.startTime), "ha").toLowerCase()}
+                                                <ClientDate date={slot.startTime} formatStr="ha" className="lowercase" />
                                             </div>
                                         ))}
                                     </div>
