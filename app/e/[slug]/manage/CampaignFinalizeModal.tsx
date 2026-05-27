@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, MapPin, User, Check, Loader2, Calendar, ChevronDown, ChevronRight, Info, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
+import { ClientDate, ClientTimezone } from '@/components/ClientDate';
 
 interface SlotVote {
     participantId: number;
@@ -200,7 +200,6 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
                         <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                             {slots.map(slot => {
                                 const isSelected = selectedSlotIds.has(slot.id);
-                                const d = new Date(slot.startTime);
                                 return (
                                     <label
                                         key={slot.id}
@@ -216,8 +215,9 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="font-medium text-sm text-slate-200">
-                                                {format(d, 'EEE, MMM d')}
-                                                <span className="text-slate-400 font-normal ml-2">{format(d, 'h:mm a')}</span>
+                                                <ClientDate date={slot.startTime} formatStr="EEE, MMM d" />
+                                                <ClientDate date={slot.startTime} formatStr="h:mm a" className="text-slate-400 font-normal ml-2" />
+                                                <ClientTimezone className="ml-1 text-slate-500 font-normal" />
                                             </div>
                                             <div className="flex gap-3 mt-0.5 text-xs">
                                                 <span
