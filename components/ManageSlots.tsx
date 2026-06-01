@@ -82,11 +82,9 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
         }
 
         const startDateTime = new Date(`${editDate}T${editStart}:00`);
-        const endDateTime = new Date(`${editDate}T${editEnd}:00`);
-
+        let endDateTime = new Date(`${editDate}T${editEnd}:00`);
         if (endDateTime <= startDateTime) {
-            setErrorMsg("End time must be after start time.");
-            return;
+            endDateTime = new Date(endDateTime.getTime() + 24 * 60 * 60 * 1000);
         }
 
         if (!confirm("Editing this time will wipe all existing votes for it. Continue?")) return;
@@ -119,15 +117,13 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
         }
 
         const startDateTime = new Date(`${addDate}T${addStart}:00`);
-        const endDateTime = new Date(`${addDate}T${addEnd}:00`);
+        let endDateTime = new Date(`${addDate}T${addEnd}:00`);
+        if (endDateTime <= startDateTime) {
+            endDateTime = new Date(endDateTime.getTime() + 24 * 60 * 60 * 1000);
+        }
 
         if (startDateTime < new Date()) {
             setErrorMsg("You cannot schedule events in the past.");
-            return;
-        }
-
-        if (endDateTime <= startDateTime) {
-            setErrorMsg("End time must be after start time.");
             return;
         }
 
