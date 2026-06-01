@@ -58,11 +58,9 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
 
         for (const date of selectedDates) {
             const startDateTime = new Date(`${date}T${start}:00`);
-            const endDateTime = new Date(`${date}T${end}:00`);
-
+            let endDateTime = new Date(`${date}T${end}:00`);
             if (endDateTime <= startDateTime) {
-                alert("End time must be after start time.");
-                return;
+                endDateTime = new Date(endDateTime.getTime() + 24 * 60 * 60 * 1000);
             }
 
             if (startDateTime < now) {
