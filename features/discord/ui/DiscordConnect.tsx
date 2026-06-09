@@ -145,7 +145,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 </div>
 
                 {expanded && (
-                    <div className="ml-3 pl-3 border-l border-slate-800 py-2 space-y-3">
+                    <div className="mt-1 p-3 bg-slate-900/40 rounded-lg border border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
                             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Manager Recovery</p>
                             <button
@@ -234,18 +234,16 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 )}
 
                 {step === 'initial' && (
-                    <div className="pl-12">
-                        <a
-                            href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
-                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20"
-                        >
-                            Connect Discord Server
-                        </a>
-                    </div>
+                    <a
+                        href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
+                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20"
+                    >
+                        Connect Discord Server
+                    </a>
                 )}
 
                 {step === 'picking_channel' && (
-                    <div className="pl-12 space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
                         {loading && channels.length === 0 ? (
                             <div className="flex items-center gap-2 text-xs text-slate-500">
                                 <Loader2 className="w-3 h-3 animate-spin" />

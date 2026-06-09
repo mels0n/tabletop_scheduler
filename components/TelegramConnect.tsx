@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { updateTelegramInviteLink, checkEventStatus } from "@/features/event-management/server/actions";
-import { AlertCircle, CheckCircle, Loader2, Save, Send } from "lucide-react";
+import { CheckCircle, Loader2, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface TelegramConnectProps {
@@ -130,7 +130,7 @@ export function TelegramConnect({
                 </div>
 
                 {expanded && (
-                    <div className="ml-3 pl-3 border-l border-slate-800 py-2 space-y-3">
+                    <div className="mt-1 p-3 bg-slate-900/40 rounded-lg border border-slate-800 space-y-3">
                         <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Manager Recovery</p>
                         {!hasManagerChatId ? (
                             <div className="space-y-2">
@@ -186,7 +186,7 @@ export function TelegramConnect({
         <div className="space-y-4">
             <div className="p-4 bg-blue-900/20 border border-blue-800 rounded-xl space-y-4">
                 <div className="flex items-start gap-3 text-blue-300">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <Send className="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <div className="space-y-1">
                         <p className="font-bold">Connect Telegram Group</p>
                         <p className="opacity-90 text-xs text-blue-400">
@@ -196,7 +196,7 @@ export function TelegramConnect({
                 </div>
 
                 {step === 'initial' && (
-                    <div className="space-y-3 pl-8">
+                    <div className="space-y-3">
                         <p className="text-sm text-slate-300">
                             Is <b>@{botUsername}</b> already in the Telegram group?
                         </p>
@@ -218,21 +218,17 @@ export function TelegramConnect({
                 )}
 
                 {step === 'bot_in_group' && (
-                    <div className="space-y-4 pl-8 animate-in fade-in slide-in-from-top-2">
-                        <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-700 space-y-2">
-                            <p className="text-xs text-slate-400">1. Copy this specific event link:</p>
-                            <div className="flex items-center gap-2">
-                                <code className="flex-1 bg-black/30 p-2 rounded text-xs font-mono text-slate-300 truncate">
-                                    {typeof window !== 'undefined' ? `${window.location.host}/e/${slug}` : `/e/${slug}`}
-                                </code>
-                                <div className="shrink-0">
-                                    <CopyLinkButton url={`/e/${slug}`} />
-                                </div>
-                            </div>
-                            <p className="text-xs text-slate-400">
-                                2. <b>Paste it into your Telegram group</b> to finish connecting.
-                            </p>
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                        <p className="text-xs text-slate-400">1. Copy this specific event link:</p>
+                        <div className="flex items-center gap-2">
+                            <code className="flex-1 bg-black/30 p-2 rounded text-xs font-mono text-slate-300 truncate">
+                                {typeof window !== 'undefined' ? `${window.location.host}/e/${slug}` : `/e/${slug}`}
+                            </code>
+                            <CopyLinkButton url={`/e/${slug}`} />
                         </div>
+                        <p className="text-xs text-slate-400">
+                            2. <b>Paste it into your Telegram group</b> to finish connecting.
+                        </p>
                         <button onClick={() => setStep('initial')} className="text-xs text-slate-500 hover:text-slate-300 underline">
                             Start Over
                         </button>
@@ -240,7 +236,7 @@ export function TelegramConnect({
                 )}
 
                 {step === 'bot_not_in_group' && (
-                    <div className="space-y-4 pl-8 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                         <div className="space-y-2">
                             <label className="text-sm text-slate-300 font-medium">
                                 First, what is the Group Invite Link?
@@ -274,7 +270,7 @@ export function TelegramConnect({
                 )}
 
                 {step === 'link_saved' && (
-                    <div className="space-y-4 pl-8 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                         <p className="text-sm text-slate-300">
                             Perfect. Now click below to add the bot to your group.
                         </p>
