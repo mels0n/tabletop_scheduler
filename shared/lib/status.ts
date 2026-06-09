@@ -14,15 +14,13 @@ import { checkSlotQuorum } from "./quorum";
  * @returns {string} HTML formatted status message.
  */
 export function generateStatusMessage(event: any, participantCount: number, baseUrl?: string) {
-    let statusMsg = `📊 <b>${event.title}</b>\n\n`;
-    statusMsg += `👥 <b>Participants:</b> ${participantCount}\n\n`;
-    statusMsg += `<b>Current Votes:</b>\n`;
+    let statusMsg = `📊 <b>${event.title}</b>\n`;
+    statusMsg += `👥 ${participantCount} participant${participantCount === 1 ? '' : 's'}\n\n`;
 
     event.timeSlots.forEach((slot: any) => {
         const yes = slot.votes.filter((v: any) => v.preference === 'YES').length;
         const maybe = slot.votes.filter((v: any) => v.preference === 'MAYBE').length;
 
-        // Intent: Use event's timezone or default to UTC for consistent display.
         const tz = event.timezone || 'UTC';
         const dateStr = new Date(slot.startTime).toLocaleDateString('en-US', {
             weekday: 'short', month: 'short', day: 'numeric', timeZone: tz
@@ -31,19 +29,12 @@ export function generateStatusMessage(event: any, participantCount: number, base
             hour: '2-digit', minute: '2-digit', timeZone: tz, timeZoneName: 'short'
         });
 
-        // Intent: Highlight "Perfect" slots where everyone can make it and a host is available.
-        // This drives the group towards consensus.
         const { perfect } = checkSlotQuorum(slot, event.minPlayers, participantCount);
+        const prefix = perfect ? "🌟" : "📅";
 
-        const isPerfect = perfect;
-        const prefix = isPerfect ? "🌟 " : "▫️ ";
-
-        statusMsg += `${prefix}<b>${dateStr} @ ${timeStr}</b>\n`;
-        statusMsg += `   ✅ ${yes}  ⚠️ ${maybe}\n`;
+        statusMsg += `${prefix} <b>${dateStr} @ ${timeStr}</b>  ✅ ${yes}  ⚠️ ${maybe}\n`;
     });
 
-    // Use provided key or default to localhost if missing (though caller should provide it).
-    // Intent: Fallback ensures the link is never broken in dev environments.
     const url = baseUrl || 'http://localhost:3000';
     statusMsg += `\n<a href="${url}/e/${event.slug}">🔗 Vote Here</a>`;
     return statusMsg;
