@@ -27,6 +27,16 @@ export default async function ProfilePage() {
     let serverUserName: string | null = discordUserName || null;
     const eventMap = new Map();
 
+    const resolveScheduledDate = (e: { finalizedSlotId: number | null, timeSlots: { id: number, startTime: Date }[], finalizedSessions: { timeSlot: { startTime: Date } }[] }): string | undefined => {
+        const finalizedSlot = e.timeSlots.find(s => s.id === e.finalizedSlotId);
+        if (finalizedSlot) return finalizedSlot.startTime.toISOString();
+        if (e.finalizedSessions.length > 0) {
+            const sorted = [...e.finalizedSessions].sort((a, b) => a.timeSlot.startTime.getTime() - b.timeSlot.startTime.getTime());
+            return sorted[0].timeSlot.startTime.toISOString();
+        }
+        return undefined;
+    };
+
     const fetchEvents = async (chatId: string | undefined, discordId: string | undefined) => {
         // 1. Fetch Managed Events (Telegram)
         if (chatId) {
@@ -39,12 +49,12 @@ export default async function ProfilePage() {
                     updatedAt: true,
                     status: true,
                     finalizedSlotId: true,
-                    timeSlots: { select: { id: true, startTime: true } }
+                    timeSlots: { select: { id: true, startTime: true } },
+                    finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
                 },
                 orderBy: { updatedAt: 'desc' }
             });
             managed.forEach(e => {
-                const finalizedSlot = e.timeSlots.find(s => s.id === e.finalizedSlotId);
                 eventMap.set(e.slug, {
                     slug: e.slug,
                     title: e.title,
@@ -52,7 +62,7 @@ export default async function ProfilePage() {
                     lastVisited: e.updatedAt.toISOString(),
                     source: 'telegram',
                     status: e.status,
-                    scheduledDate: finalizedSlot?.startTime.toISOString()
+                    scheduledDate: resolveScheduledDate(e)
                 });
             });
         }
@@ -68,12 +78,12 @@ export default async function ProfilePage() {
                     updatedAt: true,
                     status: true,
                     finalizedSlotId: true,
-                    timeSlots: { select: { id: true, startTime: true } }
+                    timeSlots: { select: { id: true, startTime: true } },
+                    finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
                 },
                 orderBy: { updatedAt: 'desc' }
             });
             managedDiscord.forEach(e => {
-                const finalizedSlot = e.timeSlots.find(s => s.id === e.finalizedSlotId);
                 eventMap.set(e.slug, {
                     slug: e.slug,
                     title: e.title,
@@ -81,7 +91,7 @@ export default async function ProfilePage() {
                     lastVisited: e.updatedAt.toISOString(),
                     source: 'discord',
                     status: e.status,
-                    scheduledDate: finalizedSlot?.startTime.toISOString()
+                    scheduledDate: resolveScheduledDate(e)
                 });
             });
         }
@@ -99,13 +109,14 @@ export default async function ProfilePage() {
                             updatedAt: true,
                             status: true,
                             finalizedSlotId: true,
-                            timeSlots: { select: { id: true, startTime: true } }
+                            timeSlots: { select: { id: true, startTime: true } },
+                            finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
                         }
                     }
                 },
                 orderBy: { event: { updatedAt: 'desc' } }
             });
-            
+
             if (participated.length > 0 && !serverUserName) {
                 serverUserName = participated[0].name;
             }
@@ -113,7 +124,6 @@ export default async function ProfilePage() {
             participated.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (!existing || existing.role !== 'MANAGER') {
-                    const finalizedSlot = p.event.timeSlots.find(s => s.id === p.event.finalizedSlotId);
                     eventMap.set(p.event.slug, {
                         slug: p.event.slug,
                         title: p.event.title,
@@ -123,7 +133,7 @@ export default async function ProfilePage() {
                         participantId: p.id,
                         source: 'telegram',
                         status: p.event.status,
-                        scheduledDate: finalizedSlot?.startTime.toISOString()
+                        scheduledDate: resolveScheduledDate(p.event)
                     });
                 }
             });
@@ -142,13 +152,14 @@ export default async function ProfilePage() {
                             updatedAt: true,
                             status: true,
                             finalizedSlotId: true,
-                            timeSlots: { select: { id: true, startTime: true } }
+                            timeSlots: { select: { id: true, startTime: true } },
+                            finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
                         }
                     }
                 },
                 orderBy: { event: { updatedAt: 'desc' } }
             });
-            
+
             if (participatedDiscord.length > 0 && !serverUserName) {
                 serverUserName = participatedDiscord[0].name;
             }
@@ -156,7 +167,6 @@ export default async function ProfilePage() {
             participatedDiscord.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (!existing || existing.role !== 'MANAGER') {
-                    const finalizedSlot = p.event.timeSlots.find(s => s.id === p.event.finalizedSlotId);
                     eventMap.set(p.event.slug, {
                         slug: p.event.slug,
                         title: p.event.title,
@@ -165,7 +175,7 @@ export default async function ProfilePage() {
                         participantId: p.id,
                         source: 'discord',
                         status: p.event.status,
-                        scheduledDate: finalizedSlot?.startTime.toISOString()
+                        scheduledDate: resolveScheduledDate(p.event)
                     });
                 }
             });
