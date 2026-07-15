@@ -128,3 +128,5 @@ Draft nights that get properly scheduled happen. Draft nights that rely on the g
 ---
 
 Get the booster box, stock the land station, brief everyone on the snack rules before they sit down, and let Tabletop Time handle the date. The cards will take care of the rest.
+
+If your group plays Commander between drafts, keep those decks sharp too: here's how to [tune your MTG decks with your playgroup using Archidekt](/blog/tune-mtg-decks-archidekt).

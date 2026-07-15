@@ -61,3 +61,5 @@ Hosting a Commander night?
 ## Conclusion
 
 Commander is the best format for social gaming, but it lives and dies by participation. Don't rely on "Who's free tonight?" texts. Plan ahead, lock in your pods, and ensure rule 0 is respected. May you draw your Sol Ring on turn 1.
+
+And when the pod wraps up, close the loop: [tune your decks with your playgroup on Archidekt](/blog/tune-mtg-decks-archidekt) before you book the rematch.
