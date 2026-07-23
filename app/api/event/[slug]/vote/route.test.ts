@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { resolvePassiveChatId, POST } from './route';
+import { POST } from './route';
+import { resolvePassiveChatId } from '@/features/auth/server/passive-link';
 import prisma from '@/shared/lib/prisma';
 
 vi.mock('@/shared/lib/prisma');
