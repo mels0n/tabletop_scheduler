@@ -52,7 +52,7 @@ export default function FAQPage() {
         },
         {
             question: "Can I link an event to my Telegram or Discord after I've already voted?",
-            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. You need to have voted on the event first, and you can only link or unlink your own identity."
+            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. Events you manage also show a separate indigo 'Manager' badge marking your role there, which doesn't by itself mean the event is linked to your identity. You need to have voted on the event first, and you can only link or unlink your own identity."
         },
         {
             question: "How does the waitlist work?",

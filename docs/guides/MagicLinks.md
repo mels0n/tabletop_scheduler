@@ -38,6 +38,7 @@ Every card on the **My Events** page carries its own badge, independent of the h
 
 *   **"Telegram Synced" / "Discord Synced"** (colored, same style as the header pills): this event's participant row is stamped with your verified identity, so it will always show up here, on any device.
 *   **"This Device Only"** (gray): this event only exists in this browser's local history. It hasn't been linked to a synced identity yet.
+*   **"Manager"** (indigo, static dot): shown on events you manage, marking your role. It's independent of the sync badges above; a managed event with no linked participant identity yet still shows just "Manager", never "This Device Only", since it's already tied to the event on the server through your manager record.
 
 The badges are clickable:
 *   Click a gray **"This Device Only"** badge to open a small menu offering to link the event to whichever platform(s) your browser is synced with.

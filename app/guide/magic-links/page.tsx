@@ -88,6 +88,9 @@ export default function MagicLinksPage() {
                         Every card on <strong>My Events</strong> also carries its own badge, separate from the header pills: a colored <strong>&quot;Telegram Synced&quot;</strong> / <strong>&quot;Discord Synced&quot;</strong> badge means that event&apos;s vote is tied to your verified identity, while a gray <strong>&quot;This Device Only&quot;</strong> badge means it only exists in this browser&apos;s local history.
                     </p>
                     <p>
+                        Events you manage also show a separate indigo <strong>&quot;Manager&quot;</strong> badge alongside any sync badges, marking your role there. It doesn&apos;t by itself mean your identity is linked, a managed event with no linked participant still just shows &quot;Manager&quot; (never &quot;This Device Only&quot;, since it&apos;s already tied to the event on the server).
+                    </p>
+                    <p>
                         Click a badge to act on it: a gray badge opens a menu to <strong>link</strong> the event to whichever platform(s) you&apos;re synced with, and a colored badge opens a menu to <strong>unlink</strong> it. Linking requires you to have already voted on that event (so there&apos;s a participant row to stamp), and you can only unlink your own identity, never someone else&apos;s.
                     </p>
 

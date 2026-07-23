@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientDate } from "@/components/ClientDate";
 import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
 import { linkParticipant, unlinkParticipant } from "@/features/auth/server/participant-link";
+import { SyncBadge } from "@/components/SyncBadge";
 
 
 import { DiscordLoginSender } from "@/features/discord/ui/DiscordLoginSender";
@@ -25,34 +26,18 @@ interface ServerEvent {
 }
 
 /**
- * @component SyncBadge
- * @description Small pill badge showing how an event (or the user) is linked to
- * a sync source. Shared by the header sync pills and the per-event card badges
- * so the visual language stays consistent across the dashboard.
+ * @component ManagerBadge
+ * @description Pill marking an event's `role: 'MANAGER'`, using the same geometry
+ * as `SyncBadge` but an indigo palette and a static (non-pulsing) dot, since it
+ * reflects a role rather than a live sync connection. Distinct from the sync
+ * badges: an event can show this alongside Telegram/Discord Synced badges, or
+ * alone if the manager record has no linked participant identity yet.
  */
-function SyncBadge({ variant }: { variant: 'telegram' | 'discord' | 'device' }) {
-    if (variant === 'telegram') {
-        return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-green-900/40 text-green-400 rounded-full border border-green-800 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Telegram Synced
-            </span>
-        );
-    }
-
-    if (variant === 'discord') {
-        return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-[#5865F2]/20 text-[#5865F2] rounded-full border border-[#5865F2]/50 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2] animate-pulse" />
-                Discord Synced
-            </span>
-        );
-    }
-
+function ManagerBadge() {
     return (
-        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-            This Device Only
+        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full border border-indigo-800 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+            Manager
         </span>
     );
 }
@@ -167,7 +152,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
     };
 
     /** Shared badge trigger: opens the card's one popover, or reads as a hint-only tooltip when neither platform is synced. */
-    const badgeTrigger = (variant: 'telegram' | 'discord' | 'device') => (
+    const badgeTrigger = (variant: 'telegram' | 'discord' | 'device' | 'manager') => (
         <span
             key={variant}
             onClick={canLink ? toggle : undefined}
@@ -176,7 +161,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
             tabIndex={canLink ? 0 : undefined}
             title={!canLink ? SYNC_FIRST_HINT : undefined}
         >
-            <SyncBadge variant={variant} />
+            {variant === 'manager' ? <ManagerBadge /> : <SyncBadge variant={variant} />}
         </span>
     );
 
@@ -222,7 +207,12 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
                         }
                     </p>
                     <div className="relative flex flex-wrap gap-1.5 mt-2">
-                        {sources.length > 0 ? sources.map(badgeTrigger) : badgeTrigger('device')}
+                        {serverEvent ? (
+                            <>
+                                {sources.map(badgeTrigger)}
+                                {serverEvent.role === 'MANAGER' && badgeTrigger('manager')}
+                            </>
+                        ) : badgeTrigger('device')}
                         {popoverOpen && canLink && (
                             <LinkPopover onClose={closePopover}>
                                 {isTelegramSynced && (

@@ -18,6 +18,7 @@ import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
+import { SyncBadge } from "@/components/SyncBadge";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 
@@ -288,6 +289,19 @@ export default async function ManageEventPage({ params }: PageProps) {
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-slate-500">Share:</span>
                                 <CopyLinkButton url={`/e/${event.slug}`} />
+                            </div>
+                            {/* Manager sync status: which platform(s) this manager record can
+                                recover a login link through, independent of participant sync
+                                badges shown on the profile page. */}
+                            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                                {event.managerChatId && <SyncBadge variant="telegram" />}
+                                {event.managerDiscordId && <SyncBadge variant="discord" />}
+                                {!event.managerChatId && !event.managerDiscordId && (
+                                    <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700 flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                        Manager Not Linked
+                                    </span>
+                                )}
                             </div>
                         </div>
 
