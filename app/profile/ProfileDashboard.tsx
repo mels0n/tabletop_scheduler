@@ -69,6 +69,33 @@ function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram
 }
 
 /**
+ * @component NotLinkedBadge
+ * @description Per-event "not linked yet" pill for a platform the browser IS synced
+ * with but this event isn't linked to. Same dashed geometry as ConnectBadge, but a
+ * popover trigger (not a link) so it flows into the card's shared link menu. When the
+ * event has no participant row to link (`disabled`), it greys out and surfaces `hint`
+ * as a tooltip instead of opening the menu.
+ */
+function NotLinkedBadge({ platform, disabled, hint, onClick }: { platform: 'telegram' | 'discord'; disabled?: boolean; hint?: string; onClick?: (e: React.MouseEvent) => void }) {
+    const hoverClass = platform === 'telegram'
+        ? 'hover:border-green-700 hover:text-green-400'
+        : 'hover:border-[#5865F2]/70 hover:text-[#5865F2]';
+
+    return (
+        <span
+            role={disabled ? undefined : 'button'}
+            tabIndex={disabled ? undefined : 0}
+            onClick={disabled ? undefined : onClick}
+            title={disabled ? hint : undefined}
+            className={`text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent rounded-full border border-dashed flex items-center gap-1 transition-colors ${disabled ? 'text-slate-600 border-slate-700/60 opacity-60 cursor-not-allowed' : `text-slate-400 border-slate-600 cursor-pointer ${hoverClass}`}`}
+        >
+            <span className="w-1.5 h-1.5 rounded-full border border-slate-500" />
+            {platform === 'telegram' ? 'Telegram' : 'Discord'} Not Linked
+        </span>
+    );
+}
+
+/**
  * @component LinkPopover
  * @description Hand-rolled popover (no dependency): a full-screen invisible backdrop
  * that closes the menu on click-outside, plus an anchored menu box. Clicks inside the
@@ -151,8 +178,10 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
         setPopoverOpen(prev => !prev);
     };
 
-    /** Shared badge trigger: opens the card's one popover, or reads as a hint-only tooltip when neither platform is synced. */
-    const badgeTrigger = (variant: 'telegram' | 'discord' | 'device' | 'manager') => (
+    /** Shared badge trigger for sync-status pills: opens the card's one popover, or
+     *  reads as a hint-only tooltip when neither platform is synced. The Manager tag is
+     *  intentionally NOT a trigger — it's a role indicator, not a link control. */
+    const badgeTrigger = (variant: 'telegram' | 'discord' | 'device') => (
         <span
             key={variant}
             onClick={canLink ? toggle : undefined}
@@ -161,7 +190,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
             tabIndex={canLink ? 0 : undefined}
             title={!canLink ? SYNC_FIRST_HINT : undefined}
         >
-            {variant === 'manager' ? <ManagerBadge /> : <SyncBadge variant={variant} />}
+            <SyncBadge variant={variant} />
         </span>
     );
 
@@ -210,7 +239,28 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
                         {serverEvent ? (
                             <>
                                 {sources.map(badgeTrigger)}
-                                {serverEvent.role === 'MANAGER' && badgeTrigger('manager')}
+                                {/* "Not linked" pills for platforms this browser is synced
+                                    with but the event isn't linked to — the intuitive place
+                                    to start a link, disabled with a hint until you've voted. */}
+                                {isTelegramSynced && !sources.includes('telegram') && (
+                                    <NotLinkedBadge
+                                        key="telegram-unlinked"
+                                        platform="telegram"
+                                        disabled={!participantId}
+                                        hint={LINK_FIRST_HINT}
+                                        onClick={toggle}
+                                    />
+                                )}
+                                {isDiscordSynced && !sources.includes('discord') && (
+                                    <NotLinkedBadge
+                                        key="discord-unlinked"
+                                        platform="discord"
+                                        disabled={!participantId}
+                                        hint={LINK_FIRST_HINT}
+                                        onClick={toggle}
+                                    />
+                                )}
+                                {serverEvent.role === 'MANAGER' && <ManagerBadge />}
                             </>
                         ) : badgeTrigger('device')}
                         {popoverOpen && canLink && (
