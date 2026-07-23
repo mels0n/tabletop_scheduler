@@ -8,6 +8,53 @@ import { processWaitlistPromotion } from "@/features/event-management/server/wai
 const log = Logger.get("API:Vote");
 
 /**
+ * @function resolvePassiveChatId
+ * @description Feature: Passive Identity Linking.
+ * Given a handle-only telegramId with no verified numeric chatId yet, try to resolve one
+ * so the participant isn't invisible to cross-device profile sync (which resolves events
+ * strictly by numeric chatId, never by handle).
+ *
+ * Normalization: production data stores handles both with and without the leading '@'
+ * ('pyaniz' vs '@mels0n'), so both forms are always matched regardless of which form the
+ * caller passed in.
+ *
+ * Step 1: Look for another Participant row carrying this handle that already has a
+ * verified chatId (the original passive-linking behavior).
+ * Step 2 (fallback): Look at Event.managerTelegram / Event.managerChatId. A user who
+ * manages one event and then votes on a friend's event under the same handle has no
+ * Participant row anywhere with a chatId yet, but their own event's manager record is
+ * already verified.
+ *
+ * @param {any} tx - Prisma transaction client.
+ * @param {string} telegramId - Handle as submitted by the client (with or without '@').
+ * @returns {Promise<string | null>} The resolved numeric chatId, or null if none found.
+ */
+export async function resolvePassiveChatId(tx: any, telegramId: string): Promise<string | null> {
+    const clean = telegramId.replace('@', '');
+    const formatted = `@${clean}`;
+
+    const participantMatch = await tx.participant.findFirst({
+        where: {
+            telegramId: { in: [clean, formatted] },
+            NOT: { chatId: null }
+        },
+        select: { chatId: true }
+    });
+    if (participantMatch?.chatId) return participantMatch.chatId;
+
+    const managerMatch = await tx.event.findFirst({
+        where: {
+            managerTelegram: { in: [clean, formatted] },
+            NOT: { managerChatId: null }
+        },
+        select: { managerChatId: true }
+    });
+    if (managerMatch?.managerChatId) return managerMatch.managerChatId;
+
+    return null;
+}
+
+/**
  * @function POST
  * @description Handles vote submission for a specific event.
  *
@@ -109,6 +156,15 @@ export async function POST(
 
                 // Security: Ensure participant belongs to this event before updating.
                 if (existing && existing.eventId === eventId) {
+                    // Feature: Passive Identity Linking (Self-Healing)
+                    // If this participant still has no verified chatId, this re-vote is a
+                    // chance to self-heal via the same resolution as new-participant creation.
+                    // Only attempt it when a chatId is missing, and never overwrite one already set.
+                    let resolvedChatId: string | null = null;
+                    if (!existing.chatId && telegramId) {
+                        resolvedChatId = await resolvePassiveChatId(tx, telegramId);
+                    }
+
                     participant = await tx.participant.update({
                         where: { id: participantId },
                         data: {
@@ -116,7 +172,9 @@ export async function POST(
                             telegramId,
                             discordId,
                             discordUsername,
-                            status: nextStatus
+                            status: nextStatus,
+                            // Only include chatId when we actually resolved one; avoid churn.
+                            ...(resolvedChatId ? { chatId: resolvedChatId } : {})
                         }
                     });
 
@@ -135,21 +193,13 @@ export async function POST(
             // 2. If no valid existing participant found, create new
             if (!participant) {
                 // Feature: Passive Identity Linking
-                // Try to find an existing chatId for this user from other events to link them immediately.
+                // Try to find an existing verified chatId for this user so their new Participant
+                // row isn't invisible to cross-device profile sync (which resolves events strictly
+                // by numeric chatId). Checks other Participant rows first, then falls back to the
+                // Event manager record (see resolvePassiveChatId for both steps).
                 let existingChatId = null;
                 if (telegramId) {
-                    const linkedParams = {
-                        where: {
-                            OR: [
-                                { telegramId: telegramId },
-                                { telegramId: telegramId.startsWith('@') ? telegramId : `@${telegramId}` }
-                            ],
-                            NOT: { chatId: null }
-                        },
-                        select: { chatId: true }
-                    };
-                    const match = await tx.participant.findFirst(linkedParams);
-                    existingChatId = match?.chatId;
+                    existingChatId = await resolvePassiveChatId(tx, telegramId);
                 }
 
                 participant = await tx.participant.create({
