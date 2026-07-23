@@ -56,6 +56,32 @@ function SyncBadge({ variant }: { variant: 'telegram' | 'discord' | 'device' }) 
 }
 
 /**
+ * @component ConnectBadge
+ * @description Hollow "empty slot" pill shown in place of a SyncBadge when a
+ * platform isn't synced yet. Same pill geometry/typography as SyncBadge, but
+ * dashed/muted to read as an action rather than a status, and it tints toward
+ * the platform color on hover to invite the click.
+ */
+function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram' | 'discord'; href: string; newTab?: boolean; onClick?: () => void }) {
+    const hoverClass = platform === 'telegram'
+        ? 'hover:border-green-700 hover:text-green-400'
+        : 'hover:border-[#5865F2]/70 hover:text-[#5865F2]';
+
+    return (
+        <a
+            href={href}
+            onClick={onClick}
+            target={newTab ? "_blank" : undefined}
+            rel={newTab ? "noopener noreferrer" : undefined}
+            className={`text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent text-slate-400 rounded-full border border-dashed border-slate-600 flex items-center gap-1 cursor-pointer transition-colors ${hoverClass}`}
+        >
+            <span className="w-1.5 h-1.5 rounded-full border border-slate-500" />
+            Connect {platform === 'telegram' ? 'Telegram' : 'Discord'}
+        </a>
+    );
+}
+
+/**
  * @component ProfileDashboard
  * @description Client-side dashboard for authenticated/identified users.
  *
@@ -69,9 +95,10 @@ function SyncBadge({ variant }: { variant: 'telegram' | 'discord' | 'device' }) 
  * 3. Recovery:
  *    - Provides a "Magic Link" request form to elevate a session from Anonymous -> Authenticated.
  */
-export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string }) {
+export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
+    const [telegramConnectClicked, setTelegramConnectClicked] = useState(false);
 
     // Lookup of server-resolved events by slug, used to render per-event sync badges.
     const serverEventsBySlug = useMemo(() => {
@@ -157,9 +184,25 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         </h1>
                         <p className="text-slate-400 mb-2">Welcome to your event dashboard.</p>
                         <div className="flex flex-wrap gap-2">
-                            {isTelegramSynced && <SyncBadge variant="telegram" />}
-                            {isDiscordSynced && <SyncBadge variant="discord" />}
+                            {isTelegramSynced ? (
+                                <SyncBadge variant="telegram" />
+                            ) : telegramConnectUrl ? (
+                                <ConnectBadge
+                                    platform="telegram"
+                                    href={telegramConnectUrl}
+                                    newTab
+                                    onClick={() => setTelegramConnectClicked(true)}
+                                />
+                            ) : null}
+                            {isDiscordSynced ? (
+                                <SyncBadge variant="discord" />
+                            ) : (
+                                <ConnectBadge platform="discord" href="/api/auth/discord?flow=login&returnTo=/profile" />
+                            )}
                         </div>
+                        {telegramConnectClicked && !isTelegramSynced && (
+                            <p className="text-xs text-slate-500 mt-2">Check your Telegram DMs for a login link.</p>
+                        )}
                     </div>
                 </div>
 
