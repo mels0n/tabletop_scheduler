@@ -60,7 +60,7 @@ export default async function ProfilePage() {
                     title: e.title,
                     role: 'MANAGER',
                     lastVisited: e.updatedAt.toISOString(),
-                    source: 'telegram',
+                    sources: ['telegram'],
                     status: e.status,
                     scheduledDate: resolveScheduledDate(e)
                 });
@@ -84,12 +84,16 @@ export default async function ProfilePage() {
                 orderBy: { updatedAt: 'desc' }
             });
             managedDiscord.forEach(e => {
+                const existing = eventMap.get(e.slug);
+                // Union sources: an event managed via both Telegram and Discord should
+                // keep both tags instead of the later pass clobbering the earlier one.
+                const sources = existing ? Array.from(new Set([...existing.sources, 'discord'])) : ['discord'];
                 eventMap.set(e.slug, {
                     slug: e.slug,
                     title: e.title,
                     role: 'MANAGER',
                     lastVisited: e.updatedAt.toISOString(),
-                    source: 'discord',
+                    sources,
                     status: e.status,
                     scheduledDate: resolveScheduledDate(e)
                 });
@@ -123,7 +127,12 @@ export default async function ProfilePage() {
 
             participated.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
-                if (!existing || existing.role !== 'MANAGER') {
+                if (existing?.role === 'MANAGER') {
+                    // Manager role supersedes Participant, but the participant pass
+                    // should still tag this event as reachable via Telegram.
+                    if (!existing.sources.includes('telegram')) existing.sources.push('telegram');
+                } else {
+                    const sources = existing ? Array.from(new Set([...existing.sources, 'telegram'])) : ['telegram'];
                     eventMap.set(p.event.slug, {
                         slug: p.event.slug,
                         title: p.event.title,
@@ -131,7 +140,7 @@ export default async function ProfilePage() {
                         lastVisited: p.event.updatedAt.toISOString(),
                         eventId: p.event.id,
                         participantId: p.id,
-                        source: 'telegram',
+                        sources,
                         status: p.event.status,
                         scheduledDate: resolveScheduledDate(p.event)
                     });
@@ -166,14 +175,19 @@ export default async function ProfilePage() {
 
             participatedDiscord.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
-                if (!existing || existing.role !== 'MANAGER') {
+                if (existing?.role === 'MANAGER') {
+                    // Manager role supersedes Participant, but the participant pass
+                    // should still tag this event as reachable via Discord.
+                    if (!existing.sources.includes('discord')) existing.sources.push('discord');
+                } else {
+                    const sources = existing ? Array.from(new Set([...existing.sources, 'discord'])) : ['discord'];
                     eventMap.set(p.event.slug, {
                         slug: p.event.slug,
                         title: p.event.title,
                         role: 'PARTICIPANT',
                         lastVisited: p.event.updatedAt.toISOString(),
                         participantId: p.id,
-                        source: 'discord',
+                        sources,
                         status: p.event.status,
                         scheduledDate: resolveScheduledDate(p.event)
                     });
