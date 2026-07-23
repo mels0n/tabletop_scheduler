@@ -5,6 +5,7 @@ import Logger from "@/shared/lib/logger";
 import { checkEventQuorum } from "@/shared/lib/quorum";
 import { processWaitlistPromotion } from "@/features/event-management/server/waitlist";
 import { resolvePassiveChatId } from "@/features/auth/server/passive-link";
+import { normalizeHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("API:Vote");
 
@@ -41,6 +42,10 @@ export async function POST(
         const eventId = parseInt(params.slug);
         const body = await req.json();
         let { name, telegramId, votes, participantId, discordId, discordUsername, linkIdentity } = body;
+
+        // Canonicalize the handle at the write boundary: users may type it with or
+        // without '@', so store it '@'-less and lowercased. Display code re-adds one '@'.
+        telegramId = normalizeHandle(telegramId);
 
         // Feature: Vote-time identity toggle. Defaults to true (current behavior) so
         // existing/older clients that don't send this field are unaffected.

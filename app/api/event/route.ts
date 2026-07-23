@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { randomBytes } from "crypto";
 import Logger from "@/shared/lib/logger";
+import { normalizeHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("API:EventCreate");
 
@@ -75,7 +76,9 @@ export async function POST(req: Request) {
                     select: { telegramId: true }
                 });
                 if (pastParticipant) {
-                    inferredTelegramHandle = pastParticipant.telegramId;
+                    // Defensive: legacy participant rows may still carry a stray '@';
+                    // canonicalize before it becomes the manager handle.
+                    inferredTelegramHandle = normalizeHandle(pastParticipant.telegramId);
                 }
             } catch (e) {
                 log.warn("Failed to infer telegram handle during event creation", { globalChatId });

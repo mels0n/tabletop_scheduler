@@ -57,12 +57,12 @@ describe('Event Management Actions', () => {
             expect(result.error).toContain('at least 2 characters');
         });
 
-        it('should prepend @ to handle', async () => {
+        it('stores the handle canonicalized without @ (accepts input with or without @)', async () => {
             mockVerifyAdmin.mockResolvedValue(true);
-            await updateManagerHandle('slug', 'chris');
+            await updateManagerHandle('slug', '@Chris');
 
             expect(mockPrisma.event.update).toHaveBeenCalledWith(expect.objectContaining({
-                data: { managerTelegram: '@chris' }
+                data: { managerTelegram: 'chris' }
             }));
         });
     });

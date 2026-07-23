@@ -3,6 +3,7 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { normalizeHandle, formatHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("EventActions");
 
@@ -41,19 +42,20 @@ export async function checkEventStatus(slug: string) {
 export async function updateManagerHandle(slug: string, handle: string) {
     if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
 
-    if (!handle || handle.trim().length < 2) {
+    // Canonicalize: accept the handle with or without '@' and store it '@'-less
+    // (lowercased), matching every other write path. Display code re-adds one '@'.
+    const cleanHandle = normalizeHandle(handle);
+    if (!cleanHandle || cleanHandle.length < 2) {
         return { error: "Handle must be at least 2 characters." };
     }
-
-    const formattedHandle = handle.startsWith("@") ? handle : `@${handle}`;
 
     try {
         await prisma.event.update({
             where: { slug },
-            data: { managerTelegram: formattedHandle }
+            data: { managerTelegram: cleanHandle }
         });
-        log.info("Manager handle updated", { slug, handle: formattedHandle });
-        return { success: true, handle: formattedHandle };
+        log.info("Manager handle updated", { slug, handle: cleanHandle });
+        return { success: true, handle: formatHandle(cleanHandle) };
     } catch (e) {
         log.error("Failed to update handle", e as Error);
         return { error: "Failed to update handle." };

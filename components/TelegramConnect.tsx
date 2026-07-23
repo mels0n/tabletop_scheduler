@@ -5,6 +5,7 @@ import { CopyLinkButton } from "./CopyLinkButton";
 import { updateTelegramInviteLink, checkEventStatus } from "@/features/event-management/server/actions";
 import { CheckCircle, Loader2, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatHandle } from "@/shared/lib/handle";
 
 interface TelegramConnectProps {
     slug: string;
@@ -118,7 +119,7 @@ export function TelegramConnect({
                     </div>
                     <div className="flex items-center gap-3">
                         {initialHandle && (
-                            <span className="text-xs text-slate-500 font-mono">@{initialHandle}</span>
+                            <span className="text-xs text-slate-500 font-mono">{formatHandle(initialHandle)}</span>
                         )}
                         <button
                             onClick={() => setExpanded(e => !e)}
@@ -162,7 +163,7 @@ export function TelegramConnect({
                                     <CheckIcon className="w-3 h-3 shrink-0" />
                                     <span>Identity verified</span>
                                     {initialHandle && (
-                                        <span className="ml-auto font-mono opacity-60">@{initialHandle}</span>
+                                        <span className="ml-auto font-mono opacity-60">{formatHandle(initialHandle)}</span>
                                     )}
                                 </div>
                                 {dmMessage && <p className="text-green-400 text-xs">{dmMessage}</p>}
@@ -322,7 +323,7 @@ export function TelegramConnect({
                         <div className="flex items-center gap-2 text-xs text-green-400 bg-green-900/10 px-3 py-2 rounded border border-green-900/30">
                             <CheckIcon className="w-3 h-3 shrink-0" />
                             <span className="font-medium">Identity Verified</span>
-                            {initialHandle && <span className="ml-auto font-mono opacity-70">@{initialHandle}</span>}
+                            {initialHandle && <span className="ml-auto font-mono opacity-70">{formatHandle(initialHandle)}</span>}
                         </div>
                         {dmMessage && <p className="text-green-400 text-xs font-medium text-center">{dmMessage}</p>}
                         <button

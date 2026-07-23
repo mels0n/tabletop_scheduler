@@ -7,6 +7,7 @@ import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID, randomBytes } from "crypto";
 import { sendTelegramMessage } from "@/features/telegram/lib/telegram-client";
+import { normalizeHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("RecoveryActions");
 
@@ -43,11 +44,9 @@ export async function recoverManagerLink(slug: string, handle: string) {
         return { error: "No manager linked to this event." };
     }
 
-    const normalize = (h: string) => h.toLowerCase().replace('@', '').trim();
-
     const formattedHandle = handle.startsWith("@") ? handle : `@${handle}`;
 
-    if (normalize(event.managerTelegram) !== normalize(handle)) {
+    if (normalizeHandle(event.managerTelegram) !== normalizeHandle(handle)) {
         log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: formattedHandle });
         return { error: "Telegram handle does not match our records." };
     }

@@ -7,6 +7,7 @@ import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID } from "crypto";
 import { sendTelegramMessage, getBotUsername } from "@/features/telegram/lib/telegram-client";
+import { normalizeHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("MagicLinkActions");
 
@@ -14,13 +15,14 @@ const log = Logger.get("MagicLinkActions");
  * Sends a "Magic Link" to a user's global Telegram DM to log them in and view all their events.
  */
 export async function sendGlobalMagicLink(handle: string) {
-    const normalize = (h: string) => h.toLowerCase().replace('@', '').trim();
-    const cleanHandle = normalize(handle);
-    const formattedHandle = handle.startsWith('@') ? handle : `@${handle}`;
+    const cleanHandle = normalizeHandle(handle);
 
-    if (cleanHandle.length < 2) {
+    if (!cleanHandle || cleanHandle.length < 2) {
         return { error: "Please enter a valid Telegram handle." };
     }
+
+    // Legacy rows may still store the handle with a leading '@'; match both forms.
+    const formattedHandle = `@${cleanHandle}`;
 
     try {
         const participant = await prisma.participant.findFirst({
