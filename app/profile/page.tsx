@@ -1,5 +1,6 @@
 import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
+import { getBotUsername } from "@/features/telegram/lib/telegram-client";
 import { ProfileDashboard } from "./ProfileDashboard";
 
 export const dynamic = "force-dynamic";
@@ -204,5 +205,23 @@ export default async function ProfilePage() {
         console.error("Failed to fetch server events", e);
     }
 
-    return <ProfileDashboard serverEvents={serverEvents} isTelegramSynced={!!telegramChatId} isDiscordSynced={!!discordUserId} serverUserName={serverUserName || undefined} />;
+    // Resolve the bot username server-side so the "Connect Telegram" pill can deep-link
+    // straight to `https://t.me/<bot>?start=login`. Hide the pill entirely if the token
+    // is missing or the Telegram API lookup fails.
+    let telegramConnectUrl: string | null = null;
+    if (!telegramChatId) {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        const botUsername = botToken ? await getBotUsername(botToken) : null;
+        telegramConnectUrl = botUsername ? `https://t.me/${botUsername}?start=login` : null;
+    }
+
+    return (
+        <ProfileDashboard
+            serverEvents={serverEvents}
+            isTelegramSynced={!!telegramChatId}
+            isDiscordSynced={!!discordUserId}
+            serverUserName={serverUserName || undefined}
+            telegramConnectUrl={telegramConnectUrl}
+        />
+    );
 }
