@@ -146,25 +146,39 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
     isDiscordSynced?: boolean;
 }) {
     const router = useRouter();
-    const [openPopover, setOpenPopover] = useState<'device' | 'telegram' | 'discord' | null>(null);
+    const [popoverOpen, setPopoverOpen] = useState(false);
     const [pending, setPending] = useState(false);
     const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    const sources = serverEvent?.sources;
+    const sources = serverEvent?.sources ?? [];
     const eventId = event.eventId ?? serverEvent?.eventId;
     const participantId = serverEvent?.participantId ?? (
         eventId ? (Number(localStorage.getItem(`tabletop_participant_${eventId}`)) || undefined) : undefined
     );
     const canLink = isTelegramSynced || isDiscordSynced;
 
-    const closePopover = () => setOpenPopover(null);
+    const closePopover = () => setPopoverOpen(false);
     const stop = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
 
-    const toggle = (which: 'device' | 'telegram' | 'discord') => (e: React.MouseEvent) => {
+    const toggle = (e: React.MouseEvent) => {
         stop(e);
         if (pending) return;
-        setOpenPopover(prev => (prev === which ? null : which));
+        setPopoverOpen(prev => !prev);
     };
+
+    /** Shared badge trigger: opens the card's one popover, or reads as a hint-only tooltip when neither platform is synced. */
+    const badgeTrigger = (variant: 'telegram' | 'discord' | 'device') => (
+        <span
+            key={variant}
+            onClick={canLink ? toggle : undefined}
+            className={canLink ? "cursor-pointer inline-flex" : "inline-flex"}
+            role={canLink ? "button" : undefined}
+            tabIndex={canLink ? 0 : undefined}
+            title={!canLink ? SYNC_FIRST_HINT : undefined}
+        >
+            <SyncBadge variant={variant} />
+        </span>
+    );
 
     const handleAction = (action: 'link' | 'unlink', platform: 'telegram' | 'discord') => async (e: React.MouseEvent) => {
         stop(e);
@@ -207,59 +221,28 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
                                 : "Draft / Scheduling...")
                         }
                     </p>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                        {sources && sources.length > 0
-                            ? sources.map(source => (
-                                <span key={source} className="relative inline-block">
-                                    <span onClick={toggle(source)} className="cursor-pointer inline-flex" role="button" tabIndex={0}>
-                                        <SyncBadge variant={source} />
-                                    </span>
-                                    {openPopover === source && (
-                                        <LinkPopover onClose={closePopover}>
-                                            <PopoverItem
-                                                label={`Unlink from ${source === 'telegram' ? 'Telegram' : 'Discord'}`}
-                                                disabled={!participantId}
-                                                hint={LINK_FIRST_HINT}
-                                                onClick={handleAction('unlink', source)}
-                                            />
-                                        </LinkPopover>
-                                    )}
-                                </span>
-                            ))
-                            : (
-                                <span className="relative inline-block">
-                                    <span
-                                        onClick={canLink ? toggle('device') : undefined}
-                                        className={canLink ? "cursor-pointer inline-flex" : "inline-flex"}
-                                        role={canLink ? "button" : undefined}
-                                        tabIndex={canLink ? 0 : undefined}
-                                        title={!canLink ? SYNC_FIRST_HINT : undefined}
-                                    >
-                                        <SyncBadge variant="device" />
-                                    </span>
-                                    {openPopover === 'device' && canLink && (
-                                        <LinkPopover onClose={closePopover}>
-                                            {isTelegramSynced && (
-                                                <PopoverItem
-                                                    label="Link to Telegram"
-                                                    disabled={!participantId}
-                                                    hint={LINK_FIRST_HINT}
-                                                    onClick={handleAction('link', 'telegram')}
-                                                />
-                                            )}
-                                            {isDiscordSynced && (
-                                                <PopoverItem
-                                                    label="Link to Discord"
-                                                    disabled={!participantId}
-                                                    hint={LINK_FIRST_HINT}
-                                                    onClick={handleAction('link', 'discord')}
-                                                />
-                                            )}
-                                        </LinkPopover>
-                                    )}
-                                </span>
-                            )
-                        }
+                    <div className="relative flex flex-wrap gap-1.5 mt-2">
+                        {sources.length > 0 ? sources.map(badgeTrigger) : badgeTrigger('device')}
+                        {popoverOpen && canLink && (
+                            <LinkPopover onClose={closePopover}>
+                                {isTelegramSynced && (
+                                    <PopoverItem
+                                        label={sources.includes('telegram') ? 'Unlink from Telegram' : 'Link to Telegram'}
+                                        disabled={!participantId}
+                                        hint={LINK_FIRST_HINT}
+                                        onClick={handleAction(sources.includes('telegram') ? 'unlink' : 'link', 'telegram')}
+                                    />
+                                )}
+                                {isDiscordSynced && (
+                                    <PopoverItem
+                                        label={sources.includes('discord') ? 'Unlink from Discord' : 'Link to Discord'}
+                                        disabled={!participantId}
+                                        hint={LINK_FIRST_HINT}
+                                        onClick={handleAction(sources.includes('discord') ? 'unlink' : 'link', 'discord')}
+                                    />
+                                )}
+                            </LinkPopover>
+                        )}
                     </div>
                     {actionMsg && (
                         <p className={`text-xs mt-1.5 ${actionMsg.type === 'success' ? 'text-green-400' : 'text-amber-400'}`}>
