@@ -360,6 +360,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                             id: cookieStore.get("tabletop_user_discord_id")!.value,
                             username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"
                         } : undefined}
+                        isTelegramSynced={isTelegramSynced}
+                        isDiscordSynced={isDiscordSynced}
                     />
                 )}
 
