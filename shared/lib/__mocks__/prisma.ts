@@ -13,6 +13,7 @@ export const prisma = {
         findUnique: vi.fn(),
         findFirst: vi.fn(),
         create: vi.fn(),
+        update: vi.fn(),
         deleteMany: vi.fn(),
         count: vi.fn(),
     },
