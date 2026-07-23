@@ -1,11 +1,13 @@
 "use client";
 
-import { useEventHistory } from "@/hooks/useEventHistory";
+import { useEventHistory, VisitedEvent } from "@/hooks/useEventHistory";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, User as UserIcon, Calendar, Clock, RefreshCw, Send, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ClientDate } from "@/components/ClientDate";
 import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
+import { linkParticipant, unlinkParticipant } from "@/features/auth/server/participant-link";
 
 
 import { DiscordLoginSender } from "@/features/discord/ui/DiscordLoginSender";
@@ -82,6 +84,196 @@ function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram
 }
 
 /**
+ * @component LinkPopover
+ * @description Hand-rolled popover (no dependency): a full-screen invisible backdrop
+ * that closes the menu on click-outside, plus an anchored menu box. Clicks inside the
+ * menu are stopped from bubbling to the backdrop or to a wrapping <Link>.
+ */
+function LinkPopover({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+    return (
+        <>
+            <div
+                className="fixed inset-0 z-40"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
+            />
+            <div
+                className="absolute z-50 top-full left-0 mt-1 min-w-[190px] bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {children}
+            </div>
+        </>
+    );
+}
+
+/** Single action row inside a LinkPopover. Disabled items show `hint` as a tooltip. */
+function PopoverItem({ label, disabled, hint, onClick }: { label: string; disabled?: boolean; hint?: string; onClick: (e: React.MouseEvent) => void }) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            title={disabled ? hint : undefined}
+            onClick={onClick}
+            className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+        >
+            {label}
+        </button>
+    );
+}
+
+const LINK_FIRST_HINT = "Vote on this event first to link it";
+const SYNC_FIRST_HINT = "Sync this browser first to link events";
+
+/**
+ * @component EventCard
+ * @description One row in the "Your Events" list. Owns the popover/pending/message
+ * state for that row's sync badges so link/unlink actions can be wired up without
+ * hooks inside the parent's `.map()`.
+ *
+ * participantId resolution:
+ * - Server-resolved events (role matched the caller's chatId/discordId) carry
+ *   `serverEvent.participantId` directly.
+ * - Device-only events (no server match yet, e.g. the row is unclaimed) fall back to
+ *   the locally-stored `tabletop_participant_<eventId>` written when the user voted
+ *   in this browser. `eventId` itself comes from local history (populated by
+ *   `validateHistory`) or the server event.
+ * - If neither resolves, linking/unlinking that platform is disabled with a hint.
+ */
+function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
+    event: VisitedEvent;
+    serverEvent?: ServerEvent;
+    isTelegramSynced?: boolean;
+    isDiscordSynced?: boolean;
+}) {
+    const router = useRouter();
+    const [openPopover, setOpenPopover] = useState<'device' | 'telegram' | 'discord' | null>(null);
+    const [pending, setPending] = useState(false);
+    const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+    const sources = serverEvent?.sources;
+    const eventId = event.eventId ?? serverEvent?.eventId;
+    const participantId = serverEvent?.participantId ?? (
+        eventId ? (Number(localStorage.getItem(`tabletop_participant_${eventId}`)) || undefined) : undefined
+    );
+    const canLink = isTelegramSynced || isDiscordSynced;
+
+    const closePopover = () => setOpenPopover(null);
+    const stop = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
+
+    const toggle = (which: 'device' | 'telegram' | 'discord') => (e: React.MouseEvent) => {
+        stop(e);
+        if (pending) return;
+        setOpenPopover(prev => (prev === which ? null : which));
+    };
+
+    const handleAction = (action: 'link' | 'unlink', platform: 'telegram' | 'discord') => async (e: React.MouseEvent) => {
+        stop(e);
+        if (!participantId || pending) return;
+        closePopover();
+        setPending(true);
+        setActionMsg(null);
+        const res = action === 'link'
+            ? await linkParticipant({ slug: event.slug, participantId, platform })
+            : await unlinkParticipant({ slug: event.slug, participantId, platform });
+        setPending(false);
+        if ('error' in res) {
+            setActionMsg({ type: 'error', text: res.error });
+        } else {
+            setActionMsg({ type: 'success', text: res.message || (action === 'link' ? 'Linked.' : 'Unlinked.') });
+            router.refresh();
+        }
+    };
+
+    return (
+        <Link
+            href={`/e/${event.slug}`}
+            className="group block p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-indigo-500/30 transition-all"
+        >
+            <div className="flex justify-between items-center">
+                <div>
+                    <h3 className="font-semibold text-lg group-hover:text-indigo-300 transition-colors flex items-center gap-2">
+                        {event.title}
+                        {event.status === 'CANCELLED' && (
+                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-800">
+                                Cancelled
+                            </span>
+                        )}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono mt-1">
+                        {event.scheduledDate
+                            ? <ClientDate date={event.scheduledDate} formatStr="MMM d, yyyy" />
+                            : (event.status === 'CANCELLED'
+                                ? <>Original Date: <ClientDate date={event.lastVisited} formatStr="MMM d" /></>
+                                : "Draft / Scheduling...")
+                        }
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                        {sources && sources.length > 0
+                            ? sources.map(source => (
+                                <span key={source} className="relative inline-block">
+                                    <span onClick={toggle(source)} className="cursor-pointer inline-flex" role="button" tabIndex={0}>
+                                        <SyncBadge variant={source} />
+                                    </span>
+                                    {openPopover === source && (
+                                        <LinkPopover onClose={closePopover}>
+                                            <PopoverItem
+                                                label={`Unlink from ${source === 'telegram' ? 'Telegram' : 'Discord'}`}
+                                                disabled={!participantId}
+                                                hint={LINK_FIRST_HINT}
+                                                onClick={handleAction('unlink', source)}
+                                            />
+                                        </LinkPopover>
+                                    )}
+                                </span>
+                            ))
+                            : (
+                                <span className="relative inline-block">
+                                    <span
+                                        onClick={canLink ? toggle('device') : undefined}
+                                        className={canLink ? "cursor-pointer inline-flex" : "inline-flex"}
+                                        role={canLink ? "button" : undefined}
+                                        tabIndex={canLink ? 0 : undefined}
+                                        title={!canLink ? SYNC_FIRST_HINT : undefined}
+                                    >
+                                        <SyncBadge variant="device" />
+                                    </span>
+                                    {openPopover === 'device' && canLink && (
+                                        <LinkPopover onClose={closePopover}>
+                                            {isTelegramSynced && (
+                                                <PopoverItem
+                                                    label="Link to Telegram"
+                                                    disabled={!participantId}
+                                                    hint={LINK_FIRST_HINT}
+                                                    onClick={handleAction('link', 'telegram')}
+                                                />
+                                            )}
+                                            {isDiscordSynced && (
+                                                <PopoverItem
+                                                    label="Link to Discord"
+                                                    disabled={!participantId}
+                                                    hint={LINK_FIRST_HINT}
+                                                    onClick={handleAction('link', 'discord')}
+                                                />
+                                            )}
+                                        </LinkPopover>
+                                    )}
+                                </span>
+                            )
+                        }
+                    </div>
+                    {actionMsg && (
+                        <p className={`text-xs mt-1.5 ${actionMsg.type === 'success' ? 'text-green-400' : 'text-amber-400'}`}>
+                            {actionMsg.text}
+                        </p>
+                    )}
+                </div>
+                <ArrowRightIcon className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+            </div>
+        </Link>
+    );
+}
+
+/**
  * @component ProfileDashboard
  * @description Client-side dashboard for authenticated/identified users.
  *
@@ -135,7 +327,8 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                 title: e.title,
                 lastVisited: new Date(e.lastVisited).getTime(),
                 status: e.status,
-                scheduledDate: e.scheduledDate
+                scheduledDate: e.scheduledDate,
+                eventId: e.eventId
             }));
             bulkMerge(toSync);
 
@@ -223,45 +416,15 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         </div>
                     ) : (
                         <div className="grid gap-4">
-                            {history.map(event => {
-                                const serverEvent = serverEventsBySlug.get(event.slug);
-                                const sources = serverEvent?.sources;
-                                return (
-                                <Link
+                            {history.map(event => (
+                                <EventCard
                                     key={event.slug}
-                                    href={`/e/${event.slug}`}
-                                    className="group block p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-indigo-500/30 transition-all"
-                                >
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <h3 className="font-semibold text-lg group-hover:text-indigo-300 transition-colors flex items-center gap-2">
-                                                {event.title}
-                                                {event.status === 'CANCELLED' && (
-                                                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-800">
-                                                        Cancelled
-                                                    </span>
-                                                )}
-                                            </h3>
-                                            <p className="text-xs text-slate-500 font-mono mt-1">
-                                                {event.scheduledDate
-                                                    ? <ClientDate date={event.scheduledDate} formatStr="MMM d, yyyy" />
-                                                    : (event.status === 'CANCELLED'
-                                                        ? <>Original Date: <ClientDate date={event.lastVisited} formatStr="MMM d" /></>
-                                                        : "Draft / Scheduling...")
-                                                }
-                                            </p>
-                                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                                {sources && sources.length > 0
-                                                    ? sources.map(source => <SyncBadge key={source} variant={source} />)
-                                                    : <SyncBadge variant="device" />
-                                                }
-                                            </div>
-                                        </div>
-                                        <ArrowRightIcon className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors" />
-                                    </div>
-                                </Link>
-                                );
-                            })}
+                                    event={event}
+                                    serverEvent={serverEventsBySlug.get(event.slug)}
+                                    isTelegramSynced={isTelegramSynced}
+                                    isDiscordSynced={isDiscordSynced}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>
