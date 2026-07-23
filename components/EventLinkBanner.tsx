@@ -74,7 +74,7 @@ export function EventLinkBanner({ eventId, slug, isTelegramSynced, isDiscordSync
         <div className="flex items-start gap-3 bg-indigo-950/50 border border-indigo-800/50 rounded-lg p-3 text-sm">
             <div className="flex-1 space-y-2 text-indigo-200">
                 <p>
-                    This browser is synced with {platforms} — link this event so it shows on all your devices?
+                    This browser is synced with {platforms}. Link this event so it shows on all your devices?
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                     {offerTelegram && (
