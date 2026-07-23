@@ -89,12 +89,17 @@ Retrieve read-only details about a specific event.
   "name": "Jane Doe",
   "telegramId": "@jane", // Optional
   "participantId": 123, // Optional, if updating existing vote
+  "discordId": "123456789012345678", // Optional, verified Discord id from the caller's synced cookie
+  "discordUsername": "jane#0001", // Optional, display name paired with discordId
+  "linkIdentity": true, // Optional, default true. Set false to opt this vote out of all identity linking
   "votes": [
     { "slotId": 1, "preference": "YES", "canHost": true },
     { "slotId": 2, "preference": "NO" }
   ]
 }
 ```
+
+`linkIdentity: false` skips passive Telegram chat-ID resolution/self-heal and does not write `discordId`/`discordUsername`, leaving the participant row unlinked even if the caller is synced.
 
 **Response (200 OK):**
 ```json
