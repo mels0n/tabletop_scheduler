@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
  * 2. If present, fetches all associated events from the database:
  *    - Events Managed (where managerChatId matches).
  *    - Events Participated (via Participant relation).
- * 3. Maps and de-duplicates events (Manager role supersedes Participant role).
+ * 3. Maps and de-duplicates events (Manager role supersedes Participant role for
+ *    the `role` field, but sync badge `sources` and `participantId` always come
+ *    from the participant queries, never the manager ones).
  * 4. Hydrates the Client Component `ProfileDashboard` with this trusted server data.
  */
 export default async function ProfilePage() {
@@ -56,13 +58,15 @@ export default async function ProfilePage() {
                 orderBy: { updatedAt: 'desc' }
             });
             managed.forEach(e => {
+                // Manager role only, never a sync source: sync badges are derived
+                // purely from the participant queries below (see fetchEvents doc).
                 eventMap.set(e.slug, {
                     slug: e.slug,
                     title: e.title,
                     role: 'MANAGER',
                     lastVisited: e.updatedAt.toISOString(),
                     eventId: e.id,
-                    sources: ['telegram'],
+                    sources: [],
                     status: e.status,
                     scheduledDate: resolveScheduledDate(e)
                 });
@@ -87,9 +91,10 @@ export default async function ProfilePage() {
             });
             managedDiscord.forEach(e => {
                 const existing = eventMap.get(e.slug);
-                // Union sources: an event managed via both Telegram and Discord should
-                // keep both tags instead of the later pass clobbering the earlier one.
-                const sources = existing ? Array.from(new Set([...existing.sources, 'discord'])) : ['discord'];
+                // Manager role only, never a sync source (see the Telegram pass above).
+                // Preserve whatever sources the earlier pass already set instead of
+                // clobbering them.
+                const sources = existing ? existing.sources : [];
                 eventMap.set(e.slug, {
                     slug: e.slug,
                     title: e.title,
@@ -131,8 +136,10 @@ export default async function ProfilePage() {
             participated.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (existing?.role === 'MANAGER') {
-                    // Manager role supersedes Participant, but the participant pass
-                    // should still tag this event as reachable via Telegram.
+                    // Manager role supersedes Participant for the `role` field, but sync
+                    // badges and participantId (used to link/unlink) always come from the
+                    // participant row when one exists.
+                    existing.participantId = p.id;
                     if (!existing.sources.includes('telegram')) existing.sources.push('telegram');
                 } else {
                     const sources = existing ? Array.from(new Set([...existing.sources, 'telegram'])) : ['telegram'];
@@ -179,8 +186,10 @@ export default async function ProfilePage() {
             participatedDiscord.forEach(p => {
                 const existing = eventMap.get(p.event.slug);
                 if (existing?.role === 'MANAGER') {
-                    // Manager role supersedes Participant, but the participant pass
-                    // should still tag this event as reachable via Discord.
+                    // Manager role supersedes Participant for the `role` field, but sync
+                    // badges and participantId (used to link/unlink) always come from the
+                    // participant row when one exists.
+                    existing.participantId = p.id;
                     if (!existing.sources.includes('discord')) existing.sources.push('discord');
                 } else {
                     const sources = existing ? Array.from(new Set([...existing.sources, 'discord'])) : ['discord'];

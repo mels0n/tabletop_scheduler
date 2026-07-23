@@ -87,7 +87,8 @@ Your personal history of events.
 - **Local History**: This page tracks events you've visited or created on this device.
 - **Connect Pills**: The header shows a solid "Telegram Synced" / "Discord Synced" pill per platform you're already connected to, or a dashed "Connect Telegram" / "Connect Discord" pill (deep-link to the bot / OAuth) when you're not.
 - **Sync**: Use the "Sync & Recover" tool to merge events from your Telegram or Discord account.
-- **Per-Event Badges**: Each event card carries its own badge: a colored "Telegram Synced" / "Discord Synced" badge means that event's vote is tied to your verified identity, while a gray "This Device Only" badge means it only lives in this browser's local history. Click a gray badge to link the event to a synced platform, or a colored badge to unlink it. Linking requires you to have voted on that event, and you can only unlink your own identity.
+- **Per-Event Badges**: Each event card carries its own badges: a colored "Telegram Synced" / "Discord Synced" badge means that event's vote is tied to your verified identity, while a gray "This Device Only" badge means it only lives in this browser's local history. Click a gray badge to link the event to a synced platform, or a colored badge to unlink it. Linking requires you to have voted on that event, and you can only unlink your own identity.
+- **Manager Badge**: Events you manage also show a separate indigo "Manager" badge marking your role there. It's independent of the sync badges, a managed event with no linked participant identity shows just "Manager" (not "This Device Only", since it's already tied to the event on the server).
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.
 - **Cleanup**: The list automatically removes events that have been deleted from the server.
 
