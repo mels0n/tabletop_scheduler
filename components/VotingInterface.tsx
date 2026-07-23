@@ -24,6 +24,7 @@ interface VotingInterfaceProps {
     slug: string;
     serverParticipantId?: number;
     discordIdentity?: { id: string, username: string };
+    telegramIdentity?: { handle: string };
     eventType?: "ONE_SHOT" | "CAMPAIGN";
     isTelegramSynced?: boolean;
     isDiscordSynced?: boolean;
@@ -31,7 +32,7 @@ interface VotingInterfaceProps {
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, telegramIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
@@ -45,9 +46,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
     const [participantId, setParticipantId] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>("quick");
     const [campaignTooltipOpen, setCampaignTooltipOpen] = useState(false);
-    const [linkIdentity, setLinkIdentity] = useState(true);
-
-    const isSynced = isTelegramSynced || isDiscordSynced;
+    // Per-platform identity linking. Each is only surfaced (and only meaningful)
+    // when that platform is synced in this browser; both default to on.
+    const [linkTelegram, setLinkTelegram] = useState(true);
+    const [linkDiscord, setLinkDiscord] = useState(true);
 
     useEffect(() => {
         let pid = serverParticipantId;
@@ -114,13 +116,18 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
 
         setIsSubmitting(true);
         try {
+            // A synced Telegram identity supplies its verified handle via the badge;
+            // otherwise fall back to whatever the user typed in the manual field.
+            const effectiveTelegram = telegramIdentity ? telegramIdentity.handle : userTelegram;
+
             const payload = {
                 name: userName,
-                telegramId: userTelegram,
-                discordId: linkIdentity ? discordIdentity?.id : undefined,
-                discordUsername: linkIdentity ? discordIdentity?.username : undefined,
+                telegramId: linkTelegram ? effectiveTelegram : "",
+                discordId: linkDiscord ? discordIdentity?.id : undefined,
+                discordUsername: linkDiscord ? discordIdentity?.username : undefined,
                 participantId,
-                linkIdentity,
+                linkTelegram,
+                linkDiscord,
                 votes: Object.entries(effectiveVotes)
                     .filter(([_, preference]) => preference !== undefined)
                     .map(([slotId, preference]) => ({
@@ -182,20 +189,28 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                             Who are you?
                         </h3>
 
-                        {discordIdentity ? (
-                            <div className="flex items-center gap-2 text-xs bg-[#5865F2]/20 text-[#5865F2] px-2 py-1 rounded border border-[#5865F2]/50">
-                                <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
-                                <span>{discordIdentity.username}</span>
-                            </div>
-                        ) : (
-                            <a
-                                href={`/api/auth/discord?flow=login&returnTo=${encodeURIComponent(pathname || '/')}`}
-                                className="text-xs bg-[#5865F2] hover:bg-[#4752C4] text-white px-3 py-1.5 rounded transition-colors flex items-center gap-2"
-                            >
-                                <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
-                                Log in
-                            </a>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {telegramIdentity && (
+                                <div className="flex items-center gap-2 text-xs bg-[#229ED9]/20 text-[#229ED9] px-2 py-1 rounded border border-[#229ED9]/50">
+                                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" /></svg>
+                                    <span>@{telegramIdentity.handle}</span>
+                                </div>
+                            )}
+                            {discordIdentity ? (
+                                <div className="flex items-center gap-2 text-xs bg-[#5865F2]/20 text-[#5865F2] px-2 py-1 rounded border border-[#5865F2]/50">
+                                    <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
+                                    <span>{discordIdentity.username}</span>
+                                </div>
+                            ) : (
+                                <a
+                                    href={`/api/auth/discord?flow=login&returnTo=${encodeURIComponent(pathname || '/')}`}
+                                    className="text-xs bg-[#5865F2] hover:bg-[#4752C4] text-white px-3 py-1.5 rounded transition-colors flex items-center gap-2"
+                                >
+                                    <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
+                                    Log in
+                                </a>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4">
@@ -206,33 +221,62 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                             value={userName}
                             onChange={(e) => setUserName(e.target.value)}
                         />
-                        <input
-                            type="text"
-                            placeholder="Telegram Handle (Optional)"
-                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
-                            value={userTelegram}
-                            onChange={(e) => setUserTelegram(e.target.value)}
-                        />
+                        {/* Manual handle entry only when Telegram isn't already
+                            surfaced as a verified badge above. */}
+                        {!telegramIdentity && (
+                            <input
+                                type="text"
+                                placeholder="Telegram Handle (Optional)"
+                                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
+                                value={userTelegram}
+                                onChange={(e) => setUserTelegram(e.target.value)}
+                            />
+                        )}
                     </div>
 
-                    {isSynced && (
-                        <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={linkIdentity}
-                                onChange={(e) => setLinkIdentity(e.target.checked)}
-                                className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
-                            />
-                            <span className={clsx(
-                                "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-full border flex items-center gap-1",
-                                linkIdentity
-                                    ? "bg-green-900/40 text-green-400 border-green-800"
-                                    : "bg-slate-800/60 text-slate-500 border-slate-700"
-                            )}>
-                                {linkIdentity && <Check className="w-3 h-3" />}
-                                Will link to {[isTelegramSynced && "Telegram", isDiscordSynced && "Discord"].filter(Boolean).join(" & ")}
-                            </span>
-                        </label>
+                    {/* Per-platform link toggles — each shown only when that platform
+                        is synced in this browser. */}
+                    {(isTelegramSynced || isDiscordSynced) && (
+                        <div className="flex flex-col gap-2 mt-4">
+                            {isTelegramSynced && (
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={linkTelegram}
+                                        onChange={(e) => setLinkTelegram(e.target.checked)}
+                                        className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                                    />
+                                    <span className={clsx(
+                                        "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-full border flex items-center gap-1",
+                                        linkTelegram
+                                            ? "bg-green-900/40 text-green-400 border-green-800"
+                                            : "bg-slate-800/60 text-slate-500 border-slate-700"
+                                    )}>
+                                        {linkTelegram && <Check className="w-3 h-3" />}
+                                        Link my Telegram{telegramIdentity ? ` @${telegramIdentity.handle}` : ""}
+                                    </span>
+                                </label>
+                            )}
+                            {isDiscordSynced && (
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={linkDiscord}
+                                        onChange={(e) => setLinkDiscord(e.target.checked)}
+                                        className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                                    />
+                                    <span className={clsx(
+                                        "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-full border flex items-center gap-1",
+                                        linkDiscord
+                                            ? "bg-green-900/40 text-green-400 border-green-800"
+                                            : "bg-slate-800/60 text-slate-500 border-slate-700"
+                                    )}>
+                                        {linkDiscord && <Check className="w-3 h-3" />}
+                                        Link my Discord{discordIdentity ? ` ${discordIdentity.username}` : ""}
+                                    </span>
+                                </label>
+                            )}
+                        </div>
                     )}
                 </div>
 

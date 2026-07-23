@@ -26,9 +26,12 @@ const log = Logger.get("API:Vote");
  *    - Checks if the new vote triggered a "Viable" (Min Players) or "Perfect" (All + Host) state.
  *    - Notifies the Event Manager privately if a threshold is crossed for the first time.
  *
- * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, discordId?, discordUsername?, linkIdentity? }
- *   `linkIdentity` (default true): when explicitly false, opts this vote out of identity
- *   linking — skips passive chatId resolution/self-heal and doesn't write discordId/discordUsername.
+ * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, discordId?, discordUsername?, linkTelegram?, linkDiscord? }
+ *   `linkTelegram`/`linkDiscord` (each default true): when explicitly false, opts this
+ *   vote out of that platform's identity linking — `linkTelegram=false` skips passive
+ *   chatId resolution/self-heal, `linkDiscord=false` doesn't write discordId/discordUsername.
+ *   Legacy clients may still send the combined `linkIdentity`, which is used as the
+ *   fallback for both when the per-platform flags are absent.
  * @param {Object} context - Route parameters.
  * @param {string} context.params.slug - The event identifier (Note: actually treated as ID in logic but slug in route).
  */
@@ -41,15 +44,18 @@ export async function POST(
         // Legacy: Ideally strictly slug-based, but currently numeric ID is used in API calls.
         const eventId = parseInt(params.slug);
         const body = await req.json();
-        let { name, telegramId, votes, participantId, discordId, discordUsername, linkIdentity } = body;
+        let { name, telegramId, votes, participantId, discordId, discordUsername, linkIdentity, linkTelegram, linkDiscord } = body;
 
         // Canonicalize the handle at the write boundary: users may type it with or
         // without '@', so store it '@'-less and lowercased. Display code re-adds one '@'.
         telegramId = normalizeHandle(telegramId);
 
-        // Feature: Vote-time identity toggle. Defaults to true (current behavior) so
-        // existing/older clients that don't send this field are unaffected.
-        const shouldLinkIdentity = linkIdentity !== false;
+        // Feature: Per-platform vote-time identity toggles. The client now sends a
+        // separate flag per platform; both default to true so a missing field keeps
+        // the historical "link everything" behavior. Older clients that only send the
+        // combined `linkIdentity` fall back to it, so a deploy-window opt-out is honored.
+        const shouldLinkTelegram = linkTelegram !== undefined ? linkTelegram !== false : linkIdentity !== false;
+        const shouldLinkDiscord = linkDiscord !== undefined ? linkDiscord !== false : linkIdentity !== false;
 
         if (!name || !votes || !Array.isArray(votes)) {
             log.warn("Invalid vote data", { eventId });
@@ -126,7 +132,7 @@ export async function POST(
                     // chance to self-heal via the same resolution as new-participant creation.
                     // Only attempt it when a chatId is missing, and never overwrite one already set.
                     let resolvedChatId: string | null = null;
-                    if (!existing.chatId && telegramId && shouldLinkIdentity) {
+                    if (!existing.chatId && telegramId && shouldLinkTelegram) {
                         resolvedChatId = await resolvePassiveChatId(tx, telegramId);
                     }
 
@@ -138,7 +144,7 @@ export async function POST(
                             status: nextStatus,
                             // Opt-out: leave discordId/discordUsername untouched rather than
                             // overwriting with the body's values.
-                            ...(shouldLinkIdentity ? { discordId, discordUsername } : {}),
+                            ...(shouldLinkDiscord ? { discordId, discordUsername } : {}),
                             // Only include chatId when we actually resolved one; avoid churn.
                             ...(resolvedChatId ? { chatId: resolvedChatId } : {})
                         }
@@ -164,7 +170,7 @@ export async function POST(
                 // by numeric chatId). Checks other Participant rows first, then falls back to the
                 // Event manager record (see resolvePassiveChatId for both steps).
                 let existingChatId = null;
-                if (telegramId && shouldLinkIdentity) {
+                if (telegramId && shouldLinkTelegram) {
                     existingChatId = await resolvePassiveChatId(tx, telegramId);
                 }
 
@@ -174,7 +180,7 @@ export async function POST(
                         name,
                         telegramId,
                         // Opt-out: don't stamp Discord identity from the body onto a fresh row.
-                        ...(shouldLinkIdentity ? { discordId, discordUsername } : {}),
+                        ...(shouldLinkDiscord ? { discordId, discordUsername } : {}),
                         chatId: existingChatId, // Inherit identity if known
                         status: nextStatus || 'PENDING'
                     },
