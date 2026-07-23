@@ -20,6 +20,8 @@ export const prisma = {
     },
     vote: {
         deleteMany: vi.fn(),
+        findMany: vi.fn(),
+        createMany: vi.fn(),
     },
     timeSlot: {
         deleteMany: vi.fn(),

@@ -25,11 +25,13 @@ interface VotingInterfaceProps {
     serverParticipantId?: number;
     discordIdentity?: { id: string, username: string };
     eventType?: "ONE_SHOT" | "CAMPAIGN";
+    isTelegramSynced?: boolean;
+    isDiscordSynced?: boolean;
 }
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, eventType = "ONE_SHOT" }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
@@ -43,6 +45,9 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
     const [participantId, setParticipantId] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>("quick");
     const [campaignTooltipOpen, setCampaignTooltipOpen] = useState(false);
+    const [linkIdentity, setLinkIdentity] = useState(true);
+
+    const isSynced = isTelegramSynced || isDiscordSynced;
 
     useEffect(() => {
         let pid = serverParticipantId;
@@ -112,9 +117,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             const payload = {
                 name: userName,
                 telegramId: userTelegram,
-                discordId: discordIdentity?.id,
-                discordUsername: discordIdentity?.username,
+                discordId: linkIdentity ? discordIdentity?.id : undefined,
+                discordUsername: linkIdentity ? discordIdentity?.username : undefined,
                 participantId,
+                linkIdentity,
                 votes: Object.entries(effectiveVotes)
                     .filter(([_, preference]) => preference !== undefined)
                     .map(([slotId, preference]) => ({
@@ -208,6 +214,26 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                             onChange={(e) => setUserTelegram(e.target.value)}
                         />
                     </div>
+
+                    {isSynced && (
+                        <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={linkIdentity}
+                                onChange={(e) => setLinkIdentity(e.target.checked)}
+                                className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                            />
+                            <span className={clsx(
+                                "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-full border flex items-center gap-1",
+                                linkIdentity
+                                    ? "bg-green-900/40 text-green-400 border-green-800"
+                                    : "bg-slate-800/60 text-slate-500 border-slate-700"
+                            )}>
+                                {linkIdentity && <Check className="w-3 h-3" />}
+                                Will link to {[isTelegramSynced && "Telegram", isDiscordSynced && "Discord"].filter(Boolean).join(" & ")}
+                            </span>
+                        </label>
+                    )}
                 </div>
 
                 {/* ── Campaign context banner ── */}
