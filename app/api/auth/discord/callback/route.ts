@@ -10,6 +10,7 @@ import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 import { hashToken } from "@/shared/lib/token";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "@/shared/lib/prisma";
+import { normalizeHandle } from "@/shared/lib/handle";
 
 /**
  * @function GET
@@ -143,7 +144,9 @@ export async function GET(req: Request) {
                         where: { id: event.id },
                         data: {
                             managerDiscordId: user.id,
-                            managerDiscordUsername: user.username,
+                            // Discord usernames are case-sensitive and arrive '@'-less via OAuth;
+                            // strip a stray '@' defensively but preserve case.
+                            managerDiscordUsername: normalizeHandle(user.username, { lowercase: false }),
                             adminToken: newHash
                         }
                     });

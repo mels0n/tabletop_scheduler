@@ -67,6 +67,24 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         expect(createData).not.toHaveProperty('discordUsername');
         expect(createData.chatId).toBeNull();
     });
+
+    it('stores telegramId canonicalized (no leading @, lowercased) regardless of how the voter typed it', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 43 });
+
+        const res = await POST(
+            mockRequest({
+                name: 'Chris',
+                telegramId: '@MelS0n',
+                linkIdentity: false,
+                votes: [{ slotId: 1, preference: 'YES', canHost: false }],
+            }),
+            { params: { slug: '1' } }
+        );
+        await res;
+
+        const createData = mockPrisma.participant.create.mock.calls[0][0].data;
+        expect(createData.telegramId).toBe('mels0n');
+    });
 });
 
 describe('resolvePassiveChatId', () => {
