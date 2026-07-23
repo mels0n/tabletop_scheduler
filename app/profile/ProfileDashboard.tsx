@@ -3,7 +3,7 @@
 import { useEventHistory } from "@/hooks/useEventHistory";
 import Link from "next/link";
 import { ArrowLeft, User as UserIcon, Calendar, Clock, RefreshCw, Send, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ClientDate } from "@/components/ClientDate";
 import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
 
@@ -17,9 +17,42 @@ interface ServerEvent {
     lastVisited: string; // ISO string
     eventId?: number;
     participantId?: number;
-    source?: 'telegram' | 'discord';
+    sources?: ('telegram' | 'discord')[];
     status?: string;
     scheduledDate?: string;
+}
+
+/**
+ * @component SyncBadge
+ * @description Small pill badge showing how an event (or the user) is linked to
+ * a sync source. Shared by the header sync pills and the per-event card badges
+ * so the visual language stays consistent across the dashboard.
+ */
+function SyncBadge({ variant }: { variant: 'telegram' | 'discord' | 'device' }) {
+    if (variant === 'telegram') {
+        return (
+            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-green-900/40 text-green-400 rounded-full border border-green-800 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                Telegram Synced
+            </span>
+        );
+    }
+
+    if (variant === 'discord') {
+        return (
+            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-[#5865F2]/20 text-[#5865F2] rounded-full border border-[#5865F2]/50 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2] animate-pulse" />
+                Discord Synced
+            </span>
+        );
+    }
+
+    return (
+        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+            This Device Only
+        </span>
+    );
 }
 
 /**
@@ -39,6 +72,11 @@ interface ServerEvent {
 export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
+
+    // Lookup of server-resolved events by slug, used to render per-event sync badges.
+    const serverEventsBySlug = useMemo(() => {
+        return new Map(serverEvents.map(e => [e.slug, e]));
+    }, [serverEvents]);
 
     // Recovery Form State
     const [handle, setHandle] = useState("");
@@ -119,18 +157,8 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         </h1>
                         <p className="text-slate-400 mb-2">Welcome to your event dashboard.</p>
                         <div className="flex flex-wrap gap-2">
-                            {isTelegramSynced && (
-                                <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-green-900/40 text-green-400 rounded-full border border-green-800 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    Telegram Synced
-                                </span>
-                            )}
-                            {isDiscordSynced && (
-                                <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-[#5865F2]/20 text-[#5865F2] rounded-full border border-[#5865F2]/50 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2] animate-pulse" />
-                                    Discord Synced
-                                </span>
-                            )}
+                            {isTelegramSynced && <SyncBadge variant="telegram" />}
+                            {isDiscordSynced && <SyncBadge variant="discord" />}
                         </div>
                     </div>
                 </div>
@@ -152,7 +180,10 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         </div>
                     ) : (
                         <div className="grid gap-4">
-                            {history.map(event => (
+                            {history.map(event => {
+                                const serverEvent = serverEventsBySlug.get(event.slug);
+                                const sources = serverEvent?.sources;
+                                return (
                                 <Link
                                     key={event.slug}
                                     href={`/e/${event.slug}`}
@@ -176,11 +207,18 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                                                         : "Draft / Scheduling...")
                                                 }
                                             </p>
+                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                {sources && sources.length > 0
+                                                    ? sources.map(source => <SyncBadge key={source} variant={source} />)
+                                                    : <SyncBadge variant="device" />
+                                                }
+                                            </div>
                                         </div>
                                         <ArrowRightIcon className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors" />
                                     </div>
                                 </Link>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
