@@ -8,7 +8,6 @@ import { ManagerRecovery } from "@/features/auth/ui/ManagerRecovery";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
 import { CampaignStatusBanner } from "@/components/CampaignStatusBanner";
-import { EventLinkBanner } from "@/components/EventLinkBanner";
 import Link from "next/link";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 
@@ -111,6 +110,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     // This allows the voting interface to pre-fill "You are interacting as X".
     const cookieStore = cookies();
     const userChatId = cookieStore.get("tabletop_user_chat_id")?.value;
+    const userTelegramName = cookieStore.get("tabletop_user_telegram_name")?.value;
     const userDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
     const isTelegramSynced = !!userChatId;
     const isDiscordSynced = !!userDiscordId;
@@ -140,14 +140,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         const no = slot.votes.filter(v => v.preference === 'NO').length;
         return { ...slot, counts: { yes, maybe, no } };
     });
-
-    // Feature: Event-page link banner. Expose only linked/unlinked booleans to the
-    // client, never the raw chatId/discordId values.
-    const participantLinkInfo = event.participants.map(p => ({
-        id: p.id,
-        hasTelegramLink: !!p.chatId,
-        hasDiscordLink: !!p.discordId,
-    }));
 
     // Determine finalized slot/sessions if applicable
     const isFinalized = event.status === 'FINALIZED';
@@ -204,16 +196,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                         <span>Target: {event.minPlayers} players needed</span>
                     </div>
                 </div>
-
-                {event.status !== 'CANCELLED' && (
-                    <EventLinkBanner
-                        eventId={event.id}
-                        slug={event.slug}
-                        isTelegramSynced={isTelegramSynced}
-                        isDiscordSynced={isDiscordSynced}
-                        participants={participantLinkInfo}
-                    />
-                )}
 
                 {/* Voting or Finalized View */}
                 {/* Status Views Routing */}
@@ -360,6 +342,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                             id: cookieStore.get("tabletop_user_discord_id")!.value,
                             username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"
                         } : undefined}
+                        telegramIdentity={userTelegramName ? { handle: userTelegramName } : undefined}
                         isTelegramSynced={isTelegramSynced}
                         isDiscordSynced={isDiscordSynced}
                     />

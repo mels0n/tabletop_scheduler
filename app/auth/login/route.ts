@@ -63,6 +63,15 @@ export async function GET(request: NextRequest) {
                 ...COOKIE_BASE_OPTIONS,
                 maxAge: COOKIE_MAX_AGE
             });
+            // Also set username for display (mirrors Discord below), so the vote
+            // form can show a Telegram identity badge instead of an empty field.
+            if (validToken.telegramUsername) {
+                cookies().set("tabletop_user_telegram_name", validToken.telegramUsername, {
+                    ...COOKIE_BASE_OPTIONS,
+                    httpOnly: false, // Readable by client
+                    maxAge: COOKIE_MAX_AGE
+                });
+            }
         }
 
         if (validToken.discordId) {

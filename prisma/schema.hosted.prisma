@@ -136,6 +136,7 @@ model Vote {
 model LoginToken {
   token     String   @id @default(uuid())
   chatId    String?   // The Telegram Chat ID being authenticated
+  telegramUsername String? // For display purposes (mirrors discordUsername)
   discordId String?   // The Discord User ID being authenticated
   discordUsername String? // For display purposes
   expiresAt DateTime

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { sendTelegramMessage } from "@/features/telegram/lib/telegram-client";
 import Logger from "@/shared/lib/logger";
+import { normalizeHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("API:Webhook");
 
@@ -265,11 +266,15 @@ async function handleGlobalLogin(chatId: number, user: any, token: string) {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 min expiry
 
-    // Store HASH in DB
+    // Store HASH in DB. Capture the Telegram username too (mirrors Discord's
+    // discordUsername) so the login route can set a display cookie and the vote
+    // form can show a Telegram identity badge instead of an empty handle field.
+    const handle = normalizeHandle(user?.username);
     await prisma.loginToken.create({
         data: {
             token: tokenHash,
             chatId: chatId.toString(),
+            telegramUsername: handle || null,
             expiresAt
         }
     });

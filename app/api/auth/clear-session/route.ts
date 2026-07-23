@@ -10,15 +10,17 @@ import { cookies } from "next/headers";
  * on next page load rather than looping on the error screen.
  *
  * Cookies cleared:
- * - tabletop_user_chat_id      — Telegram identity
- * - tabletop_user_discord_id   — Discord identity
- * - tabletop_user_discord_name — Discord display name (non-sensitive, public)
+ * - tabletop_user_chat_id       — Telegram identity
+ * - tabletop_user_telegram_name — Telegram display name (non-sensitive, public)
+ * - tabletop_user_discord_id    — Discord identity
+ * - tabletop_user_discord_name  — Discord display name (non-sensitive, public)
  */
 export async function POST() {
     const cookieStore = cookies();
 
     const AUTH_COOKIES = [
         "tabletop_user_chat_id",
+        "tabletop_user_telegram_name",
         "tabletop_user_discord_id",
         "tabletop_user_discord_name",
     ];

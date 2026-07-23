@@ -68,6 +68,61 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         expect(createData.chatId).toBeNull();
     });
 
+    it('links Discord but skips Telegram resolution when linkDiscord=true and linkTelegram=false', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 44 });
+
+        const res = await POST(
+            mockRequest({
+                name: 'Chris',
+                telegramId: '@someone',
+                discordId: 'discord-1',
+                discordUsername: 'SomeUser',
+                linkTelegram: false,
+                linkDiscord: true,
+                votes: [{ slotId: 1, preference: 'YES', canHost: false }],
+            }),
+            { params: { slug: '1' } }
+        );
+        await res;
+
+        // Telegram off: no passive resolution, chatId stays null.
+        expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
+        expect(mockPrisma.event.findFirst).not.toHaveBeenCalled();
+
+        const createData = mockPrisma.participant.create.mock.calls[0][0].data;
+        expect(createData.chatId).toBeNull();
+        // Discord on: identity written.
+        expect(createData.discordId).toBe('discord-1');
+        expect(createData.discordUsername).toBe('SomeUser');
+    });
+
+    it('resolves Telegram but skips Discord write when linkTelegram=true and linkDiscord=false', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
+        mockPrisma.participant.create.mockResolvedValue({ id: 45 });
+
+        const res = await POST(
+            mockRequest({
+                name: 'Chris',
+                telegramId: '@someone',
+                discordId: 'discord-1',
+                discordUsername: 'SomeUser',
+                linkTelegram: true,
+                linkDiscord: false,
+                votes: [{ slotId: 1, preference: 'YES', canHost: false }],
+            }),
+            { params: { slug: '1' } }
+        );
+        await res;
+
+        // Telegram on: passive resolution runs and its chatId is inherited.
+        expect(mockPrisma.participant.findFirst).toHaveBeenCalled();
+        const createData = mockPrisma.participant.create.mock.calls[0][0].data;
+        expect(createData.chatId).toBe('999');
+        // Discord off: identity not written.
+        expect(createData).not.toHaveProperty('discordId');
+        expect(createData).not.toHaveProperty('discordUsername');
+    });
+
     it('stores telegramId canonicalized (no leading @, lowercased) regardless of how the voter typed it', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 43 });
 
