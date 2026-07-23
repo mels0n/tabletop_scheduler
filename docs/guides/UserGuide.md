@@ -30,6 +30,7 @@ This is the public page you share with your players.
     - **Suggest a Time**: If none of the proposed times work for you, click "Suggest a Time" to add a new option for everyone to vote on.
     - **Submit**: Saves your votes. You can edit them later if you revisit the page on the same device.
 - **Best Slot**: The app automatically highlights the slot with the most "Yes" votes that meets the minimum player count.
+- **Identity Linking**: If your browser is synced with Telegram or Discord (see **[Magic Links](MagicLinks.md)**), the vote form shows a "Will link to Telegram/Discord" indicator with an opt-out checkbox, checked by default. Leave it checked and this vote is automatically stamped with your synced identity so it follows you across devices; uncheck it to keep this particular vote anonymous. If you're synced but a past vote on this event isn't linked yet, a dismissible banner near the top of the page offers to link it.
 
 ---
 
@@ -84,7 +85,9 @@ To get notifications in your group chat:
 
 Your personal history of events.
 - **Local History**: This page tracks events you've visited or created on this device.
+- **Connect Pills**: The header shows a solid "Telegram Synced" / "Discord Synced" pill per platform you're already connected to, or a dashed "Connect Telegram" / "Connect Discord" pill (deep-link to the bot / OAuth) when you're not.
 - **Sync**: Use the "Sync & Recover" tool to merge events from your Telegram or Discord account.
+- **Per-Event Badges**: Each event card carries its own badge: a colored "Telegram Synced" / "Discord Synced" badge means that event's vote is tied to your verified identity, while a gray "This Device Only" badge means it only lives in this browser's local history. Click a gray badge to link the event to a synced platform, or a colored badge to unlink it. Linking requires you to have voted on that event, and you can only unlink your own identity.
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.
 - **Cleanup**: The list automatically removes events that have been deleted from the server.
 

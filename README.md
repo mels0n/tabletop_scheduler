@@ -19,6 +19,7 @@ TabletopTime helps you find the best time for your gaming group to meet. It is d
   - **Discord Exclusive**: 
     - "Recover with Discord" allows instant login for event managers.
     - Post live-updating dashboards to your channel.
+- **My Events & Cross-Device Sync**: No account, but connect Telegram or Discord and your voting history follows you anywhere. The profile page shows a per-event sync badge (linked, or "This Device Only"), and you can link or unlink any event you've voted on straight from that badge.
 - **Privacy & Security**: 
   - **Zero Tracking**: We do not use Google Analytics, Facebook Pixels, or any third-party trackers.
   - **Secure Hashing**: All administrative tokens are hashed (SHA-256) before storage. We never store plaintext keys.

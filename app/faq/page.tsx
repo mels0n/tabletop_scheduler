@@ -51,6 +51,10 @@ export default function FAQPage() {
             answer: "If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
         },
         {
+            question: "Can I link an event to my Telegram or Discord after I've already voted?",
+            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. You need to have voted on the event first, and you can only link or unlink your own identity."
+        },
+        {
             question: "How does the waitlist work?",
             answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist and notify the group!"
         },
@@ -113,6 +117,18 @@ export default function FAQPage() {
                     <FAQItem
                         question="What is a 'Magic Link'?"
                         answer="(Optional) If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
+                    />
+                    <FAQItem
+                        question="Can I link an event to my Telegram or Discord after I've already voted?"
+                        answer={
+                            <span>
+                                Yes. Each event on your{" "}
+                                <Link href="/profile" className="text-indigo-400 hover:text-indigo-300 underline">
+                                    My Events
+                                </Link>{" "}
+                                page has a badge: a gray &quot;This Device Only&quot; badge means it&apos;s only saved in this browser, and clicking it lets you link it to any platform you&apos;re synced with. A colored &quot;Telegram Synced&quot; or &quot;Discord Synced&quot; badge means it&apos;s already linked, and clicking it lets you unlink it. You need to have voted on the event first, and you can only link or unlink your own identity.
+                            </span>
+                        }
                     />
                     <FAQItem
                         question="How does the waitlist work?"
