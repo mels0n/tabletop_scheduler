@@ -14,8 +14,10 @@ import prisma from "@/shared/lib/prisma";
  * @param {NextRequest} req - JSON Payload: { slugs: string[] }
  * @returns {NextResponse} JSON:
  *   - validSlugs: string[] of events that exist in DB.
- *   - events: per-slug { slug, status, scheduledDate } so the client can reflect
- *     true finalized/cancelled state even when the user is not Telegram/Discord synced.
+ *   - events: per-slug { slug, id, status, scheduledDate } so the client can reflect
+ *     true finalized/cancelled state even when the user is not Telegram/Discord synced,
+ *     and so it can resolve the numeric event id needed to look up a locally-stored
+ *     participantId (`tabletop_participant_<eventId>`) for un-synced history entries.
  */
 const resolveScheduledDate = (e: {
     finalizedSlotId: number | null;
@@ -51,6 +53,7 @@ export async function POST(req: NextRequest) {
                 slug: { in: slugs }
             },
             select: {
+                id: true,
                 slug: true,
                 status: true,
                 finalizedSlotId: true,
@@ -62,6 +65,7 @@ export async function POST(req: NextRequest) {
         const validSlugs = foundEvents.map(e => e.slug);
         const events = foundEvents.map(e => ({
             slug: e.slug,
+            id: e.id,
             status: e.status,
             scheduledDate: resolveScheduledDate(e)
         }));

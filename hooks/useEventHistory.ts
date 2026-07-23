@@ -8,6 +8,7 @@ export interface VisitedEvent {
     lastVisited: number;
     status?: string;
     scheduledDate?: string;
+    eventId?: number;
 }
 
 /**
@@ -46,7 +47,7 @@ export function useEventHistory() {
         }
     }, []);
 
-    const bulkMerge = useCallback((events: { slug: string, title: string, lastVisited?: number, status?: string, scheduledDate?: string }[]) => {
+    const bulkMerge = useCallback((events: { slug: string, title: string, lastVisited?: number, status?: string, scheduledDate?: string, eventId?: number }[]) => {
         try {
             const current = JSON.parse(localStorage.getItem('tabletop_history') || "[]") as VisitedEvent[];
             const currentMap = new Map(current.map(e => [e.slug, e]));
@@ -60,7 +61,8 @@ export function useEventHistory() {
                         title: e.title,
                         lastVisited: e.lastVisited || Date.now(),
                         status: e.status,
-                        scheduledDate: e.scheduledDate
+                        scheduledDate: e.scheduledDate,
+                        eventId: e.eventId
                     });
                     changed = true;
                 } else {
@@ -72,6 +74,10 @@ export function useEventHistory() {
                     }
                     if (e.scheduledDate && e.scheduledDate !== existing.scheduledDate) {
                         existing.scheduledDate = e.scheduledDate;
+                        changed = true;
+                    }
+                    if (e.eventId && e.eventId !== existing.eventId) {
+                        existing.eventId = e.eventId;
                         changed = true;
                     }
                 }
@@ -106,15 +112,16 @@ export function useEventHistory() {
             if (res.ok) {
                 const { validSlugs, events } = await res.json() as {
                     validSlugs: string[];
-                    events?: { slug: string; status?: string; scheduledDate?: string }[];
+                    events?: { slug: string; id?: number; status?: string; scheduledDate?: string }[];
                 };
 
                 // 1. Prune events that no longer exist in the DB.
                 const validHistory = current.filter((e: VisitedEvent) => validSlugs.includes(e.slug));
 
-                // 2. Refresh status/scheduledDate from the server so the profile reflects
-                //    true finalized/cancelled state even for un-synced users (whose local
-                //    history only ever carried slug/title/lastVisited).
+                // 2. Refresh status/scheduledDate/eventId from the server so the profile
+                //    reflects true finalized/cancelled state even for un-synced users (whose
+                //    local history only ever carried slug/title/lastVisited), and so a
+                //    numeric eventId is available to resolve a locally-stored participantId.
                 let detailsChanged = false;
                 if (events && events.length > 0) {
                     const detailMap = new Map(events.map(e => [e.slug, e]));
@@ -127,6 +134,10 @@ export function useEventHistory() {
                         }
                         if (server.scheduledDate !== e.scheduledDate) {
                             e.scheduledDate = server.scheduledDate;
+                            detailsChanged = true;
+                        }
+                        if (server.id && server.id !== e.eventId) {
+                            e.eventId = server.id;
                             detailsChanged = true;
                         }
                     });

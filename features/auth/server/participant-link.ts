@@ -3,6 +3,7 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
+import type { Participant } from "@prisma/client";
 
 const log = Logger.get("ParticipantLink");
 
@@ -40,9 +41,9 @@ const PLATFORM_COOKIE: Record<Platform, string> = {
  *
  * @param {string} slug - The event slug.
  * @param {number} participantId - The Participant row being claimed/released.
- * @returns {Promise<{ participant: any } | { error: string }>} The participant row, or an error.
+ * @returns {Promise<{ participant: Participant } | { error: string }>} The participant row, or an error.
  */
-async function loadOwnedParticipant(slug: string, participantId: number) {
+async function loadOwnedParticipant(slug: string, participantId: number): Promise<{ participant: Participant } | { error: string }> {
     const event = await prisma.event.findUnique({
         where: { slug },
         select: { id: true }
@@ -79,7 +80,7 @@ async function loadOwnedParticipant(slug: string, participantId: number) {
  * @param {Platform} params.platform - Which identity ('telegram' | 'discord') to stamp.
  * @returns {Promise<{ success: true, message?: string } | { error: string }>}
  */
-export async function linkParticipant({ slug, participantId, platform }: ParticipantLinkParams) {
+export async function linkParticipant({ slug, participantId, platform }: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;
@@ -152,7 +153,7 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
  * @param {Platform} params.platform - Which identity ('telegram' | 'discord') to clear.
  * @returns {Promise<{ success: true, message?: string } | { error: string }>}
  */
-export async function unlinkParticipant({ slug, participantId, platform }: ParticipantLinkParams) {
+export async function unlinkParticipant({ slug, participantId, platform }: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;

@@ -61,6 +61,7 @@ export default async function ProfilePage() {
                     title: e.title,
                     role: 'MANAGER',
                     lastVisited: e.updatedAt.toISOString(),
+                    eventId: e.id,
                     sources: ['telegram'],
                     status: e.status,
                     scheduledDate: resolveScheduledDate(e)
@@ -94,6 +95,7 @@ export default async function ProfilePage() {
                     title: e.title,
                     role: 'MANAGER',
                     lastVisited: e.updatedAt.toISOString(),
+                    eventId: e.id,
                     sources,
                     status: e.status,
                     scheduledDate: resolveScheduledDate(e)
@@ -187,6 +189,7 @@ export default async function ProfilePage() {
                         title: p.event.title,
                         role: 'PARTICIPANT',
                         lastVisited: p.event.updatedAt.toISOString(),
+                        eventId: p.event.id,
                         participantId: p.id,
                         sources,
                         status: p.event.status,
