@@ -104,11 +104,36 @@ export function useEventHistory() {
             });
 
             if (res.ok) {
-                const { validSlugs } = await res.json();
+                const { validSlugs, events } = await res.json() as {
+                    validSlugs: string[];
+                    events?: { slug: string; status?: string; scheduledDate?: string }[];
+                };
+
+                // 1. Prune events that no longer exist in the DB.
                 const validHistory = current.filter((e: VisitedEvent) => validSlugs.includes(e.slug));
 
-                // Only update if changes were made
-                if (validHistory.length !== current.length) {
+                // 2. Refresh status/scheduledDate from the server so the profile reflects
+                //    true finalized/cancelled state even for un-synced users (whose local
+                //    history only ever carried slug/title/lastVisited).
+                let detailsChanged = false;
+                if (events && events.length > 0) {
+                    const detailMap = new Map(events.map(e => [e.slug, e]));
+                    validHistory.forEach((e: VisitedEvent) => {
+                        const server = detailMap.get(e.slug);
+                        if (!server) return;
+                        if (server.status !== e.status) {
+                            e.status = server.status;
+                            detailsChanged = true;
+                        }
+                        if (server.scheduledDate !== e.scheduledDate) {
+                            e.scheduledDate = server.scheduledDate;
+                            detailsChanged = true;
+                        }
+                    });
+                }
+
+                // Only persist if something actually changed.
+                if (validHistory.length !== current.length || detailsChanged) {
                     localStorage.setItem('tabletop_history', JSON.stringify(validHistory));
                     setHistory(validHistory);
                 }
