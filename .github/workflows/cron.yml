@@ -15,10 +15,14 @@ jobs:
           # Replace with your actual deployed URL
           # We use a secret for the URL to keep it flexible
           if [ -n "${{ secrets.DEPLOYMENT_URL }}" ]; then
+             # --location-trusted: keep the Authorization header across redirects
+             #   (plain -L drops it when a redirect crosses host/scheme, e.g. www -> apex).
+             # --fail: exit non-zero on HTTP 4xx/5xx so an Unauthorized turns the job red
+             #   instead of silently passing.
              if [ -n "${{ secrets.CRON_SECRET }}" ]; then
-               curl -L -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+               curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
              else
-               curl -L -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders"
+               curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders"
              fi
              echo "Pinged ${{ secrets.DEPLOYMENT_URL }}"
           else
