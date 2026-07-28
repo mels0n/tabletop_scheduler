@@ -1,9 +1,14 @@
+import { Metadata } from "next";
 import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
 import { getBotUsername } from "@/features/telegram/lib/telegram-client";
 import { ProfileDashboard } from "./ProfileDashboard";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+    robots: "noindex, nofollow",
+};
 
 /**
  * @function ProfilePage
