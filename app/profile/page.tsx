@@ -46,173 +46,191 @@ export default async function ProfilePage() {
     };
 
     const fetchEvents = async (chatId: string | undefined, discordId: string | undefined) => {
-        // 1. Fetch Managed Events (Telegram)
-        if (chatId) {
-            const managed = await prisma.event.findMany({
-                where: { managerChatId: chatId },
-                select: {
-                    id: true,
-                    slug: true,
-                    title: true,
-                    updatedAt: true,
-                    status: true,
-                    finalizedSlotId: true,
-                    timeSlots: { select: { id: true, startTime: true } },
-                    finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
-                },
-                orderBy: { updatedAt: 'desc' }
+        // Issue all four applicable queries concurrently instead of one strict
+        // `await` chain: on a cold Vercel + Supabase start each round trip adds
+        // real latency, and none of these reads depend on each other. The MERGE
+        // below still runs in the exact original sequential order (managed
+        // Telegram, then managed Discord, then participated Telegram, then
+        // participated Discord) because eventMap construction is order-dependent
+        // (see fetchEvents doc).
+        const [managed, managedDiscord, participated, participatedDiscord] = await Promise.all([
+            chatId
+                ? prisma.event.findMany({
+                    where: { managerChatId: chatId },
+                    select: {
+                        id: true,
+                        slug: true,
+                        title: true,
+                        updatedAt: true,
+                        status: true,
+                        finalizedSlotId: true,
+                        timeSlots: { select: { id: true, startTime: true } },
+                        finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
+                    },
+                    orderBy: { updatedAt: 'desc' }
+                })
+                : Promise.resolve([]),
+            discordId
+                ? prisma.event.findMany({
+                    where: { managerDiscordId: discordId },
+                    select: {
+                        id: true,
+                        slug: true,
+                        title: true,
+                        updatedAt: true,
+                        status: true,
+                        finalizedSlotId: true,
+                        timeSlots: { select: { id: true, startTime: true } },
+                        finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
+                    },
+                    orderBy: { updatedAt: 'desc' }
+                })
+                : Promise.resolve([]),
+            chatId
+                ? prisma.participant.findMany({
+                    where: { chatId: chatId },
+                    include: {
+                        event: {
+                            select: {
+                                id: true,
+                                slug: true,
+                                title: true,
+                                updatedAt: true,
+                                status: true,
+                                finalizedSlotId: true,
+                                timeSlots: { select: { id: true, startTime: true } },
+                                finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
+                            }
+                        }
+                    },
+                    orderBy: { event: { updatedAt: 'desc' } }
+                })
+                : Promise.resolve([]),
+            discordId
+                ? prisma.participant.findMany({
+                    where: { discordId: discordId },
+                    include: {
+                        event: {
+                            select: {
+                                id: true,
+                                slug: true,
+                                title: true,
+                                updatedAt: true,
+                                status: true,
+                                finalizedSlotId: true,
+                                timeSlots: { select: { id: true, startTime: true } },
+                                finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
+                            }
+                        }
+                    },
+                    orderBy: { event: { updatedAt: 'desc' } }
+                })
+                : Promise.resolve([]),
+        ]);
+
+        // 1. Merge Managed Events (Telegram)
+        managed.forEach(e => {
+            // Manager role only, never a sync source: sync badges are derived
+            // purely from the participant queries below (see fetchEvents doc).
+            eventMap.set(e.slug, {
+                slug: e.slug,
+                title: e.title,
+                role: 'MANAGER',
+                lastVisited: e.updatedAt.toISOString(),
+                eventId: e.id,
+                sources: [],
+                status: e.status,
+                scheduledDate: resolveScheduledDate(e)
             });
-            managed.forEach(e => {
-                // Manager role only, never a sync source: sync badges are derived
-                // purely from the participant queries below (see fetchEvents doc).
-                eventMap.set(e.slug, {
-                    slug: e.slug,
-                    title: e.title,
-                    role: 'MANAGER',
-                    lastVisited: e.updatedAt.toISOString(),
-                    eventId: e.id,
-                    sources: [],
-                    status: e.status,
-                    scheduledDate: resolveScheduledDate(e)
-                });
+        });
+
+        // 2. Merge Managed Events (Discord)
+        managedDiscord.forEach(e => {
+            const existing = eventMap.get(e.slug);
+            // Manager role only, never a sync source (see the Telegram pass above).
+            // Preserve whatever sources the earlier pass already set instead of
+            // clobbering them.
+            const sources = existing ? existing.sources : [];
+            eventMap.set(e.slug, {
+                slug: e.slug,
+                title: e.title,
+                role: 'MANAGER',
+                lastVisited: e.updatedAt.toISOString(),
+                eventId: e.id,
+                sources,
+                status: e.status,
+                scheduledDate: resolveScheduledDate(e)
             });
+        });
+
+        // 3. Merge Participated Events (Telegram)
+        if (participated.length > 0 && !serverUserName) {
+            serverUserName = participated[0].name;
         }
 
-        // 2. Fetch Managed Events (Discord)
-        if (discordId) {
-            const managedDiscord = await prisma.event.findMany({
-                where: { managerDiscordId: discordId },
-                select: {
-                    id: true,
-                    slug: true,
-                    title: true,
-                    updatedAt: true,
-                    status: true,
-                    finalizedSlotId: true,
-                    timeSlots: { select: { id: true, startTime: true } },
-                    finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
-                },
-                orderBy: { updatedAt: 'desc' }
-            });
-            managedDiscord.forEach(e => {
-                const existing = eventMap.get(e.slug);
-                // Manager role only, never a sync source (see the Telegram pass above).
-                // Preserve whatever sources the earlier pass already set instead of
-                // clobbering them.
-                const sources = existing ? existing.sources : [];
-                eventMap.set(e.slug, {
-                    slug: e.slug,
-                    title: e.title,
-                    role: 'MANAGER',
-                    lastVisited: e.updatedAt.toISOString(),
-                    eventId: e.id,
+        participated.forEach(p => {
+            const existing = eventMap.get(p.event.slug);
+            if (existing?.role === 'MANAGER') {
+                // Manager role supersedes Participant for the `role` field, but sync
+                // badges and participantId (used to link/unlink) always come from the
+                // participant row when one exists.
+                existing.participantId = p.id;
+                if (!existing.sources.includes('telegram')) existing.sources.push('telegram');
+            } else {
+                const sources = existing ? Array.from(new Set([...existing.sources, 'telegram'])) : ['telegram'];
+                eventMap.set(p.event.slug, {
+                    slug: p.event.slug,
+                    title: p.event.title,
+                    role: 'PARTICIPANT',
+                    lastVisited: p.event.updatedAt.toISOString(),
+                    eventId: p.event.id,
+                    participantId: p.id,
                     sources,
-                    status: e.status,
-                    scheduledDate: resolveScheduledDate(e)
+                    status: p.event.status,
+                    scheduledDate: resolveScheduledDate(p.event)
                 });
-            });
-        }
-
-        // 3. Fetch Participated Events (Telegram)
-        if (chatId) {
-            const participated = await prisma.participant.findMany({
-                where: { chatId: chatId },
-                include: {
-                    event: {
-                        select: {
-                            id: true,
-                            slug: true,
-                            title: true,
-                            updatedAt: true,
-                            status: true,
-                            finalizedSlotId: true,
-                            timeSlots: { select: { id: true, startTime: true } },
-                            finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
-                        }
-                    }
-                },
-                orderBy: { event: { updatedAt: 'desc' } }
-            });
-
-            if (participated.length > 0 && !serverUserName) {
-                serverUserName = participated[0].name;
             }
+        });
 
-            participated.forEach(p => {
-                const existing = eventMap.get(p.event.slug);
-                if (existing?.role === 'MANAGER') {
-                    // Manager role supersedes Participant for the `role` field, but sync
-                    // badges and participantId (used to link/unlink) always come from the
-                    // participant row when one exists.
-                    existing.participantId = p.id;
-                    if (!existing.sources.includes('telegram')) existing.sources.push('telegram');
-                } else {
-                    const sources = existing ? Array.from(new Set([...existing.sources, 'telegram'])) : ['telegram'];
-                    eventMap.set(p.event.slug, {
-                        slug: p.event.slug,
-                        title: p.event.title,
-                        role: 'PARTICIPANT',
-                        lastVisited: p.event.updatedAt.toISOString(),
-                        eventId: p.event.id,
-                        participantId: p.id,
-                        sources,
-                        status: p.event.status,
-                        scheduledDate: resolveScheduledDate(p.event)
-                    });
-                }
-            });
+        // 4. Merge Participated Events (Discord)
+        if (participatedDiscord.length > 0 && !serverUserName) {
+            serverUserName = participatedDiscord[0].name;
         }
 
-        // 4. Fetch Participated Events (Discord)
-        if (discordId) {
-            const participatedDiscord = await prisma.participant.findMany({
-                where: { discordId: discordId },
-                include: {
-                    event: {
-                        select: {
-                            id: true,
-                            slug: true,
-                            title: true,
-                            updatedAt: true,
-                            status: true,
-                            finalizedSlotId: true,
-                            timeSlots: { select: { id: true, startTime: true } },
-                            finalizedSessions: { select: { timeSlot: { select: { startTime: true } } } }
-                        }
-                    }
-                },
-                orderBy: { event: { updatedAt: 'desc' } }
-            });
-
-            if (participatedDiscord.length > 0 && !serverUserName) {
-                serverUserName = participatedDiscord[0].name;
+        participatedDiscord.forEach(p => {
+            const existing = eventMap.get(p.event.slug);
+            if (existing?.role === 'MANAGER') {
+                // Manager role supersedes Participant for the `role` field, but sync
+                // badges and participantId (used to link/unlink) always come from the
+                // participant row when one exists.
+                existing.participantId = p.id;
+                if (!existing.sources.includes('discord')) existing.sources.push('discord');
+            } else {
+                const sources = existing ? Array.from(new Set([...existing.sources, 'discord'])) : ['discord'];
+                eventMap.set(p.event.slug, {
+                    slug: p.event.slug,
+                    title: p.event.title,
+                    role: 'PARTICIPANT',
+                    lastVisited: p.event.updatedAt.toISOString(),
+                    eventId: p.event.id,
+                    participantId: p.id,
+                    sources,
+                    status: p.event.status,
+                    scheduledDate: resolveScheduledDate(p.event)
+                });
             }
-
-            participatedDiscord.forEach(p => {
-                const existing = eventMap.get(p.event.slug);
-                if (existing?.role === 'MANAGER') {
-                    // Manager role supersedes Participant for the `role` field, but sync
-                    // badges and participantId (used to link/unlink) always come from the
-                    // participant row when one exists.
-                    existing.participantId = p.id;
-                    if (!existing.sources.includes('discord')) existing.sources.push('discord');
-                } else {
-                    const sources = existing ? Array.from(new Set([...existing.sources, 'discord'])) : ['discord'];
-                    eventMap.set(p.event.slug, {
-                        slug: p.event.slug,
-                        title: p.event.title,
-                        role: 'PARTICIPANT',
-                        lastVisited: p.event.updatedAt.toISOString(),
-                        eventId: p.event.id,
-                        participantId: p.id,
-                        sources,
-                        status: p.event.status,
-                        scheduledDate: resolveScheduledDate(p.event)
-                    });
-                }
-            });
-        }
+        });
     };
+
+    // Kick off the bot username lookup (needed for the "Connect Telegram" pill, see
+    // below) alongside the event queries instead of after them: it's independent of
+    // fetchEvents, and getBotUsername never throws (returns null on failure), so it's
+    // safe to start eagerly without a try/catch here. Preserves the original condition
+    // exactly: only actually called when `!telegramChatId` and the token is set.
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botUsernamePromise: Promise<string | null> = (!telegramChatId && botToken)
+        ? getBotUsername(botToken)
+        : Promise.resolve(null);
 
     try {
         await fetchEvents(telegramChatId, discordUserId);
@@ -227,8 +245,7 @@ export default async function ProfilePage() {
     // is missing or the Telegram API lookup fails.
     let telegramConnectUrl: string | null = null;
     if (!telegramChatId) {
-        const botToken = process.env.TELEGRAM_BOT_TOKEN;
-        const botUsername = botToken ? await getBotUsername(botToken) : null;
+        const botUsername = await botUsernamePromise;
         telegramConnectUrl = botUsername ? `https://t.me/${botUsername}?start=login` : null;
     }
 
