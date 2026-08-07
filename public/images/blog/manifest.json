@@ -26,5 +26,19 @@
       "provider": "flickr"
     },
     "at": "2026-08-07T03:03:27.818Z"
+  },
+  "best-new-board-games-2026": {
+    "source": "stock",
+    "model": null,
+    "mime": "image/jpeg",
+    "bytes": 252416,
+    "attribution": {
+      "title": "Checkers",
+      "creator": "Thad Zajdowicz",
+      "license": "cc0 1.0",
+      "source": "https://www.flickr.com/photos/40632439@N00/26073817771",
+      "provider": "flickr"
+    },
+    "at": "2026-08-07T04:22:11.975Z"
   }
 }
