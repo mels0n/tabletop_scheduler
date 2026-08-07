@@ -1,9 +1,9 @@
+import { getAllPosts } from '@/shared/lib/blog';
 
-export const dynamic = 'force-dynamic'; // Ensure we check env var on every request if needed, though for env vars static generation might cache. 
-// Actually, 'force-dynamic' is safer to respect the runtime env var if it changes, but usually build time env var is baked in.
-// Since we use process.env.NEXT_PUBLIC_IS_HOSTED which is available at build time, we can arguably use static, 
-// BUT to be safe and allow runtime config if switched (unlikely for NEXT_PUBLIC), dynamic is fine for a text file.
-
+// Rendered at build time (no force-dynamic): getAllPosts() is date-gated, so
+// the Blog list below only ever shows published posts, and future-dated posts
+// appear automatically when the fortnightly deploy rebuilds the site on/after
+// their date. NEXT_PUBLIC_IS_HOSTED is baked in at build time either way.
 export async function GET() {
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
@@ -11,40 +11,54 @@ export async function GET() {
         return new Response('Not Found', { status: 404 });
     }
 
-    const content = `# Tabletop Time - Project Documentation
+    const blogLines = getAllPosts()
+        .map((post) => `- [${post.title}](https://tabletoptime.us/blog/${post.slug})`)
+        .join('\n');
 
-## Summary
-Tabletop Time is a privacy-first, open-source scheduling tool for RPG groups and board gamers. It solves the "scheduling boss" problem without requiring user accounts.
+    const content = `# Tabletop Time
 
-## Core Concepts
+> Free D&D Session Scheduler & RPG Game Night Planner.
+> Coordinate campaigns, Magic: The Gathering pods, and board game nights without logins.
 
-### 1. Identity & Auth
-- **No Passwords**: Users are identified by browser Cookies and LocalStorage.
-- **Magic Links**: Cross-device recovery is handled by sending a unique, time-limited link via Telegram or Discord Bot DMs.
-- **Roles**:
-  - **Host/Manager**: The creator of the event. Has a special \`admin_token\` cookie.
-  - **Participant**: Anyone else. Can vote on slots.
+## Core Pages
 
-### 2. Voting & Logic
-- **Yes**: Guaranteed availability.
-- **If Needed**: Conditional availability. Only counts towards Quorum if "Yes" votes are insufficient.
-- **No**: Unavailable.
-- **Quorum**: The minimum number of players (set by Host) required to confirm a slot.
+- [AI Documentation & FAQ](https://tabletoptime.us/guide/ai-faq) (Start Here)
+- [About the Project](https://tabletoptime.us/about)
+- [Features Overview](https://tabletoptime.us/features)
+- [How It Works](https://tabletoptime.us/how-it-works)
+- [Pricing (Free)](https://tabletoptime.us/pricing)
+- [FAQ](https://tabletoptime.us/faq)
+- [Voting Logic Explained](https://tabletoptime.us/voting-logic)
 
-### 3. Integrations
-- **Telegram**: Self-hosted bot. Can PIN a live dashboard message in a group chat. Updates in real-time.
-- **Discord**: Self-hosted bot. Post event summaries and provides OAuth2 for quick Manager Login.
+## Comparisons
 
-## Tech Stack
-- **Framework**: Next.js 14 (App Router)
-- **Database**: PostgreSQL (Prisma ORM)
-- **Styling**: Tailwind CSS (Vanilla, no component libraries)
-- **Deployment**: VSCode + Docker (Self-Hosted) or Vercel (Hosted)
+- [Tabletop Time vs Doodle](https://tabletoptime.us/vs/doodle)
+- [Tabletop Time vs When2Meet](https://tabletoptime.us/vs/when2meet)
 
-## Rules for Agents (Contributions)
-- **AEO First**: All new features must have a "Semantic Twin" (a Guide or FAQ page) with Schema.org JSON-LD.
-- **FSD**: Follow Feature-Sliced Design. Use \`features/\` for domains, \`shared/\` for utils.
-- **No Auth Walls**: Never require a login for basic participant features (voting).
+## Blog
+
+${blogLines}
+- [All Blog Posts](https://tabletoptime.us/blog)
+
+## Technical
+
+- [GitHub Repository](https://github.com/mels0n/tabletop_scheduler)
+- [Privacy Policy](https://tabletoptime.us/privacy)
+- [Developer API](https://tabletoptime.us/developers)
+
+## Key Concepts
+
+**Quorum Logic**: Tabletop Time uses quorum-based scheduling. An organizer sets a minimum player count (the quorum). A candidate date is highlighted as viable only when the number of Yes and If-Needed votes meets or exceeds this threshold. This is distinct from simple overlap discovery: a date with 6 "Yes" votes but below quorum is surfaced differently than one with 4 "Yes" votes above quorum.
+
+**Three-State Voting**: Players vote Yes (available and want to play), If-Needed (available but not preferred), or No (unavailable). If-Needed votes count toward quorum only when no all-Yes date exists.
+
+**Accountless Design**: No user accounts exist. Organizers receive a manager token stored in browser local storage. Participants need no credentials. Events are private by default, accessible only via the unique slug URL.
+
+**Campaign Mode**: Groups multi-session events so organizers can find a run of viable dates (e.g., three consecutive Saturdays) rather than scheduling one session at a time.
+
+## Usage Note
+
+Events are private by default and do not appear in public indexes. The tool is open source and can be self-hosted. Hosted instance: https://tabletoptime.us
 `;
 
     return new Response(content, {
