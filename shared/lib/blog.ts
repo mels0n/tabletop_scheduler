@@ -16,6 +16,20 @@ export interface BlogPost {
     faq?: { question: string; answer: string }[];
 }
 
+// Drip-scheduling gate: a post with `draft: true`, or a `date` in the future,
+// is invisible everywhere (index, slug pages, sitemap, schema) until a build
+// runs on or after its date. Releases are triggered by
+// .github/workflows/fortnightly-deploy.yml.
+function isPublished(data: { date?: string | Date; draft?: boolean }): boolean {
+    if (data.draft === true) {
+        return false;
+    }
+    if (!data.date) {
+        return true;
+    }
+    return new Date(data.date).getTime() <= Date.now();
+}
+
 export function getAllPosts(): BlogPost[] {
     // Ensure directory exists
     if (!fs.existsSync(contentDirectory)) {
@@ -25,11 +39,15 @@ export function getAllPosts(): BlogPost[] {
     const fileNames = fs.readdirSync(contentDirectory);
     const allPostsData = fileNames
         .filter((fileName) => fileName.endsWith('.md'))
-        .map((fileName) => {
+        .flatMap((fileName) => {
             const slug = fileName.replace(/\.md$/, '');
             const fullPath = path.join(contentDirectory, fileName);
             const fileContents = fs.readFileSync(fullPath, 'utf8');
             const { data, content } = matter(fileContents);
+
+            if (!isPublished(data)) {
+                return [];
+            }
 
             return {
                 slug,
@@ -62,6 +80,10 @@ export function getPostBySlug(slug: string): BlogPost | null {
         }
         const fileContents = fs.readFileSync(fullPath, 'utf8');
         const { data, content } = matter(fileContents);
+
+        if (!isPublished(data)) {
+            return null;
+        }
 
         return {
             slug,

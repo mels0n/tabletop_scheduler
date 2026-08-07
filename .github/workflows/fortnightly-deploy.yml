@@ -1,0 +1,57 @@
+name: Fortnightly deploy
+
+# Pushes an empty commit to main every other Thursday. Vercel is connected to
+# this repo and deploys on every push to main, so the commit is the whole
+# trigger — no Vercel API token or deploy hook lives in GitHub.
+#
+# This is what publishes scheduled blog posts: getAllPosts()/getPostBySlug()
+# filter by `date` (and `draft`) at build time, so a post dated in the future
+# stays invisible — index, slug page, sitemap, schema — until a build runs on
+# or after its date. See shared/lib/blog.ts.
+#
+# GitHub Actions cron has no native "every 2 weeks" schedule, so this runs
+# every Thursday and skips itself on the off week by checking ISO week parity
+# against a fixed reference date (2026-08-13, the first scheduled slot).
+
+on:
+  schedule:
+    # 13:00 UTC every Thursday — 8:00am CDT / 7:00am CST.
+    - cron: "0 13 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fortnightly-deploy
+  cancel-in-progress: false
+
+jobs:
+  trigger-rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Check fortnightly cadence
+        id: cadence
+        run: |
+          reference="2026-08-13"
+          today=$(date -u +%F)
+          days=$(( ( $(date -u -d "$today" +%s) - $(date -u -d "$reference" +%s) ) / 86400 ))
+          weeks_since=$(( days / 7 ))
+          if [ $((weeks_since % 2)) -eq 0 ]; then
+            echo "on_cadence=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on_cadence=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push empty commit to main
+        if: steps.cadence.outputs.on_cadence == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: fortnightly scheduled rebuild"
+          git push origin main

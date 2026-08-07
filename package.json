@@ -17,6 +17,7 @@
     "start": "next start",
     "test": "vitest",
     "lint": "next lint",
+    "blog:queue": "node scripts/blog-queue.mjs",
     "db:backup": "node scripts/db-backup.mjs",
     "db:restore": "node scripts/db-restore.mjs"
   },
