@@ -126,17 +126,6 @@ export default function AboutPage() {
                     </div>
                 </section>
 
-                {/* Credit */}
-                <section className="text-center">
-                    <p className="text-sm text-slate-500">
-                        Tabletop Time was designed and is maintained by{" "}
-                        <a href="https://untapweb.com" className="hover:text-indigo-400 transition-colors">
-                            Untap Web
-                        </a>
-                        .
-                    </p>
-                </section>
-
                 {/* CTA */}
                 <section className="text-center pt-8">
                     <Link
@@ -146,6 +135,17 @@ export default function AboutPage() {
                         Start Scheduling
                         <ArrowRight className="w-5 h-5" />
                     </Link>
+                </section>
+
+                {/* Credit */}
+                <section className="text-center py-6">
+                    <p className="text-sm text-slate-500">
+                        Tabletop Time was designed and is maintained by{" "}
+                        <a href="https://untapweb.com" className="hover:text-indigo-400 transition-colors">
+                            Untap Web
+                        </a>
+                        .
+                    </p>
                 </section>
 
             </div>
