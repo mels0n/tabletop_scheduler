@@ -1,10 +1,12 @@
 "use client";
 
 import React from 'react';
+import { usePathname } from "next/navigation";
 
 export default function UntapBadge({ type = 'Designed' }: { type?: 'Designed' | 'Hosted' | 'Built' | 'Powered' }) {
+  const isHome = usePathname() === "/";
   return (
-    <a href="https://untapweb.com" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375em', fontSize: 'inherit', color: 'inherit', textDecoration: 'none', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseOver={(e) => e.currentTarget.style.opacity = '1'} onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}>
+    <a href="https://untapweb.com" target="_blank" rel={isHome ? "noopener noreferrer" : "nofollow noopener noreferrer"} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375em', fontSize: 'inherit', color: 'inherit', textDecoration: 'none', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseOver={(e) => e.currentTarget.style.opacity = '1'} onMouseOut={(e) => e.currentTarget.style.opacity = '0.7'}>
       <svg width="1.1em" height="1.25em" viewBox="0 0 44 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
         <line x1="7" y1="9" x2="7" y2="31" stroke="#38B2AC" strokeWidth="2" strokeLinecap="round" />
         <line x1="37" y1="9" x2="37" y2="31" stroke="#38B2AC" strokeWidth="2" strokeLinecap="round" />
