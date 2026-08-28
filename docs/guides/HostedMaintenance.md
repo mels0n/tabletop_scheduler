@@ -70,21 +70,20 @@ verifies on every push to `main`.
 Prisma Migrate cannot run through the transaction pooler, which is why
 `prisma/hosted/schema.prisma` declares `directUrl`.
 
-## How the pre-existing database was adopted
+## Adopting the pre-existing database (one time)
 
-Production predates this setup: it was created with `prisma db push` and had no
-`_prisma_migrations` ledger, so a plain `migrate deploy` would have tried to
-`CREATE TABLE` on tables that already existed and failed.
+Production predates this setup: created with `prisma db push`, no
+`_prisma_migrations` ledger. `migrate deploy` refuses to touch a non-empty database
+that has no ledger and fails with **P3005** before executing any SQL, so the
+baseline has to be recorded rather than run:
 
-Rather than require a manual `migrate resolve --applied` step, `0_init` is written
-to be **idempotent**: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`,
-and `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT` for foreign keys. It therefore
-applies cleanly to both an empty database (creating everything) and the existing
-production database (creating nothing), and applying it is what writes the ledger.
+```bash
+DIRECT_URL="<supabase direct url>" npm run db:baseline:hosted
+```
 
-Every migration after `0_init` is ordinary generated SQL and does not need to be
-idempotent.
-
+That is `migrate resolve --applied 0_init`: it writes the ledger and marks the
+baseline applied without touching a table. Every later migration then applies
+normally on deploy. Run once, ever.
 ## Escape hatch
 
 `npm run db:push:hosted` still exists for emergencies. It syncs the whole schema
