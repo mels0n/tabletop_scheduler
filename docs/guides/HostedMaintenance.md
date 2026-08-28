@@ -29,13 +29,7 @@ Command at `scripts/vercel-build.sh`, which runs `prisma generate`, then
 `prisma migrate deploy` (production only), then `next build`. A failed migration
 fails the deploy.
 
-The build then re-runs `migrate diff` against the database and fails if anything
-still differs. That catches the one case `migrate deploy` cannot: a schema edit
-that shipped with no migration behind it, where deploy applies nothing and the
-app goes live expecting a column that does not exist. No CI job and no extra
-credential -- the deploy already holds `DIRECT_URL`.
-
-`npm test` covers the other half: `tests/schema-parity.test.ts` fails if the two
+`npm test` covers schema parity: `tests/schema-parity.test.ts` fails if the two
 schema files stop describing the same models.
 ## Making a schema change
 

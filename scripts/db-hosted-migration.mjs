@@ -17,6 +17,7 @@
 import { execFileSync } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 const SCHEMA = 'prisma/hosted/schema.prisma';
 const MIGRATIONS_DIR = 'prisma/hosted/migrations';
@@ -39,12 +40,23 @@ if (name && !/^[a-z0-9_]+$/.test(name)) {
     process.exit(1);
 }
 
+// Invoke the Prisma CLI entrypoint directly with node rather than going through
+// `npx`. npx resolves to npx.cmd on Windows, which needs shell:true, and cmd then
+// splits the connection string on characters like & -- silently mangling the
+// arguments instead of failing cleanly. Spawning node with an argv array passes
+// every character through untouched on all platforms.
+const PRISMA_BIN = join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
+if (!existsSync(PRISMA_BIN)) {
+    console.error('❌ Prisma CLI not found at ' + PRISMA_BIN + '. Run npm install first.');
+    process.exit(1);
+}
+
 let sql;
 try {
     sql = execFileSync(
-        'npx',
-        ['prisma', 'migrate', 'diff', '--from-url', url, '--to-schema-datamodel', SCHEMA, '--script'],
-        { encoding: 'utf8', shell: process.platform === 'win32' }
+        process.execPath,
+        [PRISMA_BIN, 'migrate', 'diff', '--from-url', url, '--to-schema-datamodel', SCHEMA, '--script'],
+        { encoding: 'utf8' }
     );
 } catch (e) {
     console.error('❌ prisma migrate diff failed:\n' + (e.stderr || e.message));

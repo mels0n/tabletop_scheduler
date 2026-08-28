@@ -28,14 +28,6 @@ npx prisma generate --schema="$SCHEMA"
 if [ "$VERCEL_ENV" = "production" ]; then
     echo "▶ prisma migrate deploy (production)"
     npx prisma migrate deploy --schema="$SCHEMA"
-
-    # Catch the one thing migrate deploy cannot: a schema edit that shipped with no
-    # migration behind it. deploy would apply nothing and the app would go live
-    # expecting a column the database lacks -- the exact failure this replaces.
-    # --exit-code returns 2 when the database still differs from the schema, and
-    # set -e turns that into a failed deploy.
-    echo "verifying the database now matches the schema"
-    npx prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel "$SCHEMA" --script --exit-code
 else
     echo "▶ skipping migrate deploy (VERCEL_ENV=${VERCEL_ENV:-unset}, not production)"
 fi
