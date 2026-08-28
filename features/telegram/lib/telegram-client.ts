@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import Logger from "@/shared/lib/logger";
 import { reliableFetch } from "@/shared/lib/fetch";
 
@@ -260,6 +261,25 @@ export async function deleteWebhook(token: string) {
 }
 
 /**
+ * @function getWebhookSecret
+ * @description Shared secret used to authenticate incoming webhook requests.
+ *
+ * Telegram echoes the value registered via setWebhook back on every update in the
+ * X-Telegram-Bot-Api-Secret-Token header, which is the only thing distinguishing a
+ * real update from anyone POSTing to the public endpoint.
+ *
+ * Derived from the bot token rather than stored in its own env var: the sender and
+ * the verifier are the same deployment, so a derived value can never fall out of
+ * sync, and rotating the bot token rotates the secret automatically.
+ *
+ * @param {string} token - Bot Token.
+ * @returns {string} 64 hex chars (Telegram allows 1-256 of A-Z a-z 0-9 _ -).
+ */
+export function getWebhookSecret(token: string): string {
+    return createHash("sha256").update(`tabletop-webhook:${token}`).digest("hex");
+}
+
+/**
  * @function ensureWebhook
  * @description Configures the Bot to send updates to this application's API endpoint.
  * Run during startup in hosted environments.
@@ -270,7 +290,9 @@ export async function deleteWebhook(token: string) {
  */
 export async function ensureWebhook(domain: string, token: string) {
     const webhookUrl = `${domain}/api/telegram/webhook`;
-    const url = `https://api.telegram.org/bot${token}/setWebhook?url=${webhookUrl}`;
+    // secret_token: Telegram returns this on every update so the handler can reject
+    // forged POSTs to the public webhook endpoint.
+    const url = `https://api.telegram.org/bot${token}/setWebhook?url=${webhookUrl}&secret_token=${getWebhookSecret(token)}`;
 
     log.info(`Setting Webhook to: ${webhookUrl}`);
 

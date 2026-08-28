@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
-import { sendTelegramMessage } from "@/features/telegram/lib/telegram-client";
+import { sendTelegramMessage, getWebhookSecret } from "@/features/telegram/lib/telegram-client";
 import Logger from "@/shared/lib/logger";
 import { normalizeHandle } from "@/shared/lib/handle";
 
@@ -11,12 +11,15 @@ const log = Logger.get("API:Webhook");
  * @description Central Handler for Telegram Webhook updates.
  *
  * Responsibilities:
+ * 0. Authentication: rejects any POST not carrying the secret token registered
+ *    with setWebhook. This URL is public and every command below has side effects.
  * 1. Command Parsing: Handles `/start`, `/connect`, and automatic link detection (`/e/[slug]`).
  * 2. Identity Management:
  *    - Automatically links "Participating" Telegram users to their DB Participant records (Passive Capture).
  *    - Automatically links "Event Managers" to their Event records (Passive Capture).
  * 3. Recovery: Handles Magic Link callbacks (`setup_recovery_...`) to regain access to an event.
- * 4. Login: Handles "Global Login" requests (`/start login`).
+ * 4. Login: Handles "Global Login" requests (`/start login`, and any bare `/start`
+ *    in a private chat, since clients sometimes drop the deep-link payload).
  *
  * Pattern: One Webhook to Rule Them All.
  * Instead of separate endpoints, all bot traffic flows here and is routed by message content.
@@ -29,6 +32,20 @@ export async function POST(req: Request) {
     if (!token) {
         log.error("Config Error: TELEGRAM_BOT_TOKEN missing");
         return NextResponse.json({ error: "Config Error" }, { status: 500 });
+    }
+
+    // Authenticate the update. This endpoint is a public URL, and every command it
+    // handles has side effects (linking a chat to an event, issuing a magic login
+    // link), so an unauthenticated POST is a real attack surface. Telegram echoes the
+    // secret registered by ensureWebhook on every genuine update.
+    //
+    // Transition note: immediately after a deploy that introduces or changes this
+    // secret, the in-flight update arrives without the header and is rejected. The
+    // instrumentation hook re-registers the webhook on server start, so Telegram's
+    // next retry carries the header and delivery resumes on its own.
+    if (req.headers.get("x-telegram-bot-api-secret-token") !== getWebhookSecret(token)) {
+        log.warn("Rejected webhook update: missing or invalid secret token");
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -87,17 +104,24 @@ export async function POST(req: Request) {
                     // Global Login Flow
                     await handleGlobalLogin(chatId, update.message.from, token);
                 } else {
-                    // Check for generic slug payload (from ?startgroup=slug)
-                    // Intent: Support "Add to Group" button from the web UI.
-                    if (parts.length > 1 && parts[1]) {
-                        const potentialSlug = parts[1].trim();
-                        // Validation: slug is alphanumeric
-                        if (/^[a-zA-Z0-9]+$/.test(potentialSlug)) {
-                            await connectEvent(potentialSlug, chatId, update.message.from, token);
-                        }
+                    // Generic slug payload (from ?startgroup=slug): the "Add to Group"
+                    // button in the web UI.
+                    const potentialSlug = parts.length > 1 ? parts[1].trim() : "";
+
+                    if (potentialSlug && /^[a-zA-Z0-9]+$/.test(potentialSlug)) {
+                        await connectEvent(potentialSlug, chatId, update.message.from, token);
+                    } else if (update.message.chat?.type === "private") {
+                        // Bare or unrecognized /start in a DM: either the user found the
+                        // bot directly and pressed START, or the client dropped the
+                        // deep-link payload (Telegram Desktop does this when the chat is
+                        // already open, which is how ?start=login silently did nothing).
+                        // Silence is indistinguishable from a broken bot, so treat any
+                        // bare /start in a private chat as a login request.
+                        await handleGlobalLogin(chatId, update.message.from, token);
                     }
 
-                    // Silent fail for non-recognized start commands to avoid spam
+                    // Groups stay silent: a bare /start there is usually meant for
+                    // another bot, and answering would be spam.
                 }
             }
 
