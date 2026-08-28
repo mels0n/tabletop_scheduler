@@ -39,8 +39,9 @@ the database does not have. Preview deployments skip step 2 -- they share the
 production `DATABASE_URL`, so letting a feature branch apply DDL would mutate the
 live schema.
 
-**Do not set a Build Command in the Vercel dashboard.** `vercel.json` is the source
-of truth; a dashboard value would override it and silently drop the migration step.
+**Leave the dashboard Build Command empty.** `vercel.json` takes precedence over
+project settings, so a value there is ignored -- but leaving one set invites someone
+to edit it and wonder why nothing changes.
 
 The hosted schema lives at `prisma/hosted/schema.prisma` with its own Postgres
 migration history in `prisma/hosted/migrations/`. The SQLite schema and
