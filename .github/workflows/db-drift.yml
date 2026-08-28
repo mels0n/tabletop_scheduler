@@ -1,0 +1,67 @@
+# Guards the hosted (Vercel + Supabase) database against schema drift.
+#
+# Production deploys apply migrations automatically (scripts/vercel-build.sh), so
+# this is the backstop: it catches a schema change that shipped without a
+# migration, and any hand-edit made directly in the Supabase SQL editor.
+#
+# Without this, a missed migration is invisible until a user hits the broken code
+# path -- which is how LoginToken.telegramUsername stayed missing for a month.
+
+name: DB drift check
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'prisma/**'
+      - '.github/workflows/db-drift.yml'
+  schedule:
+    # 12:00 UTC daily, so hand-edits get caught even with no pushes.
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  schema-parity:
+    name: Schemas agree with each other
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: sqlite and postgres schemas declare the same models
+        run: npx vitest run tests/schema-parity.test.ts
+
+  prod-drift:
+    name: Production matches the hosted schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Fail early if the connection secret is missing
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::error::DIRECT_URL secret is not set. Add the Supabase DIRECT connection string (port 5432) under repo Settings > Secrets > Actions."
+            exit 1
+          fi
+
+      - name: Compare production against prisma/hosted/schema.prisma
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          # --exit-code: 0 = in sync, 2 = drift. Print the SQL either way so the
+          # log shows exactly what production is missing.
+          npx prisma migrate diff \
+            --from-url "$DIRECT_URL" \
+            --to-schema-datamodel prisma/hosted/schema.prisma \
+            --script \
+            --exit-code

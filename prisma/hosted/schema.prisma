@@ -8,8 +8,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (Supabase pgBouncer, port 6543) for app queries.
+  url       = env("DATABASE_URL")
+  // Direct connection (port 5432) for DDL. Prisma Migrate cannot run through
+  // the transaction pooler, so migrate deploy/diff/resolve use this instead.
+  directUrl = env("DIRECT_URL")
 }
 
 // --- CORE MODELS ---

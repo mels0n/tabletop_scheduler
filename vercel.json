@@ -1,4 +1,5 @@
 {
+    "buildCommand": "bash scripts/vercel-build.sh",
     "crons": [
         {
             "path": "/api/cron/cleanup",

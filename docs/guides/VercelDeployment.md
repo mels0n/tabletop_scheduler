@@ -9,7 +9,8 @@
 Configure the following in your Vercel Project Settings:
 
 ### Core
-- `DATABASE_URL`: Connection string to your Postgres DB (e.g., `postgres://user:pass@host/db`).
+- `DATABASE_URL`: Connection string to your Postgres DB (e.g., `postgres://user:pass@host/db`). On Supabase this is the **pooled** string (port 6543).
+- `DIRECT_URL`: The **direct** connection string (port 5432). Required: Prisma Migrate cannot run DDL through a transaction pooler, and the build applies migrations.
 - `NEXT_PUBLIC_BASE_URL`: The production URL (e.g., `https://your-project.vercel.app`).
 - `TZ`: `America/New_York` (or your preferred timezone).
 
@@ -24,15 +25,28 @@ Configure the following in your Vercel Project Settings:
 Only set these if running the public hosted version (tabletoptime.us):
 - `NEXT_PUBLIC_IS_HOSTED`: Set to `true` to enable hosted-specific behavior (public sitemap, SEO/AEO indexing).
 
-## 3. Database Migration
-Since you validated with SQLite locally, you must switch to Postgres for production.
+## 3. Database Migrations
 
-1. **Update Schema**: Ensure `provider = "postgresql"` in `prisma/schema.prisma`.
-   *(Or use Vercel's specific Prisma setups if using their storage)*.
+Migrations are applied automatically. `vercel.json` sets the Build Command to
+`scripts/vercel-build.sh`, which runs:
 
-2. **Run Migrations**:
-   Add this to your "Build Command" in Vercel or run strictly during build:
-   `npx prisma generate && npx prisma migrate deploy`
+1. `prisma generate --schema=prisma/hosted/schema.prisma`
+2. `prisma migrate deploy --schema=prisma/hosted/schema.prisma` (production deployments only)
+3. `next build`
+
+A failed migration fails the deploy, so the app can never ship expecting a column
+the database does not have. Preview deployments skip step 2 -- they share the
+production `DATABASE_URL`, so letting a feature branch apply DDL would mutate the
+live schema.
+
+**Do not set a Build Command in the Vercel dashboard.** `vercel.json` is the source
+of truth; a dashboard value would override it and silently drop the migration step.
+
+The hosted schema lives at `prisma/hosted/schema.prisma` with its own Postgres
+migration history in `prisma/hosted/migrations/`. The SQLite schema and
+`prisma/migrations/` at the top level belong to the self-hosted Docker build and are
+not used here. See [HostedMaintenance.md](./HostedMaintenance.md) for the day-to-day
+workflow.
 
 ## 4. Discord Configuration
 1. Go to Discord Developer Portal -> OAuth2.
