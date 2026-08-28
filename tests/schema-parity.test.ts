@@ -16,9 +16,9 @@ const SELF_HOSTED = join(process.cwd(), 'prisma', 'schema.prisma');
 const HOSTED = join(process.cwd(), 'prisma', 'hosted', 'schema.prisma');
 
 /** Extract `model X { ... }` / `enum X { ... }` blocks, normalized for comparison. */
-function parseBlocks(path: string): Map<string, string[]> {
+function parseBlocks(path: string): Record<string, string[]> {
     const src = readFileSync(path, 'utf8');
-    const blocks = new Map<string, string[]>();
+    const blocks: Record<string, string[]> = {};
 
     let current: string | null = null;
     let body: string[] = [];
@@ -40,7 +40,7 @@ function parseBlocks(path: string): Map<string, string[]> {
 
         if (line === '}') {
             // Sorted, so cosmetic reordering inside a block is not a failure.
-            blocks.set(current, body.sort());
+            blocks[current] = body.sort();
             current = null;
             continue;
         }
@@ -56,13 +56,13 @@ describe('prisma schema parity', () => {
     const hosted = parseBlocks(HOSTED);
 
     it('declares the same models and enums in both schemas', () => {
-        expect([...hosted.keys()].sort()).toEqual([...selfHosted.keys()].sort());
+        expect(Object.keys(hosted).sort()).toEqual(Object.keys(selfHosted).sort());
     });
 
     it('declares identical fields in every shared block', () => {
-        for (const [name, fields] of selfHosted) {
-            expect(hosted.get(name), `${name} differs from the hosted schema`).toEqual(fields);
-        }
+        Object.keys(selfHosted).forEach((name) => {
+            expect(hosted[name], `${name} differs from the hosted schema`).toEqual(selfHosted[name]);
+        });
     });
 
     it('keeps the datasource providers distinct', () => {

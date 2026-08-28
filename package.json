@@ -15,7 +15,6 @@
     "db:new:hosted": "node scripts/db-hosted-migration.mjs",
     "db:diff:hosted": "node scripts/db-hosted-migration.mjs --dry-run",
     "db:deploy:hosted": "npm run db:backup && prisma migrate deploy --schema=prisma/hosted/schema.prisma",
-    "db:baseline:hosted": "prisma migrate resolve --applied 0_init --schema=prisma/hosted/schema.prisma",
     "db:push:hosted": "npm run db:backup && prisma db push --schema=prisma/hosted/schema.prisma",
     "start": "next start",
     "test": "vitest",

@@ -69,19 +69,20 @@ verifies on every push to `main`.
 Prisma Migrate cannot run through the transaction pooler, which is why
 `prisma/hosted/schema.prisma` declares `directUrl`.
 
-## One-time baseline (already done; recorded for reference)
+## How the pre-existing database was adopted
 
-The production database predates this setup: it was created with `prisma db push`
-and had no `_prisma_migrations` ledger. Adopting Migrate on it required:
+Production predates this setup: it was created with `prisma db push` and had no
+`_prisma_migrations` ledger, so a plain `migrate deploy` would have tried to
+`CREATE TABLE` on tables that already existed and failed.
 
-1. Bringing production in line with the schema (the last manual apply).
-2. `prisma/hosted/migrations/0_init/migration.sql`, generated with
-   `prisma migrate diff --from-empty --to-schema-datamodel prisma/hosted/schema.prisma --script`.
-3. `DIRECT_URL=... npm run db:baseline:hosted` -- `migrate resolve --applied 0_init`,
-   which writes the ledger and marks the baseline applied without touching a table.
+Rather than require a manual `migrate resolve --applied` step, `0_init` is written
+to be **idempotent**: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`,
+and `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT` for foreign keys. It therefore
+applies cleanly to both an empty database (creating everything) and the existing
+production database (creating nothing), and applying it is what writes the ledger.
 
-Never run `migrate deploy` against a database with no ledger: it would try to
-create tables that already exist and fail partway.
+Every migration after `0_init` is ordinary generated SQL and does not need to be
+idempotent.
 
 ## Escape hatch
 
