@@ -29,13 +29,18 @@ Command at `scripts/vercel-build.sh`, which runs `prisma generate`, then
 `prisma migrate deploy` (production only), then `next build`. A failed migration
 fails the deploy.
 
-Two backstops run in `.github/workflows/db-drift.yml`:
+Three jobs in `.github/workflows/db-drift.yml` back that up:
 
 - **schema-parity** - the two schema files still describe the same models.
-- **prod-drift** - production still matches `prisma/hosted/schema.prisma`.
-  Catches a schema change that shipped without a migration, and any hand-edit
-  made in the Supabase SQL editor.
-
+- **migrations-cover-schema** - replays `prisma/hosted/migrations/` into a
+  throwaway Postgres service container and diffs the result against
+  `prisma/hosted/schema.prisma`. This is the one that matters: it catches a
+  schema edit that shipped without a migration, which is the failure mode that
+  caused the outage. It needs no credentials.
+- **prod-drift** *(optional)* - compares the live database against the schema,
+  catching hand-edits made in the Supabase console. Skipped with a notice unless
+  a `DIRECT_URL` repository secret is configured, so putting production
+  credentials in GitHub stays a deliberate choice.
 ## Making a schema change
 
 1. Edit **both** schema files (`prisma/schema.prisma` and
@@ -64,7 +69,7 @@ verifies on every push to `main`.
 | variable | where | purpose |
 |---|---|---|
 | `DATABASE_URL` | Vercel | pooled connection (port 6543), app queries |
-| `DIRECT_URL` | Vercel + GitHub secret | direct connection (port 5432), DDL |
+| `DIRECT_URL` | Vercel (GitHub secret optional) | direct connection (port 5432), DDL |
 
 Prisma Migrate cannot run through the transaction pooler, which is why
 `prisma/hosted/schema.prisma` declares `directUrl`.

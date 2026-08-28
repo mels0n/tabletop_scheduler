@@ -1,11 +1,13 @@
 # Guards the hosted (Vercel + Supabase) database against schema drift.
 #
-# Production deploys apply migrations automatically (scripts/vercel-build.sh), so
-# this is the backstop: it catches a schema change that shipped without a
-# migration, and any hand-edit made directly in the Supabase SQL editor.
+# Production deploys apply migrations themselves (scripts/vercel-build.sh), so the
+# realistic failure left is authoring: someone edits prisma/hosted/schema.prisma
+# and forgets to generate the matching migration. migrate deploy then applies
+# nothing, the app ships expecting a column that does not exist, and it fails at
+# runtime -- exactly how LoginToken.telegramUsername stayed missing for a month.
 #
-# Without this, a missed migration is invisible until a user hits the broken code
-# path -- which is how LoginToken.telegramUsername stayed missing for a month.
+# The main check replays the migration history into a throwaway Postgres and
+# compares the result against the schema, so it needs no production credentials.
 
 name: DB drift check
 
@@ -15,14 +17,18 @@ on:
     paths:
       - 'prisma/**'
       - '.github/workflows/db-drift.yml'
+  pull_request:
+    paths:
+      - 'prisma/**'
   schedule:
-    # 12:00 UTC daily, so hand-edits get caught even with no pushes.
+    # 12:00 UTC daily, so a hand-edit in the Supabase console gets caught even
+    # with no pushes (optional prod-drift job below).
     - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:
   schema-parity:
-    name: Schemas agree with each other
+    name: Both schema files declare the same models
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,11 +37,45 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: sqlite and postgres schemas declare the same models
-        run: npx vitest run tests/schema-parity.test.ts
+      - run: npx vitest run tests/schema-parity.test.ts
+
+  migrations-cover-schema:
+    name: Migration history produces the hosted schema
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Replay prisma/hosted/migrations and diff against the schema
+        run: |
+          # --exit-code: 0 = the history fully produces the schema, 2 = something in
+          # the schema has no migration behind it. The SQL printed on failure is
+          # exactly the migration that is missing.
+          npx prisma migrate diff \
+            --from-migrations prisma/hosted/migrations \
+            --to-schema-datamodel prisma/hosted/schema.prisma \
+            --shadow-database-url "postgresql://postgres:postgres@localhost:5432/postgres" \
+            --script \
+            --exit-code
 
   prod-drift:
-    name: Production matches the hosted schema
+    name: Production matches the hosted schema (optional)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,22 +84,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-
-      - name: Fail early if the connection secret is missing
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          if [ -z "$DIRECT_URL" ]; then
-            echo "::error::DIRECT_URL secret is not set. Add the Supabase DIRECT connection string (port 5432) under repo Settings > Secrets > Actions."
-            exit 1
-          fi
 
       - name: Compare production against prisma/hosted/schema.prisma
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
-          # --exit-code: 0 = in sync, 2 = drift. Print the SQL either way so the
-          # log shows exactly what production is missing.
+          # Only catches drift the deploy cannot: someone editing the live database
+          # by hand. Skipped unless a DIRECT_URL secret is configured, so production
+          # credentials in GitHub stay opt-in.
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::notice::No DIRECT_URL secret set; skipping the live production comparison."
+            exit 0
+          fi
           npx prisma migrate diff \
             --from-url "$DIRECT_URL" \
             --to-schema-datamodel prisma/hosted/schema.prisma \
