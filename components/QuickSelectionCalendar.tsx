@@ -361,12 +361,15 @@ export function QuickSelectionCalendar({
                                                 data-slot-id={slot.id}
                                                 onPointerDown={(e) => handleSlotPointerDown(e, slot.id)}
                                                 className={clsx(
-                                                    "flex-1 flex items-center justify-center",
+                                                    "relative flex-1 flex items-center justify-center",
                                                     "rounded text-[9px] sm:text-[10px] font-medium cursor-pointer transition-colors",
                                                     "min-h-[24px]",
                                                     slotColor(votes[slot.id])
                                                 )}
                                             >
+                                                {canHost[slot.id] && (
+                                                    <Home className="absolute top-0.5 right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-90" aria-label="Can host" />
+                                                )}
                                                 <ClientDate date={slot.startTime} formatStr="ha" className="lowercase" />
                                             </div>
                                         ))}
