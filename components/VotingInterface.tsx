@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ClientDate, ClientTimezone } from "./ClientDate";
-import { Check, HelpCircle, X, User as UserIcon, Loader2, LayoutList, CalendarDays, CalendarRange, Info } from "lucide-react";
+import { Check, HelpCircle, X, User as UserIcon, Loader2, LayoutList, CalendarDays, CalendarRange, Info, Home } from "lucide-react";
 import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
@@ -361,6 +361,9 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                             const myVote = votes[slot.id];
                             const totalYes = slot.counts.yes;
                             const isViable = totalYes >= minPlayers;
+                            const hasHostOffer = slot.votes.some(
+                                (v: any) => (v.preference === "YES" || v.preference === "MAYBE") && v.canHost
+                            );
 
                             return (
                                 <div key={slot.id} className={clsx(
@@ -378,10 +381,16 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                                             <p className="text-sm text-indigo-200">
                                                 <ClientDate date={slot.startTime} formatStr="h:mm a" /> - <ClientDate date={slot.endTime} formatStr="h:mm a" /> <ClientTimezone className="text-indigo-300/70 ml-1" />
                                             </p>
-                                            <div className="mt-2 flex gap-2 text-xs">
+                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                                 <span className="text-green-400">{slot.counts.yes} Yes</span>
                                                 <span className="text-yellow-400">{slot.counts.maybe} If Needed</span>
                                                 <span className="text-red-400">{slot.counts.no} No</span>
+                                                {hasHostOffer && (
+                                                    <span className="flex items-center gap-1 text-indigo-400" title="Someone offered to host this time">
+                                                        <Home className="w-3 h-3" />
+                                                        Host offered
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 

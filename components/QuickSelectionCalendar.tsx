@@ -142,11 +142,13 @@ export function QuickSelectionCalendar({
         onVotesChange(next);
 
         const nextHost = { ...canHostRef.current };
-        if (brushRef.current === "NO" || !hostBrushRef.current) {
+        if (brushRef.current === "NO") {
             delete nextHost[slotId];
-        } else {
+        } else if (hostBrushRef.current) {
             nextHost[slotId] = true;
         }
+        // Host toggle off: leave any existing host flag alone so repainting
+        // Available/If Needed doesn't silently strip hosting
         onCanHostChange(nextHost);
     };
 
@@ -154,12 +156,20 @@ export function QuickSelectionCalendar({
         e.preventDefault();
         isPaintingRef.current = true;
         if (votesRef.current[slotId] === brushRef.current) {
-            // Tapping the same preference deselects; dragging always paints
-            const next = { ...votesRef.current, [slotId]: undefined };
-            onVotesChange(next);
-            const nextHost = { ...canHostRef.current };
-            delete nextHost[slotId];
-            onCanHostChange(nextHost);
+            if (hostBrushRef.current && brushRef.current !== "NO") {
+                // Host toggle on + matching slot: toggle hosting, keep the vote
+                const nextHost = { ...canHostRef.current };
+                if (nextHost[slotId]) delete nextHost[slotId];
+                else nextHost[slotId] = true;
+                onCanHostChange(nextHost);
+            } else {
+                // Tapping the same preference deselects; dragging always paints
+                const next = { ...votesRef.current, [slotId]: undefined };
+                onVotesChange(next);
+                const nextHost = { ...canHostRef.current };
+                delete nextHost[slotId];
+                onCanHostChange(nextHost);
+            }
         } else {
             applyBrush(slotId);
         }
@@ -242,7 +252,7 @@ export function QuickSelectionCalendar({
                     </button>
                     <span className="text-xs text-slate-500">
                         {hostBrush && brush !== "NO"
-                            ? "Painted slots will include hosting"
+                            ? "Painted slots include hosting — tap an already-painted day to toggle just the house"
                             : "Enable to mark you can host as you paint"}
                     </span>
                 </div>
