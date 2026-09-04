@@ -79,7 +79,7 @@ async function getEventWithVotes(slug: string) {
  * 5. Configure "Reminders" and "Cleanup" settings.
  *
  * Logic:
- * - Pre-sorts TimeSlots based on a heuristic: Perfect > Has Host > Total Votes > Yes Votes.
+ * - Pre-sorts TimeSlots based on a heuristic: Perfect > Total Votes > Yes Votes > Has Host.
  * - Conditional Rendering: Switches between "Voting Mode" (list of slots) and "Finalized Mode" (Big Green Success Card).
  */
 export default async function ManageEventPage({ params }: PageProps) {
@@ -129,26 +129,26 @@ export default async function ManageEventPage({ params }: PageProps) {
 
     // Custom Sort Strategy:
     // 1. "Perfect" (Everyone + Host) is top priority.
-    // 2. "Has Host" is second priority (logistics are hard).
-    // 3. "Total Turnout" (Yes + Maybe) is third.
-    // 4. "Strong Preference" (Yes count) is fourth.
+    // 2. "Total Turnout" (Yes + Maybe) is second — availability is the scarce resource.
+    // 3. "Strong Preference" (Yes count) is third.
+    // 4. "Has Host" breaks ties — a location is easier to find than a person.
     slots.sort((a, b) => {
         // 1. Status Category (Perfect > Viable > Low)
         // We rely on 'perfect' flag for top tier.
         if (a.perfect && !b.perfect) return -1;
         if (!a.perfect && b.perfect) return 1;
 
-        // 2. Has Host House
-        if (a.hasHost && !b.hasHost) return -1;
-        if (!a.hasHost && b.hasHost) return 1;
-
-        // 3. Total Turnout (Yes + Maybe)
+        // 2. Total Turnout (Yes + Maybe)
         const aTotal = a.yesCount + a.maybeCount;
         const bTotal = b.yesCount + b.maybeCount;
         if (bTotal !== aTotal) return bTotal - aTotal;
 
-        // 4. Total Yes
+        // 3. Total Yes
         if (b.yesCount !== a.yesCount) return b.yesCount - a.yesCount;
+
+        // 4. Has Host House
+        if (a.hasHost && !b.hasHost) return -1;
+        if (!a.hasHost && b.hasHost) return 1;
 
         return 0;
     });
