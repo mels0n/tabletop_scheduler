@@ -1,7 +1,7 @@
 ---
 title: "How to Schedule Twilight Imperium: All-Day or Evenings"
 description: "Twilight Imperium takes 6-10 hours with 4-6 players. Here's how to run it as one all-day event or split it across evenings, and get everyone to commit."
-date: "2026-09-10"
+date: "2026-09-24"
 heroImage: "/images/blog/how-to-schedule-twilight-imperium.jpg"
 tags: ["Twilight Imperium", "Board Games", "Scheduling", "Game Night", "Tabletop"]
 faq:

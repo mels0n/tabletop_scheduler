@@ -1,7 +1,7 @@
 ---
 title: "Oswald Grinding Cam: A 20-Year Throwback in Modern MTG"
 description: "Twenty years after grinding out mill wins with Enduring Renewal, I found Grinding Station again in Oswald Fiddlebender, a real 2026 Modern combo deck."
-date: "2026-09-24"
+date: "2026-09-10"
 heroImage: "/images/blog/oswald-grinding-cam-modern-deck.jpg"
 tags: ["MTG", "Magic: The Gathering", "Modern", "Combo Deck", "Deck Tech", "Artifacts"]
 itemList: ["Oswald Fiddlebender: the Birthing Pod-style tutor chain", "Grinding Station: the untap engine that mills the opponent out", "Sewer-veillance Cam: cheap, flashy artifact fuel for the loop", "Emry, Lurker of the Loch: recursion that turns self-mill into gas", "Urza's Saga: a second toolbox tutoring Moxen and combo pieces", "Portable Hole: one-mana removal that doubles as combo fuel", "Agatha's Soul Cauldron and Loki, God of Mischief: the card-advantage package"]
