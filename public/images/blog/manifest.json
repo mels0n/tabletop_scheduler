@@ -40,5 +40,35 @@
       "provider": "flickr"
     },
     "at": "2026-08-07T04:22:11.975Z"
+  },
+  "oswald-grinding-cam-modern-deck": {
+    "source": "stock",
+    "provider": "pixabay",
+    "model": null,
+    "mime": "image/jpeg",
+    "bytes": 101501,
+    "attribution": {
+      "title": "card game, bavaria, card player, playing cards, game",
+      "creator": "planet_fox",
+      "license": "Pixabay Content License",
+      "source": "https://pixabay.com/photos/card-game-bavaria-card-player-8070905/",
+      "provider": "pixabay"
+    },
+    "at": "2026-09-04T09:36:27.076Z"
+  },
+  "how-to-schedule-twilight-imperium": {
+    "source": "stock",
+    "provider": "pixabay",
+    "model": null,
+    "mime": "image/jpeg",
+    "bytes": 72946,
+    "attribution": {
+      "title": "chess, board, game, chess board, board game, chess pieces, strategy, pawn, king and queen, black and white, monochrome, chess, chess, chess, chess, chess, strategy, strategy, strategy",
+      "creator": "PublicDomainPictures",
+      "license": "Pixabay Content License",
+      "source": "https://pixabay.com/photos/chess-board-game-chess-board-316658/",
+      "provider": "pixabay"
+    },
+    "at": "2026-09-04T09:35:45.079Z"
   }
 }
