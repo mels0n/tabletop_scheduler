@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 
@@ -26,12 +27,15 @@ const log = Logger.get("API:Vote");
  *    - Checks if the new vote triggered a "Viable" (Min Players) or "Perfect" (All + Host) state.
  *    - Notifies the Event Manager privately if a threshold is crossed for the first time.
  *
- * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, discordId?, discordUsername?, linkTelegram?, linkDiscord? }
+ * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, linkTelegram?, linkDiscord? }
  *   `linkTelegram`/`linkDiscord` (each default true): when explicitly false, opts this
  *   vote out of that platform's identity linking — `linkTelegram=false` skips passive
  *   chatId resolution/self-heal, `linkDiscord=false` doesn't write discordId/discordUsername.
  *   Legacy clients may still send the combined `linkIdentity`, which is used as the
  *   fallback for both when the per-platform flags are absent.
+ *   Body-supplied `discordId`/`discordUsername` are accepted but IGNORED: Discord identity
+ *   is read from the httpOnly OAuth session cookies (tabletop_user_discord_id/_name), so a
+ *   request can never attach a Discord account its sender doesn't hold a session for.
  * @param {Object} context - Route parameters.
  * @param {string} context.params.slug - The event identifier (Note: actually treated as ID in logic but slug in route).
  */
@@ -44,7 +48,15 @@ export async function POST(
         // Legacy: Ideally strictly slug-based, but currently numeric ID is used in API calls.
         const eventId = parseInt(params.slug);
         const body = await req.json();
-        let { name, telegramId, votes, participantId, discordId, discordUsername, linkIdentity, linkTelegram, linkDiscord } = body;
+        let { name, telegramId, votes, participantId, linkIdentity, linkTelegram, linkDiscord } = body;
+
+        // Security: Discord identity comes from the OAuth session cookies only. The body's
+        // discordId/discordUsername (still sent by clients) are ignored so a forged payload
+        // can't attach an arbitrary Discord user to a participant (and later cause the bot
+        // to DM someone who never authorized us).
+        const cookieStore = cookies();
+        const discordId = cookieStore.get("tabletop_user_discord_id")?.value;
+        const discordUsername = cookieStore.get("tabletop_user_discord_name")?.value;
 
         // Canonicalize the handle at the write boundary: users may type it with or
         // without '@', so store it '@'-less and lowercased. Display code re-adds one '@'.
@@ -142,9 +154,8 @@ export async function POST(
                             name,
                             telegramId,
                             status: nextStatus,
-                            // Opt-out: leave discordId/discordUsername untouched rather than
-                            // overwriting with the body's values.
-                            ...(shouldLinkDiscord ? { discordId, discordUsername } : {}),
+                            // Opt-out (or no Discord session): leave discordId/discordUsername untouched.
+                            ...(shouldLinkDiscord && discordId ? { discordId, discordUsername } : {}),
                             // Only include chatId when we actually resolved one; avoid churn.
                             ...(resolvedChatId ? { chatId: resolvedChatId } : {})
                         }
@@ -179,8 +190,8 @@ export async function POST(
                         eventId,
                         name,
                         telegramId,
-                        // Opt-out: don't stamp Discord identity from the body onto a fresh row.
-                        ...(shouldLinkDiscord ? { discordId, discordUsername } : {}),
+                        // Opt-out (or no Discord session): don't stamp Discord identity onto a fresh row.
+                        ...(shouldLinkDiscord && discordId ? { discordId, discordUsername } : {}),
                         chatId: existingChatId, // Inherit identity if known
                         status: nextStatus || 'PENDING'
                     },

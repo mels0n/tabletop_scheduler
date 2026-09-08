@@ -14,6 +14,7 @@ export const prisma = {
     participant: {
         findUnique: vi.fn(),
         findFirst: vi.fn(),
+        findMany: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
@@ -33,6 +34,8 @@ export const prisma = {
     },
     loginToken: {
         create: vi.fn(),
+        findFirst: vi.fn(),
+        deleteMany: vi.fn(),
     },
     $transaction: vi.fn((callback) => callback(prisma)),
 };

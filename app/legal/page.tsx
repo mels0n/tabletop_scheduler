@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-    title: 'Legal — Terms of Service & Privacy Policy',
+    title: 'Legal | Terms of Service & Privacy Policy',
     description: 'Terms of Service and Formal Privacy Disclosures for Tabletop Time. Learn about our policies for using the free, open-source game scheduling tool.',
     alternates: {
         canonical: '/legal',
@@ -141,16 +141,25 @@ export default function LegalPage() {
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">Optional Integrations</h3>
+                            <h3 className="text-xl font-semibold text-slate-200">Optional Integrations (Discord &amp; Telegram)</h3>
                             <p className="text-slate-300 leading-relaxed">
-                                If you choose to link Discord or Telegram for session recovery, we receive basic authentication tokens from those services. We do not pull your friend lists, message history, or other profile data.
+                                If you choose to link Discord or Telegram, here is exactly what we store: your user ID and username on the participant and event records you link, plus the server ID, channel ID, and pinned message ID for any event a host connects to a channel. We never store your access tokens, and we never read your friend lists, message history, or other profile data.
+                            </p>
+                            <p className="text-slate-300 leading-relaxed">
+                                Our bots send direct messages only in three cases: a magic login link you requested, a notice that a spot opened up for an event you joined, and a recovery link for an event you manage. We do not send promotional messages, and we never contact you outside of these functions.
+                            </p>
+                            <p className="text-slate-300 leading-relaxed">
+                                This linked identity data is deleted together with the event by the automated purge described above, and you can delete it yourself at any time (see Data Rights below).
                             </p>
                         </div>
 
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold text-slate-200">Data Rights &amp; Contact</h3>
                             <p className="text-slate-300 leading-relaxed">
-                                Because we do not use accounts, we cannot verify your identity to process manual data deletion requests for event sessions. To remove session data, either ask your Event Host to delete the event, or wait for the automated 24-hour server purge. For general policy questions, please open an issue on our GitHub Repository.
+                                If you linked Discord or Telegram, you can delete that data yourself: open your <Link href="/profile" className="text-emerald-400 hover:text-emerald-300 underline">profile page</Link> while logged in with that platform and use &quot;Unlink&quot; under Linked Accounts. This immediately removes your platform identity from every participant record, every event you manage, and any pending login links.
+                            </p>
+                            <p className="text-slate-300 leading-relaxed">
+                                For anonymous event data (names and votes entered without any linked account), ask your Event Host to delete the event, or wait for the automated 24-hour server purge. For anything else, including deletion requests we should handle manually, open an issue on our GitHub Repository and we will respond there.
                             </p>
                         </div>
                     </div>

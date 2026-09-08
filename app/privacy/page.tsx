@@ -26,7 +26,7 @@ const schema = SchemaGenerator.faq([
     },
     {
         question: 'How is game night data deleted?',
-        answer: 'Automatically. On the hosted version, events are purged daily once they are older than 24 hours. Old events, votes, and participant names are wiped from the database on a recurring schedule — no manual deletion required.',
+        answer: 'Automatically. On the hosted version, events are purged daily once they are older than 24 hours. Old events, votes, and participant names are wiped from the database on a recurring schedule with no manual deletion required. Linked Discord or Telegram identities can also be removed instantly from the profile page.',
     },
     {
         question: 'Can I self-host this board game scheduler with no data leaving my network?',
@@ -128,7 +128,7 @@ export default function PrivacyPage() {
                         <div className="pt-8">
                             <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: How is my data deleted?</h3>
                             <p className="text-slate-300">
-                                <strong className="text-white">Automatically.</strong> On the hosted version, events are purged daily once they are older than 24 hours. There is no manual step required — old events, votes, and participant names are wiped from our database on a recurring schedule. If you want immediate deletion, you can close the event early as the host, or simply self-host and control the data lifecycle yourself.
+                                <strong className="text-white">Automatically.</strong> On the hosted version, events are purged daily once they are older than 24 hours. There is no manual step required, since old events, votes, and participant names are wiped from our database on a recurring schedule. If you want immediate deletion, you can close the event early as the host, or simply self-host and control the data lifecycle yourself. Linked a Discord or Telegram account? You can remove that identity from all of your data instantly via &quot;Linked Accounts&quot; on your <Link href="/profile" className="text-emerald-400 hover:text-emerald-300 underline">profile page</Link>.
                             </p>
                         </div>
 

@@ -10,6 +10,16 @@ vi.mock('@/app/api/event/[slug]/slot/notify', () => ({
     syncDashboard: vi.fn(),
 }));
 
+// Discord identity is sourced from the httpOnly session cookies, never the body.
+// cookieJar is the per-test cookie state; vi.hoisted so the hoisted mock factory can see it.
+const { cookieJar } = vi.hoisted(() => ({ cookieJar: new Map<string, string>() }));
+vi.mock('next/headers', () => ({
+    cookies: () => ({
+        get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name)! } : undefined),
+    }),
+    headers: () => new Headers(),
+}));
+
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn> },
     participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn> },
@@ -38,6 +48,7 @@ const baseEvent = {
 describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        cookieJar.clear();
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
@@ -45,6 +56,8 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('skips passive chatId resolution and discordId/discordUsername write when linkIdentity is false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 42 });
+        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
             mockRequest({
@@ -68,15 +81,17 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         expect(createData.chatId).toBeNull();
     });
 
-    it('links Discord but skips Telegram resolution when linkDiscord=true and linkTelegram=false', async () => {
+    it('links Discord from the session cookie (not the body) when linkDiscord=true and linkTelegram=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 44 });
+        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
             mockRequest({
                 name: 'Chris',
                 telegramId: '@someone',
-                discordId: 'discord-1',
-                discordUsername: 'SomeUser',
+                discordId: 'forged-discord-id',
+                discordUsername: 'ForgedUser',
                 linkTelegram: false,
                 linkDiscord: true,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
@@ -91,14 +106,59 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
         const createData = mockPrisma.participant.create.mock.calls[0][0].data;
         expect(createData.chatId).toBeNull();
-        // Discord on: identity written.
-        expect(createData.discordId).toBe('discord-1');
-        expect(createData.discordUsername).toBe('SomeUser');
+        // Discord on: identity written from the authenticated cookie, body values ignored.
+        expect(createData.discordId).toBe('cookie-discord-1');
+        expect(createData.discordUsername).toBe('CookieUser');
+    });
+
+    it('does not write Discord identity when no Discord session cookie exists, even if the body supplies one', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 46 });
+
+        const res = await POST(
+            mockRequest({
+                name: 'Mallory',
+                discordId: 'victim-discord-id',
+                discordUsername: 'Victim',
+                linkDiscord: true,
+                votes: [{ slotId: 1, preference: 'YES', canHost: false }],
+            }),
+            { params: { slug: '1' } }
+        );
+        await res;
+
+        const createData = mockPrisma.participant.create.mock.calls[0][0].data;
+        expect(createData).not.toHaveProperty('discordId');
+        expect(createData).not.toHaveProperty('discordUsername');
+    });
+
+    it('sources Discord identity from the cookie on participant update as well', async () => {
+        mockPrisma.participant.findUnique.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-2');
+        cookieJar.set('tabletop_user_discord_name', 'CookieUser2');
+
+        const res = await POST(
+            mockRequest({
+                name: 'Chris',
+                participantId: 47,
+                discordId: 'forged-discord-id',
+                discordUsername: 'ForgedUser',
+                votes: [{ slotId: 1, preference: 'YES', canHost: false }],
+            }),
+            { params: { slug: '1' } }
+        );
+        await res;
+
+        const updateData = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(updateData.discordId).toBe('cookie-discord-2');
+        expect(updateData.discordUsername).toBe('CookieUser2');
     });
 
     it('resolves Telegram but skips Discord write when linkTelegram=true and linkDiscord=false', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
         mockPrisma.participant.create.mockResolvedValue({ id: 45 });
+        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
             mockRequest({

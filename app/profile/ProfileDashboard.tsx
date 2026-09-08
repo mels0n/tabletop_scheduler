@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientDate } from "@/components/ClientDate";
 import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
 import { linkParticipant, unlinkParticipant } from "@/features/auth/server/participant-link";
+import { LinkedAccountsPanel } from "@/features/auth/ui/LinkedAccountsPanel";
 import { SyncBadge } from "@/components/SyncBadge";
 
 
@@ -514,6 +515,9 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         <DiscordLoginSender />
                     </div>
                 </div>
+
+                {/* Account-level unlink & data deletion */}
+                <LinkedAccountsPanel isTelegramSynced={isTelegramSynced} isDiscordSynced={isDiscordSynced} />
 
             </div >
         </div >

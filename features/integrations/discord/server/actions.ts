@@ -219,35 +219,34 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
         }
 
         // 2. Fallback: Find User by Username (if cookie ID didn't yield a match)
+        // Security: EXACT match only. Substring matching (`contains`, and matching against
+        // the free-text display name) let a stranger typing a fragment trigger a bot DM to
+        // whichever user happened to match — unsolicited contact under Discord's Developer
+        // Policy. Exact compare happens in JS because Prisma's case-insensitive mode isn't
+        // portable across our sqlite/postgres dual targets; linked rows are few (24h purge).
         if (!targetDiscordId) {
-            // Search participant records by username
-            const participantByUsername = await prisma.participant.findFirst({
-                where: {
-                    discordId: { not: null },
-                    OR: [
-                        { discordUsername: { contains: normalizedUsername } },
-                        { name: { contains: normalizedUsername } }
-                    ]
-                },
+            const matchesInput = (stored: string | null) =>
+                !!stored && stored.toLowerCase().replace('@', '') === normalizedUsername;
+
+            const linkedParticipants = await prisma.participant.findMany({
+                where: { discordId: { not: null }, discordUsername: { not: null } },
                 select: { discordId: true, discordUsername: true }
             });
+            const participantMatch = linkedParticipants.find(p => matchesInput(p.discordUsername));
 
-            if (participantByUsername) {
-                targetDiscordId = participantByUsername.discordId;
-                targetDiscordUsername = participantByUsername.discordUsername;
+            if (participantMatch) {
+                targetDiscordId = participantMatch.discordId;
+                targetDiscordUsername = participantMatch.discordUsername;
             } else {
-                // Search event manager records by username
-                const managerByUsername = await prisma.event.findFirst({
-                    where: {
-                        managerDiscordId: { not: null },
-                        managerDiscordUsername: { contains: normalizedUsername }
-                    },
+                const linkedManagers = await prisma.event.findMany({
+                    where: { managerDiscordId: { not: null }, managerDiscordUsername: { not: null } },
                     select: { managerDiscordId: true, managerDiscordUsername: true }
                 });
+                const managerMatch = linkedManagers.find(e => matchesInput(e.managerDiscordUsername));
 
-                if (managerByUsername) {
-                    targetDiscordId = managerByUsername.managerDiscordId;
-                    targetDiscordUsername = managerByUsername.managerDiscordUsername;
+                if (managerMatch) {
+                    targetDiscordId = managerMatch.managerDiscordId;
+                    targetDiscordUsername = managerMatch.managerDiscordUsername;
                 }
             }
         }
@@ -255,6 +254,18 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
         // 3. If no user found after all attempts
         if (!targetDiscordId) {
             return { success: false, error: "We couldn't find a record for this username. Have you voted on an event using the 'Log in with Discord' button before?" };
+        }
+
+        // 3b. Cooldown: one unexpired link per minute per Discord account, so the form
+        // can't be scripted into a DM-spam vector against a known username.
+        const recentToken = await prisma.loginToken.findFirst({
+            where: {
+                discordId: targetDiscordId,
+                createdAt: { gt: new Date(Date.now() - 60_000) }
+            }
+        });
+        if (recentToken) {
+            return { success: false, error: "A login link was just sent to this account. Please wait a minute before requesting another." };
         }
 
         // 4. Generate Token
