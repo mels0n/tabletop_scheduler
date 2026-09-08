@@ -5,10 +5,44 @@ const log = Logger.get("Fetch");
 export interface ReliableFetchOptions extends RequestInit {
     /** Time in milliseconds before the request is aborted. Default: 8000 (8 seconds) */
     timeoutMs?: number;
-    /** Number of retry attempts on 5xx errors or network failures. Default: 2 */
+    /** Number of retry attempts on 5xx errors, 429 rate limits, or network failures. Default: 2 */
     retries?: number;
     /** Exponential backoff base delay in milliseconds. Default: 500 */
     retryDelayMs?: number;
+}
+
+/**
+ * Longest rate-limit wait we will honor before giving up. Vercel serverless invocations
+ * have a hard duration budget, so a Retry-After beyond this returns the 429 to the caller
+ * instead of hanging the function.
+ */
+const MAX_RETRY_AFTER_MS = 10_000;
+
+/**
+ * Extracts the server-requested retry delay from a 429 response, in milliseconds.
+ * Sources, in order: the Retry-After header (seconds, possibly fractional), then the
+ * JSON body's `retry_after` (Discord sends seconds as a float on API v10; older
+ * versions sent milliseconds — values that look too large to be seconds are treated
+ * as ms). Returns null when the response carries no usable delay.
+ */
+async function getRetryAfterMs(res: Response): Promise<number | null> {
+    const header = res.headers.get('retry-after');
+    if (header) {
+        const seconds = parseFloat(header);
+        if (!isNaN(seconds) && seconds >= 0) return seconds * 1000;
+    }
+
+    try {
+        const body = await res.clone().json();
+        const value = body?.retry_after;
+        if (typeof value === 'number' && value >= 0) {
+            return value > 100 ? value : value * 1000;
+        }
+    } catch {
+        // No JSON body — fall through to null.
+    }
+
+    return null;
 }
 
 /**
@@ -38,7 +72,25 @@ export async function reliableFetch(url: string | URL, options: ReliableFetchOpt
             const res = await fetch(url, { ...fetchOptions, signal });
             clearTimeout(timeoutId);
 
-            // Retry on 5xx Server Errors (Rate limits 429 should ideally be respected differently, but we omit here)
+            // Rate limited: honor the server's requested delay, capped so a serverless
+            // invocation can't be held hostage by a long Retry-After. An uncapped or
+            // final-attempt 429 is returned to the caller as-is.
+            if (res.status === 429 && attempt < retries) {
+                const retryAfterMs = await getRetryAfterMs(res);
+
+                if (retryAfterMs !== null && retryAfterMs > MAX_RETRY_AFTER_MS) {
+                    log.warn(`Rate limited with Retry-After ${retryAfterMs}ms > cap; giving up`, { url: url.toString() });
+                    return res;
+                }
+
+                const waitMs = retryAfterMs ?? retryDelayMs * Math.pow(2, attempt);
+                log.warn(`Rate limited (Attempt ${attempt + 1}/${retries + 1}); retrying in ${waitMs}ms`, { url: url.toString() });
+                await new Promise(resolve => setTimeout(resolve, waitMs));
+                attempt++;
+                continue;
+            }
+
+            // Retry on 5xx Server Errors
             if (!res.ok && res.status >= 500) {
                 if (attempt < retries) {
                     log.warn(`API 5xx Error (Attempt ${attempt + 1}/${retries + 1}): ${res.status}`, { url: url.toString() });
