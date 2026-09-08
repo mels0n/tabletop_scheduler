@@ -202,7 +202,7 @@ export async function cancelEvent(slug: string) {
                 await editDiscordMessage(
                     event.discordChannelId,
                     event.discordMessageId,
-                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${event.title}**" has been cancelled by the host.\n\n[View Event Details](${baseUrl}/e/${slug})`,
+                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${event.title}**" has been cancelled by the host.\n\n[View Event Details](<${baseUrl}/e/${slug}>)`,
                     token
                 );
             }

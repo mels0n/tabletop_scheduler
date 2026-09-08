@@ -107,9 +107,9 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
                 include: { timeSlots: { include: { votes: true } } }
             });
             const statusMsg = generateStatusMessage(fullEvent!, participants, baseUrl);
-            const cleanMsg = statusMsg.replace(/<[^>]*>?/gm, '');
+            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
 
-            const dashResult = await sendDiscordMessage(channelId, `**EVENT STATUS**\n${cleanMsg}\n\n[View Event](${baseUrl}/e/${slug})`, token);
+            const dashResult = await sendDiscordMessage(channelId, `**EVENT STATUS**\n${htmlToDiscordMarkdown(statusMsg)}`, token);
 
             if (dashResult.id) {
                 await pinDiscordMessage(channelId, dashResult.id, token);

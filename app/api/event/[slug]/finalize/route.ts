@@ -219,13 +219,9 @@ export async function POST(
             if (finalizedEvent.discordMessageId) {
                 await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
             }
+            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
             const htmlMsg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
-            const discordMsg = htmlMsg
-                .replace(/<b>(.*?)<\/b>/g, '**$1**')
-                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
-                .replace(/ \| /g, ' • ')
-                .replace(/<br\s*\/?>/g, '\n')
-                .replace(/&nbsp;/g, ' ');
+            const discordMsg = htmlToDiscordMarkdown(htmlMsg);
 
             const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
             const msgId = res.id;
@@ -474,13 +470,9 @@ async function handleCampaignFinalize(
         if (finalizedEvent.discordMessageId) {
             await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
         }
+        const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
         const htmlMsg = buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames);
-        const discordMsg = htmlMsg
-            .replace(/<b>(.*?)<\/b>/g, '**$1**')
-            .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
-            .replace(/ \| /g, ' • ')
-            .replace(/<br\s*\/?>/g, '\n')
-            .replace(/&nbsp;/g, ' ');
+        const discordMsg = htmlToDiscordMarkdown(htmlMsg);
 
         const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
         if (res.id) {

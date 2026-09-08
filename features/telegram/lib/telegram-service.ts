@@ -146,7 +146,7 @@ export async function checkReminders(token: string) {
                 const { sendDiscordMessage } = await import("@/features/discord/model/discord");
                 await sendDiscordMessage(
                     event.discordChannelId,
-                    `🔔 **Reminder**\n\nPlease cast your votes for **${event.title}**!\n\n👉 [Vote Here](${link})`,
+                    `🔔 **Reminder**\n\nPlease cast your votes for **${event.title}**!\n\n👉 [Vote Here](<${link}>)`,
                     process.env.DISCORD_BOT_TOKEN
                 );
             }

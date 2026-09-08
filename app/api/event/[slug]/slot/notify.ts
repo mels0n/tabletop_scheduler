@@ -74,19 +74,13 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
         // Discord
         if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
             const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
+            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
 
-            const discordSnippet = messageSnippet
-                .replace(/<b>(.*?)<\/b>/g, '**$1**')
-                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)');
+            const discordSnippet = htmlToDiscordMarkdown(messageSnippet);
 
             await sendDiscordMessage(event.discordChannelId, `📅 **Time Options Updated!**\n\n${discordSnippet} for **${event.title}**.`, process.env.DISCORD_BOT_TOKEN);
 
-            const discordMsg = statusMsg
-                .replace(/<b>(.*?)<\/b>/g, '**$1**')
-                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
-                .replace(/ \| /g, ' • ')
-                .replace(/<br\s*\/?>/g, '\n')
-                .replace(/&nbsp;/g, ' ');
+            const discordMsg = htmlToDiscordMarkdown(statusMsg);
 
             if (event.discordMessageId) {
                 await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
@@ -173,13 +167,9 @@ export async function syncDashboard(eventId: number) {
         // Discord
         if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
             const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
+            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
 
-            const discordMsg = statusMsg
-                .replace(/<b>(.*?)<\/b>/g, '**$1**')
-                .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)')
-                .replace(/ \| /g, ' • ')
-                .replace(/<br\s*\/?>/g, '\n')
-                .replace(/&nbsp;/g, ' ');
+            const discordMsg = htmlToDiscordMarkdown(statusMsg);
 
             if (event.discordMessageId) {
                 await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
