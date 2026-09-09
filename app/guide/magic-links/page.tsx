@@ -66,14 +66,12 @@ export default function MagicLinksPage() {
                         If you are on a new device or your cookies have been cleared, you can recover access to your entire event history via the <strong>My Events</strong> (Profile) page.
                     </p>
                     <p>
-                        The header of that page always shows two status pills. Already synced with a platform? You&apos;ll see a solid <strong>&quot;Telegram Synced&quot;</strong> or <strong>&quot;Discord Synced&quot;</strong> pill. Not synced yet? You&apos;ll see a dashed <strong>&quot;Connect Telegram&quot;</strong> (deep-links to the bot, which DMs you a login link) or <strong>&quot;Connect Discord&quot;</strong> (starts the OAuth flow) pill instead, as a shortcut to the steps below.
+                        The header of that page always shows two status pills. Already synced with a platform? You&apos;ll see a solid <strong>&quot;Telegram Synced&quot;</strong> or <strong>&quot;Discord Synced&quot;</strong> pill, and clicking it lets you <strong>disconnect this browser</strong> (a simple sign-out: your events and votes are kept, and you can reconnect anytime). Not synced yet? You&apos;ll see a dashed <strong>&quot;Connect&quot;</strong> pill instead.
                     </p>
                     <ol>
                         <li>Navigate to the <Link href="/profile">My Events</Link> page.</li>
-                        <li>Scroll down to the <strong>&quot;Sync & Recover&quot;</strong> section.</li>
-                        <li>Enter your <strong>Telegram Handle</strong> (e.g., <code>@YourHandle</code>) or Discord Username.</li>
-                        <li>Click <strong>Sync My Events</strong>.</li>
-                        <li>The bot will DM you a <strong>Global Magic Link</strong>. Click it to log in.</li>
+                        <li>Click <strong>&quot;Connect Telegram&quot;</strong> (opens the bot, which DMs you a login link) or <strong>&quot;Connect Discord&quot;</strong> (starts the OAuth flow).</li>
+                        <li>For Telegram, the bot will DM you a <strong>Global Magic Link</strong>. Click it to log in. Discord logs you in directly once you authorize.</li>
                     </ol>
                     <p>
                         This will restore your <strong>Event List</strong> and your <strong>Voting Identity</strong> (allowing you to edit previous votes).

@@ -17,9 +17,10 @@ describe('LinkedAccountsPanel', () => {
         vi.resetAllMocks();
     });
 
-    it('renders nothing when no platform is synced', () => {
-        const { container } = render(<LinkedAccountsPanel isTelegramSynced={false} isDiscordSynced={false} />);
-        expect(container.firstChild).toBeNull();
+    it('renders an empty state (not the unlink rows) when no platform is synced', () => {
+        render(<LinkedAccountsPanel isTelegramSynced={false} isDiscordSynced={false} />);
+        expect(screen.getByText(/no platforms are linked on this browser/i)).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /unlink/i })).toBeNull();
     });
 
     it('shows a recovery-loss warning before unlinking Discord and only calls the action on confirm', async () => {

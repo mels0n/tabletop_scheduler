@@ -104,14 +104,13 @@ function PlatformRow({ platform }: { platform: Platform }) {
 
 /**
  * @component LinkedAccountsPanel
- * @description "Linked Accounts" section for the profile page: lists each platform the
- * browser is synced with and offers the account-level "unlink and delete my data" action.
- * This is the self-serve deletion path our privacy disclosures point at, so it renders
- * only when there is actually a linked platform to act on.
+ * @description "Linked Accounts" section for the Privacy & Data page: lists each platform
+ * the browser is synced with and offers the account-level "unlink and delete my data"
+ * action. This is the self-serve deletion path our privacy disclosures point at. When no
+ * platform is linked it renders an explicit empty state (the panel now lives on its own
+ * page, so returning nothing would leave that page blank).
  */
 export function LinkedAccountsPanel({ isTelegramSynced, isDiscordSynced }: { isTelegramSynced?: boolean; isDiscordSynced?: boolean }) {
-    if (!isTelegramSynced && !isDiscordSynced) return null;
-
     return (
         <div className="pt-8 border-t border-slate-800">
             <h3 className="text-lg font-medium text-slate-200 mb-1 flex items-center gap-2">
@@ -121,10 +120,17 @@ export function LinkedAccountsPanel({ isTelegramSynced, isDiscordSynced }: { isT
             <p className="text-xs text-slate-500 mb-4">
                 Unlinking removes that platform&apos;s identity from all of your Tabletop Time data.
             </p>
-            <div className="bg-slate-900 border border-slate-700 rounded-xl px-6 py-3 divide-y divide-slate-800">
-                {isTelegramSynced && <PlatformRow platform="telegram" />}
-                {isDiscordSynced && <PlatformRow platform="discord" />}
-            </div>
+            {(isTelegramSynced || isDiscordSynced) ? (
+                <div className="bg-slate-900 border border-slate-700 rounded-xl px-6 py-3 divide-y divide-slate-800">
+                    {isTelegramSynced && <PlatformRow platform="telegram" />}
+                    {isDiscordSynced && <PlatformRow platform="discord" />}
+                </div>
+            ) : (
+                <div className="text-center py-8 px-6 text-sm text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                    No platforms are linked on this browser. Connect Telegram or Discord from your
+                    profile page first, then manage or delete that data here.
+                </div>
+            )}
         </div>
     );
 }

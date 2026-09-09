@@ -156,7 +156,7 @@ export default function LegalPage() {
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold text-slate-200">Data Rights &amp; Contact</h3>
                             <p className="text-slate-300 leading-relaxed">
-                                If you linked Discord or Telegram, you can delete that data yourself: open your <Link href="/profile" className="text-emerald-400 hover:text-emerald-300 underline">profile page</Link> while logged in with that platform and use &quot;Unlink&quot; under Linked Accounts. This immediately removes your platform identity from every participant record, every event you manage, and any pending login links.
+                                If you linked Discord or Telegram, you can delete that data yourself: open the <Link href="/profile/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy &amp; Data page</Link> while logged in with that platform and use &quot;Unlink&quot; under Linked Accounts. This immediately removes your platform identity from every participant record, every event you manage, and any pending login links.
                             </p>
                             <p className="text-slate-300 leading-relaxed">
                                 For anonymous event data (names and votes entered without any linked account), ask your Event Host to delete the event, or wait for the automated 24-hour server purge. For anything else, including deletion requests we should handle manually, open an issue on our GitHub Repository and we will respond there.

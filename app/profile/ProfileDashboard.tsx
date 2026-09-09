@@ -3,16 +3,12 @@
 import { useEventHistory, VisitedEvent } from "@/hooks/useEventHistory";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User as UserIcon, Calendar, Clock, RefreshCw, Send, Lock } from "lucide-react";
+import { ArrowLeft, User as UserIcon, Clock, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ClientDate } from "@/components/ClientDate";
-import { sendGlobalMagicLink } from "@/features/auth/server/magic-link";
 import { linkParticipant, unlinkParticipant } from "@/features/auth/server/participant-link";
-import { LinkedAccountsPanel } from "@/features/auth/ui/LinkedAccountsPanel";
+import { disconnectPlatformFromBrowser } from "@/features/auth/server/browser-disconnect";
 import { SyncBadge } from "@/components/SyncBadge";
-
-
-import { DiscordLoginSender } from "@/features/discord/ui/DiscordLoginSender";
 
 interface ServerEvent {
     slug: string;
@@ -66,6 +62,69 @@ function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram
             <span className="w-1.5 h-1.5 rounded-full border border-slate-500" />
             Connect {platform === 'telegram' ? 'Telegram' : 'Discord'}
         </a>
+    );
+}
+
+/**
+ * @component HeaderSyncPill
+ * @description Header-level synced pill: the same SyncBadge visual, made clickable so the
+ * browser-level connection can be managed the way per-event badges are. Its popover offers
+ * the non-destructive "disconnect this browser" (cookie-only sign-out via
+ * `disconnectPlatformFromBrowser`) plus a quiet link to the Privacy & Data page for the
+ * destructive account-level unlink. Action results are reported up through `onResult` so
+ * the message renders below the whole pill row (this pill unmounts on successful
+ * disconnect, when the server re-renders it as a ConnectBadge).
+ */
+function HeaderSyncPill({ platform, onResult }: { platform: 'telegram' | 'discord'; onResult: (msg: { type: 'success' | 'error'; text: string } | null) => void }) {
+    const router = useRouter();
+    const [open, setOpen] = useState(false);
+    const [pending, setPending] = useState(false);
+
+    const label = platform === 'telegram' ? 'Telegram' : 'Discord';
+
+    const handleDisconnect = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pending) return;
+        setOpen(false);
+        setPending(true);
+        onResult(null);
+        const res = await disconnectPlatformFromBrowser(platform);
+        setPending(false);
+        if ('error' in res) {
+            onResult({ type: 'error', text: res.error });
+        } else {
+            onResult({ type: 'success', text: res.message });
+            router.refresh();
+        }
+    };
+
+    return (
+        <span className="relative inline-flex">
+            <span
+                role="button"
+                tabIndex={0}
+                onClick={() => { if (!pending) setOpen(prev => !prev); }}
+                className={`inline-flex cursor-pointer ${pending ? 'opacity-60' : ''}`}
+            >
+                <SyncBadge variant={platform} />
+            </span>
+            {open && (
+                <LinkPopover onClose={() => setOpen(false)}>
+                    <PopoverItem label="Disconnect this browser" onClick={handleDisconnect} />
+                    <p className="px-3 pb-2 text-[10px] leading-snug text-slate-500">
+                        Signs this browser out of {label} sync. Your events and votes are kept, and you can reconnect anytime.
+                    </p>
+                    <Link
+                        href="/profile/privacy"
+                        onClick={(e) => e.stopPropagation()}
+                        className="block px-3 py-2 text-xs text-rose-300/90 hover:bg-slate-800 border-t border-slate-800 transition-colors"
+                    >
+                        Delete my {label} data…
+                    </Link>
+                </LinkPopover>
+            )}
+        </span>
     );
 }
 
@@ -321,10 +380,9 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
         return new Map(serverEvents.map(e => [e.slug, e]));
     }, [serverEvents]);
 
-    // Recovery Form State
-    const [handle, setHandle] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string, deepLink?: string } | null>(null);
+    // Result of the header pills' browser-level disconnect action, rendered below the
+    // pill row (the acting pill itself unmounts once the disconnect refresh lands).
+    const [syncActionMsg, setSyncActionMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -367,23 +425,6 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
         }
     }, [serverEvents, bulkMerge]);
 
-    const handleRecovery = async () => {
-        if (!handle) return;
-        setLoading(true);
-        setMsg(null);
-
-        const res = await sendGlobalMagicLink(handle);
-
-        if (res.success) {
-            setMsg({ type: 'success', text: res.message || "Link sent!" });
-        } else if (res.deepLink) {
-            setMsg({ type: 'error', text: res.message || "Verification needed", deepLink: res.deepLink });
-        } else {
-            setMsg({ type: 'error', text: res.error || "Failed to find events" });
-        }
-        setLoading(false);
-    };
-
     return (
         <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
             <div className="max-w-3xl mx-auto space-y-8">
@@ -402,7 +443,7 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         <p className="text-slate-400 mb-2">Welcome to your event dashboard.</p>
                         <div className="flex flex-wrap gap-2">
                             {isTelegramSynced ? (
-                                <SyncBadge variant="telegram" />
+                                <HeaderSyncPill platform="telegram" onResult={setSyncActionMsg} />
                             ) : telegramConnectUrl ? (
                                 <ConnectBadge
                                     platform="telegram"
@@ -412,13 +453,23 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                                 />
                             ) : null}
                             {isDiscordSynced ? (
-                                <SyncBadge variant="discord" />
+                                <HeaderSyncPill platform="discord" onResult={setSyncActionMsg} />
                             ) : (
                                 <ConnectBadge platform="discord" href="/api/auth/discord?flow=login&returnTo=/profile" />
                             )}
                         </div>
+                        <p className="text-xs text-slate-500 mt-2 max-w-md">
+                            Syncing ties this browser to your Telegram or Discord identity, so your events
+                            and votes follow you across devices. Use a Connect pill to get a magic link,
+                            or click a synced pill to disconnect this browser.
+                        </p>
                         {telegramConnectClicked && !isTelegramSynced && (
                             <p className="text-xs text-slate-500 mt-2">Check your Telegram DMs for a login link.</p>
+                        )}
+                        {syncActionMsg && (
+                            <p className={`text-xs mt-2 ${syncActionMsg.type === 'success' ? 'text-green-400' : 'text-amber-400'}`}>
+                                {syncActionMsg.text}
+                            </p>
                         )}
                     </div>
                 </div>
@@ -453,71 +504,21 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                     )}
                 </div>
 
-                {/* Magic Link Recovery Section */}
-                <div className="pt-8 border-t border-slate-800">
-                    <h3 className="text-lg font-medium text-slate-200 mb-4 flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-slate-400" />
-                        Sync & Recover
-                    </h3>
-
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {/* Telegram Panel */}
-                        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-                            <h4 className="text-md font-semibold text-slate-200 mb-2 flex items-center gap-2">
-                                <span className="text-sky-400">Telegram</span> Sync
-                            </h4>
-                            <p className="text-slate-400 text-sm mb-4">
-                                Enter your Telegram Handle to receive a Magic Link.
-                                <br />
-                                <span className="text-xs text-slate-500 italic">(Requires you to have used your handle during voting previously)</span>
-                            </p>
-
-                            <div className="flex flex-col gap-3">
-                                <input
-                                    type="text"
-                                    placeholder="@username"
-                                    value={handle}
-                                    onChange={(e) => setHandle(e.target.value)}
-                                    className="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 outline-none"
-                                />
-                                <button
-                                    onClick={handleRecovery}
-                                    disabled={loading || !handle}
-                                    className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                >
-                                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                    Send Link
-                                </button>
-                            </div>
-
-                            {msg && (
-                                <div className={`mt-4 p-3 rounded-lg text-sm border ${msg.type === 'success'
-                                    ? 'bg-green-900/20 border-green-800 text-green-300'
-                                    : 'bg-amber-900/20 border-amber-800 text-amber-300'
-                                    }`}>
-                                    <p className="font-medium mb-1">{msg.text}</p>
-                                    {msg.deepLink && (
-                                        <a
-                                            href={msg.deepLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="mt-2 inline-flex items-center gap-2 text-amber-300 hover:text-white underline"
-                                        >
-                                            <Lock className="w-3 h-3" />
-                                            Open Telegram to Verify
-                                        </a>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Discord Panel */}
-                        <DiscordLoginSender />
+                {/* Quiet pointer to the account-level unlink & data deletion page. Kept
+                    discoverable from the profile because privacy/legal copy (and Discord's
+                    self-serve deletion requirement) route users through here. */}
+                {(isTelegramSynced || isDiscordSynced) && (
+                    <div className="pt-8 border-t border-slate-800">
+                        <Link
+                            href="/profile/privacy"
+                            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                        >
+                            <ShieldCheck className="w-4 h-4" />
+                            Privacy &amp; data controls
+                            <span aria-hidden>&rarr;</span>
+                        </Link>
                     </div>
-                </div>
-
-                {/* Account-level unlink & data deletion */}
-                <LinkedAccountsPanel isTelegramSynced={isTelegramSynced} isDiscordSynced={isDiscordSynced} />
+                )}
 
             </div >
         </div >
