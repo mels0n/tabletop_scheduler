@@ -95,13 +95,17 @@ export default function AboutPage() {
                             <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
                                 Christopher Melson
                             </a>
-                            , a software developer and lifelong tabletop gamer, after his own Magic: The Gathering group started falling apart — not because of drama, but because adults with jobs and kids can&apos;t coordinate over group chats.
+                            , a technology and operations executive and lifelong tabletop gamer, after his own Magic: The Gathering group started falling apart. Not because of drama, but because adults with jobs and kids can&apos;t coordinate over group chats.
                         </p>
                         <p>
                             Doodle polls required logins and felt corporate. We needed something <strong>fast, private, and specific to gamers</strong>.
                         </p>
                         <p>
-                            So he built it. No venture capital, no data selling — just a tool to help us play more games.
+                            So he built it. No venture capital, no data selling, just a tool to help us play more games. Chris supports the project through his web hosting company,{" "}
+                            <a href="https://untapweb.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                                Untap Web
+                            </a>
+                            , which keeps it running.
                         </p>
                     </div>
                     <div className="bg-slate-900/50 p-8 rounded-3xl border border-slate-800">
@@ -135,17 +139,6 @@ export default function AboutPage() {
                         Start Scheduling
                         <ArrowRight className="w-5 h-5" />
                     </Link>
-                </section>
-
-                {/* Credit */}
-                <section className="text-center py-6">
-                    <p className="text-sm text-slate-500">
-                        Tabletop Time was designed and is maintained by{" "}
-                        <a href="https://untapweb.com" className="hover:text-indigo-400 transition-colors">
-                            Untap Web
-                        </a>
-                        .
-                    </p>
                 </section>
 
             </div>
