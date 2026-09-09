@@ -48,7 +48,7 @@ export function middleware(request: NextRequest) {
                 path: '/',
                 secure: process.env.NODE_ENV === "production",
                 httpOnly: !isPublic,
-                sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax'
+                sameSite: 'lax'
             });
         }
     });
