@@ -351,7 +351,7 @@ async function handleGlobalLogin(chatId: number, user: any, token: string) {
 
     // Use a fixed hardcoded fallback just in case getBaseUrl is getting weird in polling
     const { getBaseUrl } = await import("@/shared/lib/url");
-    const baseUrl = getBaseUrl(null);
+    const baseUrl = getBaseUrl();
     const magicLink = `${baseUrl}/auth/login?token=${plaintextToken}`;
 
     await sendTelegramMessage(chatId, `🔐 <b>Magic Login</b>\n\nClick here to access <b>My Events</b>:\n${magicLink}\n\n(Valid for 15 minutes)`, token);
@@ -403,7 +403,7 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
         const { getBaseUrl } = await import("@/shared/lib/url");
 
         if (fullEvent) {
-            const baseUrl = detectedBaseUrl || getBaseUrl(null);
+            const baseUrl = detectedBaseUrl || getBaseUrl();
             const statusMsg = generateStatusMessage(fullEvent, participants, baseUrl);
 
             // Send Dashboard immediately (No "Connected!" message)

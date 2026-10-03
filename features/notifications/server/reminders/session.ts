@@ -75,7 +75,7 @@ export async function runSessionReminders(now: Date): Promise<ReminderRunSummary
                 );
                 if (!due) continue;
 
-                const link = `${getBaseUrl(null)}/e/${event.slug}`;
+                const link = `${getBaseUrl()}/e/${event.slug}`;
                 const when = formatSessionTime(candidate.startTime, event.timezone || "UTC");
                 const lines = [
                     `📅 <b>Session reminder</b>`,

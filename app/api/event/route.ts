@@ -120,7 +120,7 @@ export async function POST(req: Request) {
             let webhookId: string | null = null;
             if (fromUrl) {
                 const { getBaseUrl } = await import("@/shared/lib/url");
-                const origin = getBaseUrl(req.headers);
+                const origin = getBaseUrl();
                 const votingLink = `${origin}/e/${slug}`;
 
                 const wh = await tx.webhookEvent.create({

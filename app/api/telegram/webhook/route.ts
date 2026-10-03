@@ -279,7 +279,6 @@ async function handleRecoverySetup(chatId: number, user: any, slug: string, reco
  */
 async function handleGlobalLogin(chatId: number, user: any, token: string) {
     const { getBaseUrl } = await import("@/shared/lib/url");
-    const { headers } = await import("next/headers");
     const { hashToken } = await import("@/shared/lib/token");
     const { v4: uuidv4 } = await import("uuid");
 
@@ -303,7 +302,7 @@ async function handleGlobalLogin(chatId: number, user: any, token: string) {
         }
     });
 
-    const baseUrl = getBaseUrl(headers());
+    const baseUrl = getBaseUrl();
     // Send PLAINTEXT in Link
     const magicLink = `${baseUrl}/auth/login?token=${plaintextToken}`;
 
@@ -377,10 +376,9 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
         const { generateStatusMessage } = await import("@/shared/lib/status");
         const { pinChatMessage } = await import("@/features/telegram/lib/telegram-client");
         const { getBaseUrl } = await import("@/shared/lib/url");
-        const { headers } = await import("next/headers");
 
         if (fullEvent) {
-            const baseUrl = getBaseUrl(headers());
+            const baseUrl = getBaseUrl();
             const statusMsg = generateStatusMessage(fullEvent, participants, baseUrl);
 
             const dashboardMsgId = await sendTelegramMessage(chatId, statusMsg, token);

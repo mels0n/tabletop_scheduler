@@ -40,8 +40,8 @@ export async function GET(
         }
 
         // Determine Base URL purely for the Description link
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const origin = getBaseUrl(req.headers);
+        const { getBaseUrlFromHeaders } = await import("@/shared/lib/url");
+        const origin = getBaseUrlFromHeaders(req.headers);
         const url = `${origin}/e/${event.slug}`;
         const dtstamp = formatDateICS(new Date());
 

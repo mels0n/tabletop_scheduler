@@ -1,3 +1,5 @@
+import { getServerConfig } from "@/shared/config/server";
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 // Intent: Define log severity levels for filtering.
@@ -8,11 +10,6 @@ const tiers: Record<LogLevel, number> = {
     error: 3,
 };
 
-// Check environment variable (default to 'info')
-// Intent: Allows runtime configuration of log verbosity.
-const currentLevel: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
-const currentTier = tiers[currentLevel] ?? 1;
-
 /**
  * @interface LogPayload
  * @description Flexible key-value structure for structured logging data.
@@ -22,19 +19,56 @@ interface LogPayload {
 }
 
 /**
+ * Current threshold. Read lazily from the validated config; if the config itself is
+ * invalid the logger must still work (it is how that failure gets reported), so fall
+ * back to `info`.
+ */
+function currentTier(): number {
+    try {
+        return tiers[getServerConfig().logLevel];
+    } catch {
+        return tiers.info;
+    }
+}
+
+function serializeError(err: Error): Record<string, unknown> {
+    const out: Record<string, unknown> = { name: err.name, message: err.message, stack: err.stack };
+    const code = (err as { code?: unknown }).code;
+    if (code !== undefined) out.code = code;
+    if (err.cause !== undefined) out.cause = err.cause instanceof Error ? serializeError(err.cause) : err.cause;
+    return out;
+}
+
+/** JSON.stringify that turns Errors into plain objects and cuts circular references. */
+function safeStringify(entry: Record<string, unknown>): string {
+    const seen = new WeakSet<object>();
+    return JSON.stringify(entry, (_key, value) => {
+        if (value instanceof Error) return serializeError(value);
+        if (typeof value === 'bigint') return value.toString();
+        if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) return '[Circular]';
+            seen.add(value);
+        }
+        return value;
+    });
+}
+
+const RESERVED = new Set(['ts', 'level', 'ctx', 'msg']);
+
+/**
  * @class Logger
  * @description Centralized structured logging utility.
- * Features:
- * 1. Context-aware logging (e.g., "[Database]", "[Auth]").
- * 2. structured JSON logging via console (compatible with cloud log aggregators).
- * 3. Log level filtering based on environment variables.
- * 4. Safe error serialization (handles circular references).
+ * Emits one JSON object per line: `{ ts, level, ctx, msg, ...bindings, ...data }`,
+ * suitable for Vercel and Docker log collectors. Level comes from `LOG_LEVEL` via the
+ * server config.
  */
 class Logger {
-    private context: string;
+    private readonly context: string;
+    private readonly bindings: LogPayload;
 
-    constructor(context: string = 'App') {
+    constructor(context: string = 'App', bindings: LogPayload = {}) {
         this.context = context;
+        this.bindings = bindings;
     }
 
     // Factory method for creating context-aware loggers
@@ -42,41 +76,33 @@ class Logger {
         return new Logger(context);
     }
 
-    /**
-     * Determines if a message should be emitted based on the current log level config.
-     */
-    private shouldLog(level: LogLevel): boolean {
-        return tiers[level] >= currentTier;
+    /** Child logger that adds `requestId` to every line it writes. */
+    withRequestId(id: string): Logger {
+        return new Logger(this.context, { ...this.bindings, requestId: id });
     }
 
-    /**
-     * Formats the log message into a consistent string structure.
-     * Tries to serialize the 'data' payload safely.
-     */
-    private format(level: LogLevel, message: string, data?: LogPayload) {
-        const timestamp = new Date().toISOString();
-        const contextStr = `[${this.context}]`;
-        const levelStr = level.toUpperCase().padEnd(5); // "INFO "
+    private shouldLog(level: LogLevel): boolean {
+        return tiers[level] >= currentTier();
+    }
 
-        let output = `${timestamp} ${levelStr} ${contextStr} ${message}`;
-
-        if (data) {
-            // Keep data structured but safe
-            try {
-                // If data contains an Error object, format it nicely
-                if (data instanceof Error) {
-                    output += `\nStack: ${data.stack}`;
-                } else if ('error' in data && data.error instanceof Error) {
-                    output += `\nStack: ${data.error.stack}`;
-                }
-
-                output += ` ${JSON.stringify(data)}`;
-            } catch (e) {
-                output += ` [Circular/Unserializable Data]`;
+    private format(level: LogLevel, message: string, data?: LogPayload): string {
+        const entry: Record<string, unknown> = {
+            ts: new Date().toISOString(),
+            level,
+            ctx: this.context,
+            msg: message,
+        };
+        // Payload keys never overwrite the reserved fields above.
+        for (const source of [this.bindings, data ?? {}]) {
+            for (const [key, value] of Object.entries(source)) {
+                if (!RESERVED.has(key)) entry[key] = value;
             }
         }
-
-        return output;
+        try {
+            return safeStringify(entry);
+        } catch {
+            return JSON.stringify({ ts: entry.ts, level, ctx: this.context, msg: message, note: 'unserializable data' });
+        }
     }
 
     debug(message: string, data?: LogPayload) {

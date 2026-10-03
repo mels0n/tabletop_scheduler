@@ -93,9 +93,7 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
         const participantsCount = await prisma.participant.count({ where: { eventId } });
 
         const { getBaseUrl } = await import("@/shared/lib/url");
-        const { headers } = await import("next/headers");
-        const headerList = headers();
-        const baseUrl = getBaseUrl(headerList);
+        const baseUrl = getBaseUrl();
 
         let statusMsg = "";
 
@@ -160,9 +158,7 @@ export async function syncDashboard(eventId: number) {
         const participantsCount = await prisma.participant.count({ where: { eventId } });
 
         const { getBaseUrl } = await import("@/shared/lib/url");
-        const { headers } = await import("next/headers");
-        const headerList = headers();
-        const baseUrl = getBaseUrl(headerList);
+        const baseUrl = getBaseUrl();
 
         let statusMsg = "";
 

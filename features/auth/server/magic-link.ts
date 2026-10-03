@@ -2,7 +2,6 @@
 
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { headers } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID } from "crypto";
@@ -63,7 +62,7 @@ export async function sendGlobalMagicLink(handle: string) {
                 }
             });
 
-            const baseUrl = getBaseUrl(headers());
+            const baseUrl = getBaseUrl();
             const magicLink = `${baseUrl}/auth/login?token=${rawToken}`;
 
             await sendTelegramMessage(
