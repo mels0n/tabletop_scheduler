@@ -12,7 +12,7 @@ TabletopTime is primarily a user-facing Next.js application, but every interacti
 |------|---------|
 | none | Public. Anyone who knows the URL can call it. |
 | event admin | The caller must be the event's admin: either the `tabletop_admin_<slug>` cookie (set by the manage link) or a signed identity cookie that matches the event's stored manager. A request that fails this check gets `403`, on every route. |
-| cron bearer | `Authorization: Bearer <CRON_SECRET>`. When `CRON_SECRET` is unset on a self-hosted instance, loopback requests (`127.0.0.1`, `localhost`) are accepted instead. On hosted, a missing secret means every request is rejected. |
+| cron bearer | `Authorization: Bearer <CRON_SECRET>`. When `CRON_SECRET` is unset, every request is rejected, including loopback ones. The Docker image always generates a secret, so its internal scheduler is unaffected. |
 | Telegram secret token | The `X-Telegram-Bot-Api-Secret-Token` header must match the secret registered with Telegram when the webhook was set. |
 | Ko-fi token | The `verification_token` field inside the Ko-fi payload must match `KOFI_VERIFICATION_TOKEN`. |
 

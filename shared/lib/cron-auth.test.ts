@@ -37,6 +37,11 @@ describe('requireCronAuth', () => {
         expect(() => requireCronAuth(req('https://tabletoptime.us/api/cron/reminders', { authorization: 'Bearer s3cret' }))).not.toThrow();
     });
 
+    it('accepts the right bearer token on a self-host box', () => {
+        useEnv({ CRON_SECRET: 's3cret' });
+        expect(() => requireCronAuth(req('http://127.0.0.1:3000/api/cron/webhooks', { authorization: 'Bearer s3cret' }))).not.toThrow();
+    });
+
     it('rejects a wrong bearer token', () => {
         useEnv(HOSTED);
         expect401(() => requireCronAuth(req('https://tabletoptime.us/api/cron/reminders', { authorization: 'Bearer nope' })));
@@ -59,35 +64,26 @@ describe('requireCronAuth', () => {
         expect(() => requireCronAuth(req('http://localhost:3000/api/cron/cleanup', { host: 'localhost:3000' }))).toThrow();
     });
 
-    it('allows loopback hosts on a self-host box with no secret', () => {
+    it('fails closed on a self-host box with no secret, whatever the Host header says', () => {
         useEnv({});
-        expect(() => requireCronAuth(req('http://127.0.0.1:3000/api/cron/cleanup', { host: '127.0.0.1:3000' }))).not.toThrow();
-        expect(() => requireCronAuth(req('http://localhost:3000/api/cron/cleanup', { host: 'localhost:3000' }))).not.toThrow();
+        expect401(() => requireCronAuth(req('http://127.0.0.1:3000/api/cron/cleanup', { host: '127.0.0.1:3000' })));
+        expect401(() => requireCronAuth(req('http://localhost:3000/api/cron/cleanup', { host: 'localhost:3000' })));
+        expect401(() => requireCronAuth(req('http://example.com/api/cron/cleanup', { host: 'example.com', authorization: 'Bearer anything' })));
     });
 
-    it('rejects non-loopback hosts on a self-host box with no secret', () => {
+    it('warns once that CRON_SECRET is unset', async () => {
         useEnv({});
-        expect401(() => requireCronAuth(req('http://example.com/api/cron/cleanup', { host: 'example.com' })));
-        expect401(() => requireCronAuth(req('http://localhost.evil.com:3000/x', { host: 'localhost.evil.com:3000' })));
-        expect401(() => requireCronAuth(req('http://127.0.0.1.evil.com/x', { host: '127.0.0.1.evil.com' })));
-    });
-});
-
-describe('requireCronAuth: hosted without a secret (defensive branch)', () => {
-    it('rejects loopback when the config says hosted and the secret is null', async () => {
         vi.resetModules();
-        vi.doMock('@/shared/config/server', () => ({
-            getServerConfig: () => ({ isHosted: true, cronSecret: null }),
-        }));
-        const mod = await import('./cron-auth');
-        const errors = await import('@/shared/errors');
+        const fresh = await import('./cron-auth');
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         try {
-            mod.requireCronAuth(req('http://localhost:3000/x', { host: 'localhost:3000' }));
-            throw new Error('expected throw');
-        } catch (e) {
-            expect(e).toBeInstanceOf(errors.UnauthorizedError);
+            expect(() => fresh.requireCronAuth(req('http://127.0.0.1:3000/x'))).toThrow();
+            expect(() => fresh.requireCronAuth(req('http://127.0.0.1:3000/x'))).toThrow();
+            const hits = warn.mock.calls.filter((c) => String(c[0]).includes('CRON_SECRET'));
+            expect(hits).toHaveLength(1);
+        } finally {
+            warn.mockRestore();
+            vi.resetModules();
         }
-        vi.doUnmock('@/shared/config/server');
-        vi.resetModules();
     });
 });

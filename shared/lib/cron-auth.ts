@@ -1,8 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getServerConfig } from "@/shared/config/server";
 import { UnauthorizedError } from "@/shared/errors";
+import Logger from "@/shared/lib/logger";
 
-const LOOPBACK_HOST = /^(127\.0\.0\.1|localhost)(:\d+)?$/i;
+const log = Logger.get("CronAuth");
+let warnedNoSecret = false;
 
 /** Constant-time string compare; hashing first removes the length side channel. */
 function safeEqual(a: string, b: string): boolean {
@@ -13,30 +15,22 @@ function safeEqual(a: string, b: string): boolean {
 
 /**
  * Authorizes cron and maintenance endpoints. Fails closed: passes only with
- * `Authorization: Bearer <CRON_SECRET>`, or, on a self-hosted box with no secret
- * configured, when the request targets a loopback host. Throws `UnauthorizedError`.
+ * `Authorization: Bearer <CRON_SECRET>`. With no secret configured every request is
+ * rejected (the Docker entrypoint always generates one). Throws `UnauthorizedError`.
  */
 export function requireCronAuth(req: Request): void {
-    const { cronSecret, isHosted } = getServerConfig();
+    const { cronSecret } = getServerConfig();
 
-    if (cronSecret) {
-        const header = req.headers.get("authorization") ?? "";
-        const match = /^Bearer (.+)$/.exec(header);
-        if (match && safeEqual(match[1], cronSecret)) return;
+    if (!cronSecret) {
+        if (!warnedNoSecret) {
+            warnedNoSecret = true;
+            log.warn("CRON_SECRET is unset; every cron and maintenance request is rejected");
+        }
         throw new UnauthorizedError();
     }
 
-    if (!isHosted) {
-        let host = req.headers.get("host");
-        if (!host) {
-            try {
-                host = new URL(req.url).host;
-            } catch {
-                host = null;
-            }
-        }
-        if (host && LOOPBACK_HOST.test(host)) return;
-    }
-
+    const header = req.headers.get("authorization") ?? "";
+    const match = /^Bearer (.+)$/.exec(header);
+    if (match && safeEqual(match[1], cronSecret)) return;
     throw new UnauthorizedError();
 }
