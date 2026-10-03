@@ -69,7 +69,7 @@ const baseEvent = {
     timeSlots: [],
 };
 
-describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
+describe('POST /api/event/[slug]/vote: linkIdentity opt-out', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
