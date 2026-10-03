@@ -1,7 +1,82 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
+import { broadcastToEvent } from "@/features/notifications";
+import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
 
 const log = Logger.get("API:Slot:Notify");
+
+interface DashboardTargets {
+    telegramChatId: string | null;
+    pinnedMessageId: number | null;
+    discordChannelId: string | null;
+    discordMessageId: string | null;
+}
+
+/**
+ * Edits the Discord dashboard message in place. If the edit fails (message deleted,
+ * bot lost access) or none is stored yet, posts a fresh one, pins it and stores its id.
+ * A successful edit never posts a duplicate.
+ */
+export async function refreshDiscordDashboard(
+    event: Pick<DashboardTargets, "discordChannelId" | "discordMessageId">,
+    eventId: number,
+    html: string
+): Promise<void> {
+    const token = process.env.DISCORD_BOT_TOKEN;
+    if (!event.discordChannelId || !token) return;
+    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
+    const content = htmlToDiscordMarkdown(html);
+
+    if (event.discordMessageId && await editDiscordMessage(event.discordChannelId, event.discordMessageId, content, token)) {
+        return;
+    }
+
+    const res = await sendDiscordMessage(event.discordChannelId, content, token);
+    if (res.id) {
+        await pinDiscordMessage(event.discordChannelId, res.id, token);
+        await prisma.event.update({ where: { id: eventId }, data: { discordMessageId: res.id } });
+    }
+}
+
+/**
+ * Brings the Telegram pinned dashboard up to date. Edits in place when possible; if the
+ * edit fails (message deleted, bot lost access) or none is stored yet, posts a fresh one,
+ * pins it and stores its id. A successful edit never posts a duplicate.
+ */
+export async function refreshTelegramDashboard(
+    event: Pick<DashboardTargets, "telegramChatId" | "pinnedMessageId">,
+    eventId: number,
+    html: string
+): Promise<void> {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!event.telegramChatId || !token) return;
+    const { sendTelegramMessage, editMessageText, pinChatMessage } = await import("@/features/telegram");
+
+    if (event.pinnedMessageId && await editMessageText(event.telegramChatId, event.pinnedMessageId, html, token)) {
+        return;
+    }
+
+    const newMsgId = await sendTelegramMessage(event.telegramChatId, html, token);
+    if (newMsgId) {
+        await pinChatMessage(event.telegramChatId, newMsgId, token);
+        await prisma.event.update({ where: { id: eventId }, data: { pinnedMessageId: newMsgId } });
+    }
+}
+
+/** Updates the pinned dashboard on each platform; one platform's failure never skips the other. */
+async function refreshDashboards(event: DashboardTargets, eventId: number, statusMsg: string): Promise<void> {
+    try {
+        await refreshTelegramDashboard(event, eventId, statusMsg);
+    } catch (error) {
+        log.error("Telegram dashboard update failed", error as Error);
+    }
+
+    try {
+        await refreshDiscordDashboard(event, eventId, statusMsg);
+    } catch (error) {
+        log.error("Discord dashboard update failed", error as Error);
+    }
+}
 
 export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
     try {
@@ -55,43 +130,16 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
             statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
         }
 
-        // Telegram
-        if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage, editMessageText, pinChatMessage } = await import("@/features/telegram");
-            await sendTelegramMessage(event.telegramChatId, `📅 <b>Time Options Updated!</b>\n\n${messageSnippet} for <b>${event.title}</b>.`, process.env.TELEGRAM_BOT_TOKEN);
+        // Announcement goes to each linked platform independently.
+        await broadcastToEvent(
+            event,
+            { html: `📅 <b>Time Options Updated!</b>
 
-            if (event.pinnedMessageId) {
-                await editMessageText(event.telegramChatId, event.pinnedMessageId, statusMsg, process.env.TELEGRAM_BOT_TOKEN);
-            } else {
-                const newMsgId = await sendTelegramMessage(event.telegramChatId, statusMsg, process.env.TELEGRAM_BOT_TOKEN);
-                if (newMsgId) {
-                    await pinChatMessage(event.telegramChatId, newMsgId, process.env.TELEGRAM_BOT_TOKEN);
-                    await prisma.event.update({ where: { id: eventId }, data: { pinnedMessageId: newMsgId } });
-                }
-            }
-        }
+${messageSnippet} for <b>${event.title}</b>.` },
+            { eventId, kind: "slot-update" }
+        );
 
-        // Discord
-        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
-            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
-
-            const discordSnippet = htmlToDiscordMarkdown(messageSnippet);
-
-            await sendDiscordMessage(event.discordChannelId, `📅 **Time Options Updated!**\n\n${discordSnippet} for **${event.title}**.`, process.env.DISCORD_BOT_TOKEN);
-
-            const discordMsg = htmlToDiscordMarkdown(statusMsg);
-
-            if (event.discordMessageId) {
-                await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-            } else {
-                const res = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-                if (res.id) {
-                    await pinDiscordMessage(event.discordChannelId, res.id, process.env.DISCORD_BOT_TOKEN);
-                    await prisma.event.update({ where: { id: eventId }, data: { discordMessageId: res.id } });
-                }
-            }
-        }
+        await refreshDashboards(event, eventId, statusMsg);
     } catch (error) {
         log.error("Failed to push slot updates", error as Error);
     }
@@ -149,38 +197,7 @@ export async function syncDashboard(eventId: number) {
             statusMsg = generateStatusMessage(event, participantsCount, baseUrl);
         }
 
-        // Telegram
-        if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage, editMessageText, pinChatMessage } = await import("@/features/telegram");
-
-            if (event.pinnedMessageId) {
-                await editMessageText(event.telegramChatId, event.pinnedMessageId, statusMsg, process.env.TELEGRAM_BOT_TOKEN);
-            } else {
-                const newMsgId = await sendTelegramMessage(event.telegramChatId, statusMsg, process.env.TELEGRAM_BOT_TOKEN);
-                if (newMsgId) {
-                    await pinChatMessage(event.telegramChatId, newMsgId, process.env.TELEGRAM_BOT_TOKEN);
-                    await prisma.event.update({ where: { id: eventId }, data: { pinnedMessageId: newMsgId } });
-                }
-            }
-        }
-
-        // Discord
-        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
-            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
-
-            const discordMsg = htmlToDiscordMarkdown(statusMsg);
-
-            if (event.discordMessageId) {
-                await editDiscordMessage(event.discordChannelId, event.discordMessageId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-            } else {
-                const res = await sendDiscordMessage(event.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-                if (res.id) {
-                    await pinDiscordMessage(event.discordChannelId, res.id, process.env.DISCORD_BOT_TOKEN);
-                    await prisma.event.update({ where: { id: eventId }, data: { discordMessageId: res.id } });
-                }
-            }
-        }
+        await refreshDashboards(event, eventId, statusMsg);
     } catch (error) {
         log.error("Failed to sync dashboard", error as Error);
     }

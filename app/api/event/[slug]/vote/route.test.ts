@@ -2,8 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { resolvePassiveChatId } from '@/features/auth/server/passive-link';
 import prisma from '@/shared/lib/prisma';
+import { sendDirectMessage } from '@/features/notifications';
+import { checkEventQuorum } from '@/shared/lib/quorum';
 
 vi.mock('@/shared/lib/prisma');
+vi.mock('@/features/notifications', () => ({
+    sendDirectMessage: vi.fn(),
+    broadcastToEvent: vi.fn(),
+    isDelivered: (r: any) => r.telegram.status === 'sent' || r.discord.status === 'sent',
+}));
+vi.mock('@/shared/lib/quorum', () => ({
+    checkEventQuorum: vi.fn(),
+}));
 // syncDashboard is dynamically imported unconditionally at the end of every POST; stub it
 // out so the test only exercises the participant/vote persistence being tested here.
 vi.mock('@/app/api/event/[slug]/slot/notify', () => ({
@@ -52,6 +62,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
     });
 
     it('skips passive chatId resolution and discordId/discordUsername write when linkIdentity is false', async () => {
@@ -199,6 +210,79 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
         const createData = mockPrisma.participant.create.mock.calls[0][0].data;
         expect(createData.telegramId).toBe('mels0n');
+    });
+});
+
+describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
+    const mockSend = sendDirectMessage as unknown as ReturnType<typeof vi.fn>;
+    const mockQuorum = checkEventQuorum as unknown as ReturnType<typeof vi.fn>;
+    const mockEventUpdate = (prisma as any).event.update as ReturnType<typeof vi.fn>;
+    const mockParticipantCount = (prisma as any).participant.count as ReturnType<typeof vi.fn>;
+    const sent = { status: 'sent', messageId: '1' };
+    const notLinked = { status: 'skipped', reason: 'not_linked' };
+    const failed = { status: 'failed', error: 'boom' };
+
+    const body = { name: 'Chris', linkIdentity: false, votes: [{ slotId: 1, preference: 'YES', canHost: false }] };
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 1 });
+        mockParticipantCount.mockResolvedValue(4);
+        mockQuorum.mockReturnValue({ perfect: false, viable: true });
+    });
+
+    it('DMs a Discord-only manager on viable quorum and sets the flag', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
+
+        await POST(mockRequest(body), { params: { slug: '1' } });
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd-mgr' });
+        expect(mockSend.mock.calls[0][1].html).toContain('Viable Quorum Reached');
+        expect(mockEventUpdate).toHaveBeenCalledWith({ where: { id: 1 }, data: { quorumViableNotified: true } });
+    });
+
+    it('sets both flags on perfect quorum for a Discord-only manager', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
+        mockQuorum.mockReturnValue({ perfect: true, viable: true });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
+
+        await POST(mockRequest(body), { params: { slug: '1' } });
+
+        expect(mockSend.mock.calls[0][1].html).toContain('Perfect Match Found');
+        expect(mockEventUpdate).toHaveBeenCalledWith({ where: { id: 1 }, data: { quorumPerfectNotified: true, quorumViableNotified: true } });
+    });
+
+    it('leaves the flag unset when delivery failed on every platform (retries next vote)', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerChatId: '55', managerDiscordId: 'd-mgr' });
+        mockSend.mockResolvedValue({ telegram: failed, discord: failed });
+
+        await POST(mockRequest(body), { params: { slug: '1' } });
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('neither sends nor sets the flag when the manager has no linked platform', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night' });
+
+        await POST(mockRequest(body), { params: { slug: '1' } });
+
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('does not re-alert when the viable flag is already set', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumViableNotified: true });
+
+        await POST(mockRequest(body), { params: { slug: '1' } });
+
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(mockEventUpdate).not.toHaveBeenCalled();
     });
 });
 

@@ -72,24 +72,16 @@ export async function processWaitlistPromotion(eventId: number) {
             });
             userPromoted = true;
 
-            // Notify Candidate via Telegram
-            if (candidate.chatId && process.env.TELEGRAM_BOT_TOKEN) {
-                const { sendTelegramMessage } = await import("@/features/telegram");
-                await sendTelegramMessage(
-                    candidate.chatId,
-                    `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${event.title}</b> and you've been moved off the waitlist!`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-
-            // Notify Candidate via Discord (if mapped)
-            if (candidate.discordId && process.env.DISCORD_BOT_TOKEN) {
-                const { createDMChannel, sendDiscordMessage } = await import("@/features/discord/model/discord");
-                const dm = await createDMChannel(candidate.discordId, process.env.DISCORD_BOT_TOKEN);
-                if (dm?.id) {
-                    await sendDiscordMessage(dm.id, `🎟️ **You're In!**\n\nA spot opened up for **${event.title}** and you've been moved off the waitlist!`, process.env.DISCORD_BOT_TOKEN);
-                }
-            }
+            // Notify candidate on every linked platform (independent)
+            const { sendDirectMessage } = await import("@/features/notifications");
+            await sendDirectMessage(
+                { telegramChatId: candidate.chatId, discordUserId: candidate.discordId },
+                {
+                    html: `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${event.title}</b> and you've been moved off the waitlist!`,
+                    discord: `🎟️ **You're In!**\n\nA spot opened up for **${event.title}** and you've been moved off the waitlist!`,
+                },
+                { eventId, participantId: candidate.id, kind: "waitlist-promotion" }
+            );
 
             log.info("Auto-promoted user from waitlist", { eventId, participantId: candidate.id });
         }
