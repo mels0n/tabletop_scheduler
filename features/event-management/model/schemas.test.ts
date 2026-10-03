@@ -30,6 +30,16 @@ describe('createEventSchema', () => {
         expect(parsed.minPlayers).toBe(4);
     });
 
+    it('accepts only https://t.me/ invite links (or none) as telegramLink', () => {
+        expect(createEventSchema.parse({ ...validEvent, telegramLink: 'https://t.me/+abcDEF123' }).telegramLink)
+            .toBe('https://t.me/+abcDEF123');
+        expect(createEventSchema.parse({ ...validEvent, telegramLink: '' }).telegramLink).toBeNull();
+        expect(createEventSchema.parse({ ...validEvent, telegramLink: null }).telegramLink).toBeNull();
+        for (const bad of ['javascript:alert(1)', 'http://t.me/x', 'https://evil.example/t.me/', 'https://t.me.evil.example/x', '//t.me/x']) {
+            expect(createEventSchema.safeParse({ ...validEvent, telegramLink: bad }).success).toBe(false);
+        }
+    });
+
     it('rejects an invalid timezone', () => {
         expect(createEventSchema.safeParse({ ...validEvent, timezone: 'Mars/Olympus_Mons' }).success).toBe(false);
     });
