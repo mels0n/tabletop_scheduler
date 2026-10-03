@@ -257,6 +257,16 @@ describe('Discord channel binding requires admin and a guild this admin just add
         }
     });
 
+    it('connectDiscordChannel escapes Discord markdown in the event title of the announcement', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ id: 1, slug: 'abc', title: '**bold** _x_', managerDiscordId: null, timeSlots: [] });
+
+        await connectDiscordChannel('abc', GUILD, CHANNEL);
+
+        const announcement = mockSendMessage.mock.calls[0][1] as string;
+        expect(announcement).toContain(String.raw`\*\*bold\*\* \_x\_`);
+        expect(announcement).not.toContain('**bold**');
+    });
+
     it('listDiscordChannels without admin -> forbidden and the bot is never asked', async () => {
         mockAdmin.mockResolvedValue(false);
 

@@ -4,6 +4,7 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
+import { escapeDiscordMarkdown } from "@/shared/lib/escape";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID } from "crypto";
 
@@ -121,7 +122,7 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
         });
 
         const baseUrl = getBaseUrl();
-        const announcement = `📅 **Event Planning: ${event.title}**\nTime to vote!\n${baseUrl}/e/${slug}`;
+        const announcement = `📅 **Event Planning: ${escapeDiscordMarkdown(event.title)}**\nTime to vote!\n${baseUrl}/e/${slug}`;
         const sendResult = await sendDiscordMessage(channelId, announcement, token);
 
         if (sendResult.error) {
