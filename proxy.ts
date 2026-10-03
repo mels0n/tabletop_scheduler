@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { IDENTITY_COOKIES, identityCookieOptions, verifyValue } from '@/shared/lib/session'
+import { REQUEST_ID_HEADER, resolveRequestId } from '@/shared/lib/logger'
 
 /** Matches /e/<slug>/manage and anything below it; capture group 1 is the slug. */
 const MANAGE_ROUTE = /^\/e\/([^/]+)\/manage(\/|$)/;
@@ -15,7 +16,12 @@ const IDENTITY_PAIRS = [
 
 /**
  * @function proxy
- * @description Request proxy that enforces administrative access AND implements Sliding Sessions.
+ * @description Request proxy that tags every request with a correlation id, enforces
+ * administrative access, and implements Sliding Sessions.
+ *
+ * Request ids: the incoming `x-request-id` is reused when well formed, otherwise a UUID is
+ * minted. It is forwarded on the request (route handlers read it via `Logger.fromRequest`)
+ * and echoed on the response. API routes get only this; the cookie logic below is for pages.
  *
  * Sliding Session Logic:
  * On every matched request, auth cookies are re-set with the same value and a fresh
@@ -24,7 +30,27 @@ const IDENTITY_PAIRS = [
  * example a pre-signing legacy value) is deleted together with its display-name cookie.
  */
 export function proxy(request: NextRequest) {
-    const response = NextResponse.next();
+    const requestId = resolveRequestId(request.headers);
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(REQUEST_ID_HEADER, requestId);
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.headers.set(REQUEST_ID_HEADER, requestId);
+
+    if (request.nextUrl.pathname.startsWith('/api/')) return response;
+
+    const redirect = refreshSessionsAndGuard(request, response);
+    if (redirect) {
+        redirect.headers.set(REQUEST_ID_HEADER, requestId);
+        return redirect;
+    }
+    return response;
+}
+
+/**
+ * Applies the sliding refresh to `response` and returns a redirect when a manage page is
+ * requested with neither the event's admin cookie nor a verified identity, else null.
+ */
+function refreshSessionsAndGuard(request: NextRequest, response: NextResponse): NextResponse | null {
     const identityOpts = identityCookieOptions();
     let hasVerifiedIdentity = false;
 
@@ -74,14 +100,15 @@ export function proxy(request: NextRequest) {
         }
     }
 
-    return response;
+    return null;
 }
 
 export const config = {
     // Intent: Run on all event pages to catch both Users (Votes) and Managers
-    // Also run on Profile to keep that synced.
+    // Also run on Profile to keep that synced, and on API routes for request ids.
     matcher: [
         '/e/:slug*', // Covers /e/[slug], /e/[slug]/manage, /e/[slug]/vote etc
-        '/profile'
+        '/profile',
+        '/api/:path*',
     ],
 }

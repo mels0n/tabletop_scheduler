@@ -1,6 +1,6 @@
 import Logger from "@/shared/lib/logger";
 import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
-import { sendTelegramMessage } from "@/features/telegram/lib/telegram-client";
+import { sendTelegramMessageResult } from "@/features/telegram/lib/telegram-client";
 import { sendDiscordMessage, sendDiscordDM } from "@/features/integrations/discord/model/discord";
 
 const log = Logger.get("Notifications");
@@ -68,8 +68,10 @@ async function viaTelegram(chatId: string | null | undefined, html: string): Pro
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) return { status: "skipped", reason: "not_configured" };
     try {
-        const id = await sendTelegramMessage(chatId, html, token);
-        return id ? { status: "sent", messageId: String(id) } : { status: "failed", error: "telegram send returned no message id" };
+        // Telegram's own description ("Forbidden: bot was kicked...", "Bad Request: chat not
+        // found") is carried through so callers can recognise a dead chat.
+        const res = await sendTelegramMessageResult(chatId, html, token);
+        return res.ok ? { status: "sent", messageId: String(res.value) } : { status: "failed", error: res.status ? `${res.status} ${res.error}` : res.error };
     } catch (e) {
         return { status: "failed", error: describeError(e) };
     }

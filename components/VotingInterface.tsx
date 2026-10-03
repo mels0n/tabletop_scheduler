@@ -152,7 +152,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 alert("Failed to save votes");
             }
         } catch (e) {
-            console.error(e);
+            console.error("Failed to submit votes", e);
             alert("Error submitting votes");
         } finally {
             setIsSubmitting(false);

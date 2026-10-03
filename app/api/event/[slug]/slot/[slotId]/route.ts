@@ -61,11 +61,11 @@ export async function PATCH(req: Request, props: { params: Promise<{ slug: strin
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 }
 
-export async function DELETE(_req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
+export async function DELETE(req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
     const { slug, slotId } = await props.params;
     try {
         const slotIdInt = idParam.parse(slotId);
@@ -85,6 +85,6 @@ export async function DELETE(_req: Request, props: { params: Promise<{ slug: str
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 }

@@ -5,6 +5,7 @@ import Logger from "@/shared/lib/logger";
 import { verifyEventAdmin } from "@/features/auth";
 import { ConflictError, ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
 import { campaignFinalizeSchema, oneShotFinalizeSchema } from "@/features/event-management/model/schemas";
+import { escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Finalize");
 
@@ -125,7 +126,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         acceptedNames = allAccepted.map(v => v.participant.name);
         waitlistNames = allWaitlist.map(v => v.participant.name);
 
-        const transactionResult = await prisma.$transaction(async (tx) => {
+        const finalizedEvent = await prisma.$transaction(async (tx) => {
             // Precondition: only a DRAFT event can be finalized, exactly once.
             const claimed = await tx.event.updateMany({
                 where: { id: currentEvent.id, status: 'DRAFT' },
@@ -158,11 +159,11 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
             const sTime = updatedEvent.timeSlots.find(s => s.id === updatedEvent.finalizedSlotId);
 
-            let webhookId: string | null = null;
+            // The webhook row is queued in the same transaction; /api/cron/webhooks delivers it.
             if (updatedEvent.fromUrl) {
                 const { getBaseUrl } = await import("@/shared/lib/url");
                 const origin = getBaseUrl();
-                const wh = await tx.webhookEvent.create({
+                await tx.webhookEvent.create({
                     data: {
                         eventId: updatedEvent.id,
                         url: updatedEvent.fromUrl,
@@ -188,18 +189,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         })
                     }
                 });
-                webhookId = wh.id;
             }
 
-            return { event: updatedEvent, webhookId };
+            return updatedEvent;
         });
-
-        const { event: finalizedEvent, webhookId } = transactionResult;
-
-        if (webhookId) {
-            const { processWebhook } = await import("@/shared/lib/webhook-sender");
-            await processWebhook(webhookId);
-        }
 
         const { getBaseUrl } = await import("@/shared/lib/url");
         const origin = getBaseUrl();
@@ -216,12 +209,12 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         await Promise.all([
             ...acceptedParticipants.map(p => sendDirectMessage(
                 { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n<a href="${eventLink}">View Details</a>` },
+                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n<a href="${eventLink}">View Details</a>` },
                 { slug, kind: "finalize-accepted" }
             )),
             ...waitlistedParticipants.map(p => sendDirectMessage(
                 { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nWe'll let you know if a spot opens up!` },
+                { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nWe'll let you know if a spot opens up!` },
                 { slug, kind: "finalize-waitlist" }
             )),
         ]);
@@ -229,7 +222,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         log.info("One-shot event finalized successfully", { slug });
 
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 
     redirect(`/e/${slug}/manage`);
@@ -329,7 +322,7 @@ async function handleCampaignFinalize(
     const updateData: { status: string; location: string | null; finalizedHostId?: number } = { status: "FINALIZED", location };
     if (houseId !== null) updateData.finalizedHostId = houseId;
 
-    const transactionResult = await prisma.$transaction(async (tx) => {
+    const finalizedEvent = await prisma.$transaction(async (tx) => {
         // Precondition: only a DRAFT campaign can be finalized, exactly once.
         const claimed = await tx.event.updateMany({
             where: { id: currentEvent.id, status: 'DRAFT' },
@@ -361,11 +354,11 @@ async function handleCampaignFinalize(
             await tx.participant.updateMany({ where: { id: { in: waitlistIds }, eventId: updatedEvent.id }, data: { status: 'WAITLIST' } });
         }
 
-        let webhookId: string | null = null;
+        // The webhook row is queued in the same transaction; /api/cron/webhooks delivers it.
         if (updatedEvent.fromUrl) {
             const { getBaseUrl } = await import("@/shared/lib/url");
             const origin = getBaseUrl();
-            const wh = await tx.webhookEvent.create({
+            await tx.webhookEvent.create({
                 data: {
                     eventId: updatedEvent.id,
                     url: updatedEvent.fromUrl,
@@ -391,18 +384,10 @@ async function handleCampaignFinalize(
                     })
                 }
             });
-            webhookId = wh.id;
         }
 
-        return { event: updatedEvent, webhookId };
+        return updatedEvent;
     });
-
-    const { event: finalizedEvent, webhookId } = transactionResult;
-
-    if (webhookId) {
-        const { processWebhook } = await import("@/shared/lib/webhook-sender");
-        await processWebhook(webhookId);
-    }
 
     const { getBaseUrl } = await import("@/shared/lib/url");
     const origin = getBaseUrl();
@@ -433,12 +418,12 @@ async function handleCampaignFinalize(
     await Promise.all([
         ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
             { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n\nSessions locked in:\n${sessionList}\n\n<a href="${eventLink}">View Details</a>` },
+            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}\n\n<a href="${eventLink}">View Details</a>` },
             { slug, kind: "finalize-campaign-accepted" }
         )),
         ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
             { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
+            { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
             { slug, kind: "finalize-campaign-waitlist" }
         )),
     ]);

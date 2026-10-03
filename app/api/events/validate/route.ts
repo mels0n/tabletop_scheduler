@@ -73,6 +73,6 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ validSlugs, events });
     } catch (e) {
-        return toResponse(e, log);
+        return toResponse(e, log.forRequest(req));
     }
 }

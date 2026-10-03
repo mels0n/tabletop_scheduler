@@ -9,6 +9,7 @@ import { normalizeHandle } from "@/shared/lib/handle";
 import { identityCookieOptions, readIdentity, signValue, verifyValue } from "@/shared/lib/session";
 import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
 import { idParam, voteSchema } from "@/features/event-management/model/schemas";
+import { escapeDiscordMarkdown, escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Vote");
 
@@ -273,7 +274,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         response.cookies.set(cookieName, signValue(String(participantRow.id)), identityCookieOptions());
         return response;
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 }
 
@@ -296,8 +297,8 @@ async function broadcastVoteUpdate(event: VotedEvent, userDisplay: string): Prom
     await broadcastToEvent(
         { telegramChatId: event.telegramChatId, discordChannelId: event.discordChannelId },
         {
-            html: `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`,
-            discord: `🚀 **${userDisplay}** updated availability for **${event.title}**!`,
+            html: `🚀 <b>${escapeHtml(userDisplay)}</b> just updated their availability for <b>${escapeHtml(event.title)}</b>!`,
+            discord: `🚀 **${escapeDiscordMarkdown(userDisplay)}** updated availability for **${escapeDiscordMarkdown(event.title)}**!`,
         },
         { slug: event.slug, kind: "vote-update" }
     );
@@ -321,7 +322,7 @@ async function notifyManagerOfQuorum(event: VotedEvent, quorum: { viable: boolea
         if (event.quorumPerfectNotified) return;
         const result = await sendDirectMessage(
             managerTarget,
-            { html: `🌟 <b>Perfect Match Found</b> for <b>${event.title}</b>!\n\nEveryone can make it and you have a host!\n\n👉 <a href="${link}">Finalize Now</a>` },
+            { html: `🌟 <b>Perfect Match Found</b> for <b>${escapeHtml(event.title)}</b>!\n\nEveryone can make it and you have a host!\n\n👉 <a href="${link}">Finalize Now</a>` },
             { slug: event.slug, kind: "quorum-perfect" }
         );
         if (isDelivered(result)) {
@@ -339,7 +340,7 @@ async function notifyManagerOfQuorum(event: VotedEvent, quorum: { viable: boolea
     if (quorum.viable && !event.quorumViableNotified) {
         const result = await sendDirectMessage(
             managerTarget,
-            { html: `🎉 <b>Viable Quorum Reached</b> for <b>${event.title}</b>!\n\nYou have enough players for a game.\n\n👉 <a href="${link}">Manage Event</a>` },
+            { html: `🎉 <b>Viable Quorum Reached</b> for <b>${escapeHtml(event.title)}</b>!\n\nYou have enough players for a game.\n\n👉 <a href="${link}">Manage Event</a>` },
             { slug: event.slug, kind: "quorum-viable" }
         );
         if (isDelivered(result)) {

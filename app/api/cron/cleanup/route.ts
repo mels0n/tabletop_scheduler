@@ -33,7 +33,7 @@ export async function GET(req: Request) {
     try {
         requireCronAuth(req);
     } catch (e) {
-        return toResponse(e, log);
+        return toResponse(e, log.forRequest(req));
     }
 
     try {

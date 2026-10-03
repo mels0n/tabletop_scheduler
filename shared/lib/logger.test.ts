@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import Logger from './logger';
+import Logger, { resolveRequestId } from './logger';
 import { resetServerConfigForTests } from '@/shared/config/server';
 import { stubConfigEnv } from '@/shared/config/test-env';
 
@@ -110,5 +110,24 @@ describe('Logger', () => {
 
         expect(JSON.parse(lines[0])).toMatchObject({ ctx: 'Api', requestId: 'req-123', msg: 'handled' });
         expect(JSON.parse(lines[1]).requestId).toBeUndefined();
+    });
+
+    it('fromRequest reuses a well-formed x-request-id', () => {
+        stubConfigEnv({});
+        resetServerConfigForTests();
+        const lines = capture('info');
+
+        const req = new Request('http://localhost/api/x', { headers: { 'x-request-id': 'abc-123' } });
+        Logger.fromRequest(req, 'Api').info('handled');
+        Logger.get('Other').forRequest(req).info('also');
+
+        expect(JSON.parse(lines[0])).toMatchObject({ ctx: 'Api', requestId: 'abc-123' });
+        expect(JSON.parse(lines[1])).toMatchObject({ ctx: 'Other', requestId: 'abc-123' });
+    });
+
+    it('fromRequest mints a UUID when the header is missing or malformed', () => {
+        expect(resolveRequestId(new Headers())).toMatch(/^[0-9a-f-]{36}$/);
+        expect(resolveRequestId(new Headers({ 'x-request-id': 'has spaces <and> {json}' }))).toMatch(/^[0-9a-f-]{36}$/);
+        expect(resolveRequestId(new Headers({ 'x-request-id': 'x'.repeat(200) }))).toMatch(/^[0-9a-f-]{36}$/);
     });
 });

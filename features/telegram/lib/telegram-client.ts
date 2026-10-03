@@ -6,16 +6,39 @@ import type { EditResult } from "@/shared/lib/edit-result";
 const log = Logger.get("Telegram");
 
 /**
- * When a basic group is upgraded to a supergroup, Telegram rejects sends to the old id
- * with `parameters.migrate_to_chat_id`. Returns the new id from an error body, or null.
+ * Outcome of a Bot API call that can fail meaningfully. On failure `error` is Telegram's own
+ * `description` (for example "Forbidden: bot was kicked from the group chat" or
+ * "Bad Request: chat not found") and `status` is the HTTP status, or 0 when no response
+ * arrived (network error, timeout, missing token).
  */
-function migratedChatId(errorBody: string): number | null {
+export type TelegramResult<T> = { ok: true; value: T } | { ok: false; error: string; status: number };
+
+interface TelegramErrorBody {
+    description: string;
+    /** Set when a basic group was upgraded to a supergroup. */
+    migrateToChatId: number | null;
+}
+
+/** Reads `description` and `parameters.migrate_to_chat_id` from a Bot API error body. */
+function parseErrorBody(status: number, raw: string): TelegramErrorBody {
     try {
-        const id = JSON.parse(errorBody)?.parameters?.migrate_to_chat_id;
-        return typeof id === "number" ? id : null;
+        const body = JSON.parse(raw);
+        const id = body?.parameters?.migrate_to_chat_id;
+        return {
+            description: typeof body?.description === "string" ? body.description : `HTTP ${status}`,
+            migrateToChatId: typeof id === "number" ? id : null,
+        };
     } catch {
-        return null;
+        return { description: raw.trim() || `HTTP ${status}`, migrateToChatId: null };
     }
+}
+
+function failure(error: string, status: number): { ok: false; error: string; status: number } {
+    return { ok: false, error, status };
+}
+
+function errorMessage(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
 }
 
 /** Repoints every event bound to the old group at the upgraded supergroup. Never throws. */
@@ -33,23 +56,29 @@ async function adoptMigratedChat(oldChatId: string | number, newChatId: number):
 }
 
 /**
- * @function sendTelegramMessage
- * @description Sends a rich text message to a specific Telegram Chat ID.
- * Defaults to 'HTML' parse mode to support bold/italic/links.
- *
- * @param {string | number} chatId - The target Telegram chat or user ID.
- * @param {string} text - Message content (HTML tags supported).
- * @param {string} token - The Bot API Token.
- * @returns {Promise<number | null>} The sent Message ID, or null if failed.
+ * Sends an HTML message and reports Telegram's error on failure. When the group was upgraded
+ * to a supergroup, bound events are repointed and the send is retried once in the new chat.
  */
-export async function sendTelegramMessage(chatId: string | number, text: string, token: string): Promise<number | null> {
+export async function sendTelegramMessageResult(chatId: string | number, text: string, token: string): Promise<TelegramResult<number>> {
     return postMessage(chatId, text, token, true);
 }
 
-async function postMessage(chatId: string | number, text: string, token: string, allowMigrationRetry: boolean): Promise<number | null> {
+/**
+ * @function sendTelegramMessage
+ * @description Sends a rich text message (HTML parse mode) to a Telegram chat.
+ * Convenience form of `sendTelegramMessageResult` for callers that only need the id.
+ *
+ * @returns {Promise<number | null>} The sent message id, or null if the send failed.
+ */
+export async function sendTelegramMessage(chatId: string | number, text: string, token: string): Promise<number | null> {
+    const result = await sendTelegramMessageResult(chatId, text, token);
+    return result.ok ? result.value : null;
+}
+
+async function postMessage(chatId: string | number, text: string, token: string, allowMigrationRetry: boolean): Promise<TelegramResult<number>> {
     if (!token) {
         log.error("Token is missing");
-        return null;
+        return failure("Telegram bot token is missing", 0);
     }
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     log.debug(`Sending message to ${chatId}`, { textSnippet: text.substring(0, 50) });
@@ -66,22 +95,23 @@ async function postMessage(chatId: string | number, text: string, token: string,
         });
 
         if (!res.ok) {
-            const err = await res.text();
-            const newChatId = allowMigrationRetry ? migratedChatId(err) : null;
-            if (newChatId !== null) {
-                await adoptMigratedChat(chatId, newChatId);
-                return postMessage(newChatId, text, token, false);
+            const err = parseErrorBody(res.status, await res.text());
+            if (allowMigrationRetry && err.migrateToChatId !== null) {
+                await adoptMigratedChat(chatId, err.migrateToChatId);
+                return postMessage(err.migrateToChatId, text, token, false);
             }
-            log.error("API Error (sendMessage)", { error: err });
-            return null;
+            log.error("API Error (sendMessage)", { status: res.status, error: err.description });
+            return failure(err.description, res.status);
         }
 
         const data = await res.json();
-        log.debug(`Message sent successfully. ID: ${data.result?.message_id}`);
-        return data.result?.message_id;
+        const messageId = data.result?.message_id;
+        if (typeof messageId !== "number") return failure("Telegram response carried no message id", res.status);
+        log.debug(`Message sent successfully. ID: ${messageId}`);
+        return { ok: true, value: messageId };
     } catch (e) {
         log.error("Failed to send message", e as Error);
-        return null;
+        return failure(errorMessage(e), 0);
     }
 }
 
@@ -123,15 +153,10 @@ export async function unpinChatMessage(chatId: string | number, messageId: numbe
 }
 
 /**
- * @function pinChatMessage
- * @description Pins a message to the top of the chat for high visibility.
- * Error Handling: Specifically checks for "not enough rights" to inform the user.
- *
- * @param {string | number} chatId - Target Chat ID.
- * @param {number} messageId - Message to pin.
- * @param {string} token - Bot Token.
+ * Pins a message silently and reports Telegram's error on failure. When the bot lacks pin
+ * rights it also asks the chat to promote it.
  */
-export async function pinChatMessage(chatId: string | number, messageId: number, token: string) {
+export async function pinChatMessageResult(chatId: string | number, messageId: number, token: string): Promise<TelegramResult<void>> {
     log.debug(`Attempting to pin message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/pinChatMessage`;
     try {
@@ -146,46 +171,59 @@ export async function pinChatMessage(chatId: string | number, messageId: number,
         });
 
         if (!res.ok) {
-            const err = await res.text();
-            log.error("API Error (pinChatMessage)", { error: err });
+            const err = parseErrorBody(res.status, await res.text());
+            log.error("API Error (pinChatMessage)", { status: res.status, error: err.description });
 
-            // Intent: Handle "not enough rights" error specifically to improve UX.
-            // If the bot can't pin, it alerts the chat to fix permissions.
-            try {
-                const jsonErr = JSON.parse(err);
-                if (jsonErr.error_code === 400 && jsonErr.description?.includes("not enough rights")) {
-                    await sendTelegramMessage(chatId, "⚠️ I tried to pin the message above, but I don't have permission. Please promote me to <b>Admin</b> with <b>Pin Messages</b> rights!", token);
-                }
-            } catch (parseErr) {
-                // ignore parsing error
+            // Intent: If the bot can't pin, it alerts the chat to fix permissions.
+            if (res.status === 400 && err.description.includes("not enough rights")) {
+                await sendTelegramMessage(chatId, "⚠️ I tried to pin the message above, but I don't have permission. Please promote me to <b>Admin</b> with <b>Pin Messages</b> rights!", token);
             }
-            return;
+            return failure(err.description, res.status);
         }
 
         log.info(`Message ${messageId} pinned successfully.`);
+        return { ok: true, value: undefined };
     } catch (e) {
         log.error("Failed to pin message", e as Error);
+        return failure(errorMessage(e), 0);
     }
 }
 
 /**
+ * @function pinChatMessage
+ * @description Pins a message to the top of the chat. Convenience form of
+ * `pinChatMessageResult` for callers that do not act on the outcome.
+ */
+export async function pinChatMessage(chatId: string | number, messageId: number, token: string): Promise<void> {
+    await pinChatMessageResult(chatId, messageId, token);
+}
+
+/**
+ * Edits a message's HTML text and reports Telegram's error on failure. "message is not
+ * modified" counts as success. When the group was upgraded to a supergroup, bound events are
+ * repointed and the edit is retried once there (message ids do not carry over, so the retry
+ * usually fails and the caller reposts, now into the right chat).
+ */
+export async function editMessageTextResult(chatId: string | number, messageId: number, text: string, token: string): Promise<TelegramResult<void>> {
+    return editMessage(chatId, messageId, text, token, true);
+}
+
+/**
  * @function editMessageText
- * @description Modifies the content of an existing message.
- * Crucial for the "Real-Time Dashboard" effect where the status message updates in-place.
+ * @description Modifies the content of an existing message (the live dashboard).
  *
- * @param {string | number} chatId - Target Chat ID.
- * @param {number} messageId - Message to edit.
- * @param {string} text - New content.
- * @param {string} token - Bot Token.
  * @returns {Promise<EditResult>} 'edited' when the message shows `text` (including "message is
  * not modified"); 'gone' on 400 "message to edit not found" / "message can't be edited";
  * 'failed' for anything else (rate limit, 5xx, timeout), where the caller must not repost.
  */
 export async function editMessageText(chatId: string | number, messageId: number, text: string, token: string): Promise<EditResult> {
-    return editMessage(chatId, messageId, text, token, true);
+    const result = await editMessageTextResult(chatId, messageId, text, token);
+    if (result.ok) return "edited";
+    const gone = result.error.includes("message to edit not found") || result.error.includes("message can't be edited");
+    return result.status === 400 && gone ? "gone" : "failed";
 }
 
-async function editMessage(chatId: string | number, messageId: number, text: string, token: string, allowMigrationRetry: boolean): Promise<EditResult> {
+async function editMessage(chatId: string | number, messageId: number, text: string, token: string, allowMigrationRetry: boolean): Promise<TelegramResult<void>> {
     log.debug(`Editing message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
     try {
@@ -201,26 +239,21 @@ async function editMessage(chatId: string | number, messageId: number, text: str
         });
 
         if (!res.ok) {
-            const err = await res.text();
+            const err = parseErrorBody(res.status, await res.text());
             // Intent: Re-rendering an unchanged dashboard is a success, not a reason to repost it.
-            if (err.includes("message is not modified")) return "edited";
-            if (res.status === 400 && (err.includes("message to edit not found") || err.includes("message can't be edited"))) return "gone";
-            // Group upgraded to a supergroup: record the new id and retry once there. Message
-            // ids do not carry over, so the retry usually fails and the caller reposts, now
-            // into the right chat.
-            const newChatId = allowMigrationRetry ? migratedChatId(err) : null;
-            if (newChatId !== null) {
-                await adoptMigratedChat(chatId, newChatId);
-                return editMessage(newChatId, messageId, text, token, false);
+            if (err.description.includes("message is not modified")) return { ok: true, value: undefined };
+            if (allowMigrationRetry && err.migrateToChatId !== null) {
+                await adoptMigratedChat(chatId, err.migrateToChatId);
+                return editMessage(err.migrateToChatId, messageId, text, token, false);
             }
-            log.error("API Error (editMessageText)", { error: err });
-            return "failed";
+            log.error("API Error (editMessageText)", { status: res.status, error: err.description });
+            return failure(err.description, res.status);
         }
         log.debug(`Message ${messageId} edited successfully.`);
-        return "edited";
+        return { ok: true, value: undefined };
     } catch (e) {
         log.error("Failed to edit message", e as Error);
-        return "failed";
+        return failure(errorMessage(e), 0);
     }
 }
 

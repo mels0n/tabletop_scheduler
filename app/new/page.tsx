@@ -126,11 +126,11 @@ function NewEventForm() {
             if (creationSucceeded) {
                 // Intent: If creation succeeded but router.push failed (e.g. network timeout),
                 // fallback to hard navigation to ensure user gets to the next page.
-                console.warn("Router push failed, falling back to location.href", error);
+                console.error("Router push failed, falling back to location.href", error);
                 // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate hard navigation when router.push failed
                 window.location.href = `/e/${eventSlug}/manage`;
             } else {
-                console.error("Submit Failed", error);
+                console.error("Event creation failed", error);
                 setLoading(false);
             }
         }

@@ -43,6 +43,6 @@ export async function POST(request: Request, props: { params: Promise<{ slug: st
         return NextResponse.json({ success: true });
 
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(request));
     }
 }

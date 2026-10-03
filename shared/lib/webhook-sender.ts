@@ -1,14 +1,11 @@
-import { createHmac } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import prisma from "@/shared/lib/prisma";
-import Logger from "@/shared/lib/logger";
-import { getServerConfig } from "@/shared/config/server";
 import { ValidationError } from "@/shared/errors";
 
-const log = Logger.get("WebhookSender");
-
-const REQUEST_TIMEOUT_MS = 10_000;
+/*
+ * Destination checks for outbound webhooks. Delivery itself lives in
+ * `features/integrations/webhooks/server/deliver.ts`, the only code that sends one.
+ */
 
 /** IPv4 CIDR blocks a webhook may never reach: private, loopback, link-local, CGNAT, multicast, reserved. */
 const BLOCKED_V4: ReadonlyArray<[number, number]> = [
@@ -136,103 +133,5 @@ export async function assertSafeWebhookUrl(url: string): Promise<void> {
     }
     if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
         throw new ValidationError("Webhook URL must resolve to a public address");
-    }
-}
-
-/** `sha256=<hex HMAC-SHA256(secret, body)>`, keyed by CRON_SECRET when set, else SESSION_SECRET. */
-export function signWebhookBody(body: string): string {
-    const { cronSecret, sessionSecret } = getServerConfig();
-    return `sha256=${createHmac("sha256", cronSecret ?? sessionSecret).update(body, "utf8").digest("hex")}`;
-}
-
-/**
- * Processes a single webhook event.
- * Handles the actual HTTP request and updates the database status.
- *
- * @param webhookId - The UUID of the WebhookEvent to process
- * @returns Object containing the result status
- */
-export async function processWebhook(webhookId: string) {
-    const webhook = await prisma.webhookEvent.findUnique({
-        where: { id: webhookId }
-    });
-
-    if (!webhook) {
-        log.warn("Webhook not found", { webhookId });
-        return { success: false, error: "Webhook not found" };
-    }
-
-    try {
-        await assertSafeWebhookUrl(webhook.url);
-    } catch (error) {
-        // A destination that is (or now resolves to) a private address is never retried.
-        await prisma.webhookEvent.update({
-            where: { id: webhookId },
-            data: { status: "FAILED", attempts: webhook.attempts + 1 }
-        });
-        log.warn("Webhook destination refused", { id: webhookId, reason: (error as Error).message });
-        return { success: false, status: "FAILED", error: (error as Error).message };
-    }
-
-    try {
-        log.info("Attempting webhook delivery", { id: webhookId, attempt: webhook.attempts + 1 });
-
-        const res = await fetch(webhook.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Tabletop-Event-Id": webhook.eventId.toString(),
-                "X-Webhook-Id": webhook.id,
-                "X-Tabletop-Signature": signWebhookBody(webhook.payload),
-            },
-            body: webhook.payload,
-            // Redirects are not followed: a 3xx could point the request back at a private host.
-            redirect: "manual",
-            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-        });
-
-        if (res.ok) {
-            // Success
-            await prisma.webhookEvent.update({
-                where: { id: webhookId },
-                data: {
-                    status: "DELIVERED",
-                    attempts: { increment: 1 }
-                }
-            });
-            log.info("Webhook delivered successfully", { id: webhookId });
-            return { success: true, status: "DELIVERED" };
-        } else {
-            throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-
-    } catch (error) {
-        // Failure Handling
-        const attempts = webhook.attempts + 1;
-        const now = new Date();
-
-        // Policy: Check if we've exceeded 1 hour from creation
-        // 1 Hour = 60 mins = 3600000 ms
-        const age = now.getTime() - webhook.createdAt.getTime();
-        const TIMEOUT_MS = 60 * 60 * 1000;
-
-        let newStatus = "RETRY";
-        const nextTime = new Date(now.getTime() + 5 * 60 * 1000); // Default 5 min retry
-
-        if (age > TIMEOUT_MS) {
-            newStatus = "FAILED";
-        }
-
-        await prisma.webhookEvent.update({
-            where: { id: webhookId },
-            data: {
-                status: newStatus,
-                attempts: attempts,
-                nextAttempt: newStatus === "RETRY" ? nextTime : undefined
-            }
-        });
-
-        log.warn("Webhook delivery failed", { id: webhookId, error: String(error), status: newStatus });
-        return { success: false, status: newStatus, error: String(error) };
     }
 }

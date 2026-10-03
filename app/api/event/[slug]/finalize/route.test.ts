@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
@@ -12,10 +12,17 @@ vi.mock('@/features/notifications', () => ({
 }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 vi.mock('@/shared/lib/url', () => ({ getBaseUrl: () => 'https://example.test' }));
-vi.mock('@/shared/lib/eventMessage', () => ({
-    buildFinalizedMessage: () => '<b>finalized</b>',
-    buildCampaignFinalizedMessage: () => '<b>campaign finalized</b>',
-}));
+// Canned group messages by default; the escaping tests switch to the real builders.
+const { realMessages } = vi.hoisted(() => ({ realMessages: { on: false } }));
+vi.mock('@/shared/lib/eventMessage', async (importOriginal) => {
+    const real = await importOriginal<typeof import('@/shared/lib/eventMessage')>();
+    return {
+        buildFinalizedMessage: (...args: Parameters<typeof real.buildFinalizedMessage>) =>
+            realMessages.on ? real.buildFinalizedMessage(...args) : '<b>finalized</b>',
+        buildCampaignFinalizedMessage: (...args: Parameters<typeof real.buildCampaignFinalizedMessage>) =>
+            realMessages.on ? real.buildCampaignFinalizedMessage(...args) : '<b>campaign finalized</b>',
+    };
+});
 vi.mock('@/features/telegram', () => ({
     sendTelegramMessage: vi.fn(),
     deleteMessage: vi.fn(),
@@ -182,6 +189,73 @@ describe('POST /api/event/[slug]/finalize', () => {
 
         expect(res!.status).toBe(403);
         expect(mockPrisma.event.findUnique).not.toHaveBeenCalled();
+    });
+});
+
+describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
+    const hostile = '<a href="https://evil">x</a>';
+    const hostileVote = {
+        participantId: 7,
+        preference: 'YES',
+        createdAt,
+        participant: { id: 7, name: hostile, chatId: 'c-7', discordId: null },
+    };
+    const event = { ...finalizedEvent, title: hostile, location: null, description: null, finalizedHost: null, timezone: 'UTC' };
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        realMessages.on = true;
+        (verifyEventAdmin as any).mockResolvedValue(true);
+        process.env.TELEGRAM_BOT_TOKEN = 'tg-token';
+        process.env.DISCORD_BOT_TOKEN = 'dc-token';
+        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, title: hostile }).mockResolvedValueOnce(event);
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+        mockPrisma.timeSlot.findFirst.mockResolvedValue({ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt });
+        mockPrisma.vote.findMany.mockResolvedValue([hostileVote]);
+        mockPrisma.event.update.mockResolvedValue(event);
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
+        (telegram.sendTelegramMessage as any).mockResolvedValue(99);
+        (discord.sendDiscordMessage as any).mockResolvedValue({ id: 'new-msg' });
+    });
+
+    afterEach(() => {
+        realMessages.on = false;
+        vi.unstubAllGlobals();
+    });
+
+    it('escapes a hostile participant name and title in the group announcement and the DM', async () => {
+        await POST(oneShotRequest(), params);
+
+        const escaped = '&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;';
+        const groupHtml = (telegram.sendTelegramMessage as any).mock.calls[0][1] as string;
+        expect(groupHtml).toContain(escaped);
+        expect(groupHtml).not.toContain('<a href="https://evil"');
+
+        const discordText = (discord.sendDiscordMessage as any).mock.calls[0][1] as string;
+        expect(discordText).not.toContain('<https://evil>');
+        expect(discordText).not.toMatch(/\[x\]\(/);
+
+        const dm = mockSend.mock.calls[0][1].html as string;
+        expect(dm).toContain(escaped);
+        expect(dm).not.toContain('<a href="https://evil"');
+    });
+
+    it('only queues the FINALIZED webhook; the cron delivers it', async () => {
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+        mockPrisma.event.findUnique.mockReset();
+        mockPrisma.event.findUnique
+            .mockResolvedValueOnce(eventMeta)
+            .mockResolvedValueOnce({ ...event, fromUrl: 'https://hooks.example/finalized' });
+        mockPrisma.webhookEvent.create.mockResolvedValue({ id: 'wh-1' });
+
+        await POST(oneShotRequest(), params);
+
+        expect(mockPrisma.webhookEvent.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({ url: 'https://hooks.example/finalized', status: 'PENDING' }),
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });
 
