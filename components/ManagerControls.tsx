@@ -142,7 +142,7 @@ export function ManagerControls({
                     <div className="space-y-4">
                         <div>
                             <h4 className="text-sm font-semibold text-slate-300">Voting reminders</h4>
-                            <p className="text-xs text-slate-500">While voting is open, post a nudge in the group/channel on the days and time you pick.</p>
+                            <p className="text-xs text-slate-500">While voting is open, post a nudge in the group/channel on the days and time you pick. Nudges stop once a time has enough players, or when no proposed time is left in the future.</p>
                         </div>
                         <label className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition-colors">
                             <input
@@ -319,7 +319,7 @@ export function ManagerControls({
                             <AlertTriangle className={`w-4 h-4 ${isFinalized && !isCancelled ? 'text-orange-500' : 'text-red-500'} shrink-0`} />
                             <p>
                                 <b>Warning:</b> {isFinalized && !isCancelled
-                                    ? "This will cancel the event and notify all participants. The event data will be permanently removed."
+                                    ? "This will cancel the event and post a notice in the connected group or channel. The event data is deleted one day after cancellation, or right away if you delete it afterwards."
                                     : (isCancelled
                                         ? "This event is already cancelled. Deleting it will permanently remove all data from the database."
                                         : "This action cannot be undone. All votes, participants, and data will be permanently erased."

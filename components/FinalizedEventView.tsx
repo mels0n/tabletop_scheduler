@@ -333,7 +333,7 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                                         myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60"
                                 )}>
                                     {isWaitlistedButSpaceAvailable ? "We have space! Change your RSVP to 'Available' to join." :
-                                        myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
+                                        myStatus === 'WAITLIST' ? "If a spot opens up you move in automatically, with a DM if you linked Telegram or Discord." : "See you at the session."}
                                 </p>
                             </div>
                         </div>

@@ -49,7 +49,7 @@ describe('VotingInterface: vote refused for a participant this browser does not 
         fireEvent.click(screen.getByRole('button', { name: 'Vote Available' }));
         fireEvent.click(screen.getByRole('button', { name: 'Submit Votes' }));
 
-        expect(await screen.findByText(/Sign in with Telegram or Discord to edit this vote/)).toBeTruthy();
+        expect(await screen.findByText(/sign in with that account to edit this vote/)).toBeTruthy();
         expect(JSON.parse(fetchMock.mock.calls[0][1].body).participantId).toBe(5);
 
         fireEvent.click(screen.getByRole('button', { name: 'Vote as a new participant' }));
