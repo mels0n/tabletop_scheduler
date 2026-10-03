@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 import prisma from "@/shared/lib/prisma";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import Logger from "@/shared/lib/logger";
@@ -47,8 +48,8 @@ export async function DELETE(
             await sendDirectMessage(
                 { telegramChatId: participant.chatId, discordUserId: participant.discordId },
                 {
-                    html: `⚠️ <b>Event Update</b>\n\nYou have been removed from the finalized event <b>${participant.event.title}</b> by the organizer.`,
-                    discord: `⚠️ **Event Update**\n\nYou have been removed from the finalized event **${participant.event.title}** by the organizer.`,
+                    html: `⚠️ <b>Event Update</b>\n\nYou have been removed from the finalized event <b>${escapeHtml(participant.event.title)}</b> by the organizer.`,
+                    discord: `⚠️ **Event Update**\n\nYou have been removed from the finalized event **${escapeDiscordMarkdown(participant.event.title)}** by the organizer.`,
                 },
                 { slug, participantId: participantIdInt, kind: "participant-removed" }
             );
