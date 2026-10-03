@@ -5,10 +5,8 @@ import { pushSlotUpdates } from "../notify";
 
 const log = Logger.get("API:Slot:Suggest");
 
-export async function POST(
-    request: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function POST(request: Request, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     try {
         const body = await request.json();
         const { startTime, endTime, suggesterName } = body;

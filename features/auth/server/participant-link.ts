@@ -86,7 +86,7 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
         if ('error' in loaded) return loaded;
         const { participant } = loaded;
 
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const identityId = cookieStore.get(PLATFORM_COOKIE[platform])?.value;
 
         // Guard: UI shouldn't offer linking a platform the user hasn't synced, but a
@@ -159,7 +159,7 @@ export async function unlinkParticipant({ slug, participantId, platform }: Parti
         if ('error' in loaded) return loaded;
         const { participant } = loaded;
 
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const identityId = cookieStore.get(PLATFORM_COOKIE[platform])?.value;
 
         if (!identityId) {

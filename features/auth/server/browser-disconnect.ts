@@ -39,7 +39,7 @@ const PLATFORM_NAME_COOKIE: Record<Platform, string> = {
  */
 export async function disconnectPlatformFromBrowser(platform: Platform): Promise<{ success: true, message: string } | { error: string }> {
     try {
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const identityId = cookieStore.get(PLATFORM_ID_COOKIE[platform])?.value;
 
         if (!identityId) {

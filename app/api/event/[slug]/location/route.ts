@@ -25,14 +25,12 @@ const log = Logger.get("API:Location");
  * @param {string} context.params.slug - The event identifier.
  * @returns {NextResponse} Success status and updated location.
  */
-export async function POST(
-    req: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     try {
         const { location } = await req.json();
 
-        if (!await verifyEventAdmin(params.slug)) {
+        if (!(await verifyEventAdmin(params.slug))) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

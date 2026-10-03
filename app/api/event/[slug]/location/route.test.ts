@@ -31,7 +31,7 @@ const event = {
 };
 
 const call = () =>
-    POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ location: 'New place' }) }), { params: { slug: 's' } });
+    POST(new Request('http://x', { method: 'POST', body: JSON.stringify({ location: 'New place' }) }), { params: Promise.resolve({ slug: 's' }) });
 
 describe('location update dashboard sync', () => {
     beforeEach(() => {

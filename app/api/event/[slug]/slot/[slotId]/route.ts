@@ -6,10 +6,8 @@ import { pushSlotUpdates } from "../notify";
 
 const log = Logger.get("API:Slot:Manage");
 
-export async function PATCH(
-    req: Request,
-    { params }: { params: { slug: string; slotId: string } }
-) {
+export async function PATCH(req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
+    const params = await props.params;
     try {
         const { slug, slotId } = params;
         const body = await req.json();
@@ -70,10 +68,8 @@ export async function PATCH(
     }
 }
 
-export async function DELETE(
-    req: Request,
-    { params }: { params: { slug: string; slotId: string } }
-) {
+export async function DELETE(req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
+    const params = await props.params;
     try {
         const { slug, slotId } = params;
         const slotIdInt = parseInt(slotId, 10);

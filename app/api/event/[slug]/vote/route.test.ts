@@ -79,7 +79,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkIdentity: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -107,7 +107,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkDiscord: true,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -133,7 +133,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkDiscord: true,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -156,7 +156,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 discordUsername: 'ForgedUser',
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -181,7 +181,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkDiscord: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -204,7 +204,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkIdentity: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -238,7 +238,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
         mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
 
-        await POST(mockRequest(body), { params: { slug: '1' } });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
 
         expect(mockSend).toHaveBeenCalledTimes(1);
         expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd-mgr' });
@@ -251,7 +251,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockQuorum.mockReturnValue({ perfect: true, viable: true });
         mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
 
-        await POST(mockRequest(body), { params: { slug: '1' } });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
 
         expect(mockSend.mock.calls[0][1].html).toContain('Perfect Match Found');
         expect(mockEventUpdate).toHaveBeenCalledWith({ where: { id: 1 }, data: { quorumPerfectNotified: true, quorumViableNotified: true } });
@@ -261,7 +261,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerChatId: '55', managerDiscordId: 'd-mgr' });
         mockSend.mockResolvedValue({ telegram: failed, discord: failed });
 
-        await POST(mockRequest(body), { params: { slug: '1' } });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
 
         expect(mockSend).toHaveBeenCalledTimes(1);
         expect(mockEventUpdate).not.toHaveBeenCalled();
@@ -270,7 +270,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
     it('neither sends nor sets the flag when the manager has no linked platform', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night' });
 
-        await POST(mockRequest(body), { params: { slug: '1' } });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
 
         expect(mockSend).not.toHaveBeenCalled();
         expect(mockEventUpdate).not.toHaveBeenCalled();
@@ -279,7 +279,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
     it('does not re-alert when the viable flag is already set', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumViableNotified: true });
 
-        await POST(mockRequest(body), { params: { slug: '1' } });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
 
         expect(mockSend).not.toHaveBeenCalled();
         expect(mockEventUpdate).not.toHaveBeenCalled();

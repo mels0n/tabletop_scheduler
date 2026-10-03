@@ -13,14 +13,12 @@ const log = Logger.get("API:Finalize");
  * ONE_SHOT: Accepts FormData with slotId/houseId/location. Redirects on success.
  * CAMPAIGN: Accepts JSON with slotIds[]/houseId/location. Returns JSON on success.
  */
-export async function POST(
-    req: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     try {
         log.info("Request received", { slug: params.slug });
 
-        if (!await verifyEventAdmin(params.slug)) {
+        if (!(await verifyEventAdmin(params.slug))) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -290,9 +288,9 @@ async function handleCampaignFinalize(
         const yesCandidates = candidates.filter(v => v.preference === 'YES').sort(byTime);
         const maybeCandidates = candidates.filter(v => v.preference === 'MAYBE').sort(byTime);
         const yesAccepted = max ? yesCandidates.slice(0, max) : yesCandidates;
-        let count = yesAccepted.length;
+        const count = yesAccepted.length;
         let maybeAccepted: typeof candidates = [];
-        if (count < min) { maybeAccepted = maybeCandidates.slice(0, min - count); count += maybeAccepted.length; }
+        if (count < min) { maybeAccepted = maybeCandidates.slice(0, min - count); }
         const allAccepted = [...yesAccepted, ...maybeAccepted];
         const allWaitlist = [...(max ? yesCandidates.slice(max) : []), ...maybeCandidates.slice(maybeAccepted.length)];
         allWaitlist.sort((a, b) => { if (a.preference !== b.preference) return a.preference === 'YES' ? -1 : 1; return a.earliestTime.getTime() - b.earliestTime.getTime(); });

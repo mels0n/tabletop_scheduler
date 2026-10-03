@@ -12,18 +12,16 @@ import Link from "next/link";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 
 interface PageProps {
-    params: { slug: string };
-    searchParams: { action?: string };
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<{ action?: string }>;
 }
 
 /**
  * @function generateMetadata
  * @description Generates dynamic metadata for the event page.
  */
-export async function generateMetadata(
-    { params }: PageProps,
-    parent: ResolvingMetadata
-): Promise<Metadata> {
+export async function generateMetadata(props: PageProps, _parent: ResolvingMetadata): Promise<Metadata> {
+    const params = await props.params;
     const event = await getEvent(params.slug);
 
     if (!event) {
@@ -103,12 +101,14 @@ async function getEvent(slug: string) {
  *    - Provides a link to `/manage` for the organizer.
  *    - Includes `ManagerRecovery` tool for lost access.
  */
-export default async function EventPage({ params, searchParams }: PageProps) {
+export default async function EventPage(props: PageProps) {
+    const searchParams = await props.searchParams;
+    const params = await props.params;
     const event = await getEvent(params.slug);
 
     // Intent: Identify user from server-side cookie (Fail-safe for cross-browser sync).
     // This allows the voting interface to pre-fill "You are interacting as X".
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userChatId = cookieStore.get("tabletop_user_chat_id")?.value;
     const userTelegramName = cookieStore.get("tabletop_user_telegram_name")?.value;
     const userDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;

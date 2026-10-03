@@ -74,14 +74,14 @@ export async function sendGlobalMagicLink(handle: string) {
             return { success: true, message: "Magic Link sent to your Telegram DMs!" };
 
         } else {
-            const exists = await prisma.participant.count({
+            const exists = (await prisma.participant.count({
                 where: { OR: [{ telegramId: cleanHandle }, { telegramId: formattedHandle }] }
-            }) > 0 || await prisma.event.count({
+            })) > 0 || (await prisma.event.count({
                 where: { managerTelegram: formattedHandle }
-            }) > 0;
+            })) > 0;
 
             if (exists) {
-                const botName = await getBotUsername(process.env.TELEGRAM_BOT_TOKEN!) || "TabletopSchedulerBot";
+                const botName = (await getBotUsername(process.env.TELEGRAM_BOT_TOKEN!)) || "TabletopSchedulerBot";
                 return {
                     error: "UNLINKED",
                     message: "We found your events, but the bot hasn't verified you yet.",

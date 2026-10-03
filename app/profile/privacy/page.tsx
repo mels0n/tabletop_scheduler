@@ -22,8 +22,8 @@ export const metadata: Metadata = {
  * Reads the same httpOnly platform cookies as the profile page to decide which platforms
  * are currently linked on this browser.
  */
-export default function ProfilePrivacyPage() {
-    const cookieStore = cookies();
+export default async function ProfilePrivacyPage() {
+    const cookieStore = await cookies();
     const isTelegramSynced = !!cookieStore.get("tabletop_user_chat_id")?.value;
     const isDiscordSynced = !!cookieStore.get("tabletop_user_discord_id")?.value;
 

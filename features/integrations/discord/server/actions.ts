@@ -64,7 +64,7 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
     if (!token) return { error: "Server Configuration Error: Discord Token missing" };
 
     try {
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
         const discordUsername = cookieStore.get("tabletop_user_discord_name")?.value;
 
@@ -171,7 +171,7 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
     let targetDiscordUsername: string | null = null;
 
     try {
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const cookieDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
 
         // 1. Fast-path: Prioritize Discord ID from cookie (most reliable identity signal)

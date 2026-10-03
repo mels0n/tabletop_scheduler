@@ -10,9 +10,10 @@ export const contentType = 'image/png';
 export const alt = 'Tabletop Time Event';
 export const revalidate = 86400; // Cache for 24 hours
 
-export default async function Image({ params }: { params: { slug: string } }) {
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
     const event = await prisma.event.findUnique({
-        where: { slug: params.slug },
+        where: { slug },
     });
 
     const title = event?.title || 'Tabletop Event';
