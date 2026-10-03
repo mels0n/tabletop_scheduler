@@ -40,7 +40,7 @@ describe('getServerConfig: defaults', () => {
             discord: { botToken: null, appId: null, clientSecret: null },
             kofiVerificationToken: null,
             logLevel: 'info',
-            cleanupRetentionDays: { finalized: 1, draft: 30, cancelled: 7 },
+            cleanupRetentionDays: { finalized: 1, draft: 1, cancelled: 1 },
             acceptDataLoss: false,
         });
     });

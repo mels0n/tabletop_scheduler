@@ -404,10 +404,10 @@ These routes are called by a scheduler, never by a browser. All three require th
 
 Deletes expired events and their related rows in batches, unpins any dashboard messages first, and removes expired login tokens. Retention, all adjustable with the `CLEANUP_RETENTION_DAYS_*` variables:
 
-- one-shot events: 1 day after the finalized slot
-- campaigns: 1 day after the last scheduled session
-- drafts: 30 days after the last activity
-- cancelled events: 7 days
+- one-shot events: 1 day after the finalized slot ends
+- campaigns: 1 day after the last scheduled session ends
+- drafts: 1 day after the last proposed slot ends (a draft with no slots: 1 day after creation)
+- cancelled events: 1 day after cancellation
 
 **Response (200):** `{ "success": true, "deleted": 4, "deletedLoginTokens": 2, "errors": 0, "scanned": 40 }`
 

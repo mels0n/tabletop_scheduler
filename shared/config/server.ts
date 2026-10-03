@@ -88,8 +88,8 @@ const envSchema = z.object({
         z.string().toLowerCase().pipe(z.enum(["debug", "info", "warn", "error"])).optional().default("info"),
     ),
     CLEANUP_RETENTION_DAYS_FINALIZED: retentionDays(1),
-    CLEANUP_RETENTION_DAYS_DRAFT: retentionDays(30),
-    CLEANUP_RETENTION_DAYS_CANCELLED: retentionDays(7),
+    CLEANUP_RETENTION_DAYS_DRAFT: retentionDays(1),
+    CLEANUP_RETENTION_DAYS_CANCELLED: retentionDays(1),
     PRISMA_ACCEPT_DATA_LOSS: flag,
     NEXT_PHASE: optionalString,
 });

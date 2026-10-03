@@ -98,11 +98,16 @@ describe.skipIf(!generatedClientIsSqlite())('cleanup cron retention (SQLite inte
         expect(await exists(p, recent.id)).toBe(true);
     });
 
-    it('keeps the one-shot rule: deleted one day after the finalized slot starts', async () => {
+    it('deletes a one-shot one day after its finalized slot ends', async () => {
         const p = db.prisma;
         const past = await makeEvent(p, { status: 'FINALIZED' });
         const pastSlot = await addSlot(p, past.id, daysAgo(2));
         await p.event.update({ where: { id: past.id }, data: { finalizedSlotId: pastSlot.id } });
+
+        // Started 25 hours ago but a 4 hour slot ended only 21 hours ago: still inside the day.
+        const justEnded = await makeEvent(p, { status: 'FINALIZED' });
+        const justEndedSlot = await addSlot(p, justEnded.id, new Date(now - 25 * 3600_000));
+        await p.event.update({ where: { id: justEnded.id }, data: { finalizedSlotId: justEndedSlot.id } });
 
         const upcoming = await makeEvent(p, { status: 'FINALIZED' });
         const upcomingSlot = await addSlot(p, upcoming.id, daysAhead(2));
@@ -112,31 +117,47 @@ describe.skipIf(!generatedClientIsSqlite())('cleanup cron retention (SQLite inte
 
         await GET(cronRequest());
         expect(await exists(p, past.id)).toBe(false);
+        expect(await exists(p, justEnded.id)).toBe(true);
         expect(await exists(p, upcoming.id)).toBe(true);
     });
 
-    it('deletes drafts after 30 days without activity, but not while a slot is still ahead', async () => {
+    it('deletes a draft one day after its last proposed slot ends, whatever its last edit', async () => {
         const p = db.prisma;
-        const stale = await makeEvent(p, { status: 'DRAFT', createdAt: daysAgo(60), updatedAt: daysAgo(40) });
-        const staleWithFutureSlot = await makeEvent(p, {
-            status: 'DRAFT',
-            createdAt: daysAgo(60),
-            updatedAt: daysAgo(40),
-        });
-        await addSlot(p, staleWithFutureSlot.id, daysAhead(3));
-        // Created long ago but edited recently: the edit counts as activity.
-        const edited = await makeEvent(p, { status: 'DRAFT', createdAt: daysAgo(60), updatedAt: daysAgo(5) });
+        // Edited an hour ago, but every proposed time is two days gone: an edit does not extend it.
+        const lapsed = await makeEvent(p, { status: 'DRAFT', createdAt: daysAgo(10), updatedAt: new Date(now - 3600_000) });
+        await addSlot(p, lapsed.id, daysAgo(5));
+        await addSlot(p, lapsed.id, daysAgo(2));
+
+        const withFutureSlot = await makeEvent(p, { status: 'DRAFT', createdAt: daysAgo(60), updatedAt: daysAgo(40) });
+        await addSlot(p, withFutureSlot.id, daysAgo(5));
+        await addSlot(p, withFutureSlot.id, daysAhead(3));
+
+        // Last slot ended 21 hours ago: still inside the one day window.
+        const recent = await makeEvent(p, { status: 'DRAFT', createdAt: daysAgo(10), updatedAt: daysAgo(10) });
+        await addSlot(p, recent.id, new Date(now - 25 * 3600_000));
 
         await GET(cronRequest());
-        expect(await exists(p, stale.id)).toBe(false);
-        expect(await exists(p, staleWithFutureSlot.id)).toBe(true);
-        expect(await exists(p, edited.id)).toBe(true);
+        expect(await exists(p, lapsed.id)).toBe(false);
+        expect(await exists(p, withFutureSlot.id)).toBe(true);
+        expect(await exists(p, recent.id)).toBe(true);
     });
 
-    it('deletes cancelled events 7 days after cancellation', async () => {
+    it('deletes a draft with no slots one day after creation', async () => {
         const p = db.prisma;
-        const old = await makeEvent(p, { status: 'CANCELLED', updatedAt: daysAgo(8) });
-        const fresh = await makeEvent(p, { status: 'CANCELLED', updatedAt: daysAgo(2) });
+        const old = await makeEvent(p, { status: 'DRAFT', createdAt: daysAgo(2), updatedAt: new Date(now - 3600_000) });
+        const fresh = await makeEvent(p, { status: 'DRAFT', createdAt: new Date(now - 3600_000) });
+
+        await GET(cronRequest());
+        expect(await exists(p, old.id)).toBe(false);
+        expect(await exists(p, fresh.id)).toBe(true);
+    });
+
+    it('deletes cancelled events one day after cancellation', async () => {
+        const p = db.prisma;
+        const old = await makeEvent(p, { status: 'CANCELLED', updatedAt: daysAgo(2) });
+        const fresh = await makeEvent(p, { status: 'CANCELLED', updatedAt: new Date(now - 3600_000) });
+        // A cancelled event with future slots is still removed a day after cancellation.
+        await addSlot(p, old.id, daysAhead(10));
 
         await GET(cronRequest());
         expect(await exists(p, old.id)).toBe(false);
