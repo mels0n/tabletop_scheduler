@@ -134,7 +134,7 @@ export default function VsWhen2MeetPage() {
                         />
                         <Problem
                             title="No Discord or Telegram integration"
-                            body="When2Meet links get shared in Discord, but that's where the integration ends. Tabletop Time's bots bring voting directly into the server, so players can respond without leaving the app where they already hang out."
+                            body="When2Meet links get shared in Discord, but that's where the integration ends. Tabletop Time's bots pin a live vote tally and reminders in the server, so the poll stays in the app where players already hang out."
                         />
                         <Problem
                             title="No multi-session or campaign support"

@@ -127,7 +127,7 @@ export default function VsRalllyPage() {
                         />
                         <Problem
                             title="No Discord or Telegram integration"
-                            body="Rallly is a web app. Your group is in Discord. Players miss the poll because it lives in a link that gets buried in the group chat. Tabletop Time's bots bring voting directly into your Discord server or Telegram group."
+                            body="Rallly is a web app. Your group is in Discord. Players miss the poll because it lives in a link that gets buried in the group chat. Tabletop Time's bots pin a live vote tally and reminders directly in your Discord server or Telegram group."
                         />
                         <Problem
                             title="No campaign or multi-session support"
