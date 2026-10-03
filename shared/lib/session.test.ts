@@ -8,6 +8,7 @@ import {
     IDENTITY_PURPOSES,
     participantCookieName,
     participantPurpose,
+    readDiscordDisplayName,
 } from './session';
 import { resetServerConfigForTests } from '@/shared/config/server';
 import { stubConfigEnv } from '@/shared/config/test-env';
@@ -122,6 +123,18 @@ describe('participant cookie helpers', () => {
     it('names the cookie and purpose per slug', () => {
         expect(participantCookieName('abc')).toBe('tabletop_participant_abc');
         expect(participantPurpose('abc')).toBe('participant:abc');
+    });
+});
+
+describe('readDiscordDisplayName', () => {
+    it('returns a plausible display name', () => {
+        expect(readDiscordDisplayName(store({ tabletop_user_discord_name: ' ChrisM ' }))).toBe('ChrisM');
+    });
+
+    it('rejects missing, oversized or control-character values', () => {
+        expect(readDiscordDisplayName(store({}))).toBeNull();
+        expect(readDiscordDisplayName(store({ tabletop_user_discord_name: 'x'.repeat(65) }))).toBeNull();
+        expect(readDiscordDisplayName(store({ tabletop_user_discord_name: 'a' + String.fromCharCode(10) + 'b' }))).toBeNull();
     });
 });
 
