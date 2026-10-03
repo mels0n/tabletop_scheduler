@@ -41,6 +41,7 @@ export const prisma = {
         findUnique: vi.fn(),
         findMany: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
     },
     loginToken: {
         create: vi.fn(),
