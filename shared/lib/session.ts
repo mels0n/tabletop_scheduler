@@ -86,6 +86,20 @@ export function readIdentity(store: CookieReader): { chatId: string | null; disc
     };
 }
 
+/** Client-readable display-name cookie set beside the Discord identity cookie. */
+export const DISCORD_NAME_COOKIE = "tabletop_user_discord_name";
+
+/**
+ * The Discord display name from its cookie, or null when absent or implausible. The cookie
+ * is client-writable: use it only as a label beside a verified Discord ID, and never to
+ * replace a stored username.
+ */
+export function readDiscordDisplayName(store: CookieReader): string | null {
+    const raw = store.get(DISCORD_NAME_COOKIE)?.value?.trim();
+    if (!raw || raw.length > 64 || [...raw].some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f)) return null;
+    return raw;
+}
+
 /** Signs a platform ID for its identity cookie. */
 export function signIdentity(platform: IdentityPlatform, id: string): string {
     return signValue(IDENTITY_PURPOSES[platform], id);

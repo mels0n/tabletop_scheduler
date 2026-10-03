@@ -3,7 +3,13 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
-import { readIdentityCookie } from "@/shared/lib/session";
+import {
+    participantCookieName,
+    participantPurpose,
+    readDiscordDisplayName,
+    readIdentityCookie,
+    verifyValue,
+} from "@/shared/lib/session";
 import type { Participant } from "@prisma/client";
 
 const log = Logger.get("ParticipantLink");
@@ -36,12 +42,12 @@ const PLATFORM_LABEL: Record<Platform, string> = {
  *
  * @param {string} slug - The event slug.
  * @param {number} participantId - The Participant row being claimed/released.
- * @returns {Promise<{ participant: Participant } | { error: string }>} The participant row, or an error.
+ * @returns The participant row and its event's slug, or an error.
  */
-async function loadOwnedParticipant(slug: string, participantId: number): Promise<{ participant: Participant } | { error: string }> {
+async function loadOwnedParticipant(slug: string, participantId: number): Promise<{ participant: Participant; eventSlug: string } | { error: string }> {
     const event = await prisma.event.findUnique({
         where: { slug },
-        select: { id: true }
+        select: { id: true, slug: true }
     });
     if (!event) {
         return { error: "Event not found." };
@@ -57,7 +63,7 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
         return { error: "Participant not found for this event." };
     }
 
-    return { participant };
+    return { participant, eventSlug: event.slug };
 }
 
 /**
@@ -65,6 +71,10 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
  * @description Stamps the caller's verified platform identity (read from their httpOnly
  * cookie) onto an event Participant row, claiming an "unclaimed" vote as their own so it
  * surfaces on their profile going forward.
+ *
+ * Ownership: participant ids are public, so a signed identity alone is not enough. The
+ * caller must also hold the signed `tabletop_participant_<slug>` cookie the vote route set
+ * when this browser cast the vote, and it must name this row.
  *
  * Idempotent: re-linking a row already stamped with the caller's own identity is a no-op
  * success. Linking a row already claimed by a *different* verified identity is refused.
@@ -79,9 +89,18 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;
-        const { participant } = loaded;
+        const { participant, eventSlug } = loaded;
 
         const cookieStore = await cookies();
+        const ownedId = verifyValue(
+            participantPurpose(eventSlug),
+            cookieStore.get(participantCookieName(eventSlug))?.value
+        );
+        if (ownedId !== String(participant.id)) {
+            log.warn("Refused participant link: browser does not own the row", { slug: eventSlug, participantId });
+            return { error: "This browser did not cast this vote. Link it from the browser you voted with." };
+        }
+
         const identityId = readIdentityCookie(cookieStore, platform);
 
         // Guard: UI shouldn't offer linking a platform the user hasn't synced, but a
@@ -111,9 +130,9 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
                 return { error: "This participant is already linked to a different Discord account." };
             }
 
-            // Best-effort display name; not required to link (only client-readable, never
-            // used for identity checks).
-            const discordUsername = cookieStore.get('tabletop_user_discord_name')?.value;
+            // Best-effort display name from a client-writable cookie: only beside the verified
+            // id, and never replacing a username the row already has.
+            const discordUsername = participant.discordUsername ? null : readDiscordDisplayName(cookieStore);
 
             await prisma.participant.update({
                 where: { id: participantId },
