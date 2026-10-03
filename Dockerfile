@@ -102,7 +102,7 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 # We explicitly copy the Prisma CLI and engines from the 'builder' stage.
 # This allows 'start.sh' to run 'npx prisma db push' against the SQLite file on
 # startup (self-host has no migration history; 'db push' is the contract).
-# Non-SQLite URLs fall back to 'prisma migrate deploy' in start.sh.
+# Self-hosting is SQLite only; start.sh refuses any other DATABASE_URL.
 #
 # TRADEOFF:
 # Increases image size slightly, but removes the need for an external 'initContainer'.

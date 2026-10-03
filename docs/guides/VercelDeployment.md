@@ -44,9 +44,9 @@ project settings, so a value there is ignored -- but leaving one set invites som
 to edit it and wonder why nothing changes.
 
 The hosted schema lives at `prisma/hosted/schema.prisma` with its own Postgres
-migration history in `prisma/hosted/migrations/`. The SQLite schema and
-`prisma/migrations/` at the top level belong to the self-hosted Docker build and are
-not used here. See [HostedMaintenance.md](./HostedMaintenance.md) for the day-to-day
+migration history in `prisma/hosted/migrations/`. The SQLite schema at
+`prisma/schema.prisma` belongs to the self-hosted Docker build, which applies it with
+`prisma db push` and keeps no migration history. It is not used here. See [HostedMaintenance.md](./HostedMaintenance.md) for the day-to-day
 workflow.
 
 ## 4. Discord Configuration

@@ -28,6 +28,9 @@ export const prisma = {
     },
     timeSlot: {
         deleteMany: vi.fn(),
+        findMany: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
     },
     webhookEvent: {
         create: vi.fn(),
@@ -37,7 +40,18 @@ export const prisma = {
         findFirst: vi.fn(),
         deleteMany: vi.fn(),
     },
-    $transaction: vi.fn((callback) => callback(prisma)),
+    finalizedSession: {
+        findMany: vi.fn(),
+        createMany: vi.fn(),
+        deleteMany: vi.fn(),
+        count: vi.fn(),
+    },
+    donation: {
+        findMany: vi.fn(),
+        upsert: vi.fn(),
+    },
+    // Supports both forms: interactive (callback) and batch (array of pending queries).
+    $transaction: vi.fn((arg) => (Array.isArray(arg) ? Promise.all(arg) : arg(prisma))),
 };
 
 export default prisma;

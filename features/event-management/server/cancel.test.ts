@@ -26,7 +26,12 @@ import { sendTelegramMessage } from '@/features/telegram/lib/telegram-client';
 import { sendDiscordMessage, editDiscordMessage, unpinDiscordMessage } from '@/features/discord/model/discord';
 
 const mockPrisma = prisma as unknown as {
-    event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+    event: {
+        findUnique: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+        updateMany: ReturnType<typeof vi.fn>;
+        delete: ReturnType<typeof vi.fn>;
+    };
     $transaction: ReturnType<typeof vi.fn>;
 };
 
@@ -49,6 +54,8 @@ describe('cancel / delete notify both platforms independently', () => {
         vi.stubEnv('DISCORD_BOT_TOKEN', 'dc-token');
         (verifyEventAdmin as any).mockResolvedValue(true);
         mockPrisma.event.findUnique.mockResolvedValue(event);
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+        mockPrisma.event.delete.mockResolvedValue(event);
         mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(prisma));
         (sendDiscordMessage as any).mockResolvedValue({ id: 'x' });
     });
@@ -77,5 +84,37 @@ describe('cancel / delete notify both platforms independently', () => {
         expect(result).toEqual({ success: true });
         expect(unpinDiscordMessage).toHaveBeenCalledWith('dc1', 'dm1', 'dc-token');
         expect(sendDiscordMessage).toHaveBeenCalledWith('dc1', expect.stringContaining('Event Deleted'), 'dc-token');
+    });
+
+    it('cancelEvent is idempotent: a second call changes nothing and announces nothing', async () => {
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 0 });
+        const result = await cancelEvent('s');
+        expect(result).toEqual({ success: true });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 1, status: { not: 'CANCELLED' } },
+            data: { status: 'CANCELLED' },
+        });
+        expect(editMessageText).not.toHaveBeenCalled();
+        expect(editDiscordMessage).not.toHaveBeenCalled();
+        expect(sendDiscordMessage).not.toHaveBeenCalled();
+        expect(sendTelegramMessage).not.toHaveBeenCalled();
+    });
+
+    it('deleteEvent deletes with one event.delete and announces only after it', async () => {
+        const result = await deleteEvent('s');
+        expect(result).toEqual({ success: true });
+        expect(mockPrisma.event.delete).toHaveBeenCalledTimes(1);
+        expect(mockPrisma.event.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+        const deletedAt = mockPrisma.event.delete.mock.invocationCallOrder[0];
+        const announcedAt = (sendDiscordMessage as any).mock.invocationCallOrder[0];
+        expect(announcedAt).toBeGreaterThan(deletedAt);
+    });
+
+    it('deleteEvent announces nothing when the delete fails', async () => {
+        mockPrisma.event.delete.mockRejectedValue(new Error('db down'));
+        const result = await deleteEvent('s');
+        expect(result).toEqual({ error: 'Failed to delete event' });
+        expect(sendDiscordMessage).not.toHaveBeenCalled();
+        expect(sendTelegramMessage).not.toHaveBeenCalled();
     });
 });

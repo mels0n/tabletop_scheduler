@@ -7,7 +7,7 @@ set -e
 # Responsibilities:
 # 1. Environment Setup: Ensures DATABASE_URL is set (defaults to SQLite file).
 # 2. Secrets: Generates and persists SESSION_SECRET and CRON_SECRET when not provided.
-# 3. Database Migrations: Runs Prisma migrations on startup.
+# 3. Database Schema: Applies prisma/schema.prisma with `prisma db push` (SQLite only).
 # 4. Cron Simulation: Starts background loops (authorized with CRON_SECRET, logging to stdout) for:
 #    - Daily Cleanup (removes old data).
 #    - Reminder Checks (runs every 10 minutes to notify users).
@@ -55,14 +55,29 @@ ensure_secret() {
 ensure_secret SESSION_SECRET /app/data/.session-secret
 ensure_secret CRON_SECRET /app/data/.cron-secret
 
-# Action: Migrations
-echo "⚙️ Running database migrations..."
-if printf '%s\n' "$DATABASE_URL" | grep -qE '^(file:|sqlite:)'; then
-    echo "⚙️ SQLite detected; applying schema with prisma db push..."
-    npx prisma db push --schema=./prisma/schema.prisma
-else
-    echo "⚙️ Non-SQLite database detected; running prisma migrate deploy..."
-    npx prisma migrate deploy
+# Action: Schema sync
+# Self-hosting is SQLite only, and `prisma db push` is the contract: every start brings the
+# database file in line with prisma/schema.prisma. There is no migration history to replay.
+case "$DATABASE_URL" in
+    file:*) ;;
+    *)
+        echo "❌ DATABASE_URL must be a SQLite file URL (file:...). Self-hosting supports SQLite only."
+        exit 1
+        ;;
+esac
+
+echo "⚙️ Applying database schema with prisma db push..."
+PUSH_FLAGS="--schema=./prisma/schema.prisma --skip-generate"
+case "$PRISMA_ACCEPT_DATA_LOSS" in
+    1|true)
+        echo "⚠️ PRISMA_ACCEPT_DATA_LOSS is set: schema changes that drop data will be applied."
+        PUSH_FLAGS="$PUSH_FLAGS --accept-data-loss"
+        ;;
+esac
+# shellcheck disable=SC2086 # PUSH_FLAGS is a list of flags, split on purpose.
+if ! npx prisma db push $PUSH_FLAGS; then
+    echo "❌ Database schema update failed. If the output above warns about data loss, back up /app/data, then restart with PRISMA_ACCEPT_DATA_LOSS=1 to apply the change."
+    exit 1
 fi
 
 # Action: Cron Loop (Cleanup)

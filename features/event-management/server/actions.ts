@@ -122,6 +122,16 @@ export async function deleteEvent(slug: string) {
         log.warn("Failed to unpin Discord dashboard on delete", { slug, error: String(e) });
     }
 
+    // One delete: the schema cascades to slots, participants, votes, finalized sessions
+    // and queued webhooks. Announce only after it has committed.
+    try {
+        await prisma.event.delete({ where: { id: event.id } });
+        log.info("Event deleted successfully", { slug });
+    } catch (e) {
+        log.error("Failed to delete event", e as Error);
+        return { error: "Failed to delete event" };
+    }
+
     const { broadcastToEvent } = await import("@/features/notifications");
     await broadcastToEvent(
         event,
@@ -132,20 +142,7 @@ export async function deleteEvent(slug: string) {
         { slug, kind: "event-deleted" }
     );
 
-    try {
-        await prisma.$transaction(async (tx) => {
-            await tx.vote.deleteMany({ where: { timeSlot: { eventId: event.id } } });
-            await tx.timeSlot.deleteMany({ where: { eventId: event.id } });
-            await tx.participant.deleteMany({ where: { eventId: event.id } });
-            await tx.event.delete({ where: { id: event.id } });
-        });
-
-        log.info("Event deleted successfully", { slug });
-        return { success: true };
-    } catch (e) {
-        log.error("Failed to delete event", e as Error);
-        return { error: "Failed to delete event" };
-    }
+    return { success: true };
 }
 
 /**
@@ -165,10 +162,15 @@ export async function cancelEvent(slug: string) {
     log.warn("Cancelling event", { slug, title: event.title });
 
     try {
-        await prisma.event.update({
-            where: { id: event.id },
+        // Idempotent: only the call that flips the status edits dashboards or announces.
+        const { count } = await prisma.event.updateMany({
+            where: { id: event.id, status: { not: 'CANCELLED' } },
             data: { status: 'CANCELLED' }
         });
+        if (count !== 1) {
+            log.info("Event already cancelled", { slug });
+            return { success: true };
+        }
 
         const { getBaseUrl } = await import("@/shared/lib/url");
         const baseUrl = getBaseUrl();
