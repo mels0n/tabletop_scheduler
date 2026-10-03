@@ -74,6 +74,7 @@ All configuration is through environment variables, validated once at boot. A mi
 | `DISCORD_CLIENT_SECRET` | No | Discord OAuth client secret. | |
 | `KOFI_VERIFICATION_TOKEN` | No | Verification token for the Ko-fi donation webhook. | |
 | `LOG_LEVEL` | No | `debug`, `info`, `warn`, or `error`. | `info` |
+| `VOTE_ANNOUNCE_COOLDOWN_MINUTES` | No | Minutes between "updated their availability" group posts for the same person (0 to 1440; `0` posts every vote). The pinned dashboard updates on every vote. | `60` |
 | `CLEANUP_RETENTION_DAYS_FINALIZED` | No | Days to keep a finalized event after its chosen slot (or a campaign's last session) ends. | `1` |
 | `CLEANUP_RETENTION_DAYS_DRAFT` | No | Days to keep a draft after its last proposed time ends. | `1` |
 | `CLEANUP_RETENTION_DAYS_CANCELLED` | No | Days to keep a cancelled event after cancellation. | `1` |

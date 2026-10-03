@@ -57,6 +57,6 @@ The code is what proves you manage the event. It is tied to that one event, so p
 
 ## 5. What the Bot Sends
 
-**In a connected group:** the live dashboard, a short "updated their availability" post each time someone votes (it names the voter), slot changes, location updates, the finalize announcement, cancel and delete announcements, and voting or session reminders (only the reminder types the organizer turned on).
+**In a connected group:** the live dashboard, a short "updated their availability" post when someone votes (it names the voter), slot changes, location updates, the finalize announcement, cancel and delete announcements, and voting or session reminders (only the reminder types the organizer turned on). Availability updates are announced at most once per hour per person; the pinned dashboard always shows the latest votes. Self-hosters can change the window with `VOTE_ANNOUNCE_COOLDOWN_MINUTES`.
 
 **By direct message** (only to people who have started a chat with the bot): magic login links you request, waitlist promotion and removal notices, finalize results for events you joined, and quorum alerts to the organizer.
