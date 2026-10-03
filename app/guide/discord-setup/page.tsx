@@ -61,7 +61,7 @@ export default function DiscordSetupGuide() {
                         <ul className="list-disc space-y-2 pl-4">
                             <li>Click <strong>Reset Token</strong> to generate your <code>DISCORD_BOT_TOKEN</code>. Copy it immediately.</li>
                             <li>Scroll down to &quot;Privileged Gateway Intents&quot;.</li>
-                            <li><strong>Enable &quot;Message Content Intent&quot;</strong>. This is critical—the bot cannot function properly without it.</li>
+                            <li><strong>Enable &quot;Message Content Intent&quot;</strong>. This is critical: the bot cannot function properly without it.</li>
                             <li>Ensure &quot;Public Bot&quot; is checked so you can easily invite it to servers.</li>
                         </ul>
                     </div>

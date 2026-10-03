@@ -20,8 +20,8 @@ const schema = [
         alternateName: 'Tabletop Scheduler',
         featureList: [
             'No sign-up required for organizers or participants',
-            'No ads — ever',
-            'Quorum logic — minimum player threshold before a date is viable',
+            'No ads, ever',
+            'Quorum logic: minimum player threshold before a date is viable',
             'Waitlists with automatic promotion when spots open',
             'Discord and Telegram bot integration',
             'Campaign mode for multi-session scheduling',
@@ -39,7 +39,7 @@ const schema = [
             answer: 'Yes. Tabletop Time is completely free with no ads, no subscriptions, and no account required for organizers or participants. It is open source and can be self-hosted.',
         },
         {
-            question: 'Both Rallly and Tabletop Time are open source — what\'s the difference?',
+            question: 'Both Rallly and Tabletop Time are open source, so what\'s the difference?',
             answer: 'Both are open source and self-hostable. The difference is audience and feature set. Rallly is a general-purpose date polling tool. Tabletop Time is built specifically for gaming groups: quorum logic, Discord and Telegram bots, campaign mode, and waitlists are gaming-first features Rallly does not have.',
         },
         {
@@ -105,10 +105,10 @@ export default function VsRalllyPage() {
                         What Rallly Gets Right
                     </div>
                     <p className="text-slate-300 leading-relaxed">
-                        Rallly is genuinely good at what it does. The interface is clean, the date poll UI is intuitive, and participants can vote with a Yes, If Needed, or No without creating an account. It&apos;s open source, actively maintained, and can be self-hosted — all of which puts it in a different class from Doodle or LettuceMeet.
+                        Rallly is genuinely good at what it does. The interface is clean, the date poll UI is intuitive, and participants can vote with a Yes, If Needed, or No without creating an account. It&apos;s open source, actively maintained, and can be self-hosted, all of which puts it in a different class from Doodle or LettuceMeet.
                     </p>
                     <p className="text-slate-300 leading-relaxed">
-                        Rallly also supports time-of-day slots, not just dates — useful when you need to find a specific hour window rather than just picking a night. If you&apos;re scheduling a one-shot or a meeting where start time matters as much as the day, that granularity is valuable.
+                        Rallly also supports time-of-day slots, not just dates, which is useful when you need to find a specific hour window rather than just picking a night. If you&apos;re scheduling a one-shot or a meeting where start time matters as much as the day, that granularity is valuable.
                     </p>
                 </section>
 
@@ -122,7 +122,7 @@ export default function VsRalllyPage() {
                         />
                         <Problem
                             title="No waitlists or seat limits"
-                            body="For games with a hard table limit — a 4-person Commander pod, a 5-player campaign, a 8-person draft night — Rallly has no way to set a maximum or manage overflow. Waitlists and automatic seat promotion don't exist."
+                            body="For games with a hard table limit (a 4-person Commander pod, a 5-player campaign, a 8-person draft night), Rallly has no way to set a maximum or manage overflow. Waitlists and automatic seat promotion don't exist."
                         />
                         <Problem
                             title="No Discord or Telegram integration"
@@ -134,11 +134,11 @@ export default function VsRalllyPage() {
                         />
                         <Problem
                             title="Hosted version encourages account creation"
-                            body="Rallly.co's hosted version nudges organizers toward creating an account for features like event history and notifications. Tabletop Time requires no account ever — your manager access lives in your browser as a local token."
+                            body="Rallly.co's hosted version nudges organizers toward creating an account for features like event history and notifications. Tabletop Time requires no account ever. Your manager access lives in your browser as a local token."
                         />
                         <Problem
                             title="General-purpose, not gaming-specific"
-                            body="Rallly is designed for any scheduling use case. There are no gaming-specific concepts baked in — no quorum, no session terminology, no Discord integration, no campaign mode. It's a hammer; Tabletop Time is the tool shaped for this specific nail."
+                            body="Rallly is designed for any scheduling use case. There are no gaming-specific concepts baked in: no quorum, no session terminology, no Discord integration, no campaign mode. It's a hammer; Tabletop Time is the tool shaped for this specific nail."
                         />
                     </div>
                 </section>
@@ -190,10 +190,10 @@ export default function VsRalllyPage() {
                 <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-white">The Feature That Changes How You Schedule</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        Quorum logic is what separates a general scheduling tool from one built for game night. Rallly can tell you everyone&apos;s availability. It can&apos;t tell you whether a date is actually viable — that requires knowing your minimum headcount.
+                        Quorum logic is what separates a general scheduling tool from one built for game night. Rallly can tell you everyone&apos;s availability. It can&apos;t tell you whether a date is actually viable. That requires knowing your minimum headcount.
                     </p>
                     <p className="text-slate-400 leading-relaxed">
-                        Set a minimum player count in Tabletop Time — 3 for a campaign session, 4 for Commander, 8 for a draft night. Dates that hit the threshold are highlighted in green. Dates that fall short are shown in amber. You see the viable windows immediately, without counting names in a column.
+                        Set a minimum player count in Tabletop Time: 3 for a campaign session, 4 for Commander, 8 for a draft night. Dates that hit the threshold are highlighted in green. Dates that fall short are shown in amber. You see the viable windows immediately, without counting names in a column.
                     </p>
                     <p className="text-slate-400 leading-relaxed">
                         Rallly is a great tool. But it was built for scheduling meetings, not for running campaigns. Tabletop Time treats &ldquo;do we have enough players?&rdquo; as a scheduling question, not an afterthought.
@@ -204,10 +204,10 @@ export default function VsRalllyPage() {
                 <section className="space-y-4">
                     <h2 className="text-2xl font-bold text-white">When to Still Use Rallly</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        Rallly&apos;s time-of-day slot support is a genuine advantage for specific use cases. If you need to find the right hour — not just the right day — Rallly&apos;s granularity is useful. Tabletop Time uses date-level candidate slots; it&apos;s designed for &ldquo;which night this week&rdquo; questions, not &ldquo;which two-hour window on Saturday.&rdquo;
+                        Rallly&apos;s time-of-day slot support is a genuine advantage for specific use cases. If you need to find the right hour (not just the right day), Rallly&apos;s granularity is useful. Tabletop Time uses date-level candidate slots; it&apos;s designed for &ldquo;which night this week&rdquo; questions, not &ldquo;which two-hour window on Saturday.&rdquo;
                     </p>
                     <p className="text-slate-400 leading-relaxed">
-                        Rallly is also a reasonable choice for non-gaming scheduling where you want a clean, open-source Doodle alternative with no gaming-specific terminology. Both tools are open source — if you want to self-host a general-purpose date poller, Rallly&apos;s codebase is actively developed and well-documented.
+                        Rallly is also a reasonable choice for non-gaming scheduling where you want a clean, open-source Doodle alternative with no gaming-specific terminology. Both tools are open source, so if you want to self-host a general-purpose date poller, Rallly&apos;s codebase is actively developed and well-documented.
                     </p>
                 </section>
 
@@ -238,9 +238,9 @@ export default function VsRalllyPage() {
                     <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
                     <div className="space-y-4">
                         <Faq q="If both are open source, why choose one over the other?" a="Both are open source and self-hostable, which is a meaningful similarity. The difference is what's built into them. Tabletop Time ships with Discord and Telegram bots, quorum logic, waitlists, and campaign mode. Rallly ships with a clean general-purpose date poller. Pick the one whose feature set matches your group's actual workflow." />
-                        <Faq q="Does Tabletop Time support time-of-day slots like Rallly?" a="Not currently — Tabletop Time uses date-level slots, not hour-level grids. If you need to find a specific start time within a day, Rallly's time slot support is a real advantage. Tabletop Time is designed for 'which night this week or month' decisions." />
+                        <Faq q="Does Tabletop Time support time-of-day slots like Rallly?" a="Not currently. Tabletop Time uses date-level slots, not hour-level grids. If you need to find a specific start time within a day, Rallly's time slot support is a real advantage. Tabletop Time is designed for 'which night this week or month' decisions." />
                         <Faq q="Can I use Tabletop Time without Discord?" a="Yes. The Discord and Telegram bots are optional. The voting link works in any group chat, text, or email. Players click, vote, done. The bots are an enhancement, not a requirement." />
-                        <Faq q="Is Tabletop Time harder to set up than Rallly?" a="For organizers, it's roughly the same effort — name your event, pick some dates, share the link. Tabletop Time has optional fields like quorum and player limit that Rallly doesn't. Skip those and the setup is just as fast." />
+                        <Faq q="Is Tabletop Time harder to set up than Rallly?" a="For organizers, it's roughly the same effort: name your event, pick some dates, share the link. Tabletop Time has optional fields like quorum and player limit that Rallly doesn't. Skip those and the setup is just as fast." />
                     </div>
                 </section>
 

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
-    title: "Pricing — Free Forever",
+    title: "Pricing: Free Forever",
     description: "Tabletop Time is a free, open-source D&D session scheduler. No subscriptions, no paywalls, just gaming.",
     alternates: {
         canonical: '/pricing',
@@ -23,7 +23,7 @@ const jsonLd = {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD",
-        "description": "Free forever — no subscriptions, no paywalls.",
+        "description": "Free forever, with no subscriptions, no paywalls.",
         "availability": "https://schema.org/InStock"
     }
 };
