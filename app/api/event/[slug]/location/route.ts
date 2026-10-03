@@ -6,6 +6,8 @@ import Logger from "@/shared/lib/logger";
 import { refreshDiscordDashboard, refreshTelegramDashboard } from "@/app/api/event/[slug]/slot/notify";
 
 import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { ForbiddenError, toResponse } from "@/shared/errors";
+import { locationSchema } from "@/features/event-management/model/schemas";
 
 const log = Logger.get("API:Location");
 
@@ -20,7 +22,7 @@ const log = Logger.get("API:Location");
  *    post + pin when the old message is gone.
  *    - This ensures users see the new location without needing a new notification spam.
  *
- * @param {Request} req - JSON body containing `{ location: string }`.
+ * @param {Request} req - JSON body containing `{ location: string | null }` (max 200 chars). Admin only (403).
  * @param {Object} context - Route parameters.
  * @param {string} context.params.slug - The event identifier.
  * @returns {NextResponse} Success status and updated location.
@@ -28,11 +30,11 @@ const log = Logger.get("API:Location");
 export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
     const params = await props.params;
     try {
-        const { location } = await req.json();
-
         if (!(await verifyEventAdmin(params.slug))) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            throw new ForbiddenError();
         }
+
+        const { location } = locationSchema.parse(await req.json());
 
         log.info("Updating location", { slug: params.slug });
 
@@ -68,7 +70,6 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
         return NextResponse.json({ success: true, location: event.location });
     } catch (error) {
-        log.error("Location update failed", error as Error);
-        return NextResponse.json({ error: "Failed to update location" }, { status: 500 });
+        return toResponse(error, log);
     }
 }

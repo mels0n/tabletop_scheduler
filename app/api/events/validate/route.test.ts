@@ -41,4 +41,11 @@ describe('POST /api/events/validate', () => {
         expect(body).toEqual({ validSlugs: [], events: [] });
         expect(prisma.event.findMany).not.toHaveBeenCalled();
     });
+
+    it('rejects more than 50 slugs with 400 without querying the DB', async () => {
+        const res = await POST(makeRequest(Array.from({ length: 51 }, (_, i) => `slug${i}`)));
+
+        expect(res.status).toBe(400);
+        expect(prisma.event.findMany).not.toHaveBeenCalled();
+    });
 });

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
+import Logger from "@/shared/lib/logger";
+import { ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
+import { idParam } from "@/features/event-management/model/schemas";
+
+const log = Logger.get("API:Participant:Delete");
 
 export async function DELETE(
     req: NextRequest,
@@ -9,23 +14,13 @@ export async function DELETE(
     const params = await props.params;
     try {
         const { slug, participantId } = params;
-        const participantIdInt = parseInt(participantId, 10);
-
-        if (isNaN(participantIdInt)) {
-            return NextResponse.json(
-                { error: "Invalid participant ID." },
-                { status: 400 }
-            );
-        }
 
         // Verify the user is the admin of the event
-        const isAdmin = await verifyEventAdmin(slug);
-        if (!isAdmin) {
-            return NextResponse.json(
-                { error: "Unauthorized. Only event creators can remove participants." },
-                { status: 403 }
-            );
+        if (!(await verifyEventAdmin(slug))) {
+            throw new ForbiddenError("Only event creators can remove participants.");
         }
+
+        const participantIdInt = idParam.parse(participantId);
 
         // Verify participant exists and belongs to the event
         const participant = await prisma.participant.findFirst({
@@ -43,10 +38,7 @@ export async function DELETE(
         });
 
         if (!participant) {
-            return NextResponse.json(
-                { error: "Participant not found in this event." },
-                { status: 404 }
-            );
+            throw new NotFoundError("Participant not found in this event.");
         }
 
         // --- NOTIFICATION: Removed by Admin ---
@@ -66,11 +58,11 @@ export async function DELETE(
         await prisma.$transaction([
             // Delete associated votes first (foreign key constraint)
             prisma.vote.deleteMany({
-                where: { participantId: participantIdInt },
+                where: { participantId: participantIdInt, participant: { eventId: participant.eventId } },
             }),
             // Then delete the participant
             prisma.participant.delete({
-                where: { id: participantIdInt },
+                where: { id: participantIdInt, eventId: participant.eventId },
             }),
         ]);
 
@@ -84,10 +76,6 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Error deleting participant:", error);
-        return NextResponse.json(
-            { error: "Failed to delete participant." },
-            { status: 500 }
-        );
+        return toResponse(error, log);
     }
 }

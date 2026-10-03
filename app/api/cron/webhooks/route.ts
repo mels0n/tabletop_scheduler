@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
+import { requireCronAuth } from "@/shared/lib/cron-auth";
+import { toResponse } from "@/shared/errors";
 
 const log = Logger.get("Cron:Webhooks");
 
@@ -22,7 +24,13 @@ export const maxDuration = 60; // Allow 60s execution
  *    - Schedule next attempt + 5 minutes.
  *    - If total time > 1 hour (approx 12 attempts), Status -> FAILED.
  */
-export async function GET() {
+export async function GET(req: Request) {
+    try {
+        requireCronAuth(req);
+    } catch (e) {
+        return toResponse(e, log);
+    }
+
     try {
         const { processWebhook } = await import("@/shared/lib/webhook-sender");
         const now = new Date();

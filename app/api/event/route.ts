@@ -1,14 +1,137 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import Logger from "@/shared/lib/logger";
 import { normalizeHandle } from "@/shared/lib/handle";
+import { hashToken } from "@/shared/lib/token";
+import { getBaseUrl } from "@/shared/lib/url";
+import { readIdentity } from "@/shared/lib/session";
+import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
+import { ConflictError, toResponse } from "@/shared/errors";
+import { createEventSchema, type CreateEventInput } from "@/features/event-management/model/schemas";
 
 const log = Logger.get("API:EventCreate");
 
-// Intent: Generate a short, URL-friendly unique identifier (8 characters).
-function generateSlug() {
-    return randomBytes(4).toString("hex"); // e.g., "a1b2c3d4"
+const SLUG_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const SLUG_BYTES = 10; // 80 bits of entropy
+const SLUG_LENGTH = 14; // ceil(80 / log2(62))
+
+/**
+ * Generates an unguessable public slug: 10 random bytes (80 bits) encoded base62 to 14
+ * characters. Alphanumeric only, so it survives every slug parser (Telegram commands and
+ * pasted links match `[a-zA-Z0-9]+`), unlike base64url's `-` and `_`.
+ */
+function generateSlug(): string {
+    let n = BigInt(`0x${randomBytes(SLUG_BYTES).toString("hex")}`);
+    let out = "";
+    for (let i = 0; i < SLUG_LENGTH; i++) {
+        out = SLUG_ALPHABET[Number(n % BigInt(62))] + out;
+        n /= BigInt(62);
+    }
+    return out;
+}
+
+function isUniqueViolation(err: unknown): boolean {
+    return typeof err === "object" && err !== null
+        && (err as { name?: unknown }).name === "PrismaClientKnownRequestError"
+        && (err as { code?: unknown }).code === "P2002";
+}
+
+interface ManagerIdentity {
+    managerChatId: string | null;
+    managerTelegram: string | null;
+    managerDiscordId: string | null;
+    managerDiscordUsername: string | null;
+}
+
+/**
+ * Identity Pre-Sync: if the creator holds a verified (signed) global identity cookie, they
+ * become the manager of the new event. Unsigned or tampered cookies are ignored.
+ */
+async function resolveManagerIdentity(): Promise<ManagerIdentity> {
+    const cookieStore = await cookies();
+    const { chatId: globalChatId, discordId: globalDiscordId } = readIdentity(cookieStore);
+    const globalDiscordName = globalDiscordId ? cookieStore.get("tabletop_user_discord_name")?.value || null : null;
+
+    // Auto-hydrate their Telegram Handle if we know their Chat ID from a past event.
+    let inferredTelegramHandle: string | null = null;
+    if (globalChatId) {
+        try {
+            const pastParticipant = await prisma.participant.findFirst({
+                where: { chatId: globalChatId, telegramId: { not: null } },
+                orderBy: { createdAt: 'desc' },
+                select: { telegramId: true }
+            });
+            if (pastParticipant) {
+                // Defensive: legacy participant rows may still carry a stray '@';
+                // canonicalize before it becomes the manager handle.
+                inferredTelegramHandle = normalizeHandle(pastParticipant.telegramId);
+            }
+        } catch {
+            log.warn("Failed to infer telegram handle during event creation");
+        }
+    }
+
+    return {
+        managerChatId: globalChatId,
+        managerTelegram: inferredTelegramHandle,
+        managerDiscordId: globalDiscordId,
+        managerDiscordUsername: globalDiscordName,
+    };
+}
+
+async function createEvent(input: CreateEventInput, slug: string, hashedAdminToken: string, manager: ManagerIdentity) {
+    return prisma.$transaction(async (tx) => {
+        const newEvent = await tx.event.create({
+            data: {
+                slug,
+                title: input.title,
+                description: input.description,
+                adminToken: hashedAdminToken, // Store Hash
+                telegramLink: input.telegramLink,
+                ...manager,
+                timezone: input.timezone,
+                minPlayers: input.minPlayers,
+                maxPlayers: input.maxPlayers,
+                status: "DRAFT",
+                fromUrl: input.fromUrl,
+                fromUrlId: input.fromUrlId,
+                eventType: input.eventType,
+                minSessions: input.minSessions,
+                timeSlots: {
+                    create: input.slots.map((slot) => ({
+                        startTime: new Date(slot.startTime),
+                        endTime: new Date(slot.endTime),
+                    })),
+                },
+            },
+        });
+
+        // External callback: only ENQUEUE here. Delivery happens out of band (webhooks cron),
+        // so event creation never makes an outbound request on the caller's behalf.
+        if (input.fromUrl) {
+            await tx.webhookEvent.create({
+                data: {
+                    eventId: newEvent.id,
+                    url: input.fromUrl,
+                    status: "PENDING",
+                    nextAttempt: new Date(),
+                    payload: JSON.stringify({
+                        type: "CREATED",
+                        eventId: newEvent.id,
+                        fromUrlId: input.fromUrlId,
+                        slug: newEvent.slug,
+                        link: `${getBaseUrl()}/e/${slug}`,
+                        title: newEvent.title,
+                        timestamp: new Date().toISOString()
+                    })
+                }
+            });
+        }
+
+        return newEvent;
+    });
 }
 
 /**
@@ -16,151 +139,49 @@ function generateSlug() {
  * @description Creates a new event with initial time slots.
  *
  * Flow:
- * 1. Validates payload (title, slots, minPlayers).
- * 2. Generates a unique `slug` for public URL access.
- * 3. Creates the Event and associated TimeSlots transactionally in Postgres.
- * 4. Returns the sensitive `adminToken` (generated by Prisma default constraint or middleware) 
- *    so the frontend can set the management cookie immediately.
+ * 1. Validates the payload with `createEventSchema` (400 on any problem, including an
+ *    unknown timezone or a slot that ends before it starts).
+ * 2. When `fromUrl` is given, checks it is https and resolves only to public addresses (400 otherwise).
+ * 3. Generates an unguessable `slug` (retried once on a collision).
+ * 4. Creates the Event, its TimeSlots and any CREATED webhook row in one transaction.
+ * 5. Returns the plaintext `adminToken` once so the frontend can set the management cookie.
  *
- * @param {Request} req - JSON Payload: { title, description, minPlayers, slots: [{startTime, endTime}], telegramLink, timezone }
+ * @param {Request} req - JSON Payload: { title, description, minPlayers, maxPlayers, eventType, minSessions, slots: [{startTime, endTime}], timezone, fromUrl, fromUrlId }
  * @returns {NextResponse} JSON with { slug, id, adminToken }.
  */
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const { title, description, minPlayers, maxPlayers, slots, telegramLink } = body;
+        const input = createEventSchema.parse(await req.json());
 
-        const VALID_EVENT_TYPES = ["ONE_SHOT", "CAMPAIGN"];
-        const eventType: string = VALID_EVENT_TYPES.includes(body.eventType) ? body.eventType : "ONE_SHOT";
-        const minSessions: number | undefined = body.minSessions !== undefined ? Number(body.minSessions) : undefined;
-
-        if (eventType === "CAMPAIGN" && (minSessions === undefined || isNaN(minSessions) || minSessions < 1)) {
-            log.warn("CAMPAIGN event missing valid minSessions", { minSessions });
-            return NextResponse.json({ error: "CAMPAIGN events require minSessions to be a number greater than 0" }, { status: 400 });
+        if (input.fromUrl) {
+            await assertSafeWebhookUrl(input.fromUrl);
         }
 
-        log.debug("Request received", { title });
-
-        if (!title || !slots || !Array.isArray(slots) || slots.length === 0) {
-            log.warn("Invalid payload", { title, slotsLength: slots?.length });
-            return NextResponse.json({ error: "Invalid data" }, { status: 400 });
-        }
-
-        const slug = generateSlug();
+        log.debug("Request received", { slots: input.slots.length, eventType: input.eventType });
 
         // Security: Generate token manually so we can hash it for storage.
-        const { randomUUID } = await import("crypto");
-        const { hashToken } = await import("@/shared/lib/token");
-
         const rawAdminToken = randomUUID();
         const hashedAdminToken = hashToken(rawAdminToken);
+        const manager = await resolveManagerIdentity();
 
-        // Action: transactional creation ensures we don't have an event without slots.
-        // Extended Logic: Webhook Callback
-        const { fromUrl, fromUrlId } = body;
-
-        // Identity Pre-Sync: If user is logged in via Magic Link globally, auto-populate credentials
-        const { cookies } = await import("next/headers");
-        const { readIdentity } = await import("@/shared/lib/session");
-        const cookieStore = await cookies();
-        const { chatId: globalChatId, discordId: globalDiscordId } = readIdentity(cookieStore);
-        const globalDiscordName = (globalDiscordId && cookieStore.get("tabletop_user_discord_name")?.value) || null;
-        
-        // Auto-hydrate their Telegram Handle if we know their Chat ID from a past event.
-        let inferredTelegramHandle = null;
-        if (globalChatId) {
+        let event;
+        try {
+            event = await createEvent(input, generateSlug(), hashedAdminToken, manager);
+        } catch (err) {
+            if (!isUniqueViolation(err)) throw err;
+            log.warn("Slug collision; retrying once");
             try {
-                const pastParticipant = await prisma.participant.findFirst({
-                    where: { chatId: globalChatId, telegramId: { not: null } },
-                    orderBy: { createdAt: 'desc' },
-                    select: { telegramId: true }
-                });
-                if (pastParticipant) {
-                    // Defensive: legacy participant rows may still carry a stray '@';
-                    // canonicalize before it becomes the manager handle.
-                    inferredTelegramHandle = normalizeHandle(pastParticipant.telegramId);
-                }
-            } catch (e) {
-                log.warn("Failed to infer telegram handle during event creation", { globalChatId });
+                event = await createEvent(input, generateSlug(), hashedAdminToken, manager);
+            } catch (retryErr) {
+                if (isUniqueViolation(retryErr)) throw new ConflictError("Could not allocate an event link; please retry");
+                throw retryErr;
             }
         }
 
-        // Action: transactional creation ensures we don't have an event without slots.
-        // Prisma transaction is extended to include Webhook creation if needed.
-        const event = await prisma.$transaction(async (tx) => {
-            const newEvent = await tx.event.create({
-                data: {
-                    slug,
-                    title,
-                    description,
-                    adminToken: hashedAdminToken, // Store Hash
-                    telegramLink,
-                    managerChatId: globalChatId,
-                    managerTelegram: inferredTelegramHandle,
-                    managerDiscordId: globalDiscordId,
-                    managerDiscordUsername: globalDiscordName,
-                    timezone: body.timezone || "UTC",
-                    minPlayers: minPlayers || 3,
-                    maxPlayers: maxPlayers || null,
-                    status: "DRAFT",
-                    fromUrl: fromUrl || null,
-                    fromUrlId: fromUrlId || null,
-                    eventType,
-                    minSessions: minSessions ?? null,
-                    timeSlots: {
-                        create: slots.map((slot: any) => ({
-                            startTime: new Date(slot.startTime),
-                            endTime: new Date(slot.endTime),
-                        })),
-                    },
-                },
-            });
-
-            // If external URL provided, enqueue the webhook task immediately
-            let webhookId: string | null = null;
-            if (fromUrl) {
-                const { getBaseUrl } = await import("@/shared/lib/url");
-                const origin = getBaseUrl();
-                const votingLink = `${origin}/e/${slug}`;
-
-                const wh = await tx.webhookEvent.create({
-                    data: {
-                        eventId: newEvent.id,
-                        url: fromUrl,
-                        status: "PENDING",
-                        nextAttempt: new Date(), // Process immediately
-                        payload: JSON.stringify({
-                            type: "CREATED",
-                            eventId: newEvent.id,
-                            fromUrlId: fromUrlId || null,
-                            slug: newEvent.slug,
-                            link: votingLink,
-                            title: newEvent.title,
-                            timestamp: new Date().toISOString()
-                        })
-                    }
-                });
-                webhookId = wh.id;
-            }
-
-            return { event: newEvent, webhookId };
-        });
-
-        // Trigger Webhook (Fire & Forget or Await? Decision: Await to ensure we log it, but don't fail the request)
-        if (event.webhookId) {
-            const { processWebhook } = await import("@/shared/lib/webhook-sender");
-            // We await it so we don't return before the process runs, as Vercel serverless functions might freeze background tasks
-            await processWebhook(event.webhookId);
-        }
-
-        log.info("Event created successfully", { slug, id: event.event.id, hasWebhook: !!fromUrl });
+        log.info("Event created successfully", { slug: event.slug, id: event.id, hasWebhook: Boolean(input.fromUrl) });
         // Return Plaintext to user
-        return NextResponse.json({ slug: event.event.slug, id: event.event.id, adminToken: rawAdminToken });
+        return NextResponse.json({ slug: event.slug, id: event.id, adminToken: rawAdminToken });
     } catch (error) {
-        log.error("Failed to create event", error as Error);
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        return toResponse(error, log);
     }
 }

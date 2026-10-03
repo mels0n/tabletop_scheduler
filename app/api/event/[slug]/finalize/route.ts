@@ -3,8 +3,30 @@ import prisma from "@/shared/lib/prisma";
 import { redirect } from "next/navigation";
 import Logger from "@/shared/lib/logger";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { ConflictError, ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
+import { campaignFinalizeSchema, oneShotFinalizeSchema } from "@/features/event-management/model/schemas";
 
 const log = Logger.get("API:Finalize");
+
+const NOT_OPEN = "Event is not open for finalizing";
+
+/** The one-shot modal posts FormData; campaign clients post JSON. Both become a plain object. */
+async function readBody(req: Request): Promise<unknown> {
+    const contentType = req.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) return req.json();
+    const form = await req.formData();
+    return Object.fromEntries(form.entries());
+}
+
+/**
+ * Throws `NotFoundError` unless `houseId` (when given) is a participant of this event.
+ * `finalizedHostId` has a foreign key but no event scope, so the check lives here.
+ */
+async function assertHostInEvent(houseId: number | null, eventId: number): Promise<void> {
+    if (houseId === null) return;
+    const host = await prisma.participant.findFirst({ where: { id: houseId, eventId }, select: { id: true } });
+    if (!host) throw new NotFoundError("Host not found");
+}
 
 /**
  * @function POST
@@ -12,55 +34,58 @@ const log = Logger.get("API:Finalize");
  *
  * ONE_SHOT: Accepts FormData with slotId/houseId/location. Redirects on success.
  * CAMPAIGN: Accepts JSON with slotIds[]/houseId/location. Returns JSON on success.
+ *
+ * Every slot, host and participant is resolved within this event (404 otherwise), and the
+ * status flip is conditional on the event still being DRAFT (409 otherwise), so a request
+ * can neither touch another event nor re-finalize (and re-notify) this one.
  */
 export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
-    const params = await props.params;
+    const { slug } = await props.params;
     try {
-        log.info("Request received", { slug: params.slug });
+        log.info("Request received", { slug });
 
-        if (!(await verifyEventAdmin(params.slug))) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!(await verifyEventAdmin(slug))) {
+            throw new ForbiddenError();
         }
 
         const currentEvent = await prisma.event.findUnique({
-            where: { slug: params.slug },
-            select: { id: true, maxPlayers: true, minPlayers: true, title: true, eventType: true, minSessions: true, timezone: true }
+            where: { slug },
+            select: { id: true, status: true, maxPlayers: true, minPlayers: true, title: true, eventType: true, minSessions: true, timezone: true }
         });
 
         if (!currentEvent) {
-            return NextResponse.json({ error: "Event not found" }, { status: 404 });
+            throw new NotFoundError("Event not found");
         }
 
         if (currentEvent.eventType === 'CAMPAIGN') {
-            return await handleCampaignFinalize(req, params.slug, currentEvent);
+            return await handleCampaignFinalize(req, slug, currentEvent);
         }
 
-        // ─── ONE-SHOT PATH (original logic, unchanged) ────────────────────────────
+        // ─── ONE-SHOT PATH ────────────────────────────────────────────────────────
 
-        const formData = await req.formData();
-        const slotId = formData.get("slotId");
-        const hostId = formData.get("houseId");
-        const location = formData.get("location");
+        const input = oneShotFinalizeSchema.parse(await readBody(req));
 
-        if (!slotId) {
-            log.warn("Missing Slot ID", { slug: params.slug });
-            return NextResponse.json({ error: "Missing Slot ID" }, { status: 400 });
+        const slot = await prisma.timeSlot.findFirst({
+            where: { id: input.slotId, eventId: currentEvent.id },
+            select: { id: true }
+        });
+        if (!slot) {
+            throw new NotFoundError("Slot not found");
         }
+        await assertHostInEvent(input.houseId, currentEvent.id);
 
-        const updateData: any = {
+        const updateData: { status: string; finalizedSlotId: number; location: string | null; finalizedHostId?: number } = {
             status: "FINALIZED",
-            finalizedSlotId: parseInt(slotId.toString()),
-            location: location ? location.toString() : null
+            finalizedSlotId: slot.id,
+            location: input.location
         };
 
-        if (hostId) {
-            updateData.finalizedHostId = parseInt(hostId.toString());
+        if (input.houseId !== null) {
+            updateData.finalizedHostId = input.houseId;
         }
 
-        const sId = parseInt(slotId.toString());
-
         const votes = await prisma.vote.findMany({
-            where: { timeSlotId: sId, preference: { in: ['YES', 'MAYBE'] } },
+            where: { timeSlotId: slot.id, preference: { in: ['YES', 'MAYBE'] }, participant: { eventId: currentEvent.id } },
             include: { participant: true }
         });
 
@@ -101,21 +126,32 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         waitlistNames = allWaitlist.map(v => v.participant.name);
 
         const transactionResult = await prisma.$transaction(async (tx) => {
-            const updatedEvent = await tx.event.update({
-                where: { slug: params.slug },
-                data: updateData,
+            // Precondition: only a DRAFT event can be finalized, exactly once.
+            const claimed = await tx.event.updateMany({
+                where: { id: currentEvent.id, status: 'DRAFT' },
+                data: updateData
+            });
+            if (claimed.count !== 1) {
+                throw new ConflictError(NOT_OPEN);
+            }
+
+            const updatedEvent = await tx.event.findUnique({
+                where: { id: currentEvent.id },
                 include: { timeSlots: true, finalizedHost: true }
             });
+            if (!updatedEvent) {
+                throw new NotFoundError("Event not found");
+            }
 
             if (acceptedIds.length > 0) {
                 await tx.participant.updateMany({
-                    where: { id: { in: acceptedIds } },
+                    where: { id: { in: acceptedIds }, eventId: currentEvent.id },
                     data: { status: 'ACCEPTED' }
                 });
             }
             if (waitlistIds.length > 0) {
                 await tx.participant.updateMany({
-                    where: { id: { in: waitlistIds } },
+                    where: { id: { in: waitlistIds }, eventId: currentEvent.id },
                     data: { status: 'WAITLIST' }
                 });
             }
@@ -167,11 +203,11 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
         const { getBaseUrl } = await import("@/shared/lib/url");
         const origin = getBaseUrl();
-        const eventLink = `${origin}/e/${params.slug}`;
+        const eventLink = `${origin}/e/${slug}`;
 
         // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
         const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-        const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
+        const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === slot.id)!;
         await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
 
         const { sendDirectMessage } = await import("@/features/notifications");
@@ -181,23 +217,22 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             ...acceptedParticipants.map(p => sendDirectMessage(
                 { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
                 { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n<a href="${eventLink}">View Details</a>` },
-                { slug: params.slug, kind: "finalize-accepted" }
+                { slug, kind: "finalize-accepted" }
             )),
             ...waitlistedParticipants.map(p => sendDirectMessage(
                 { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
                 { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nWe'll let you know if a spot opens up!` },
-                { slug: params.slug, kind: "finalize-waitlist" }
+                { slug, kind: "finalize-waitlist" }
             )),
         ]);
 
-        log.info("One-shot event finalized successfully", { slug: params.slug });
+        log.info("One-shot event finalized successfully", { slug });
 
     } catch (error) {
-        log.error("Finalize failed", error as Error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return toResponse(error, log);
     }
 
-    redirect(`/e/${params.slug}/manage`);
+    redirect(`/e/${slug}/manage`);
 }
 
 // ─── CAMPAIGN FINALIZATION ─────────────────────────────────────────────────────
@@ -217,32 +252,22 @@ async function handleCampaignFinalize(
     slug: string,
     currentEvent: CampaignEventMeta
 ): Promise<NextResponse> {
-    let body: { slotIds: number[]; houseId?: string; location?: string; participantIds?: number[] };
-    try {
-        body = await req.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
+    const { slotIds, houseId, location, participantIds } = campaignFinalizeSchema.parse(await req.json());
 
-    const { slotIds, houseId, location, participantIds } = body;
-
-    if (!slotIds || !Array.isArray(slotIds) || slotIds.length === 0) {
-        return NextResponse.json({ error: "slotIds must be a non-empty array" }, { status: 400 });
-    }
-
-    // Validate all submitted slots belong to this event
+    // Every submitted slot must belong to this event.
     const validSlots = await prisma.timeSlot.findMany({
-        where: { id: { in: slotIds }, event: { slug } },
+        where: { id: { in: slotIds }, eventId: currentEvent.id },
         orderBy: { startTime: 'asc' }
     });
 
     if (validSlots.length !== slotIds.length) {
-        return NextResponse.json({ error: "One or more slot IDs are invalid for this event" }, { status: 400 });
+        throw new NotFoundError("One or more slots not found");
     }
+    await assertHostInEvent(houseId, currentEvent.id);
 
     // Fetch all votes across selected slots — needed for DM notifications regardless of selection path
     const allVotes = await prisma.vote.findMany({
-        where: { timeSlotId: { in: slotIds }, preference: { in: ['YES', 'MAYBE'] } },
+        where: { timeSlotId: { in: slotIds }, preference: { in: ['YES', 'MAYBE'] }, participant: { eventId: currentEvent.id } },
         include: { participant: true }
     });
 
@@ -301,28 +326,39 @@ async function handleCampaignFinalize(
     }
 
     // ── ATOMIC DB UPDATE ─────────────────────────────────────────────────────────
-    const updateData: any = { status: "FINALIZED", location: location || null };
-    if (houseId) updateData.finalizedHostId = parseInt(houseId);
+    const updateData: { status: string; location: string | null; finalizedHostId?: number } = { status: "FINALIZED", location };
+    if (houseId !== null) updateData.finalizedHostId = houseId;
 
     const transactionResult = await prisma.$transaction(async (tx) => {
-        const updatedEvent = await tx.event.update({
-            where: { slug },
-            data: updateData,
+        // Precondition: only a DRAFT campaign can be finalized, exactly once.
+        const claimed = await tx.event.updateMany({
+            where: { id: currentEvent.id, status: 'DRAFT' },
+            data: updateData
+        });
+        if (claimed.count !== 1) {
+            throw new ConflictError(NOT_OPEN);
+        }
+
+        const updatedEvent = await tx.event.findUnique({
+            where: { id: currentEvent.id },
             include: { timeSlots: true, finalizedHost: true }
         });
+        if (!updatedEvent) {
+            throw new NotFoundError("Event not found");
+        }
 
         await tx.finalizedSession.createMany({
-            data: slotIds.map(slotId => ({ eventId: updatedEvent.id, timeSlotId: slotId }))
+            data: validSlots.map(s => ({ eventId: updatedEvent.id, timeSlotId: s.id }))
         });
 
         // Reset everyone first so stale ACCEPTED statuses from prior runs don't linger
         await tx.participant.updateMany({ where: { eventId: updatedEvent.id }, data: { status: 'PENDING' } });
 
         if (acceptedIds.length > 0) {
-            await tx.participant.updateMany({ where: { id: { in: acceptedIds } }, data: { status: 'ACCEPTED' } });
+            await tx.participant.updateMany({ where: { id: { in: acceptedIds }, eventId: updatedEvent.id }, data: { status: 'ACCEPTED' } });
         }
         if (waitlistIds.length > 0) {
-            await tx.participant.updateMany({ where: { id: { in: waitlistIds } }, data: { status: 'WAITLIST' } });
+            await tx.participant.updateMany({ where: { id: { in: waitlistIds }, eventId: updatedEvent.id }, data: { status: 'WAITLIST' } });
         }
 
         let webhookId: string | null = null;

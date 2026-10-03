@@ -20,6 +20,7 @@ export const prisma = {
         updateMany: vi.fn(),
         deleteMany: vi.fn(),
         count: vi.fn(),
+        delete: vi.fn(),
     },
     vote: {
         deleteMany: vi.fn(),
@@ -28,12 +29,18 @@ export const prisma = {
     },
     timeSlot: {
         deleteMany: vi.fn(),
+        findFirst: vi.fn(),
         findMany: vi.fn(),
+        create: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
+        delete: vi.fn(),
     },
     webhookEvent: {
         create: vi.fn(),
+        findUnique: vi.fn(),
+        findMany: vi.fn(),
+        update: vi.fn(),
     },
     loginToken: {
         create: vi.fn(),
