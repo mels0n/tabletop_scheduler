@@ -43,6 +43,6 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             slot: { id: newSlot.id, startTime: newSlot.startTime, endTime: newSlot.endTime }
         });
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 }

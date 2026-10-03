@@ -163,7 +163,7 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                 alert("Failed to join event");
             }
         } catch (e) {
-            console.error(e);
+            console.error("Failed to join event", e);
             alert("Error joining event");
         } finally {
             setIsSubmitting(false);
@@ -376,7 +376,7 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
 
                                                 if (res.ok) window.location.reload();
                                             } catch (e) {
-                                                console.error(e);
+                                                console.error("Failed to update attendance status", e);
                                                 alert("Error updating status");
                                             } finally {
                                                 setIsSubmitting(false);

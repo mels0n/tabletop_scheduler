@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from './route';
 import prisma from '@/shared/lib/prisma';
-import { deliverWebhook } from '@/features/integrations/webhooks/server/deliver';
+import { deliverWebhook, WebhookRefusedError } from '@/features/integrations/webhooks/server/deliver';
 import { resetServerConfigForTests } from '@/shared/config/server';
 import { stubConfigEnv } from '@/shared/config/test-env';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/integrations/webhooks/server/deliver', () => ({ deliverWebhook: vi.fn() }));
+vi.mock('@/features/integrations/webhooks/server/deliver', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/features/integrations/webhooks/server/deliver')>()),
+    deliverWebhook: vi.fn(),
+}));
 
 const SECRET = 'cron-secret';
 const wh = prisma.webhookEvent as unknown as Record<'findMany' | 'update' | 'updateMany', ReturnType<typeof vi.fn>>;
@@ -132,6 +135,20 @@ describe('GET /api/cron/webhooks', () => {
         expect(wh.update).toHaveBeenCalledWith({
             where: { id: 'w1' },
             data: { status: 'FAILED', attempts: 12, lockedAt: null },
+        });
+    });
+
+    it('marks a refused destination FAILED on the first attempt, without retrying', async () => {
+        wh.findMany.mockResolvedValueOnce([{ id: 'w1' }]).mockResolvedValueOnce([row()]);
+        wh.updateMany.mockResolvedValue({ count: 1 });
+        (deliverWebhook as any).mockRejectedValue(new WebhookRefusedError('Webhook URL must resolve to a public address'));
+
+        const res = await GET(req());
+
+        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 0, failed: 1 });
+        expect(wh.update).toHaveBeenCalledWith({
+            where: { id: 'w1' },
+            data: { status: 'FAILED', attempts: 1, lockedAt: null },
         });
     });
 

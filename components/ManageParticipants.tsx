@@ -38,7 +38,7 @@ export function ManageParticipants({ slug, participants }: ManageParticipantsPro
             // Clear success message after 3 seconds
             setTimeout(() => setMessage(null), 3000);
         } catch (error: any) {
-            console.error(error);
+            console.error("Failed to remove participant", error);
             setMessage({ type: "error", text: error.message || "Failed to remove participant." });
         } finally {
             setIsDeleting(null);

@@ -3,7 +3,7 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { requireCronAuth } from "@/shared/lib/cron-auth";
 import { toResponse } from "@/shared/errors";
-import { deliverWebhook } from "@/features/integrations/webhooks/server/deliver";
+import { deliverWebhook, WebhookRefusedError } from "@/features/integrations/webhooks/server/deliver";
 
 const log = Logger.get("Cron:Webhooks");
 
@@ -28,7 +28,8 @@ const LOCK_TTL_MS = 10 * 60 * 1000;
  *
  * Outcome per row (sequential, at most 50 per run):
  * - 2xx: status DELIVERED, lock released.
- * - failure: attempts + 1. At 12 attempts the row becomes FAILED; otherwise RETRY with
+ * - refused destination (not https, or resolves to a private address): FAILED at once.
+ * - other failure: attempts + 1. At 12 attempts the row becomes FAILED; otherwise RETRY with
  *   `nextAttempt = now + attempts^2 * 5 minutes` and the lock released.
  */
 export async function GET(req: Request) {
@@ -78,7 +79,7 @@ export async function GET(req: Request) {
                 summary.sent++;
             } catch (error) {
                 const attempts = row.attempts + 1;
-                if (attempts >= MAX_ATTEMPTS) {
+                if (error instanceof WebhookRefusedError || attempts >= MAX_ATTEMPTS) {
                     await prisma.webhookEvent.update({
                         where: { id: row.id },
                         data: { status: "FAILED", attempts, lockedAt: null },
@@ -103,6 +104,6 @@ export async function GET(req: Request) {
 
         return NextResponse.json(summary);
     } catch (error) {
-        return toResponse(error);
+        return toResponse(error, log.forRequest(req));
     }
 }

@@ -46,7 +46,7 @@ export function EditLocationModal({ slug, initialLocation }: EditLocationModalPr
             // Intent: Re-run Server Components to display updated location from DB.
             router.refresh();
         } catch (error) {
-            console.error(error);
+            console.error("Failed to update location", error);
             alert('Failed to update location');
         } finally {
             setIsSubmitting(false);

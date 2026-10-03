@@ -3,6 +3,7 @@ import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
 import { readIdentity } from "@/shared/lib/session";
 import { getBotUsername } from "@/features/telegram";
+import Logger from "@/shared/lib/logger";
 import { ProfileDashboard } from "./ProfileDashboard";
 
 export const dynamic = "force-dynamic";
@@ -239,7 +240,7 @@ export default async function ProfilePage() {
         // Sort by recency
         serverEvents = Array.from(eventMap.values()).sort((a, b) => new Date(b.lastVisited).getTime() - new Date(a.lastVisited).getTime());
     } catch (e) {
-        console.error("Failed to fetch server events", e);
+        Logger.get("Page:Profile").error("Failed to fetch server events", e as Error);
     }
 
     // Resolve the bot username server-side so the "Connect Telegram" pill can deep-link

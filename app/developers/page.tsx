@@ -29,7 +29,7 @@ export default function DevelopersPage() {
                 </h2>
                 <p className="text-slate-300 mb-4">
                     Our API and integration points are free to use for <strong>non-commercial community projects</strong>.
-                    Commercial use — including integrations embedded in paid products, SaaS platforms, or services that generate revenue — is not permitted without prior written agreement.
+                    Commercial use is not permitted without prior written agreement. That includes integrations embedded in paid products, SaaS platforms, or services that generate revenue.
                     We also require that any public-facing integration provides clear credit.
                 </p>
                 <div className="bg-slate-900/50 p-4 rounded-lg border border-indigo-500/20">

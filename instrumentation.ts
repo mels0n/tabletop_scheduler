@@ -16,6 +16,8 @@ export async function register() {
         // caught by the non-fatal handler below.
         const { getServerConfig } = await import("@/shared/config/server");
         const config = getServerConfig();
+        const { default: Logger } = await import("@/shared/lib/logger");
+        const log = Logger.get("Instrumentation");
 
         try {
             const { token, mode } = config.telegram;
@@ -27,23 +29,23 @@ export async function register() {
                 // One getWebhookInfo read per cold start; setWebhook only when it differs.
                 const { syncWebhook } = await import("@/features/telegram");
                 const ok = await syncWebhook(config.baseUrl, token).catch((e) => {
-                    console.error("Telegram webhook setup error:", e);
+                    log.error("Telegram webhook setup error", e as Error);
                     return false;
                 });
-                if (!ok) console.error("Failed to configure the Telegram webhook.");
+                if (!ok) log.error("Failed to configure the Telegram webhook");
             } else if (token && mode === "webhook") {
-                console.error("TELEGRAM_MODE=webhook needs NEXT_PUBLIC_BASE_URL; Telegram is not configured.");
+                log.error("TELEGRAM_MODE=webhook needs NEXT_PUBLIC_BASE_URL; Telegram is not configured");
             } else if (token && mode === "polling") {
                 const { startPolling } = await import("@/features/telegram");
                 // Not awaited: the loop runs for the life of the process.
                 startPolling().catch((err) => {
-                    console.error("Failed to start the Telegram poller:", err);
+                    log.error("Failed to start the Telegram poller", err as Error);
                 });
             }
             // mode "off": nothing to do.
         } catch (error) {
             // Telegram setup is non-fatal: the web app must still boot.
-            console.error("Instrumentation hook failed (non-fatal):", error);
+            log.error("Instrumentation hook failed (non-fatal)", error as Error);
         }
     }
 }

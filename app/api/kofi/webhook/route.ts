@@ -123,6 +123,6 @@ export async function POST(request: Request) {
     // Ko-fi expects a 200; non-200 triggers retries.
     return NextResponse.json({ status: 'ok' });
   } catch (error) {
-    return toResponse(error, log);
+    return toResponse(error, log.forRequest(request));
   }
 }

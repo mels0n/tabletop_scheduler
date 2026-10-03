@@ -182,6 +182,6 @@ export async function POST(req: Request) {
         // Return Plaintext to user
         return NextResponse.json({ slug: event.slug, id: event.id, adminToken: rawAdminToken });
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 }

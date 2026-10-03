@@ -45,6 +45,6 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
         return NextResponse.json({ success: true, location: event.location });
     } catch (error) {
-        return toResponse(error, log);
+        return toResponse(error, log.forRequest(req));
     }
 }

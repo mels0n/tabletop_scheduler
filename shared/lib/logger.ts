@@ -55,6 +55,18 @@ function safeStringify(entry: Record<string, unknown>): string {
 
 const RESERVED = new Set(['ts', 'level', 'ctx', 'msg']);
 
+/** Header that carries the correlation id between the proxy, route handlers and responses. */
+export const REQUEST_ID_HEADER = 'x-request-id';
+
+/** An incoming id is reused only when it looks like an id: short, no spaces or control characters. */
+const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+
+/** Returns the request's `x-request-id` when it is well formed, otherwise a fresh UUID. */
+export function resolveRequestId(headers: Headers | null | undefined): string {
+    const incoming = headers?.get(REQUEST_ID_HEADER);
+    return incoming && SAFE_REQUEST_ID.test(incoming) ? incoming : crypto.randomUUID();
+}
+
 /**
  * @class Logger
  * @description Centralized structured logging utility.
@@ -79,6 +91,19 @@ class Logger {
     /** Child logger that adds `requestId` to every line it writes. */
     withRequestId(id: string): Logger {
         return new Logger(this.context, { ...this.bindings, requestId: id });
+    }
+
+    /**
+     * Child logger tagged with the request's id: the `x-request-id` header set by the proxy
+     * (or by an upstream load balancer), or a freshly minted UUID when there is none.
+     */
+    static fromRequest(req: Request, context: string = 'App'): Logger {
+        return new Logger(context).withRequestId(resolveRequestId(req?.headers));
+    }
+
+    /** This logger's context, tagged with the request's id (see `Logger.fromRequest`). */
+    forRequest(req: Request): Logger {
+        return this.withRequestId(resolveRequestId(req?.headers));
     }
 
     private shouldLog(level: LogLevel): boolean {

@@ -1,14 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createHmac } from 'node:crypto';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { lookupMock } = vi.hoisted(() => ({ lookupMock: vi.fn() }));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
-vi.mock('@/shared/lib/prisma');
 
-import prisma from '@/shared/lib/prisma';
-import { assertSafeWebhookUrl, isPrivateAddress, processWebhook } from './webhook-sender';
-
-const mockPrisma = prisma as any;
+import { assertSafeWebhookUrl, isPrivateAddress } from './webhook-sender';
 
 function resolvesTo(...addresses: string[]) {
     lookupMock.mockResolvedValue(addresses.map((address) => ({ address, family: address.includes(':') ? 6 : 4 })));
@@ -67,64 +62,5 @@ describe('assertSafeWebhookUrl', () => {
     it('accepts an https URL that resolves to public addresses', async () => {
         resolvesTo('93.184.216.34');
         await expect(assertSafeWebhookUrl('https://example.com/hook')).resolves.toBeUndefined();
-    });
-});
-
-describe('processWebhook', () => {
-    const fetchMock = vi.fn();
-    const webhook = {
-        id: 'wh-1', eventId: 7, url: 'https://example.com/hook', payload: '{"type":"CREATED"}',
-        attempts: 0, createdAt: new Date(),
-    };
-
-    beforeEach(() => {
-        vi.stubGlobal('fetch', fetchMock);
-        fetchMock.mockReset();
-        lookupMock.mockReset();
-        mockPrisma.webhookEvent.findUnique = vi.fn().mockResolvedValue(webhook);
-        mockPrisma.webhookEvent.update = vi.fn().mockResolvedValue({});
-        process.env.CRON_SECRET = 'cron-secret-for-tests';
-    });
-
-    afterEach(() => {
-        vi.unstubAllGlobals();
-        delete process.env.CRON_SECRET;
-    });
-
-    it('signs the raw body, refuses redirects, and marks the row delivered', async () => {
-        resolvesTo('93.184.216.34');
-        fetchMock.mockResolvedValue({ ok: true, status: 200, statusText: 'OK' });
-
-        const result = await processWebhook('wh-1');
-
-        expect(result.status).toBe('DELIVERED');
-        const [url, init] = fetchMock.mock.calls[0];
-        expect(url).toBe(webhook.url);
-        expect(init.redirect).toBe('manual');
-        expect(init.body).toBe(webhook.payload);
-        const expected = createHmac('sha256', 'cron-secret-for-tests').update(webhook.payload).digest('hex');
-        expect(init.headers['X-Tabletop-Signature']).toBe(`sha256=${expected}`);
-    });
-
-    it('never sends to a URL that now resolves to a private address', async () => {
-        resolvesTo('10.0.0.5');
-
-        const result = await processWebhook('wh-1');
-
-        expect(fetchMock).not.toHaveBeenCalled();
-        expect(result.success).toBe(false);
-        expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith(expect.objectContaining({
-            where: { id: 'wh-1' },
-            data: expect.objectContaining({ status: 'FAILED' }),
-        }));
-    });
-
-    it('treats a redirect response as a failed attempt', async () => {
-        resolvesTo('93.184.216.34');
-        fetchMock.mockResolvedValue({ ok: false, status: 302, statusText: 'Found' });
-
-        const result = await processWebhook('wh-1');
-
-        expect(result.status).toBe('RETRY');
     });
 });

@@ -31,6 +31,6 @@ export async function GET(request: Request) {
         }
         return NextResponse.json({ success: true, message: "Webhook configured successfully" });
     } catch (e) {
-        return toResponse(e, log);
+        return toResponse(e, log.forRequest(request));
     }
 }

@@ -61,3 +61,30 @@ describe('proxy manage gate', () => {
         expect(res.headers.get('location')).toBeNull();
     });
 });
+
+describe('proxy request ids', () => {
+    it('mints an id, echoes it on the response and forwards it on the request', () => {
+        const res = proxy(req('/e/abc', {}));
+        const id = res.headers.get('x-request-id');
+        expect(id).toMatch(/^[0-9a-f-]{36}$/);
+        expect(res.headers.get('x-middleware-request-x-request-id')).toBe(id);
+    });
+
+    it('reuses a well-formed incoming id', () => {
+        const request = new NextRequest('http://localhost:3000/api/health', { headers: { 'x-request-id': 'lb-42' } });
+        const res = proxy(request);
+        expect(res.headers.get('x-request-id')).toBe('lb-42');
+    });
+
+    it('tags API routes without touching cookies', () => {
+        const res = proxy(req('/api/event/abc/vote', { tabletop_admin_abc: 'raw-token' }));
+        expect(res.headers.get('x-request-id')).toBeTruthy();
+        expect(res.headers.getSetCookie()).toEqual([]);
+    });
+
+    it('tags the manage redirect too', () => {
+        const res = proxy(req('/e/abc/manage', {}));
+        expect(res.status).toBe(307);
+        expect(res.headers.get('x-request-id')).toBeTruthy();
+    });
+});

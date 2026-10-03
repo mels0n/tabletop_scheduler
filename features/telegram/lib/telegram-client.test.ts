@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendTelegramMessage, syncWebhook, webhookUrlFor, pinChatMessage } from './telegram-client';
+import { sendTelegramMessage, sendTelegramMessageResult, editMessageTextResult, pinChatMessageResult, syncWebhook, webhookUrlFor, pinChatMessage } from './telegram-client';
 import prisma from '@/shared/lib/prisma';
 
 vi.mock('@/shared/lib/prisma');
@@ -51,6 +51,32 @@ describe('telegram-client', () => {
 
             expect(await sendTelegramMessage('-123', 'hi', 'tok')).toBeNull();
             expect(fetchMock).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('error results', () => {
+        const KICKED = { ok: false, error_code: 403, description: 'Forbidden: bot was kicked from the group chat' };
+
+        it('surfaces the Telegram description and status from send, edit and pin', async () => {
+            fetchMock.mockResolvedValue(reply(403, KICKED));
+
+            const expected = { ok: false, error: KICKED.description, status: 403 };
+            expect(await sendTelegramMessageResult('-1', 'hi', 'tok')).toEqual(expected);
+            expect(await editMessageTextResult('-1', 5, 'hi', 'tok')).toEqual(expected);
+            expect(await pinChatMessageResult('-1', 5, 'tok')).toEqual(expected);
+            expect(await sendTelegramMessage('-1', 'hi', 'tok')).toBeNull();
+        });
+
+        it('reports status 0 with the cause when no response arrives', async () => {
+            fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+
+            const result = await sendTelegramMessageResult('-1', 'hi', 'tok');
+            expect(result).toMatchObject({ ok: false, status: 0 });
+        });
+
+        it('returns the message id on success', async () => {
+            fetchMock.mockResolvedValue(reply(200, { ok: true, result: { message_id: 9 } }));
+            expect(await sendTelegramMessageResult('-1', 'hi', 'tok')).toEqual({ ok: true, value: 9 });
         });
     });
 

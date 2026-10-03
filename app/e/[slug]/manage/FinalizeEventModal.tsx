@@ -61,7 +61,7 @@ export function FinalizeEventModal({ slug, slotId, potentialHosts, prominent = f
             setIsOpen(false);
             router.refresh();
         } catch (error) {
-            console.error(error);
+            console.error("Failed to finalize event", error);
             alert('Something went wrong. Please try again.');
             setIsSubmitting(false);
         }

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     try {
         requireCronAuth(request);
     } catch (e) {
-        return toResponse(e, log);
+        return toResponse(e, log.forRequest(request));
     }
 
     log.info("triggering reminder check via API");
@@ -39,11 +39,11 @@ export async function GET(request: Request) {
         const { runReminders } = await import("@/features/notifications");
         const { ok, voting, session } = await runReminders();
         if (!ok) {
-            return toResponse(new Error("Reminder run failed"), log);
+            return toResponse(new Error("Reminder run failed"), log.forRequest(request));
         }
 
         return NextResponse.json({ success: true, voting, session });
     } catch (e) {
-        return toResponse(e, log);
+        return toResponse(e, log.forRequest(request));
     }
 }

@@ -419,6 +419,36 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
     });
 });
 
+describe('POST /api/event/[slug]/vote - user text in group messages', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        afterQueue.length = 0;
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 1 });
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+    });
+
+    it('escapes a hostile voter name and title in the availability broadcast', async () => {
+        const hostile = '<a href="https://evil">x</a>';
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'D&D <night>', telegramChatId: 'tg1', discordChannelId: 'dc1' });
+
+        await POST(mockRequest({ name: hostile, linkIdentity: false, votes: [{ slotId: 1, preference: 'YES', canHost: false }] }), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        const message = (broadcastToEvent as any).mock.calls[0][1];
+        expect(message.html).toContain('&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;');
+        expect(message.html).toContain('D&amp;D &lt;night&gt;');
+        expect(message.html).not.toContain('<a href');
+        expect(message.discord).toContain(String.raw`<a href="https://evil"\>x</a\>`);
+        expect(message.discord).not.toContain('](');
+    });
+});
+
 describe('POST /api/event/[slug]/vote - validation and ownership', () => {
     const vote = { slotId: 1, preference: 'YES', canHost: false };
     const call = (body: any, slug = '1') => POST(mockRequest(body), { params: Promise.resolve({ slug }) });
