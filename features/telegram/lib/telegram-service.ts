@@ -1,7 +1,6 @@
-import { sendTelegramMessage, deleteWebhook, pinChatMessage } from "./telegram-client";
+import { sendTelegramMessage, deleteWebhook } from "./telegram-client";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { getBaseUrl } from "@/shared/lib/url";
 import { TelegramUpdate } from "../model/types";
 
 const log = Logger.get("TelegramService");
@@ -292,7 +291,7 @@ async function handleRecoverySetup(chatId: number, user: any, slug: string, reco
     }
 
     const managerHandle = event.managerTelegram?.toLowerCase().replace('@', '');
-    let updateData: any = { managerChatId: user.id.toString() };
+    const updateData: any = { managerChatId: user.id.toString() };
     let claimMessage = "";
 
     // 1. If NO manager is set, this user CLAIMS it.
@@ -327,7 +326,6 @@ async function handleRecoverySetup(chatId: number, user: any, slug: string, reco
 async function handleGlobalLogin(chatId: number, user: any, token: string) {
     const chatStr = chatId.toString();
     const { hashToken } = await import("@/shared/lib/token");
-    const { v4: uuidv4 } = await import("uuid");
 
     // Intent: Check for existing valid token (reuse to prevent Link Preview race conditions)
     // Note: We can only reuse if we have the plaintext. But we only store the hash now.
@@ -335,7 +333,7 @@ async function handleGlobalLogin(chatId: number, user: any, token: string) {
     // However, for UX, if they spam the button, we should just invalidate the old one or make a new one.
     // Security takes precedence: We generate a new one.
 
-    const plaintextToken = uuidv4();
+    const plaintextToken = crypto.randomUUID();
     const tokenHash = hashToken(plaintextToken);
 
     const expiresAt = new Date();
@@ -368,21 +366,18 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
     const senderUsername = user?.username;
     const senderId = user?.id?.toString();
 
-    let updateData: any = { telegramChatId: chatId.toString() };
-    let capturedMsg = "";
+    const updateData: any = { telegramChatId: chatId.toString() };
 
     // 1. If no manager is set yet, assume the person connecting the bot is the manager.
     if (!event.managerTelegram && senderUsername) {
         updateData.managerTelegram = senderUsername;
         if (senderId) updateData.managerChatId = senderId;
-        capturedMsg = `\n\n👮 <b>Manager Set:</b> @${senderUsername}`;
     }
     // 2. If the sender IS the manager, update their Chat ID
     else if (event.managerTelegram && senderUsername &&
         event.managerTelegram.toLowerCase().replace('@', '') === senderUsername.toLowerCase()) {
         if (senderId) {
             updateData.managerChatId = senderId;
-            capturedMsg = `\n\n✅ <b>Manager Verified</b>`;
         }
     }
 
@@ -458,7 +453,7 @@ async function handleShortLinkRecovery(chatId: number, user: any, recoveryToken:
     }
 
     const managerHandle = event.managerTelegram?.toLowerCase().replace('@', '');
-    let updateData: any = { managerChatId: user.id.toString() };
+    const updateData: any = { managerChatId: user.id.toString() };
     let claimMessage = "";
 
     // If NO manager is set, this user CLAIMS it.
