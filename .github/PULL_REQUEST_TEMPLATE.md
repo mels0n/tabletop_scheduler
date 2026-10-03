@@ -19,7 +19,7 @@ This project runs in two modes: **Hosted** (Public, AEO/SEO Heavy) and **Self-Ho
 - [ ] My changes affect Docker, Environment Variables, or Core Logic.
 - [ ] **SAFETY CHECK:** I have ensured NO AEO/SEO metadata leaks into the self-hosted build.
 - [ ] **PRIVACY CHECK:** I have verified that `robots.txt` stays `Disallow: /` for Docker builds.
-- [ ] **TRACKING CHECK:** I confirmed Google Analytics / AdSense are disabled (NoOp) in this mode.
+- [ ] **TRACKING CHECK:** I added no third-party analytics, trackers or ad scripts (the project ships none in either mode).
 
 ## Type of change
 
