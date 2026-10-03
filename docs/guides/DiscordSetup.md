@@ -39,11 +39,15 @@ DISCORD_BOT_TOKEN=your_bot_token
 NEXT_PUBLIC_BASE_URL=https://your-domain.com
 ```
 
-All Discord variables are optional. Without them the Discord buttons are hidden and the rest of the app works normally.
+All Discord variables are optional, and the rest of the app works normally without them. Sign-in and the server-connect flow use `DISCORD_APP_ID` and `DISCORD_CLIENT_SECRET`; channel posts, the dashboard and direct messages use `DISCORD_BOT_TOKEN`. Setting the bot token makes `NEXT_PUBLIC_BASE_URL` required: the server will not start without it.
+
+Optionally set `NEXT_PUBLIC_BOT_NAME` to your bot's display name. The manage page uses it in the permission-fix steps it shows when the bot cannot post in a channel.
+
+Sign-in asks Discord for the `identify` scope only. The connect flow asks for `bot identify` with the five permissions listed below. TabletopTime never reads message content.
 
 ## 5. Using the Integration
 1. Create an Event in TabletopTime.
-2. Go to the **Manager Dashboard** (`/manage`). You must be signed in as the event's manager.
+2. Go to the **Manager Dashboard** (`/e/<slug>/manage`). You must be the event's admin (the manage link sets this up in your browser).
 3. Scroll to **Connect Discord Notifications**.
 4. Click **Connect Discord Server**.
    - This will open a window to invite the bot to your server.
@@ -62,23 +66,28 @@ All Discord variables are optional. Without them the Discord buttons are hidden 
 **In the connected channel:**
 *   **Live dashboard:** The pinned message is edited in place when people vote. If Discord says the message is gone (it was deleted), the bot posts and pins a fresh one and unpins the old one. A temporary Discord error does not trigger a repost.
 *   **Vote updates:** A short "updated their availability" post when someone votes. It names the voter. Availability updates are announced at most once per hour per person; the pinned dashboard always shows the latest votes. Self-hosters can change the window with `VOTE_ANNOUNCE_COOLDOWN_MINUTES`.
-*   **Slot changes:** A short message when the organizer adds, changes, or removes a time option.
-*   **Location updates:** A short message when the organizer sets or changes the location.
+*   **Slot changes:** A short message when a time option is added (by the organizer or suggested by a player), changed, or removed.
+*   **Location changes:** No separate message; the pinned dashboard is updated with the new location.
 *   **Finalize announcement:** The result, once the organizer finalizes.
 *   **Cancel and delete announcements:** A notice when the organizer cancels or deletes the event.
-*   **Reminders:** Voting reminders and session reminders, when the organizer enables them on the manage page. Session reminders go out 2 hours, 1 day, or 2 days before each finalized session, whichever lead time the organizer picked.
+*   **Reminders:** Voting reminders and session reminders, when the organizer enables them on the manage page. Voting reminders stop once the event reaches its minimum player count. Session reminders go out 2 hours, 1 day, or 2 days before each finalized session, whichever lead time the organizer picked.
 
-**By direct message** (only to people who linked their Discord account):
-*   A magic login link you request.
-*   Waitlist promotion and removal notices.
+**By direct message** (only to people who signed in with Discord):
+*   The manager login link, sent from the manage page or the "Lost Manager Link?" form to the event's linked Discord manager.
+*   Waitlist promotion, and a notice when the organizer removes you from an event.
 *   Finalize results for events you joined.
 *   Quorum alerts to the organizer.
 
-Bot messages never ping `@everyone` or roles.
+Anyone signed in on My Events can turn bot direct messages off; manager login links are still sent, because you asked for them.
+
+Bot messages never ping `@everyone`, roles or users, and user text is escaped so it cannot inject Discord formatting.
+
+### Manager recovery with Discord
+On the manage page, **"Recover with Discord (Magic Link)"** signs you in with Discord. Because you are already the event's admin, your Discord account is saved as the event's manager (only if no Discord manager is set yet). If you later lose the manage link, the "Lost Manager Link?" form on the event page or the manage page's "Send Magic Link (Discord DM)" button sends a 15-minute login link to that Discord account.
 
 ### Troubleshooting
 *   **"Missing Access" (Error 50001)**: This means the bot cannot see or post in the specific channel you selected.
     *   **Fix**: Go to the Channel Settings -> Permissions.
     *   Add the Bot (or its role) and explicitly grant **View Channel** and **Send Messages**.
 *   **Bot not in list**: If you don't see the bot in the channel picker, ensure you have invited it to the server using the "Connect Discord Server" button, and that you are signed in as the event's manager.
-*   **Channel list is empty after a while**: The channel picker is tied to the server you added the bot to, and the permission to browse it lasts one hour. Click "Connect Discord Server" again.
+*   **Channel list is empty after a while**: The channel picker is tied to the server you added the bot to, and the permission to browse it lasts one hour. Click "Connect Discord Server" (or "Re-invite it") again.

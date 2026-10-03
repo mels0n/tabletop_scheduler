@@ -5,19 +5,21 @@ set -e
 # Script Name: start.sh
 # Description: Entrypoint script for the Docker container.
 # Responsibilities:
-# 1. Environment Setup: Ensures DATABASE_URL is set (defaults to SQLite file).
+# 1. Environment Setup: Ensures DATABASE_URL is set (defaults to a SQLite file in
+#    /app/data) and refuses anything that is not a SQLite file URL.
 # 2. Secrets: Generates and persists SESSION_SECRET and CRON_SECRET when not provided.
 # 3. Database Schema: Applies prisma/schema.prisma with `prisma db push` (SQLite only),
 #    then runs pending data migrations (scripts/run-data-migrations.mjs).
 # 4. Cron Simulation: Starts background loops (authorized with CRON_SECRET, logging to stdout) for:
-#    - Daily Cleanup (removes old data).
+#    - Daily Cleanup (deletes events past their retention window and expired login tokens).
 #    - Reminder Checks (runs every 10 minutes to notify users).
 #    - Webhook Delivery (runs every 5 minutes to send queued outbound webhooks).
 # 5. App Execution: Starts the Next.js server.
 #
 # Reason for Internal Cron:
-# In self-hosted Docker environments, we often lack an external scheduler like Vercel Cron.
-# These `while true` loops act as a poor man's scheduler to ensure reminders are sent.
+# A self-hosted container has no external scheduler (the hosted site uses Vercel Cron and
+# Supabase pg_cron). These `while true` loops call the same authenticated cron routes so
+# cleanup, reminders and webhook retries still run.
 # ==============================================================================
 
 echo "🚀 Starting Tabletop Scheduler..."
@@ -91,7 +93,7 @@ node scripts/run-data-migrations.mjs
 
 # Action: Cron Loop (Cleanup)
 echo "⏰ Setting up internal cleanup loop..."
-# Strategy: Run once after 5 minutes to clean up any restart junk, then every 24 hours.
+# Strategy: first run 5 minutes after start, then every 24 hours.
 (
     sleep 300
     while true; do
