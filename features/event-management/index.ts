@@ -20,6 +20,8 @@ export {
     idParam,
 } from "./model/schemas";
 export type { CreateEventInput, VoteInput, SlotInput } from "./model/schemas";
+export { LEGACY_PARTICIPANT_CUTOFF, isLegacyUnlinkedParticipant } from "./model/legacy";
+export { PARTICIPANT_NOT_OWNED, voteErrorMessage } from "./model/vote-errors";
 export {
     eventPageSelect,
     getEventForPage,

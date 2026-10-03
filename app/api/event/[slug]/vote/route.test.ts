@@ -496,12 +496,13 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         expect(cookie.httpOnly).toBe(true);
     });
 
-    it("refuses to edit someone else's participant row with 403", async () => {
+    it("refuses to edit someone else's participant row with 403 participant_not_owned", async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '555', discordId: 'victim' });
 
         const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
 
         expect(res.status).toBe(403);
+        expect(await res.json()).toEqual({ error: expect.any(String), code: 'participant_not_owned' });
         expect(mockPrisma.participant.update).not.toHaveBeenCalled();
         expect(mockPrisma.vote.deleteMany).not.toHaveBeenCalled();
     });
@@ -520,6 +521,72 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '48'));
 
         expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+    });
+
+    describe('legacy grace for rows created before the participant cookie existed', () => {
+        const BEFORE = new Date('2026-10-01T12:00:00Z');
+        const AFTER = new Date('2026-10-04T00:00:01Z');
+
+        it('accepts an unlinked pre-cutoff row once and issues the participant cookie', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, createdAt: BEFORE });
+
+            const res = await call({ name: 'Old Voter', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.update).toHaveBeenCalled();
+            expect(mockPrisma.participant.create).not.toHaveBeenCalled();
+            const cookie = (res as any).cookies.get('tabletop_participant_test-event');
+            expect(cookie.value).toBe(signValue('participant:test-event', '47'));
+        });
+
+        it('refuses an unlinked row created after the cutoff', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, createdAt: AFTER });
+
+            const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it('refuses a pre-cutoff row that is linked to an identity', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '555', discordId: null, createdAt: BEFORE });
+
+            expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it('refuses the grace when this browser already holds a participant cookie for the event', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, createdAt: BEFORE });
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '48'));
+
+            expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+    });
+
+    it('never overwrites an existing discordUsername from the display-name cookie', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'd-47', discordUsername: 'RealName' });
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'd-47'));
+        cookieJar.set('tabletop_user_discord_name', 'Spoofed');
+
+        const res = await call({ name: 'Dee', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(200);
+        const data = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(data.discordId).toBe('d-47');
+        expect(data).not.toHaveProperty('discordUsername');
+    });
+
+    it('ignores the display-name cookie when the discord id does not verify', async () => {
+        cookieJar.set('tabletop_user_discord_id', 'd-47');
+        cookieJar.set('tabletop_user_discord_name', 'Spoofed');
+
+        await call({ name: 'Dee', votes: [vote] });
+
+        const data = mockPrisma.participant.create.mock.calls[0][0].data;
+        expect(data).not.toHaveProperty('discordId');
+        expect(data).not.toHaveProperty('discordUsername');
     });
 
     it('allows an edit when a verified identity matches the row', async () => {

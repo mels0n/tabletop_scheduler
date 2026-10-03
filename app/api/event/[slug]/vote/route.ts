@@ -10,15 +10,25 @@ import {
     identityCookieOptions,
     participantCookieName,
     participantPurpose,
+    readDiscordDisplayName,
     readIdentity,
     signValue,
     verifyValue,
 } from "@/shared/lib/session";
-import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
+import { AppError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
 import { idParam, voteSchema } from "@/features/event-management/model/schemas";
+import { isLegacyUnlinkedParticipant } from "@/features/event-management/model/legacy";
+import { PARTICIPANT_NOT_OWNED } from "@/features/event-management/model/vote-errors";
 import { escapeDiscordMarkdown, escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Vote");
+
+/** 403 for an edit of a participant row this browser cannot prove it owns. The client keys its message on `code`. */
+class ParticipantNotOwnedError extends AppError {
+    constructor() {
+        super("You can only change your own response. Sign in with Telegram or Discord to edit this vote.", 403, PARTICIPANT_NOT_OWNED);
+    }
+}
 
 /**
  * @function POST
@@ -29,7 +39,12 @@ const log = Logger.get("API:Vote");
  * 2. Participant Upsert (Atomic):
  *    - Updates an existing participant only when the caller owns it: the signed
  *      `tabletop_participant_<slug>` cookie names that participant, or a verified identity
- *      cookie matches the row's chatId/discordId. Anyone else gets 403.
+ *      cookie matches the row's chatId/discordId. Anyone else gets 403 with
+ *      `code: 'participant_not_owned'`.
+ *    - Rollout grace: a row with no identity, created before `LEGACY_PARTICIPANT_CUTOFF`
+ *      (when the cookie did not exist yet), is accepted when this browser holds no
+ *      participant cookie for the event; the response then issues the cookie, so later
+ *      edits from this browser go through the normal check.
  *    - Or Creates new participant and sets the signed participant cookie on the response.
  *    - Identity is linked only from verified (signed) cookies: the Telegram chatId from
  *      `tabletop_user_chat_id`, Discord from `tabletop_user_discord_id`. A typed handle never
@@ -70,7 +85,8 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         const cookieStore = await cookies();
         const identity = readIdentity(cookieStore);
         const discordId = identity.discordId;
-        const discordUsername = discordId ? cookieStore.get("tabletop_user_discord_name")?.value ?? null : null;
+        // Display name only beside a verified id; the cookie is client-writable.
+        const discordUsername = discordId ? readDiscordDisplayName(cookieStore) : null;
 
         // Canonicalize the handle at the write boundary: users may type it with or
         // without '@', so store it '@'-less and lowercased. Display code re-adds one '@'.
@@ -95,10 +111,13 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         const cookieName = participantCookieName(targetEvent.slug);
         const cookiePurpose = participantPurpose(targetEvent.slug);
         const ownedParticipantId = verifyValue(cookiePurpose, cookieStore.get(cookieName)?.value);
-        const ownsParticipant = (row: { id: number; chatId: string | null; discordId: string | null }) =>
+        const hasParticipantCookie = cookieStore.get(cookieName) !== undefined;
+        const ownsParticipant = (row: { id: number; chatId: string | null; discordId: string | null; createdAt?: Date | null }) =>
             ownedParticipantId === String(row.id)
             || (identity.chatId !== null && row.chatId === identity.chatId)
-            || (identity.discordId !== null && row.discordId === identity.discordId);
+            || (identity.discordId !== null && row.discordId === identity.discordId)
+            // Rollout grace (see LEGACY_PARTICIPANT_CUTOFF); the response issues the cookie.
+            || (!hasParticipantCookie && isLegacyUnlinkedParticipant(row));
 
         // Action: Atomic Transaction for Participant & Votes
 
@@ -120,7 +139,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                     where: { id: participantId, eventId }
                 });
                 if (existing && !ownsParticipant(existing)) {
-                    throw new ForbiddenError("You can only change your own response");
+                    throw new ParticipantNotOwnedError();
                 }
             }
 
@@ -166,7 +185,11 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         telegramId,
                         status: nextStatus,
                         // Opt-out (or no Discord session): leave discordId/discordUsername untouched.
-                        ...(shouldLinkDiscord && discordId ? { discordId, discordUsername } : {}),
+                        // The display name never replaces one the row already has.
+                        ...(shouldLinkDiscord && discordId ? { discordId } : {}),
+                        ...(shouldLinkDiscord && discordId && discordUsername && !existing.discordUsername
+                            ? { discordUsername }
+                            : {}),
                         // Only include chatId when we actually resolved one; avoid churn.
                         ...(resolvedChatId ? { chatId: resolvedChatId } : {})
                     }
@@ -191,7 +214,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         name,
                         telegramId,
                         // Opt-out (or no Discord session): don't stamp Discord identity onto a fresh row.
-                        ...(shouldLinkDiscord && discordId ? { discordId, discordUsername } : {}),
+                        ...(shouldLinkDiscord && discordId ? { discordId, ...(discordUsername ? { discordUsername } : {}) } : {}),
                         // Verified Telegram identity only (signed cookie), so cross-device profile sync finds the row.
                         chatId: shouldLinkTelegram ? identity.chatId : null,
                         status: nextStatus || 'PENDING'

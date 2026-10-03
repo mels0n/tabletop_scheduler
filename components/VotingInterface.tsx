@@ -8,6 +8,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
 import { QuickSelectionCalendar } from "./QuickSelectionCalendar";
 import type { PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
+import { voteErrorMessage } from "@/features/event-management/model/vote-errors";
 
 type Slot = PublicSlot & {
     counts: { yes: number; maybe: number; no: number };
@@ -149,7 +150,9 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 setHasVoted(true);
                 window.location.reload();
             } else {
-                alert("Failed to save votes");
+                // A 403 participant_not_owned gets its own message (sign in to edit).
+                const body = await res.json().catch(() => null);
+                alert(voteErrorMessage(body));
             }
         } catch (e) {
             console.error("Failed to submit votes", e);
