@@ -24,8 +24,8 @@ All variables are parsed and validated once, at server boot, by `shared/config/s
 
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
-| `SESSION_SECRET` | In production | `dev-session-secret` outside production | HMAC key that signs the identity cookies and Telegram connect codes, and the root of the outbound webhook signing key (`hex(HMAC-SHA256(SESSION_SECRET, "webhook-signing"))`, see [External Integrations](../guides/ExternalIntegrations.md)). Use 32 or more random bytes. Changing it signs everyone out and changes the webhook signing key. The Docker image generates one into `/app/data/.session-secret` on first start if you leave it unset. |
-| `CRON_SECRET` | On hosted | - | Bearer token required by every `/api/cron/*` route and `/api/telegram/setup`. It is not used for webhook signatures. The Docker image generates one into `/app/data/.cron-secret` if unset, and its internal scheduler uses it automatically. Without one, every cron route rejects every request. |
+| `SESSION_SECRET` | On Vercel production (`VERCEL_ENV=production`), and on any non-Vercel server with `NODE_ENV=production` | `dev-session-secret` in development; on a Vercel Preview, an ephemeral per-deployment value (one warning is logged) | HMAC key that signs the identity cookies and Telegram connect codes, and the root of the outbound webhook signing key (`hex(HMAC-SHA256(SESSION_SECRET, "webhook-signing"))`, see [External Integrations](../guides/ExternalIntegrations.md)). Use 32 or more random bytes. Changing it signs everyone out and changes the webhook signing key. The Docker image generates one into `/app/data/.session-secret` on first start if you leave it unset. |
+| `CRON_SECRET` | When `NEXT_PUBLIC_IS_HOSTED=true` or on Vercel production (`VERCEL_ENV=production`); not on Vercel Preview | - | Bearer token required by every `/api/cron/*` route and `/api/telegram/setup`. It is not used for webhook signatures. The Docker image generates one into `/app/data/.cron-secret` if unset, and its internal scheduler uses it automatically. Without one, every cron route rejects every request. |
 
 ## Telegram
 

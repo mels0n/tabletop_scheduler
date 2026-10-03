@@ -105,14 +105,43 @@ describe('getServerConfig: validation', () => {
         expect(err.code).toBe('config');
     });
 
-    it('requires CRON_SECRET on Vercel', () => {
-        const err = loadError({ VERCEL: '1', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
+    it('requires CRON_SECRET on Vercel production', () => {
+        const err = loadError({ VERCEL: '1', VERCEL_ENV: 'production', SESSION_SECRET: 's', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
         expect(err.message).toContain('CRON_SECRET');
+        expect(err.message).not.toContain('SESSION_SECRET');
     });
 
-    it('requires SESSION_SECRET in production', () => {
+    it('does not require CRON_SECRET on a Vercel Preview of a self-host fork', () => {
+        const cfg = load({ VERCEL: '1', VERCEL_ENV: 'preview', NODE_ENV: 'production', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
+        expect(cfg.cronSecret).toBeNull();
+    });
+
+    it('requires SESSION_SECRET in production off Vercel', () => {
         const err = loadError({ NODE_ENV: 'production' });
         expect(err.message).toContain('SESSION_SECRET');
+    });
+
+    it('requires SESSION_SECRET on Vercel production', () => {
+        const err = loadError({ VERCEL: '1', VERCEL_ENV: 'production', NODE_ENV: 'production', CRON_SECRET: 'c' });
+        expect(err.message).toContain('SESSION_SECRET');
+    });
+
+    it('uses an ephemeral secret with one warning on a Vercel Preview without SESSION_SECRET', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const env = { VERCEL: '1', VERCEL_ENV: 'preview', NODE_ENV: 'production', NEXT_PUBLIC_IS_HOSTED: 'true', CRON_SECRET: 'c', VERCEL_DEPLOYMENT_ID: 'dpl_1' };
+            const cfg = load(env);
+            expect(cfg.sessionSecret).not.toBe('dev-session-secret');
+            expect(cfg.sessionSecret).toBe(createHmac('sha256', 'c').update('preview-session:dpl_1').digest('hex'));
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(String(warn.mock.calls[0][0])).toContain('SESSION_SECRET');
+
+            const random = load({ VERCEL: '1', VERCEL_ENV: 'preview', NODE_ENV: 'production' });
+            expect(random.sessionSecret).toMatch(/^[0-9a-f]{64}$/);
+            expect(random.sessionSecret).not.toBe('dev-session-secret');
+        } finally {
+            warn.mockRestore();
+        }
     });
 
     it('lists every missing key in one error', () => {
@@ -122,7 +151,7 @@ describe('getServerConfig: validation', () => {
     });
 
     it('rejects a bot token without a base URL on Vercel', () => {
-        const err = loadError({ VERCEL: '1', CRON_SECRET: 'c', TELEGRAM_BOT_TOKEN: 't' });
+        const err = loadError({ VERCEL: '1', VERCEL_ENV: 'production', SESSION_SECRET: 's', CRON_SECRET: 'c', TELEGRAM_BOT_TOKEN: 't' });
         expect(err.message).toContain('NEXT_PUBLIC_BASE_URL is required when a bot token is configured');
     });
 

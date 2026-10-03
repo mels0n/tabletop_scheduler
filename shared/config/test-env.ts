@@ -7,6 +7,8 @@ import { vi } from 'vitest';
 const CONFIG_KEYS = [
     'NEXT_PUBLIC_IS_HOSTED',
     'VERCEL',
+    'VERCEL_ENV',
+    'VERCEL_DEPLOYMENT_ID',
     'NEXT_PUBLIC_BASE_URL',
     'SESSION_SECRET',
     'CRON_SECRET',
