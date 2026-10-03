@@ -11,18 +11,18 @@ const log = Logger.get("EventActions");
 const SESSION_REMINDER_LEADS = [120, 1440, 2880];
 
 /**
- * Checks the manager's connection status (Telegram linkage).
+ * Checks the manager's connection status (Telegram linkage). Public callers get only the
+ * boolean; the manager's handle is returned to the event admin alone.
  */
-export async function checkManagerStatus(slug: string) {
+export async function checkManagerStatus(slug: string): Promise<{ hasManagerChatId: boolean; handle?: string | null }> {
     const event = await prisma.event.findUnique({
         where: { slug },
         select: { managerChatId: true, managerTelegram: true }
     });
 
-    return {
-        hasManagerChatId: !!event?.managerChatId,
-        handle: event?.managerTelegram
-    };
+    const status = { hasManagerChatId: !!event?.managerChatId };
+    if (!event || !(await verifyEventAdmin(slug))) return status;
+    return { ...status, handle: event.managerTelegram };
 }
 
 /**

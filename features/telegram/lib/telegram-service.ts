@@ -2,6 +2,12 @@ import { sendTelegramMessage, deleteWebhook } from "./telegram-client";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { TelegramUpdate } from "../model/types";
+import {
+    CONNECT_CODE_INVALID,
+    CONNECT_INSTRUCTIONS,
+    parseConnectCommand,
+    verifyConnectCode,
+} from "../model/connect-code";
 
 const log = Logger.get("TelegramService");
 
@@ -123,39 +129,18 @@ async function processUpdate(update: TelegramUpdate, token: string) {
     log.debug(`Received message`, { text, chatId, userId: user?.id, username });
 
     try {
-        // 1. Explicit Command: /connect [slug]
+        // 1. Explicit Command: /connect <slug> <code>
+        // The code comes from the manage page, so only the event admin can bind a chat.
         if (text.startsWith("/connect")) {
-            const parts = text.split(" ");
-            if (parts.length < 2) {
-                await sendTelegramMessage(chatId, "Please provide the Event Slug. Usage: `/connect [slug]`", token);
-                return;
-            }
-            const slug = parts[1].trim();
-            await connectEvent(slug, chatId, user, token);
+            const { slug, code } = parseConnectCommand(text);
+            await connectEvent(slug, code, chatId, token);
         }
         // 2. Start Command (with Payloads)
         else if (text.startsWith("/start")) {
             const parts = text.split(" ");
 
-            // Payload: setup_recovery_[slug]_[token]
-            if (parts.length > 1 && parts[1].startsWith("setup_recovery_")) {
-                const payload = parts[1].replace("setup_recovery_", "");
-
-                // Format: slug_token
-                const lastUnderscoreIndex = payload.lastIndexOf('_');
-                if (lastUnderscoreIndex === -1) {
-                    await sendTelegramMessage(chatId, "⚠️ Invalid Link format.", token);
-                    return;
-                }
-
-                const slug = payload.substring(0, lastUnderscoreIndex);
-                const recoveryToken = payload.substring(lastUnderscoreIndex + 1);
-
-                await handleRecoverySetup(chatId, user, slug, recoveryToken, token);
-                return;
-            }
-            // New Short Token Recovery
-            else if (parts.length > 1 && parts[1].startsWith("rec_")) {
+            // Short Token Recovery, minted only for the event admin
+            if (parts.length > 1 && parts[1].startsWith("rec_")) {
                 const recToken = parts[1].replace("rec_", "");
                 await handleShortLinkRecovery(chatId, user, recToken, token);
                 return;
@@ -167,37 +152,21 @@ async function processUpdate(update: TelegramUpdate, token: string) {
             }
             // Standard /start (Welcome) or Generic Payload (Event Slug)
             else {
-                if (parts.length > 1 && parts[1]) {
-                    // Assume payload is a slug for connection (e.g. from ?startgroup=slug)
-                    // Basic alphanumeric check to prevent weird injections, though prisma is safe
-                    const potentialSlug = parts[1].trim();
-                    if (/^[a-zA-Z0-9]+$/.test(potentialSlug)) {
-                        await connectEvent(potentialSlug, chatId, user, token);
-                        return;
-                    }
+                // A slug payload (from ?startgroup=slug) does not bind the chat; the admin
+                // sends the connect command from the manage page.
+                if (parts.length > 1 && /^[a-zA-Z0-9]+$/.test(parts[1].trim())) {
+                    await sendTelegramMessage(chatId, CONNECT_INSTRUCTIONS, token);
+                    return;
                 }
 
                 // Intent: Silent fail/no-op for plain /start to avoid spam
                 return;
             }
         }
-        // 3. Auto-Detect Link: https://.../e/[slug]
-        else if (text.includes("/e/")) {
-            // Matches: (http://...)/e/(slug)
-            const linkMatch = text.match(/(https?:\/\/[^\s]+)\/e\/([a-zA-Z0-9]+)/);
-            if (linkMatch && linkMatch[1] && linkMatch[2]) {
-                const origin = linkMatch[1];
-                const slug = linkMatch[2];
-                log.info(`Detected Event Link: ${origin} -> ${slug}`);
-                await connectEvent(slug, chatId, user, token, origin);
-                return;
-            }
-
-            // Fallback match
-            const slugMatch = text.match(/\/e\/([a-zA-Z0-9]+)/);
-            if (slugMatch && slugMatch[1]) {
-                await connectEvent(slugMatch[1], chatId, user, token);
-            }
+        // 3. A pasted event link no longer binds anything (every invited player has the
+        // link). Point the sender at the connect command instead.
+        else if (/\/e\/[a-zA-Z0-9]+/.test(text)) {
+            await sendTelegramMessage(chatId, CONNECT_INSTRUCTIONS, token);
         }
     } catch (err) {
         log.error("Error processing update", err as Error);
@@ -265,58 +234,6 @@ async function captureParticipantIdentity(chatId: number, user: any) {
         log.error("Failed passive capture", e as Error);
     }
 }
-
-/**
- * Handles logic for verifying and linking a manager via the "Recovery" flow (Magic Link).
- */
-async function handleRecoverySetup(chatId: number, user: any, slug: string, recoveryToken: string, token: string) {
-    // Verify Security Token
-    const { verifyRecoveryToken } = await import("@/features/auth/model/token");
-    if (!verifyRecoveryToken(slug, recoveryToken)) {
-        await sendTelegramMessage(chatId, "⚠️ <b>Link Expired or Invalid</b>\n\nPlease go back to the Manage page and click the button again.", token);
-        return;
-    }
-
-    const event = await prisma.event.findUnique({ where: { slug } });
-
-    if (!event) {
-        await sendTelegramMessage(chatId, "⚠️ Event not found.", token);
-        return;
-    }
-
-    const senderUsername = user?.username?.toLowerCase();
-    if (!senderUsername) {
-        await sendTelegramMessage(chatId, "⚠️ Could not verify identity. Please ensure you have a Telegram username set.", token);
-        return;
-    }
-
-    const managerHandle = event.managerTelegram?.toLowerCase().replace('@', '');
-    const updateData: any = { managerChatId: user.id.toString() };
-    let claimMessage = "";
-
-    // 1. If NO manager is set, this user CLAIMS it.
-    if (!managerHandle) {
-        updateData.managerTelegram = senderUsername;
-        claimMessage = `\n\n👮 <b>Manager Set:</b> @${senderUsername}`;
-        log.info("Manager claimed event via recovery", { slug, manager: senderUsername });
-    }
-    // 2. If manager IS set, verify identity
-    else {
-        if (senderUsername !== managerHandle) {
-            await sendTelegramMessage(chatId, `⚠️ <b>Identity Mismatch</b>\n\nYou are @${senderUsername}, but this event is managed by @${managerHandle}.`, token);
-            return;
-        }
-    }
-
-    await prisma.event.update({
-        where: { id: event.id },
-        data: updateData
-    });
-
-    log.info("Manager recovery linked successfully", { slug, manager: senderUsername });
-    await sendTelegramMessage(chatId, `✅ <b>Recovery Setup Complete!</b>\n\nI've verified you as the manager of <b>${event.title}</b>.${claimMessage}\n\nThe event page on your device should update in a few seconds.`, token);
-}
-
 /**
  * Handles "Global Login" or "Recovery Handle" flow to send a magic link to the user.
  */
@@ -356,34 +273,25 @@ async function handleGlobalLogin(chatId: number, user: any, token: string) {
 }
 
 /**
- * Connects a group chat (or user) to an event.
+ * Binds a chat to an event for `/connect <slug> <code>`. The code is shown only on the
+ * manage page. Binding never sets or changes the event's manager identity.
  */
-async function connectEvent(slug: string, chatId: number, user: any, token: string, detectedBaseUrl?: string) {
-    const event = await prisma.event.findUnique({ where: { slug } });
-    if (!event) return;
-
-    // Auto-Capture Manager Logic
-    const senderUsername = user?.username;
-    const senderId = user?.id?.toString();
-
-    const updateData: any = { telegramChatId: chatId.toString() };
-
-    // 1. If no manager is set yet, assume the person connecting the bot is the manager.
-    if (!event.managerTelegram && senderUsername) {
-        updateData.managerTelegram = senderUsername;
-        if (senderId) updateData.managerChatId = senderId;
+async function connectEvent(slug: string | null, code: string | null, chatId: number, token: string) {
+    if (!slug || !code) {
+        await sendTelegramMessage(chatId, CONNECT_INSTRUCTIONS, token);
+        return;
     }
-    // 2. If the sender IS the manager, update their Chat ID
-    else if (event.managerTelegram && senderUsername &&
-        event.managerTelegram.toLowerCase().replace('@', '') === senderUsername.toLowerCase()) {
-        if (senderId) {
-            updateData.managerChatId = senderId;
-        }
+
+    const event = await prisma.event.findUnique({ where: { slug } });
+    if (!event || !verifyConnectCode(slug, event.adminToken, code)) {
+        log.warn("Connect refused: unknown event or invalid code", { slug });
+        await sendTelegramMessage(chatId, CONNECT_CODE_INVALID, token);
+        return;
     }
 
     await prisma.event.update({
         where: { id: event.id },
-        data: updateData
+        data: { telegramChatId: chatId.toString() }
     });
 
     // Pinned Dashboard
@@ -394,11 +302,11 @@ async function connectEvent(slug: string, chatId: number, user: any, token: stri
         });
         const participants = await prisma.participant.count({ where: { eventId: event.id } });
         const { generateStatusMessage } = await import("@/shared/lib/status");
-        const { pinChatMessage } = await import("@/features/telegram"); // Ensure this import exists likely at top
+        const { pinChatMessage } = await import("./telegram-client");
         const { getBaseUrl } = await import("@/shared/lib/url");
 
         if (fullEvent) {
-            const baseUrl = detectedBaseUrl || getBaseUrl();
+            const baseUrl = getBaseUrl();
             const statusMsg = generateStatusMessage(fullEvent, participants, baseUrl);
 
             // Send Dashboard immediately (No "Connected!" message)

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CopyLinkButton } from "./CopyLinkButton";
 import { updateTelegramInviteLink, checkEventStatus } from "@/features/event-management/server/actions";
-import { CheckCircle, Loader2, Save, Send } from "lucide-react";
+import { Check, CheckCircle, Copy, Loader2, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatHandle } from "@/shared/lib/handle";
 
@@ -87,6 +86,46 @@ export function TelegramConnect({
         }
     };
 
+    // The `/connect <slug> <code>` command is admin-only, so it is fetched on demand rather
+    // than rendered into the page for everyone.
+    const [connectCommand, setConnectCommand] = useState<string | null>(null);
+    const [connectCommandError, setConnectCommandError] = useState("");
+    const needsConnectCommand = !hasChatId && (step === 'bot_in_group' || step === 'link_saved');
+
+    useEffect(() => {
+        if (!needsConnectCommand || connectCommand) return;
+        let cancelled = false;
+        (async () => {
+            const { connectCommandForAdmin } = await import("@/features/event-management/server/recovery");
+            const res = await connectCommandForAdmin(slug);
+            if (cancelled) return;
+            if (res.success) {
+                setConnectCommand(res.command);
+                setConnectCommandError("");
+            } else {
+                setConnectCommandError(res.error || "Could not load the connect command.");
+            }
+        })().catch(() => {
+            if (!cancelled) setConnectCommandError("Could not load the connect command.");
+        });
+        return () => { cancelled = true; };
+    }, [needsConnectCommand, connectCommand, slug]);
+
+    const handleRegister = async () => {
+        setRegisterLoading(true);
+        setError("");
+        try {
+            const { startTelegramRecovery } = await import("@/features/event-management/server/recovery");
+            const res = await startTelegramRecovery(slug);
+            if (res.success) {
+                window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
+                setIsPolling(true);
+            } else {
+                setError(res.error || "Failed to generate token");
+            }
+        } catch { /* best-effort: the button re-enables so the user can retry */ } finally { setRegisterLoading(false); }
+    };
+
     const handleDM = async () => {
         if (!hasManagerChatId) return;
         setDmLoading(true);
@@ -139,17 +178,7 @@ export function TelegramConnect({
                                     Register to receive magic login links via DM if you lose browser access.
                                 </p>
                                 <button
-                                    onClick={async () => {
-                                        setRegisterLoading(true);
-                                        try {
-                                            const { generateShortRecoveryToken } = await import("@/features/event-management/server/recovery");
-                                            const res = await generateShortRecoveryToken(slug);
-                                            if (res.token) {
-                                                window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
-                                                setIsPolling(true);
-                                            }
-                                        } catch { /* best-effort: the button re-enables so the user can retry */ } finally { setRegisterLoading(false); }
-                                    }}
+                                    onClick={handleRegister}
                                     disabled={registerLoading}
                                     className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
                                 >
@@ -220,15 +249,10 @@ export function TelegramConnect({
 
                 {step === 'bot_in_group' && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                        <p className="text-xs text-slate-400">1. Copy this specific event link:</p>
-                        <div className="flex items-center gap-2">
-                            <code className="flex-1 bg-black/30 p-2 rounded text-xs font-mono text-slate-300 truncate">
-                                {typeof window !== 'undefined' ? `${window.location.host}/e/${slug}` : `/e/${slug}`}
-                            </code>
-                            <CopyLinkButton url={`/e/${slug}`} />
-                        </div>
+                        <p className="text-xs text-slate-400">1. Copy this connect command:</p>
+                        <ConnectCommand command={connectCommand} error={connectCommandError} />
                         <p className="text-xs text-slate-400">
-                            2. <b>Paste it into your Telegram group</b> to finish connecting.
+                            2. <b>Send it in your Telegram group</b> to finish connecting.
                         </p>
                         <button onClick={() => setStep('initial')} className="text-xs text-slate-500 hover:text-slate-300 underline">
                             Start Over
@@ -284,6 +308,10 @@ export function TelegramConnect({
                             <Send className="w-4 h-4" />
                             <span>Add @{botUsername} to Group</span>
                         </a>
+                        <p className="text-xs text-slate-400">
+                            Then send this command in the group to finish connecting:
+                        </p>
+                        <ConnectCommand command={connectCommand} error={connectCommandError} />
                     </div>
                 )}
             </div>
@@ -299,17 +327,7 @@ export function TelegramConnect({
                             Register to receive magic login links via DM if you lose access to this browser.
                         </p>
                         <button
-                            onClick={async () => {
-                                setRegisterLoading(true);
-                                try {
-                                    const { generateShortRecoveryToken } = await import("@/features/event-management/server/recovery");
-                                    const res = await generateShortRecoveryToken(slug);
-                                    if (res.token) {
-                                        window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
-                                        setIsPolling(true);
-                                    }
-                                } catch { /* best-effort: the button re-enables so the user can retry */ } finally { setRegisterLoading(false); }
-                            }}
+                            onClick={handleRegister}
                             disabled={registerLoading}
                             className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
                         >
@@ -336,6 +354,37 @@ export function TelegramConnect({
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function ConnectCommand({ command, error }: { command: string | null; error: string }) {
+    const [copied, setCopied] = useState(false);
+
+    if (error) return <p className="text-red-400 text-xs">{error}</p>;
+    if (!command) {
+        return (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Loading command...
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center gap-2">
+            <code className="flex-1 bg-black/30 p-2 rounded text-xs font-mono text-slate-300 truncate">{command}</code>
+            <button
+                onClick={() => {
+                    navigator.clipboard.writeText(command);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-xs font-medium text-slate-300 transition-colors border border-slate-700"
+            >
+                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied!" : "Copy"}
+            </button>
         </div>
     );
 }
