@@ -48,30 +48,35 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     useEffect(() => {
         if (discordConnected && newGuildId) {
             setStep('picking_channel');
-            fetchChannels(newGuildId);
+            fetchChannels(slug, newGuildId);
         } else if (initialGuildId && !hasChannel) {
             setStep('picking_channel');
-            fetchChannels(initialGuildId);
+            fetchChannels(slug, initialGuildId);
         }
-    }, [discordConnected, newGuildId, initialGuildId, hasChannel]);
+    }, [slug, discordConnected, newGuildId, initialGuildId, hasChannel]);
 
     useEffect(() => {
         const gId = initialGuildId || newGuildId;
         if (hasChannel && gId && !channelName) {
-            listDiscordChannels(gId).then((res) => {
+            listDiscordChannels(slug, gId).then((res) => {
                 if (res.channels) {
                     const found = res.channels.find((c: { id: string, name: string }) => c.id === savedChannelId);
                     if (found) setChannelName(found.name);
                 }
             });
         }
-    }, [hasChannel, initialGuildId, newGuildId, savedChannelId, channelName]);
+    }, [slug, hasChannel, initialGuildId, newGuildId, savedChannelId, channelName]);
 
-    async function fetchChannels(gId: string) {
+    async function fetchChannels(eventSlug: string, gId: string) {
         setLoading(true);
         setError("");
-        const res = await listDiscordChannels(gId);
-        if (res.error) {
+        const res = await listDiscordChannels(eventSlug, gId);
+        if ("code" in res && res.code === "forbidden") {
+            // The one-hour grant from adding the bot has lapsed (or this browser is not the
+            // admin): start the connect flow again rather than showing an empty picker.
+            setStep('initial');
+            setError(res.error);
+        } else if (res.error) {
             setError(res.error);
         } else if (res.channels) {
             setChannels(res.channels);
@@ -271,7 +276,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                             </div>
                         )}
                         <p className="text-[10px] text-slate-500">
-                            Bot not showing up? <a href="/api/auth/discord?flow=connect" className="text-indigo-400 hover:underline">Re-invite it</a>.
+                            Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-indigo-400 hover:underline">Re-invite it</a>.
                         </p>
                     </div>
                 )}

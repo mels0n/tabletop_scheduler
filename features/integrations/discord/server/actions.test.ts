@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sendDiscordMagicLogin } from './actions';
+import { sendDiscordMagicLogin, connectDiscordChannel, listDiscordChannels } from './actions';
 import prisma from '@/shared/lib/prisma';
-import { createDMChannel, sendDiscordMessage } from '@/features/discord/model/discord';
+import { createDMChannel, sendDiscordMessage, getGuildChannels, pinDiscordMessage } from '@/features/discord/model/discord';
+import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { cookies } from 'next/headers';
+import { signValue } from '@/shared/lib/session';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/discord/model/discord', () => ({
@@ -14,10 +17,14 @@ vi.mock('@/features/discord/model/discord', () => ({
 vi.mock('@/features/event-management/server/recovery', () => ({
     dmManagerLink: vi.fn(),
 }));
+vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
 
 const mockPrisma = prisma as unknown as {
-    participant: { findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn> },
-    event: { findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn> },
+    participant: { findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },
+    event: {
+        findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn>,
+        findUnique: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>,
+    },
     loginToken: { create: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn> },
 };
 const mockCreateDM = createDMChannel as unknown as ReturnType<typeof vi.fn>;
@@ -108,5 +115,109 @@ describe('sendDiscordMagicLogin — username matching hardening', () => {
         expect(result.error).toMatch(/wait/i);
         expect(mockCreateDM).not.toHaveBeenCalled();
         expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+    });
+});
+
+const GUILD = '111111111111111111';
+const OTHER_GUILD = '222222222222222222';
+const CHANNEL = '333333333333333333';
+const mockAdmin = verifyEventAdmin as unknown as ReturnType<typeof vi.fn>;
+const mockGuildChannels = getGuildChannels as unknown as ReturnType<typeof vi.fn>;
+const mockCookies = cookies as unknown as ReturnType<typeof vi.fn>;
+
+/** Cookie store holding the given cookies (name -> raw value). */
+function cookieJar(values: Record<string, string>) {
+    return {
+        get: (name: string) => (name in values ? { name, value: values[name] } : undefined),
+        set: vi.fn(),
+        delete: vi.fn(),
+    };
+}
+
+describe('Discord channel binding requires admin and a guild this admin just added the bot to', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        process.env.DISCORD_BOT_TOKEN = 'test-bot-token';
+        mockAdmin.mockResolvedValue(true);
+        mockCookies.mockResolvedValue(cookieJar({
+            tabletop_discord_guild_abc: signValue(GUILD),
+            tabletop_user_discord_id: '999999999999999999',
+        }));
+        mockGuildChannels.mockResolvedValue([{ id: CHANNEL, name: 'general' }]);
+        mockPrisma.event.findUnique.mockResolvedValue({ id: 1, slug: 'abc', title: 'Game Night', managerDiscordId: null, timeSlots: [] });
+        mockPrisma.event.update.mockResolvedValue({});
+        mockPrisma.participant.count.mockResolvedValue(0);
+        mockSendMessage.mockResolvedValue({ id: 'msg-1' });
+        (pinDiscordMessage as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+    });
+
+    it('connectDiscordChannel without admin -> forbidden, nothing written or sent', async () => {
+        mockAdmin.mockResolvedValue(false);
+
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+        expect(mockSendMessage).not.toHaveBeenCalled();
+    });
+
+    it('connectDiscordChannel with a guild cookie for a different guild -> forbidden', async () => {
+        expect(await connectDiscordChannel('abc', OTHER_GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+    });
+
+    it('connectDiscordChannel with an unsigned guild cookie -> forbidden', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_discord_guild_abc: GUILD }));
+
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+    });
+
+    it('connectDiscordChannel with a guild cookie issued for another event -> forbidden', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_discord_guild_other: signValue(GUILD) }));
+
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
+    });
+
+    it.each([
+        ['guild', '123/../../users/@me', CHANNEL],
+        ['channel', GUILD, 'abc'],
+    ])('connectDiscordChannel rejects a malformed %s id', async (_label, guildId, channelId) => {
+        expect(await connectDiscordChannel('abc', guildId, channelId)).toMatchObject({ code: 'validation' });
+        expect(mockSendMessage).not.toHaveBeenCalled();
+    });
+
+    it('connectDiscordChannel refuses a channel that is not in the granted guild', async () => {
+        mockGuildChannels.mockResolvedValue([{ id: '444444444444444444', name: 'other' }]);
+
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toHaveProperty('error');
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+        expect(mockSendMessage).not.toHaveBeenCalled();
+    });
+
+    it('connectDiscordChannel binds guild and channel for the admin and never sets managerDiscordId', async () => {
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toEqual({ success: true });
+
+        const first = mockPrisma.event.update.mock.calls[0][0].data;
+        expect(first).toEqual({ discordGuildId: GUILD, discordChannelId: CHANNEL });
+        for (const call of mockPrisma.event.update.mock.calls) {
+            expect(call[0].data).not.toHaveProperty('managerDiscordId');
+            expect(call[0].data).not.toHaveProperty('managerDiscordUsername');
+        }
+    });
+
+    it('listDiscordChannels without admin -> forbidden and the bot is never asked', async () => {
+        mockAdmin.mockResolvedValue(false);
+
+        expect(await listDiscordChannels('abc', GUILD)).toMatchObject({ code: 'forbidden' });
+        expect(mockGuildChannels).not.toHaveBeenCalled();
+    });
+
+    it('listDiscordChannels for a guild this admin did not add the bot to -> forbidden', async () => {
+        expect(await listDiscordChannels('abc', OTHER_GUILD)).toMatchObject({ code: 'forbidden' });
+        expect(mockGuildChannels).not.toHaveBeenCalled();
+    });
+
+    it('listDiscordChannels returns channels for the granted guild', async () => {
+        expect(await listDiscordChannels('abc', GUILD)).toEqual({ success: true, channels: [{ id: CHANNEL, name: 'general' }] });
+        expect(mockGuildChannels).toHaveBeenCalledWith(GUILD, 'test-bot-token');
     });
 });

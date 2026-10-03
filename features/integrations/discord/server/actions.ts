@@ -16,6 +16,10 @@ import {
 } from "@/features/discord/model/discord";
 import { dmManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
+import { verifyValue } from "@/shared/lib/session";
+import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
+import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { guildCookieName, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
 
 const log = Logger.get("DiscordActions");
 
@@ -56,7 +60,49 @@ export async function recoverDiscordManagerLink(slug: string, username: string) 
     return { error: "Discord username does not match our records." };
 }
 
-export async function connectDiscordChannel(slug: string, guildId: string, channelId: string) {
+type ActionFailure = { success?: undefined; error: string; code?: string };
+type ConnectChannelResult = { success: true; error?: undefined; code?: undefined } | ActionFailure;
+type ListChannelsResult =
+    | { success: true; channels: { id: string; name: string }[]; error?: undefined; code?: undefined }
+    | (ActionFailure & { channels?: undefined });
+
+/** Serialises expected errors for the client; anything else is logged and made generic. */
+function toActionError(e: unknown, fallback: string): ActionFailure {
+    if (e instanceof AppError && e.status < 500) return { error: e.message, code: e.code };
+    log.error(fallback, e as Error);
+    return { error: fallback };
+}
+
+// TODO(Task 12): replace with requireEventAdmin from features/auth/server/verify.ts.
+async function requireEventAdmin(slug: string): Promise<void> {
+    if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
+}
+
+/**
+ * The bot sits in ~100 guilds, so a guild ID from the client proves nothing. Only the guild
+ * this admin just added the bot to (recorded by the OAuth callback in a signed, one-hour,
+ * per-event cookie) may be listed or bound.
+ */
+async function requireGuildGrant(slug: string, guildId: string): Promise<void> {
+    const cookieStore = await cookies();
+    if (verifyValue(cookieStore.get(guildCookieName(slug))?.value) !== guildId) {
+        throw new ForbiddenError("Discord connection expired. Connect the server again.");
+    }
+}
+
+function requireSnowflakes(...ids: string[]): void {
+    if (!ids.every(isDiscordSnowflake)) throw new ValidationError("Invalid Discord ID");
+}
+
+export async function connectDiscordChannel(slug: string, guildId: string, channelId: string): Promise<ConnectChannelResult> {
+    try {
+        await requireEventAdmin(slug);
+        requireSnowflakes(guildId, channelId);
+        await requireGuildGrant(slug, guildId);
+    } catch (e) {
+        return toActionError(e, "Failed to connect channel.");
+    }
+
     const event = await prisma.event.findUnique({ where: { slug } });
     if (!event) return { error: "Event not found" };
 
@@ -64,27 +110,17 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
     if (!token) return { error: "Server Configuration Error: Discord Token missing" };
 
     try {
-        const cookieStore = await cookies();
-        const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
-        const discordUsername = cookieStore.get("tabletop_user_discord_name")?.value;
-
-        const dataToUpdate: any = {
-            discordGuildId: guildId,
-            discordChannelId: channelId
-        };
-
-        if (discordUserId) {
-            if (!event.managerDiscordId || event.managerDiscordId === discordUserId) {
-                dataToUpdate.managerDiscordId = discordUserId;
-                if (discordUsername) {
-                    dataToUpdate.managerDiscordUsername = discordUsername;
-                }
-            }
+        // The channel must belong to the granted guild, or the bot could be pointed at a
+        // channel in any other server it is in.
+        const channels = await getGuildChannels(guildId, token);
+        if (!channels.some((c) => c.id === channelId)) {
+            return { error: "That channel is not in the connected server.", code: "validation" };
         }
 
+        // Binding a channel never changes who manages the event.
         await prisma.event.update({
             where: { id: event.id },
-            data: dataToUpdate
+            data: { discordGuildId: guildId, discordChannelId: channelId }
         });
 
         const baseUrl = getBaseUrl();
@@ -127,14 +163,22 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
     }
 }
 
-export async function listDiscordChannels(guildId: string) {
+export async function listDiscordChannels(slug: string, guildId: string): Promise<ListChannelsResult> {
+    try {
+        await requireEventAdmin(slug);
+        requireSnowflakes(guildId);
+        await requireGuildGrant(slug, guildId);
+    } catch (e) {
+        return toActionError(e, "Failed to fetch channels");
+    }
+
     const token = process.env.DISCORD_BOT_TOKEN;
     if (!token) return { error: "Server Configuration Error" };
 
     try {
         const channels = await getGuildChannels(guildId, token);
         return { success: true, channels };
-    } catch (e) {
+    } catch {
         return { error: "Failed to fetch channels" };
     }
 }

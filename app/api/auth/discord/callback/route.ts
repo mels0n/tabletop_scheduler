@@ -8,20 +8,75 @@ import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Auth:Discord");
 
-import { setAdminCookie } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
-import { hashToken } from "@/shared/lib/token";
 import prisma from "@/shared/lib/prisma";
 import { normalizeHandle } from "@/shared/lib/handle";
+import {
+    GUILD_GRANT_MAX_AGE,
+    OAUTH_NONCE_COOKIE,
+    OAUTH_NONCE_COOKIE_PATH,
+    guildCookieName,
+    isDiscordSnowflake,
+    manageSlugFrom,
+    nonceMatches,
+    parseOAuthState,
+} from "@/features/integrations/discord/model/oauth-state";
+
+/** Redirects to a same-origin path (already allow-listed by parseOAuthState) with extra query params. */
+function redirectTo(path: string, baseUrl: string, params: Record<string, string> = {}) {
+    const url = new URL(path, baseUrl);
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    return NextResponse.redirect(url);
+}
+
+/**
+ * Links the Discord account as the event's manager, but only for a caller who is already
+ * the event admin, and only when no Discord manager is set. The admin token is never
+ * rotated here: the signed identity cookie is what grants the manager admin later.
+ */
+async function linkManagerIfAdmin(returnTo: string, user: { id: string; username: string }) {
+    const slug = manageSlugFrom(returnTo);
+    if (!slug || !isDiscordSnowflake(user.id)) return;
+
+    const event = await prisma.event.findUnique({
+        where: { slug },
+        select: { id: true, managerDiscordId: true },
+    });
+    if (!event) return;
+
+    if (event.managerDiscordId === user.id) {
+        log.info("Manager signed in via Discord", { slug });
+        return;
+    }
+    if (event.managerDiscordId) return;
+
+    if (!(await verifyEventAdmin(slug))) {
+        log.warn("Refused Discord manager claim: caller is not the event admin", { slug });
+        return;
+    }
+
+    await prisma.event.update({
+        where: { id: event.id },
+        data: {
+            managerDiscordId: user.id,
+            // Discord usernames are case-sensitive and arrive '@'-less via OAuth;
+            // strip a stray '@' defensively but preserve case.
+            managerDiscordUsername: normalizeHandle(user.username, { lowercase: false }),
+        },
+    });
+    log.info("Manager linked Discord account", { slug });
+}
 
 /**
  * @function GET
  * @description Handles the OAuth2 callback from Discord.
- * Exchanges the code for an access token, fetches user profile, and sets session cookies.
+ * Verifies the state nonce, exchanges the code for an access token, fetches the user
+ * profile, and sets session cookies.
  *
  * @param {Request} req - The incoming callback request.
- * @returns {NextResponse} Redirects the user to the return URL or error page.
+ * @returns {NextResponse} Redirects the user to the (same-origin) return path.
  */
 export async function GET(req: Request) {
     const baseUrl = getBaseUrl();
@@ -38,12 +93,15 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Invalid Request" }, { status: 400 });
     }
 
-    let state;
-    try {
-        state = JSON.parse(stateStr);
-    } catch (e) {
-        return NextResponse.json({ error: "Invalid State" }, { status: 400 });
+    const cookieStore = await cookies();
+
+    // CSRF: the nonce in state must match the cookie set when this browser started the flow.
+    const state = parseOAuthState(stateStr, baseUrl);
+    if (!state || !nonceMatches(cookieStore.get(OAUTH_NONCE_COOKIE)?.value, state.nonce)) {
+        log.warn("Rejected Discord OAuth callback: missing or mismatched state nonce");
+        return NextResponse.json({ error: "Invalid OAuth state" }, { status: 400 });
     }
+    cookieStore.delete({ name: OAUTH_NONCE_COOKIE, path: OAUTH_NONCE_COOKIE_PATH });
 
     const { returnTo, flow } = state;
     const clientId = process.env.DISCORD_APP_ID;
@@ -71,15 +129,15 @@ export async function GET(req: Request) {
     if (!tokenRes.ok) {
         const err = await tokenRes.text();
         log.error("Token Exchange Failed", { error: err });
-        return NextResponse.redirect(new URL(`${returnTo}?error=token_failed`, baseUrl));
+        return redirectTo(returnTo, baseUrl, { error: "token_failed" });
     }
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
 
-    // Capture Guild Info if available (Connect Flow)
-    // When adding a bot, `guild` is often returned in this response.
-    const connectedGuild = tokenData.guild;
+    // Bot-add flow: Discord returns the guild in the server-to-server token response. Only
+    // that value is trusted; the `guild_id` query param is user-editable.
+    const connectedGuildId: unknown = tokenData.guild?.id;
 
     // 2. Fetch User Profile
     const userRes = await fetch("https://discord.com/api/users/@me", {
@@ -87,14 +145,12 @@ export async function GET(req: Request) {
     });
 
     if (!userRes.ok) {
-        return NextResponse.redirect(new URL(`${returnTo}?error=profile_failed`, baseUrl));
+        return redirectTo(returnTo, baseUrl, { error: "profile_failed" });
     }
 
     const user = await userRes.json();
 
     // 3. Handle Flow Logic
-    const cookieStore = await cookies();
-
     // Intent: Use shared configuration for 400-day persistence
     const cookieOpts = {
         ...COOKIE_BASE_OPTIONS,
@@ -109,79 +165,30 @@ export async function GET(req: Request) {
         // Optional: Set Username cookie for display
         cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false }); // readable by client
 
-        // MAGIC LINK / RECOVERY LOGIC
-        // Intent: If the user is returning to a /manage page, try to restore their Admin Access automatically.
-        // This acts as the "Magic Link" for Discord users.
-        if (returnTo.includes("/manage")) {
-            // Extract slug from path: /e/[slug]/manage
-            const match = returnTo.match(/\/e\/([^/]+)\/manage/);
-            if (match && match[1]) {
-                const slug = match[1];
+        // Returning to a manage page: link this Discord account as the manager if the
+        // caller is already the event admin (so Discord can recover access later).
+        await linkManagerIfAdmin(returnTo, user);
 
-                const event = await prisma.event.findUnique({ where: { slug } });
+        return redirectTo(returnTo, baseUrl);
+    }
 
-                // Verify: Does this Discord User own this event?
-                if (event && event.managerDiscordId === user.id) {
-                    // Success! Restore the admin session.
-                    // CRITICAL: We only have the HASH in the DB. We cannot set the cookie to the Hash,
-                    // because verifyEventAdmin expects Cookie(Plaintext) -> Hash(Cookie) === DB(Hash).
-                    // Solution: Rotate the token.
+    // --- CONNECT FLOW (Add Bot) ---
+    // The UI finishes the binding by picking a channel. That step only accepts the guild
+    // this admin just added the bot to, recorded here in a signed, short-lived cookie.
+    cookieStore.set(IDENTITY_COOKIES.discord, signValue(user.id), identityCookieOptions());
+    cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false });
 
-                    const newToken = crypto.randomUUID();
-                    const newHash = hashToken(newToken);
-
-                    await prisma.event.update({
-                        where: { id: event.id },
-                        data: { adminToken: newHash }
-                    });
-
-                    await setAdminCookie(slug, newToken);
-                    log.info("Manager session restored via Discord (Token Rotated)", { slug, userId: user.id });
-                } else if (event && !event.managerDiscordId) {
-                    // Claiming: If no Discord ID is set but they are logging in via the Manage page...
-                    // Allow the user to "Claim" this event as the manager since they had the admin link.
-                    const newToken = crypto.randomUUID();
-                    const newHash = hashToken(newToken);
-
-                    await prisma.event.update({
-                        where: { id: event.id },
-                        data: {
-                            managerDiscordId: user.id,
-                            // Discord usernames are case-sensitive and arrive '@'-less via OAuth;
-                            // strip a stray '@' defensively but preserve case.
-                            managerDiscordUsername: normalizeHandle(user.username, { lowercase: false }),
-                            adminToken: newHash
-                        }
-                    });
-
-                    // Also set the admin cookie now that they are linked
-                    await setAdminCookie(slug, newToken);
-
-                    log.info("Manager claimed event via Discord", { slug, userId: user.id });
-                }
-            }
+    const params: Record<string, string> = { discord_connected: "true" };
+    if (isDiscordSnowflake(connectedGuildId)) {
+        params.guild_id = connectedGuildId;
+        const slug = manageSlugFrom(returnTo);
+        if (slug && (await verifyEventAdmin(slug))) {
+            cookieStore.set(guildCookieName(slug), signValue(connectedGuildId), {
+                ...COOKIE_BASE_OPTIONS,
+                maxAge: GUILD_GRANT_MAX_AGE,
+            });
         }
-
-        return NextResponse.redirect(new URL(returnTo, baseUrl));
-    }
-    else if (flow === "connect") {
-        // --- CONNECT FLOW (Add Bot) ---
-        // We don't login the user, we just return the connection status to the Manage Page.
-
-        // However, we SHOULD update the Event Manager's Discord ID if possible? 
-        // We don't have the Event Slug here easily unless passed in state.
-        // But the UI can handle the save if we return successfully.
-
-        // Let's pass the guild_id back to validity check.
-        const guildParam = connectedGuild ? `&guild_id=${connectedGuild.id}` : "";
-
-        // Also set the "Manager" cookie implicitly so they don't have to login separately? 
-        // Yes, if you connect the bot, you are arguably the manager.
-        cookieStore.set(IDENTITY_COOKIES.discord, signValue(user.id), identityCookieOptions());
-        cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false });
-
-        return NextResponse.redirect(new URL(`${returnTo}?discord_connected=true${guildParam}`, baseUrl));
     }
 
-    return NextResponse.redirect(new URL("/", baseUrl));
+    return redirectTo(returnTo, baseUrl, params);
 }
