@@ -1,62 +1,60 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-
-// The sliding logic is kept self-contained here so the proxy has no app imports.
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 400; // 400 days
+import { IDENTITY_COOKIES, identityCookieOptions, verifyValue } from '@/shared/lib/session'
 
 /** Matches /e/<slug>/manage and anything below it; capture group 1 is the slug. */
 const MANAGE_ROUTE = /^\/e\/([^/]+)\/manage(\/|$)/;
 
-/** Cookies readable by client JS (not HttpOnly). Every other refreshed cookie stays HttpOnly. */
-const PUBLIC_COOKIES = new Set(['tabletop_user_discord_name', 'tabletop_user_telegram_name']);
+const ADMIN_COOKIE_PREFIX = 'tabletop_admin_';
+
+/** Each signed identity cookie and the display-name cookie that only means something alongside it. */
+const IDENTITY_PAIRS = [
+    { id: IDENTITY_COOKIES.telegram, name: 'tabletop_user_telegram_name' },
+    { id: IDENTITY_COOKIES.discord, name: 'tabletop_user_discord_name' },
+] as const;
 
 /**
  * @function proxy
  * @description Request proxy that enforces administrative access AND implements Sliding Sessions.
  *
  * Sliding Session Logic:
- * On every request to the app, we check if the user has any "Auth" cookies.
- * If they do, we re-set them with the same value but a fresh 400-day expiration.
- * This ensures active users never get logged out.
+ * On every matched request, auth cookies are re-set with the same value and a fresh
+ * 400-day expiry so active users never get logged out. Identity cookies are refreshed
+ * only when their signature verifies; an unsigned or tampered identity cookie (for
+ * example a pre-signing legacy value) is deleted together with its display-name cookie.
  */
 export function proxy(request: NextRequest) {
     const response = NextResponse.next();
+    const identityOpts = identityCookieOptions();
+    let hasVerifiedIdentity = false;
 
     // 1. Sliding Session Implementation
-    // Intent: Refresh cookies on every interaction to keep session alive indefinitely (up to 400 days from TODAY)
-    const cookiesToRefresh = [
-        'tabletop_user_chat_id',
-        'tabletop_user_discord_id',
-        'tabletop_user_discord_name',
-        'tabletop_user_telegram_name'
-    ];
+    for (const pair of IDENTITY_PAIRS) {
+        const idCookie = request.cookies.get(pair.id);
+        if (!idCookie) continue;
 
-    // Check for Dynamic Admin Cookies (tabletop_admin_*)
-    request.cookies.getAll().forEach(cookie => {
-        if (cookie.name.startsWith('tabletop_admin_')) {
-            cookiesToRefresh.push(cookie.name);
+        if (verifyValue(idCookie.value) === null) {
+            response.cookies.delete(pair.id);
+            if (request.cookies.has(pair.name)) response.cookies.delete(pair.name);
+            continue;
         }
-    });
 
-    cookiesToRefresh.forEach(cookieName => {
-        const cookie = request.cookies.get(cookieName);
-        if (cookie) {
-            // Intent: Re-set the cookie with the exact same value/options, just new Max-Age
-            // Note: We must replicate the specific flags (HttpOnly etc) or they default to strict.
-            // The display-name cookies are the only ones that are NOT HttpOnly.
-            const isPublic = PUBLIC_COOKIES.has(cookieName);
+        hasVerifiedIdentity = true;
+        response.cookies.set({ name: pair.id, value: idCookie.value, ...identityOpts });
 
-            response.cookies.set({
-                name: cookieName,
-                value: cookie.value,
-                maxAge: COOKIE_MAX_AGE,
-                path: '/',
-                secure: process.env.NODE_ENV === "production",
-                httpOnly: !isPublic,
-                sameSite: 'lax'
-            });
+        const nameCookie = request.cookies.get(pair.name);
+        if (nameCookie) {
+            // Display names are read by client JS, so they are the only non-HttpOnly cookies.
+            response.cookies.set({ name: pair.name, value: nameCookie.value, ...identityOpts, httpOnly: false });
         }
-    });
+    }
+
+    // Event admin cookies hold a raw token that is checked against its hash on every use.
+    for (const cookie of request.cookies.getAll()) {
+        if (cookie.name.startsWith(ADMIN_COOKIE_PREFIX)) {
+            response.cookies.set({ name: cookie.name, value: cookie.value, ...identityOpts });
+        }
+    }
 
     // 2. Route Protection Logic
     // URL structure is /e/[slug]/manage or /e/[slug]/manage/...
@@ -65,14 +63,12 @@ export function proxy(request: NextRequest) {
         const slug = manageMatch[1];
 
         if (slug) {
-            const adminToken = request.cookies.get(`tabletop_admin_${slug}`)?.value;
-            const globalChatId = request.cookies.get('tabletop_user_chat_id')?.value;
-            const globalDiscordId = request.cookies.get('tabletop_user_discord_id')?.value;
+            const adminToken = request.cookies.get(`${ADMIN_COOKIE_PREFIX}${slug}`)?.value;
 
-            if (!adminToken && !globalChatId && !globalDiscordId) {
+            if (!adminToken && !hasVerifiedIdentity) {
                 // Intent: Redirect unauthorized users back to the public event page.
-                // If they have a global auth cookie, we let them through to the page where
-                // `verifyEventAdmin` will securely check the database to see if they own THIS specific event.
+                // A verified identity is let through to the page, where `verifyEventAdmin`
+                // checks the database to see if they own THIS specific event.
                 return NextResponse.redirect(new URL(`/e/${slug}?action=login`, request.url));
             }
         }

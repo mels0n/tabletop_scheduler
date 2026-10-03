@@ -2,6 +2,7 @@
 
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
+import { IDENTITY_COOKIES, verifyValue } from "@/shared/lib/session";
 
 const log = Logger.get("BrowserDisconnect");
 
@@ -12,10 +13,10 @@ const PLATFORM_LABEL: Record<Platform, string> = {
     discord: 'Discord',
 };
 
-/** httpOnly cookie set by each platform's verified magic-link/OAuth flow. */
+/** Signed httpOnly cookie set by each platform's verified magic-link/OAuth flow. */
 const PLATFORM_ID_COOKIE: Record<Platform, string> = {
-    telegram: 'tabletop_user_chat_id',
-    discord: 'tabletop_user_discord_id',
+    telegram: IDENTITY_COOKIES.telegram,
+    discord: IDENTITY_COOKIES.discord,
 };
 
 /** Companion display-name cookie cleared alongside the identity cookie. */
@@ -40,7 +41,7 @@ const PLATFORM_NAME_COOKIE: Record<Platform, string> = {
 export async function disconnectPlatformFromBrowser(platform: Platform): Promise<{ success: true, message: string } | { error: string }> {
     try {
         const cookieStore = await cookies();
-        const identityId = cookieStore.get(PLATFORM_ID_COOKIE[platform])?.value;
+        const identityId = verifyValue(cookieStore.get(PLATFORM_ID_COOKIE[platform])?.value);
 
         if (!identityId) {
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };

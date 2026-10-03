@@ -18,6 +18,9 @@ afterEach(() => {
     cleanup();
 });
 
+// `server-only` throws outside the react-server condition; Next resolves it, vitest does not.
+vi.mock('server-only', () => ({}));
+
 // Mock next/headers for Server Actions. Since Next 15, cookies() and headers() return Promises.
 vi.mock('next/headers', () => ({
     cookies: vi.fn(async () => ({

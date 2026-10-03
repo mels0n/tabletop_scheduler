@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { disconnectPlatformFromBrowser } from './browser-disconnect';
 import { cookies } from 'next/headers';
+import { signValue } from '@/shared/lib/session';
 import prisma from '@/shared/lib/prisma';
 
 vi.mock('@/shared/lib/prisma');
@@ -18,7 +19,7 @@ describe('disconnectPlatformFromBrowser', () => {
 
     it('clears only the Discord session cookies and never touches the database', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_discord_id' ? { value: 'discord-42' } : undefined
+            name === 'tabletop_user_discord_id' ? { value: signValue('discord-42') } : undefined
         );
 
         const result = await disconnectPlatformFromBrowser('discord');
@@ -39,7 +40,7 @@ describe('disconnectPlatformFromBrowser', () => {
 
     it('clears only the Telegram session cookies', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_chat_id' ? { value: '999' } : undefined
+            name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
         );
 
         const result = await disconnectPlatformFromBrowser('telegram');

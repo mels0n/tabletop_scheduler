@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
+import { readIdentity } from "@/shared/lib/session";
 import { getBotUsername } from "@/features/telegram/lib/telegram-client";
 import { ProfileDashboard } from "./ProfileDashboard";
 
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
  * @description Server-side wrapper for the Profile Dashboard.
  *
  * Responsibilities:
- * 1. Checks for a persistent `tabletop_user_chat_id` cookie.
+ * 1. Reads the signed identity cookies (`tabletop_user_chat_id`, `tabletop_user_discord_id`).
  * 2. If present, fetches all associated events from the database:
  *    - Events Managed (where managerChatId matches).
  *    - Events Participated (via Participant relation).
@@ -25,11 +26,12 @@ export const metadata: Metadata = {
  * 4. Hydrates the Client Component `ProfileDashboard` with this trusted server data.
  */
 export default async function ProfilePage() {
-    // Security: Only read the HTTP-only cookie.
+    // Security: Only trust the signed HTTP-only identity cookies.
     const cookieStore = await cookies();
-    const telegramChatId = cookieStore.get("tabletop_user_chat_id")?.value;
-    const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
-    const discordUserName = cookieStore.get("tabletop_user_discord_name")?.value;
+    const identity = readIdentity(cookieStore);
+    const telegramChatId = identity.chatId ?? undefined;
+    const discordUserId = identity.discordId ?? undefined;
+    const discordUserName = discordUserId ? cookieStore.get("tabletop_user_discord_name")?.value : undefined;
 
     let serverEvents: any[] = [];
     let serverUserName: string | null = discordUserName || null;
