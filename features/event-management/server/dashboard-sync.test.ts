@@ -8,7 +8,8 @@ vi.mock('@/features/telegram', () => ({
     unpinChatMessage: vi.fn(),
 }));
 vi.mock('@/features/notifications', () => ({ broadcastToEvent: vi.fn() }));
-vi.mock('@/shared/lib/url', () => ({ getBaseUrl: () => 'https://example.test' }));
+const { getBaseUrlMock } = vi.hoisted(() => ({ getBaseUrlMock: vi.fn(() => 'https://example.test') }));
+vi.mock('@/shared/lib/url', () => ({ getBaseUrl: getBaseUrlMock }));
 vi.mock('@/shared/lib/status', () => ({ generateStatusMessage: () => 'status' }));
 vi.mock('@/features/integrations/discord/model/discord', () => ({
     editDiscordMessage: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
 }));
 
 import prisma from '@/shared/lib/prisma';
-import { refreshTelegramDashboard, refreshDiscordDashboard, pushSlotUpdates } from './dashboard-sync';
+import { refreshTelegramDashboard, refreshDiscordDashboard, pushSlotUpdates, syncDashboard } from './dashboard-sync';
 import { broadcastToEvent } from '@/features/notifications';
 import { editMessageText, sendTelegramMessage, pinChatMessage, unpinChatMessage } from '@/features/telegram';
 import { editDiscordMessage, sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } from '@/features/integrations/discord/model/discord';
@@ -130,7 +131,7 @@ describe('pushSlotUpdates', () => {
             finalizedSlotId: null,
             timeSlots: [],
             finalizedHost: null,
-            telegramChatId: null,
+            telegramChatId: 'tg1',
             pinnedMessageId: null,
             discordChannelId: null,
             discordMessageId: null,
@@ -142,5 +143,20 @@ describe('pushSlotUpdates', () => {
         const html = m(broadcastToEvent).mock.calls[0][1].html as string;
         expect(html).toContain('&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;');
         expect(html).not.toContain('<a href');
+    });
+
+    it('returns before building anything when no dashboard platform is linked', async () => {
+        const unlinked = {
+            id: 7, title: 'x', status: 'ACTIVE', finalizedSlotId: null, timeSlots: [], finalizedHost: null,
+            telegramChatId: null, pinnedMessageId: null, discordChannelId: null, discordMessageId: null,
+        };
+        (prisma as any).event.findUnique.mockResolvedValue(unlinked);
+
+        await pushSlotUpdates(7, 'A new time option was added by the creator');
+        await syncDashboard(7);
+
+        expect(getBaseUrlMock).not.toHaveBeenCalled();
+        expect((prisma as any).participant.count).not.toHaveBeenCalled();
+        expect(broadcastToEvent).not.toHaveBeenCalled();
     });
 });
