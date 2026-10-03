@@ -214,3 +214,9 @@ model Donation {
   createdAt           DateTime @default(now())
 }
 
+// Data migrations (backfills that a schema change cannot express) already applied.
+// Written by scripts/run-data-migrations.mjs in the same transaction as the backfill.
+model AppMigration {
+  id        String   @id // Stable id from scripts/data-migrations/index.mjs
+  appliedAt DateTime @default(now())
+}

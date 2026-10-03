@@ -7,7 +7,8 @@ set -e
 # Responsibilities:
 # 1. Environment Setup: Ensures DATABASE_URL is set (defaults to SQLite file).
 # 2. Secrets: Generates and persists SESSION_SECRET and CRON_SECRET when not provided.
-# 3. Database Schema: Applies prisma/schema.prisma with `prisma db push` (SQLite only).
+# 3. Database Schema: Applies prisma/schema.prisma with `prisma db push` (SQLite only),
+#    then runs pending data migrations (scripts/run-data-migrations.mjs).
 # 4. Cron Simulation: Starts background loops (authorized with CRON_SECRET, logging to stdout) for:
 #    - Daily Cleanup (removes old data).
 #    - Reminder Checks (runs every 10 minutes to notify users).
@@ -80,6 +81,13 @@ if ! npx prisma db push $PUSH_FLAGS; then
     echo "❌ Database schema update failed. If the output above warns about data loss, back up /app/data, then restart with PRISMA_ACCEPT_DATA_LOSS=1 to apply the change."
     exit 1
 fi
+
+# Action: Data migrations
+# Backfills a schema change cannot express (scripts/data-migrations). Each one runs once,
+# in a transaction, and is recorded in the AppMigration table. A failure stops the start
+# (set -e) so the app never runs against half-migrated data; the next start retries it.
+echo "⚙️ Applying pending data migrations..."
+node scripts/run-data-migrations.mjs
 
 # Action: Cron Loop (Cleanup)
 echo "⏰ Setting up internal cleanup loop..."
