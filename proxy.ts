@@ -1,21 +1,25 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Intent: Edge Middleware limitation - cannot import from shared/lib directly in some setups?
-// Actually, shared/lib imports should work if they are pure JS/TS.
-// However, to be safe and atomic, we define the sliding logic here.
+// The sliding logic is kept self-contained here so the proxy has no app imports.
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 400; // 400 days
 
+/** Matches /e/<slug>/manage and anything below it; capture group 1 is the slug. */
+const MANAGE_ROUTE = /^\/e\/([^/]+)\/manage(\/|$)/;
+
+/** Cookies readable by client JS (not HttpOnly). Every other refreshed cookie stays HttpOnly. */
+const PUBLIC_COOKIES = new Set(['tabletop_user_discord_name', 'tabletop_user_telegram_name']);
+
 /**
- * @function middleware
- * @description Edge middleware to enforce administrative access AND implement Sliding Sessions.
+ * @function proxy
+ * @description Request proxy that enforces administrative access AND implements Sliding Sessions.
  *
  * Sliding Session Logic:
  * On every request to the app, we check if the user has any "Auth" cookies.
  * If they do, we re-set them with the same value but a fresh 400-day expiration.
  * This ensures active users never get logged out.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const response = NextResponse.next();
 
     // 1. Sliding Session Implementation
@@ -23,7 +27,8 @@ export function middleware(request: NextRequest) {
     const cookiesToRefresh = [
         'tabletop_user_chat_id',
         'tabletop_user_discord_id',
-        'tabletop_user_discord_name'
+        'tabletop_user_discord_name',
+        'tabletop_user_telegram_name'
     ];
 
     // Check for Dynamic Admin Cookies (tabletop_admin_*)
@@ -38,8 +43,8 @@ export function middleware(request: NextRequest) {
         if (cookie) {
             // Intent: Re-set the cookie with the exact same value/options, just new Max-Age
             // Note: We must replicate the specific flags (HttpOnly etc) or they default to strict.
-            // "discord_name" is the only one that is NOT HttpOnly.
-            const isPublic = cookieName === 'tabletop_user_discord_name';
+            // The display-name cookies are the only ones that are NOT HttpOnly.
+            const isPublic = PUBLIC_COOKIES.has(cookieName);
 
             response.cookies.set({
                 name: cookieName,
@@ -54,13 +59,10 @@ export function middleware(request: NextRequest) {
     });
 
     // 2. Route Protection Logic
-    if (request.nextUrl.pathname.includes('/manage')) {
-        // e.g. /e/some-slug/manage
-        const parts = request.nextUrl.pathname.split('/');
-        // URL structure could be /e/[slug]/manage OR /e/[slug]/manage/...
-        // split on / -> ["", "e", "slug", "manage"]
-        const slugIndex = parts.indexOf('e') + 1;
-        const slug = parts[slugIndex];
+    // URL structure is /e/[slug]/manage or /e/[slug]/manage/...
+    const manageMatch = MANAGE_ROUTE.exec(request.nextUrl.pathname);
+    if (manageMatch) {
+        const slug = manageMatch[1];
 
         if (slug) {
             const adminToken = request.cookies.get(`tabletop_admin_${slug}`)?.value;

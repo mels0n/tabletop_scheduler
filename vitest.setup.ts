@@ -18,16 +18,16 @@ afterEach(() => {
     cleanup();
 });
 
-// Mock next/headers for Server Actions
+// Mock next/headers for Server Actions. Since Next 15, cookies() and headers() return Promises.
 vi.mock('next/headers', () => ({
-    cookies: vi.fn(() => ({
+    cookies: vi.fn(async () => ({
         get: vi.fn(),
         set: vi.fn(),
         delete: vi.fn(),
         getAll: vi.fn(),
         has: vi.fn(),
     })),
-    headers: vi.fn(() => ({
+    headers: vi.fn(async () => ({
         get: vi.fn(),
     })),
 }));
