@@ -131,6 +131,50 @@ describe("isVotingReminderDue", () => {
         expect(isVotingReminderDue(s, at("2026-10-07T10:00:00Z"))).toBe(false);
     });
 
+    describe("across DST transitions (one send per target)", () => {
+        it("America/New_York fall-back 2026-11-01: no second send between 01:10 and 03:50 local", () => {
+            const s = voting({ timezone: "America/New_York" });
+            expect(simulate(s, "2026-10-31T13:00:00Z", "2026-11-01T16:00:00Z")).toEqual([
+                "2026-10-31T14:00:00.000Z", // 10:00 EDT
+                "2026-11-01T15:00:00.000Z", // 10:00 EST
+            ]);
+        });
+
+        it("Europe/Berlin fall-back 2026-10-25", () => {
+            const s = voting({ timezone: "Europe/Berlin" });
+            expect(simulate(s, "2026-10-24T07:00:00Z", "2026-10-25T10:00:00Z")).toEqual([
+                "2026-10-24T08:00:00.000Z", // 10:00 CEST
+                "2026-10-25T09:00:00.000Z", // 10:00 CET
+            ]);
+        });
+
+        it("America/New_York spring-forward 2026-03-08", () => {
+            const s = voting({ timezone: "America/New_York" });
+            expect(simulate(s, "2026-03-07T14:00:00Z", "2026-03-08T15:00:00Z")).toEqual([
+                "2026-03-07T15:00:00.000Z", // 10:00 EST
+                "2026-03-08T14:00:00.000Z", // 10:00 EDT
+            ]);
+        });
+
+        it("a target inside the spring-forward gap fires once, as soon as the clock passes it", () => {
+            const s = voting({ timezone: "America/New_York", reminderTime: "02:30" });
+            expect(simulate(s, "2026-03-07T07:00:00Z", "2026-03-09T07:00:00Z")).toEqual([
+                "2026-03-07T07:30:00.000Z", // 02:30 EST
+                "2026-03-08T07:00:00.000Z", // 03:00 EDT, 02:30 never happened
+                "2026-03-09T06:30:00.000Z", // 02:30 EDT
+            ]);
+        });
+
+        it("a target inside the repeated fall-back hour fires once, on its first occurrence", () => {
+            const s = voting({ timezone: "America/New_York", reminderTime: "01:30" });
+            expect(simulate(s, "2026-10-31T05:00:00Z", "2026-11-02T07:00:00Z")).toEqual([
+                "2026-10-31T05:30:00.000Z", // 01:30 EDT
+                "2026-11-01T05:30:00.000Z", // first 01:30 (EDT); the second (EST) is the same target
+                "2026-11-02T06:30:00.000Z", // 01:30 EST
+            ]);
+        });
+    });
+
     it("returns false for missing or invalid config", () => {
         expect(isVotingReminderDue(voting({ reminderTime: null }), at("2026-10-07T10:00:00Z"))).toBe(false);
         expect(isVotingReminderDue(voting({ reminderDays: "" }), at("2026-10-07T10:00:00Z"))).toBe(false);
