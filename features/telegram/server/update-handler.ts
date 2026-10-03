@@ -164,16 +164,23 @@ async function connectEvent(slug: string | null, code: string | null, chatId: nu
     }
 
     const event = await prisma.event.findUnique({ where: { slug } });
-    if (!event || !verifyConnectCode(slug, event.adminToken, code)) {
+    if (!event || !verifyConnectCode(slug, event.adminToken, event.telegramChatId, code)) {
         log.warn("Connect refused: unknown event or invalid code", { slug });
         await sendTelegramMessage(chatId, CONNECT_CODE_INVALID, token);
         return;
     }
 
-    await prisma.event.update({
-        where: { id: event.id },
+    // Conditional on the binding the code was checked against: of two concurrent replays
+    // of one code, only the first moves the chat; the code is dead afterwards.
+    const { count } = await prisma.event.updateMany({
+        where: { id: event.id, telegramChatId: event.telegramChatId ?? null },
         data: { telegramChatId: chatId.toString() },
     });
+    if (count !== 1) {
+        log.warn("Connect refused: binding changed while connecting", { slug });
+        await sendTelegramMessage(chatId, CONNECT_CODE_INVALID, token);
+        return;
+    }
     log.info("Connected chat to event", { chatId, slug });
 
     try {

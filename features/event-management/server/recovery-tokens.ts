@@ -61,12 +61,16 @@ export async function generateShortRecoveryToken(slug: string): Promise<string> 
 /**
  * The exact Telegram command that binds a chat to this event. Callers must have
  * established admin rights first; the code is as sensitive as the ability to redirect
- * the event's notifications.
+ * the event's notifications. Derived from the current chat binding, so it is the code
+ * valid for the next bind and dies once that bind succeeds.
  */
 export async function getConnectCommand(slug: string): Promise<string> {
-    const event = await prisma.event.findUnique({ where: { slug }, select: { adminToken: true } });
+    const event = await prisma.event.findUnique({
+        where: { slug },
+        select: { adminToken: true, telegramChatId: true },
+    });
     if (!event?.adminToken) throw new NotFoundError("Event not found");
-    return `/connect ${slug} ${connectCodeFor(slug, event.adminToken)}`;
+    return `/connect ${slug} ${connectCodeFor(slug, event.adminToken, event.telegramChatId ?? null)}`;
 }
 
 // Per-event cooldown for manager link DMs. In-memory: on serverless each warm instance

@@ -228,7 +228,7 @@ describe('admin-only recovery setup actions', () => {
 
         expect(await connectCommandForAdmin('abc')).toEqual({
             success: true,
-            command: `/connect abc ${connectCodeFor('abc', discordOnlyEvent.adminToken)}`,
+            command: `/connect abc ${connectCodeFor('abc', discordOnlyEvent.adminToken, null)}`,
         });
     });
 });

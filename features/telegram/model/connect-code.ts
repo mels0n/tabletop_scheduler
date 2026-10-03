@@ -5,9 +5,15 @@ import { getServerConfig } from "@/shared/config/server";
  * Telegram chat binding codes.
  *
  * A chat is bound to an event only by `/connect <slug> <code>`, where the code is derived
- * from the event's admin token hash. Only someone who can open the manage page (an admin)
- * sees it, so knowing the slug (which every invited player has) is no longer enough to
- * redirect an event's notifications. Rotating the admin token invalidates old codes.
+ * from the event's admin token hash and its current chat binding. Only someone who can open
+ * the manage page (an admin) sees it, so knowing the slug (which every invited player has)
+ * is not enough to redirect an event's notifications.
+ *
+ * The manager sends the command inside the group, where every member can read it. Because
+ * the current `telegramChatId` is part of the HMAC input, a successful `/connect` changes the
+ * binding and kills the code that was just posted: replaying it elsewhere fails. The manage
+ * page always derives the code from the current binding, so it shows the one valid next code.
+ * Rotating the admin token also invalidates old codes.
  */
 
 const CODE_LENGTH = 8;
@@ -20,10 +26,13 @@ export const CONNECT_INSTRUCTIONS =
 export const CONNECT_CODE_INVALID =
     "⚠️ That connect code is not valid for this event. Open the manage page and copy the connect command again.";
 
-/** First 8 hex chars of HMAC-SHA256(sessionSecret, `connect:${slug}:${adminTokenHash}`). */
-export function connectCodeFor(slug: string, adminTokenHash: string): string {
+/**
+ * First 8 hex chars of
+ * HMAC-SHA256(sessionSecret, `connect:${slug}:${adminTokenHash}:${telegramChatId ?? ""}`).
+ */
+export function connectCodeFor(slug: string, adminTokenHash: string, telegramChatId: string | null): string {
     return createHmac("sha256", getServerConfig().sessionSecret)
-        .update(`connect:${slug}:${adminTokenHash}`, "utf8")
+        .update(`connect:${slug}:${adminTokenHash}:${telegramChatId ?? ""}`, "utf8")
         .digest("hex")
         .slice(0, CODE_LENGTH);
 }
@@ -32,12 +41,13 @@ export function connectCodeFor(slug: string, adminTokenHash: string): string {
 export function verifyConnectCode(
     slug: string,
     adminTokenHash: string | null | undefined,
+    telegramChatId: string | null | undefined,
     code: string | null | undefined
 ): boolean {
     if (!adminTokenHash || !code) return false;
     const given = code.trim().toLowerCase();
     if (!/^[0-9a-f]+$/.test(given) || given.length !== CODE_LENGTH) return false;
-    const expected = connectCodeFor(slug, adminTokenHash);
+    const expected = connectCodeFor(slug, adminTokenHash, telegramChatId || null);
     return timingSafeEqual(Buffer.from(given, "utf8"), Buffer.from(expected, "utf8"));
 }
 
