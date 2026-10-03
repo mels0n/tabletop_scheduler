@@ -3,7 +3,7 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
-import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
+import { identityCookieOptions, IDENTITY_COOKIES, signIdentity } from "@/shared/lib/session";
 
 const log = Logger.get("Auth:Global");
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         // 3. Set Cookie (HTTP Only, Secure, HMAC-signed so it cannot be forged from a known ID)
         // Intent: Authenticate the user globally across the app based on their Telegram Chat ID OR Discord ID.
         if (validToken.chatId) {
-            (await cookies()).set(IDENTITY_COOKIES.telegram, signValue(validToken.chatId), identityCookieOptions());
+            (await cookies()).set(IDENTITY_COOKIES.telegram, signIdentity("telegram", validToken.chatId), identityCookieOptions());
             // Also set username for display (mirrors Discord below), so the vote
             // form can show a Telegram identity badge instead of an empty field.
             if (validToken.telegramUsername) {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (validToken.discordId) {
-            (await cookies()).set(IDENTITY_COOKIES.discord, signValue(validToken.discordId), identityCookieOptions());
+            (await cookies()).set(IDENTITY_COOKIES.discord, signIdentity("discord", validToken.discordId), identityCookieOptions());
             // Also set username for display
             if (validToken.discordUsername) {
                 (await cookies()).set("tabletop_user_discord_name", validToken.discordUsername, {

@@ -86,3 +86,8 @@ export function isDiscordSnowflake(id: unknown): id is string {
 export function guildCookieName(slug: string): string {
     return `tabletop_discord_guild_${slug}`;
 }
+
+/** Signing purpose of the guild grant cookie for the event `slug`. */
+export function guildGrantPurpose(slug: string): string {
+    return `discord-guild:${slug}`;
+}

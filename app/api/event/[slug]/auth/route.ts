@@ -4,7 +4,7 @@ import { isAdminToken, setAdminCookie } from "@/features/auth";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
-import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
+import { identityCookieOptions, IDENTITY_COOKIES, signIdentity } from "@/shared/lib/session";
 
 const log = Logger.get("AuthRoute");
 
@@ -65,14 +65,14 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
         const cookieOpts = { ...COOKIE_BASE_OPTIONS, maxAge: COOKIE_MAX_AGE };
 
         if (event.managerDiscordId) {
-            cookieStore.set(IDENTITY_COOKIES.discord, signValue(event.managerDiscordId), identityCookieOptions());
+            cookieStore.set(IDENTITY_COOKIES.discord, signIdentity("discord", event.managerDiscordId), identityCookieOptions());
             if (event.managerDiscordUsername) {
                 cookieStore.set("tabletop_user_discord_name", event.managerDiscordUsername, { ...cookieOpts, httpOnly: false });
             }
         }
 
         if (event.managerChatId) {
-            cookieStore.set(IDENTITY_COOKIES.telegram, signValue(event.managerChatId), identityCookieOptions());
+            cookieStore.set(IDENTITY_COOKIES.telegram, signIdentity("telegram", event.managerChatId), identityCookieOptions());
         }
 
         log.info("Magic Link login successful (global identity synced)", { scope: "event", identifier: slug });

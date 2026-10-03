@@ -26,7 +26,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, chatId: null });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await linkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });
@@ -42,7 +42,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, discordId: null });
             mockCookieStore.get.mockImplementation((name: string) => {
-                if (name === 'tabletop_user_discord_id') return { value: signValue('discord-42') };
+                if (name === 'tabletop_user_discord_id') return { value: signValue('identity:discord', 'discord-42') };
                 if (name === 'tabletop_user_discord_name') return { value: 'ChrisM' };
                 return undefined;
             });
@@ -73,7 +73,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, chatId: '999' });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await linkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });
@@ -86,7 +86,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, chatId: '111' });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await linkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });
@@ -110,7 +110,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 2, chatId: null });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await linkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });
@@ -134,7 +134,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, chatId: '999', telegramId: '@chris' });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await unlinkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });
@@ -150,7 +150,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, discordId: 'discord-42', discordUsername: 'ChrisM' });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_discord_id' ? { value: signValue('discord-42') } : undefined
+                name === 'tabletop_user_discord_id' ? { value: signValue('identity:discord', 'discord-42') } : undefined
             );
 
             const result = await unlinkParticipant({ slug: 'my-slug', participantId: 5, platform: 'discord' });
@@ -166,7 +166,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, chatId: '111' });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await unlinkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });
@@ -179,7 +179,7 @@ describe('participant-link actions', () => {
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1 });
             mockPrisma.participant.findUnique.mockResolvedValue({ id: 5, eventId: 1, chatId: null });
             mockCookieStore.get.mockImplementation((name: string) =>
-                name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+                name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
             );
 
             const result = await unlinkParticipant({ slug: 'my-slug', participantId: 5, platform: 'telegram' });

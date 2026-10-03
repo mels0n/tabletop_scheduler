@@ -3,7 +3,7 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
-import { IDENTITY_COOKIES, verifyValue } from "@/shared/lib/session";
+import { readIdentityCookie } from "@/shared/lib/session";
 import type { Participant } from "@prisma/client";
 
 const log = Logger.get("ParticipantLink");
@@ -25,12 +25,6 @@ interface ParticipantLinkParams {
 const PLATFORM_LABEL: Record<Platform, string> = {
     telegram: 'Telegram',
     discord: 'Discord',
-};
-
-/** Signed httpOnly cookie set by each platform's verified magic-link/OAuth flow. */
-const PLATFORM_COOKIE: Record<Platform, string> = {
-    telegram: IDENTITY_COOKIES.telegram,
-    discord: IDENTITY_COOKIES.discord,
 };
 
 /**
@@ -88,7 +82,7 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
         const { participant } = loaded;
 
         const cookieStore = await cookies();
-        const identityId = verifyValue(cookieStore.get(PLATFORM_COOKIE[platform])?.value);
+        const identityId = readIdentityCookie(cookieStore, platform);
 
         // Guard: UI shouldn't offer linking a platform the user hasn't synced, but a
         // stale page or replayed request could still hit this action without the cookie.
@@ -161,7 +155,7 @@ export async function unlinkParticipant({ slug, participantId, platform }: Parti
         const { participant } = loaded;
 
         const cookieStore = await cookies();
-        const identityId = verifyValue(cookieStore.get(PLATFORM_COOKIE[platform])?.value);
+        const identityId = readIdentityCookie(cookieStore, platform);
 
         if (!identityId) {
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };

@@ -42,19 +42,19 @@ describe('verifyEventAdmin', () => {
     });
 
     it('accepts a signed discord identity cookie equal to the manager ID', async () => {
-        useCookies({ tabletop_user_discord_id: signValue(MANAGER_DISCORD) });
+        useCookies({ tabletop_user_discord_id: signValue('identity:discord', MANAGER_DISCORD) });
         expect(await verifyEventAdmin('my-slug')).toBe(true);
     });
 
     it('rejects an unsigned telegram identity cookie and accepts a signed one', async () => {
         useCookies({ tabletop_user_chat_id: MANAGER_CHAT });
         expect(await verifyEventAdmin('my-slug')).toBe(false);
-        useCookies({ tabletop_user_chat_id: signValue(MANAGER_CHAT) });
+        useCookies({ tabletop_user_chat_id: signValue('identity:telegram', MANAGER_CHAT) });
         expect(await verifyEventAdmin('my-slug')).toBe(true);
     });
 
     it('rejects a signed identity that is not the manager', async () => {
-        useCookies({ tabletop_user_discord_id: signValue('111111111111111111') });
+        useCookies({ tabletop_user_discord_id: signValue('identity:discord', '111111111111111111') });
         expect(await verifyEventAdmin('my-slug')).toBe(false);
     });
 
@@ -102,7 +102,7 @@ describe('requireEventAdmin', () => {
     });
 
     it('resolves when admin', async () => {
-        useCookies({ tabletop_user_discord_id: signValue(MANAGER_DISCORD) });
+        useCookies({ tabletop_user_discord_id: signValue('identity:discord', MANAGER_DISCORD) });
         await expect(requireEventAdmin('my-slug')).resolves.toBeUndefined();
     });
 });

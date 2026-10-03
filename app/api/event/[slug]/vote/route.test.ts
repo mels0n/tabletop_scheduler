@@ -83,8 +83,8 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('links neither the verified chatId nor discordId/discordUsername when linkIdentity is false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 42 });
-        cookieJar.set('tabletop_user_chat_id', signValue('777'));
-        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
+        cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '777'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
@@ -111,7 +111,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('links Discord from the session cookie (not the body) when linkDiscord=true and linkTelegram=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 44 });
-        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
@@ -162,8 +162,8 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     it('sources Discord identity from the cookie on participant update as well', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
         mockPrisma.participant.update.mockResolvedValue({ id: 47 });
-        cookieJar.set('tabletop_participant_test-event', signValue('47'));
-        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-2'));
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-2'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser2');
 
         const res = await POST(
@@ -185,8 +185,8 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('links Telegram from the verified chat cookie but skips Discord when linkTelegram=true and linkDiscord=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 45 });
-        cookieJar.set('tabletop_user_chat_id', signValue('999'));
-        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
+        cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '999'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         await POST(
@@ -236,8 +236,8 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     it('self-heals a missing chatId on update from the verified chat cookie only', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null });
         mockPrisma.participant.update.mockResolvedValue({ id: 47 });
-        cookieJar.set('tabletop_participant_test-event', signValue('47'));
-        cookieJar.set('tabletop_user_chat_id', signValue('555'));
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '555'));
 
         await POST(
             mockRequest({ name: 'Chris', participantId: 47, telegramId: 'chris', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
@@ -492,7 +492,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
 
         expect(res.status).toBe(200);
         const cookie = (res as any).cookies.get('tabletop_participant_test-event');
-        expect(cookie.value).toBe(signValue('50'));
+        expect(cookie.value).toBe(signValue('participant:test-event', '50'));
         expect(cookie.httpOnly).toBe(true);
     });
 
@@ -517,14 +517,14 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
 
     it('rejects a participant cookie signed for a different participant', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null });
-        cookieJar.set('tabletop_participant_test-event', signValue('48'));
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '48'));
 
         expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
     });
 
     it('allows an edit when a verified identity matches the row', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'd-47' });
-        cookieJar.set('tabletop_user_discord_id', signValue('d-47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'd-47'));
 
         const res = await call({ name: 'Dee', participantId: 47, linkIdentity: false, votes: [vote] });
 

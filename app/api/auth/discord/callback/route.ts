@@ -10,7 +10,7 @@ const log = Logger.get("Auth:Discord");
 
 import { verifyEventAdmin } from "@/features/auth";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
-import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
+import { identityCookieOptions, IDENTITY_COOKIES, signIdentity, signValue } from "@/shared/lib/session";
 import prisma from "@/shared/lib/prisma";
 import { normalizeHandle } from "@/shared/lib/handle";
 import {
@@ -18,6 +18,7 @@ import {
     OAUTH_NONCE_COOKIE,
     OAUTH_NONCE_COOKIE_PATH,
     guildCookieName,
+    guildGrantPurpose,
     isDiscordSnowflake,
     manageSlugFrom,
     nonceMatches,
@@ -160,7 +161,7 @@ export async function GET(req: Request) {
     if (flow === "login") {
         // --- LOGIN FLOW ---
         // Set Identity Cookie
-        cookieStore.set(IDENTITY_COOKIES.discord, signValue(user.id), identityCookieOptions());
+        cookieStore.set(IDENTITY_COOKIES.discord, signIdentity("discord", user.id), identityCookieOptions());
 
         // Optional: Set Username cookie for display
         cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false }); // readable by client
@@ -175,7 +176,7 @@ export async function GET(req: Request) {
     // --- CONNECT FLOW (Add Bot) ---
     // The UI finishes the binding by picking a channel. That step only accepts the guild
     // this admin just added the bot to, recorded here in a signed, short-lived cookie.
-    cookieStore.set(IDENTITY_COOKIES.discord, signValue(user.id), identityCookieOptions());
+    cookieStore.set(IDENTITY_COOKIES.discord, signIdentity("discord", user.id), identityCookieOptions());
     cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false });
 
     const params: Record<string, string> = { discord_connected: "true" };
@@ -183,7 +184,7 @@ export async function GET(req: Request) {
         params.guild_id = connectedGuildId;
         const slug = manageSlugFrom(returnTo);
         if (slug && (await verifyEventAdmin(slug))) {
-            cookieStore.set(guildCookieName(slug), signValue(connectedGuildId), {
+            cookieStore.set(guildCookieName(slug), signValue(guildGrantPurpose(slug), connectedGuildId), {
                 ...COOKIE_BASE_OPTIONS,
                 maxAge: GUILD_GRANT_MAX_AGE,
             });

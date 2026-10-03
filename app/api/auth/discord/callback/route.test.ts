@@ -179,7 +179,7 @@ describe('GET /api/auth/discord/callback', () => {
 
             const set = cookieSet('tabletop_discord_guild_abc');
             expect(set).toBeDefined();
-            expect(verifyValue(set![1])).toBe(GUILD);
+            expect(verifyValue('discord-guild:abc', set![1])).toBe(GUILD);
             expect(set![2]).toMatchObject({ httpOnly: true, maxAge: 3600 });
             const location = new URL(res.headers.get('location')!);
             expect(location.pathname).toBe('/e/abc/manage');
