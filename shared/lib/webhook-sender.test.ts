@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { lookupMock } = vi.hoisted(() => ({ lookupMock: vi.fn() }));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
 
-import { assertSafeWebhookUrl, isPrivateAddress } from './webhook-sender';
+import { assertSafeWebhookUrl, isPrivateAddress, resolveSafeWebhookTarget } from './webhook-sender';
 
 function resolvesTo(...addresses: string[]) {
     lookupMock.mockResolvedValue(addresses.map((address) => ({ address, family: address.includes(':') ? 6 : 4 })));
@@ -62,5 +62,26 @@ describe('assertSafeWebhookUrl', () => {
     it('accepts an https URL that resolves to public addresses', async () => {
         resolvesTo('93.184.216.34');
         await expect(assertSafeWebhookUrl('https://example.com/hook')).resolves.toBeUndefined();
+    });
+});
+
+describe('resolveSafeWebhookTarget', () => {
+    beforeEach(() => { lookupMock.mockReset(); });
+
+    it('resolves once and returns every vetted address with its family', async () => {
+        resolvesTo('93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946');
+        const target = await resolveSafeWebhookTarget('https://example.com/hook');
+        expect(target.url.hostname).toBe('example.com');
+        expect(target.addresses).toEqual([
+            { address: '93.184.216.34', family: 4 },
+            { address: '2606:2800:220:1:248:1893:25c8:1946', family: 6 },
+        ]);
+        expect(lookupMock).toHaveBeenCalledTimes(1);
+        expect(lookupMock).toHaveBeenCalledWith('example.com', { all: true, verbatim: true });
+    });
+
+    it('refuses a hostname that resolves to loopback', async () => {
+        resolvesTo('127.0.0.1');
+        await expect(resolveSafeWebhookTarget('https://rebind.example/hook')).rejects.toThrow('public address');
     });
 });

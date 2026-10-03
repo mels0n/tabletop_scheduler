@@ -1,4 +1,6 @@
-import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
+import { request } from "node:https";
+import type { LookupFunction } from "node:net";
+import { resolveSafeWebhookTarget, type VettedAddress } from "@/shared/lib/webhook-sender";
 import { signWebhookBody } from "./signature";
 
 const TIMEOUT_MS = 10_000;
@@ -23,18 +25,58 @@ export class WebhookRefusedError extends Error {
 }
 
 /**
- * The only outbound HTTP path for a queued webhook row. Re-checks the destination
- * (`assertSafeWebhookUrl`, so a host that now resolves to a private address is refused),
- * then performs one POST, always signed with `X-Tabletop-Signature` (see `signWebhookBody`).
- * Redirects are never followed and the request is abandoned after 10 seconds.
+ * A `lookup` for the socket that answers only with the addresses already vetted, so the
+ * connection cannot land anywhere the check did not approve, whatever DNS says by then.
+ * Host header and TLS SNI still come from the URL, so certificates verify as normal.
+ */
+function pinnedLookup(addresses: VettedAddress[]): LookupFunction {
+    return (_hostname, options, callback) => {
+        if (options.all) {
+            callback(null, addresses.map(({ address, family }) => ({ address, family })));
+            return;
+        }
+        const pick = addresses.find((a) => a.family === options.family) ?? addresses[0];
+        callback(null, pick.address, pick.family);
+    };
+}
+
+/** One POST over a fresh socket to a vetted address. Resolves with the status code; never follows redirects. */
+function postPinned(target: URL, addresses: VettedAddress[], headers: Record<string, string>, body: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+        const req = request(
+            target,
+            {
+                method: "POST",
+                headers: { ...headers, "Content-Length": String(Buffer.byteLength(body)) },
+                lookup: pinnedLookup(addresses),
+                agent: false, // no pooled socket from an earlier resolution
+                signal: AbortSignal.timeout(TIMEOUT_MS),
+            },
+            (res) => {
+                res.resume(); // the body is ignored; drain it so the socket closes
+                resolve(res.statusCode ?? 0);
+            },
+        );
+        req.on("error", reject);
+        req.end(body);
+    });
+}
+
+/**
+ * The only outbound HTTP path for a queued webhook row. Resolves the destination once
+ * (`resolveSafeWebhookTarget`: https, no credentials, every address public), then performs
+ * one POST connected to exactly those vetted addresses, always signed with
+ * `X-Tabletop-Signature` (see `signWebhookBody`). Redirects are never followed and the
+ * request is abandoned after 10 seconds.
  *
  * Resolves on a 2xx response. Throws `WebhookRefusedError` for a refused destination and a
  * plain `Error` otherwise (non-2xx, redirect, network error, timeout). Never touches the
  * database: the cron route owns claiming and status transitions.
  */
 export async function deliverWebhook(row: OutboxRow): Promise<void> {
+    let target: Awaited<ReturnType<typeof resolveSafeWebhookTarget>>;
     try {
-        await assertSafeWebhookUrl(row.url);
+        target = await resolveSafeWebhookTarget(row.url);
     } catch (error) {
         throw new WebhookRefusedError((error as Error).message);
     }
@@ -46,12 +88,6 @@ export async function deliverWebhook(row: OutboxRow): Promise<void> {
         "X-Tabletop-Signature": signWebhookBody(row.payload),
     };
 
-    const res = await fetch(row.url, {
-        method: "POST",
-        headers,
-        body: row.payload,
-        redirect: "manual", // a 3xx could point back at a private host: a failed attempt, never followed
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const status = await postPinned(target.url, target.addresses, headers, row.payload);
+    if (status < 200 || status >= 300) throw new Error(`HTTP ${status}`);
 }

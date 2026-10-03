@@ -11,6 +11,7 @@ set -e
 # 4. Cron Simulation: Starts background loops (authorized with CRON_SECRET, logging to stdout) for:
 #    - Daily Cleanup (removes old data).
 #    - Reminder Checks (runs every 10 minutes to notify users).
+#    - Webhook Delivery (runs every 5 minutes to send queued outbound webhooks).
 # 5. App Execution: Starts the Next.js server.
 #
 # Reason for Internal Cron:
@@ -104,7 +105,18 @@ echo "⏰ Setting up internal cleanup loop..."
     done
 ) &
 
-echo "✅ Cron loop started."
+# Action: Cron Loop (Webhooks)
+# Strategy: Run every 5 minutes so queued CREATED/FINALIZED/CANCELLED webhooks and retries go out.
+(
+    sleep 90
+    while true; do
+        echo "📤 Delivering queued webhooks..."
+        node -e "fetch('http://127.0.0.1:3000/api/cron/webhooks', { headers: { 'Authorization': 'Bearer ' + process.env.CRON_SECRET } }).then(r => console.log('Webhook delivery status:', r.status)).catch(e => console.error('Webhook delivery failed:', e.message))" || echo "❌ Webhook delivery failed"
+        sleep 300
+    done
+) &
+
+echo "✅ Cron loops started."
 
 # Action: Start Server
 echo "🟢 Starting Next.js server..."
