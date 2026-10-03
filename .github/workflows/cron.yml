@@ -2,8 +2,11 @@ name: Trigger Reminders
 
 on:
   schedule:
-    # Run every hour (at minute 0)
-    - cron: '0 * * * *'
+    # Backstop only. Hosted reminders run every 10 minutes from Supabase pg_cron
+    # (scripts/sql/pg-cron-reminders.sql); this catches a stalled pg_cron. GitHub delays
+    # scheduled runs by hours, so it stays infrequent and off the top of the hour.
+    # Overlap with pg_cron is safe: each reminder is claimed in the database before sending.
+    - cron: '7 */2 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:

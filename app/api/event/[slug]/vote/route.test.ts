@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
-import { resolvePassiveChatId } from '@/features/auth/server/passive-link';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { checkEventQuorum } from '@/shared/lib/quorum';
 import { signValue } from '@/shared/lib/session';
+import { syncDashboard } from '@/app/api/event/[slug]/slot/notify';
+import { broadcastToEvent } from '@/features/notifications';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/notifications', () => ({
@@ -15,11 +16,22 @@ vi.mock('@/features/notifications', () => ({
 vi.mock('@/shared/lib/quorum', () => ({
     checkEventQuorum: vi.fn(),
 }));
-// syncDashboard is dynamically imported unconditionally at the end of every POST; stub it
-// out so the test only exercises the participant/vote persistence being tested here.
+// syncDashboard runs in after() on every POST; stub it out so the tests only exercise
+// what they target.
 vi.mock('@/app/api/event/[slug]/slot/notify', () => ({
     syncDashboard: vi.fn(),
 }));
+
+// after() callbacks are queued here and run by flushAfter(), standing in for Next running
+// them once the response has been sent.
+const { afterQueue } = vi.hoisted(() => ({ afterQueue: [] as Array<() => unknown> }));
+vi.mock('next/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('next/server')>()),
+    after: (task: () => unknown) => { afterQueue.push(task); },
+}));
+async function flushAfter() {
+    while (afterQueue.length) await afterQueue.shift()!();
+}
 
 // Discord identity is sourced from the httpOnly session cookies, never the body.
 // cookieJar is the per-test cookie state; vi.hoisted so the hoisted mock factory can see it.
@@ -32,7 +44,7 @@ vi.mock('next/headers', () => ({
 }));
 
 const mockPrisma = prisma as unknown as {
-    event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn> },
+    event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, updateMany: ReturnType<typeof vi.fn> },
     participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },
     vote: { findMany: ReturnType<typeof vi.fn>, deleteMany: ReturnType<typeof vi.fn>, createMany: ReturnType<typeof vi.fn> },
     timeSlot: { findMany: ReturnType<typeof vi.fn> },
@@ -61,6 +73,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        afterQueue.length = 0;
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
@@ -68,8 +81,9 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
     });
 
-    it('skips passive chatId resolution and discordId/discordUsername write when linkIdentity is false', async () => {
+    it('links neither the verified chatId nor discordId/discordUsername when linkIdentity is false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 42 });
+        cookieJar.set('tabletop_user_chat_id', signValue('777'));
         cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
@@ -114,7 +128,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         );
         await res;
 
-        // Telegram off: no passive resolution, chatId stays null.
+        // Telegram off: chatId stays null.
         expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
         expect(mockPrisma.event.findFirst).not.toHaveBeenCalled();
 
@@ -169,33 +183,68 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         expect(updateData.discordUsername).toBe('CookieUser2');
     });
 
-    it('resolves Telegram but skips Discord write when linkTelegram=true and linkDiscord=false', async () => {
-        mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
+    it('links Telegram from the verified chat cookie but skips Discord when linkTelegram=true and linkDiscord=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 45 });
+        cookieJar.set('tabletop_user_chat_id', signValue('999'));
         cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
-        const res = await POST(
+        await POST(
             mockRequest({
                 name: 'Chris',
                 telegramId: '@someone',
-                discordId: 'discord-1',
-                discordUsername: 'SomeUser',
                 linkTelegram: true,
                 linkDiscord: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
             { params: Promise.resolve({ slug: '1' }) }
         );
-        await res;
 
-        // Telegram on: passive resolution runs and its chatId is inherited.
-        expect(mockPrisma.participant.findFirst).toHaveBeenCalled();
         const createData = mockPrisma.participant.create.mock.calls[0][0].data;
         expect(createData.chatId).toBe('999');
-        // Discord off: identity not written.
         expect(createData).not.toHaveProperty('discordId');
         expect(createData).not.toHaveProperty('discordUsername');
+    });
+
+    it('never resolves a chatId from a typed handle', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 48 });
+        mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
+        mockPrisma.event.findFirst.mockResolvedValue({ managerChatId: '888' });
+
+        await POST(
+            mockRequest({ name: 'Mallory', telegramId: '@victim', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
+            { params: Promise.resolve({ slug: '1' }) }
+        );
+
+        expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
+        expect(mockPrisma.event.findFirst).not.toHaveBeenCalled();
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.chatId).toBeNull();
+    });
+
+    it('ignores an unsigned chat cookie', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 49 });
+        cookieJar.set('tabletop_user_chat_id', '999');
+
+        await POST(
+            mockRequest({ name: 'Mallory', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
+            { params: Promise.resolve({ slug: '1' }) }
+        );
+
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.chatId).toBeNull();
+    });
+
+    it('self-heals a missing chatId on update from the verified chat cookie only', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        cookieJar.set('tabletop_participant_test-event', signValue('47'));
+        cookieJar.set('tabletop_user_chat_id', signValue('555'));
+
+        await POST(
+            mockRequest({ name: 'Chris', participantId: 47, telegramId: 'chris', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
+            { params: Promise.resolve({ slug: '1' }) }
+        );
+
+        expect(mockPrisma.participant.update.mock.calls[0][0].data.chatId).toBe('555');
     });
 
     it('stores telegramId canonicalized (no leading @, lowercased) regardless of how the voter typed it', async () => {
@@ -231,10 +280,12 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        afterQueue.length = 0;
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
         mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
         mockPrisma.participant.create.mockResolvedValue({ id: 1 });
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockParticipantCount.mockResolvedValue(4);
         mockQuorum.mockReturnValue({ perfect: false, viable: true });
     });
@@ -244,6 +295,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
 
         await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
         expect(mockSend).toHaveBeenCalledTimes(1);
         expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd-mgr' });
@@ -257,6 +309,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
 
         await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
         expect(mockSend.mock.calls[0][1].html).toContain('Perfect Match Found');
         expect(mockEventUpdate).toHaveBeenCalledWith({ where: { id: 1 }, data: { quorumPerfectNotified: true, quorumViableNotified: true } });
@@ -267,6 +320,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockSend.mockResolvedValue({ telegram: failed, discord: failed });
 
         await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
         expect(mockSend).toHaveBeenCalledTimes(1);
         expect(mockEventUpdate).not.toHaveBeenCalled();
@@ -276,6 +330,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night' });
 
         await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
         expect(mockSend).not.toHaveBeenCalled();
         expect(mockEventUpdate).not.toHaveBeenCalled();
@@ -285,9 +340,82 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumViableNotified: true });
 
         await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
         expect(mockSend).not.toHaveBeenCalled();
         expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('records quorumReachedAt inside the transaction the first time quorum is met', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: null });
+        const order: string[] = [];
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+            order.push('tx-start');
+            const out = await cb(prisma);
+            order.push('tx-end');
+            return out;
+        });
+        mockPrisma.event.updateMany.mockImplementation(async () => { order.push('quorum'); return { count: 1 }; });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 1, quorumReachedAt: null },
+            data: { quorumReachedAt: expect.any(Date) },
+        });
+        expect(order).toEqual(['tx-start', 'quorum', 'tx-end']);
+    });
+
+    it('sets quorumReachedAt even when the manager DM fails, but not the notified flag', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumReachedAt: null });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: failed });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { quorumReachedAt: expect.any(Date) } }));
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('leaves quorumReachedAt alone when it is already set or quorum is not met', async () => {
+        const quorumWrite = expect.objectContaining({ data: { quorumReachedAt: expect.any(Date) } });
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: new Date('2026-10-01T00:00:00Z') });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalledWith(quorumWrite);
+
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: null });
+        mockQuorum.mockReturnValue({ perfect: false, viable: false });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalledWith(quorumWrite);
+    });
+
+    it('defers dashboard sync, group broadcast and the quorum DM until after the response', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', discordChannelId: 'dc1', managerDiscordId: 'd-mgr' });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
+
+        const res = await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+
+        expect(res.status).toBe(200);
+        expect(syncDashboard).not.toHaveBeenCalled();
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(mockSend).not.toHaveBeenCalled();
+
+        await flushAfter();
+
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('still sends the DM when the dashboard sync throws', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
+        (syncDashboard as any).mockRejectedValue(new Error('down'));
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -298,6 +426,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        afterQueue.length = 0;
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
@@ -400,62 +529,5 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('WAITLIST');
         expect(order.indexOf('count')).toBeGreaterThan(order.indexOf('tx-start'));
         expect(order.indexOf('count')).toBeLessThan(order.indexOf('tx-end'));
-    });
-});
-
-describe('resolvePassiveChatId', () => {
-    it('matches an existing Participant chatId regardless of @ prefix on either side', async () => {
-        const tx = {
-            participant: {
-                findFirst: vi.fn().mockResolvedValue({ chatId: '111' })
-            },
-            event: {
-                findFirst: vi.fn()
-            }
-        };
-
-        const result = await resolvePassiveChatId(tx, '@pyaniz');
-
-        expect(result).toBe('111');
-        expect(tx.participant.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-            where: expect.objectContaining({
-                telegramId: { in: ['pyaniz', '@pyaniz'] },
-                NOT: { chatId: null }
-            })
-        }));
-        // Found via Participant; should never fall back to the Event manager lookup.
-        expect(tx.event.findFirst).not.toHaveBeenCalled();
-    });
-
-    it('falls back to Event.managerTelegram/managerChatId when no Participant row matches', async () => {
-        const tx = {
-            participant: {
-                findFirst: vi.fn().mockResolvedValue(null)
-            },
-            event: {
-                findFirst: vi.fn().mockResolvedValue({ managerChatId: '171713700' })
-            }
-        };
-
-        const result = await resolvePassiveChatId(tx, 'mels0n');
-
-        expect(result).toBe('171713700');
-        expect(tx.event.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-            where: expect.objectContaining({
-                managerTelegram: { in: ['mels0n', '@mels0n'] },
-                NOT: { managerChatId: null }
-            })
-        }));
-    });
-
-    it('returns null when neither a Participant nor an Event manager record matches', async () => {
-        const tx = {
-            participant: { findFirst: vi.fn().mockResolvedValue(null) },
-            event: { findFirst: vi.fn().mockResolvedValue(null) }
-        };
-
-        const result = await resolvePassiveChatId(tx, 'nobody');
-
-        expect(result).toBeNull();
     });
 });

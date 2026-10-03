@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 
 import { checkEventQuorum } from "@/shared/lib/quorum";
 import { processWaitlistPromotion } from "@/features/event-management/server/waitlist";
-import { resolvePassiveChatId } from "@/features/auth/server/passive-link";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { identityCookieOptions, readIdentity, signValue, verifyValue } from "@/shared/lib/session";
 import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
@@ -28,21 +27,24 @@ function participantCookieName(eventSlug: string): string {
  *    - Updates an existing participant only when the caller owns it: the signed
  *      `tabletop_participant_<slug>` cookie names that participant, or a verified identity
  *      cookie matches the row's chatId/discordId. Anyone else gets 403.
- *    - Or Creates new participant (inheriting Telegram identity if matched) and sets the
- *      signed participant cookie on the response.
+ *    - Or Creates new participant and sets the signed participant cookie on the response.
+ *    - Identity is linked only from verified (signed) cookies: the Telegram chatId from
+ *      `tabletop_user_chat_id`, Discord from `tabletop_user_discord_id`. A typed handle never
+ *      resolves to a chatId.
  * 3. Vote persistence: every slotId must belong to this event (400 otherwise); old votes for
  *    the user are replaced. The capacity count and status decision run in the same transaction.
- * 4. Real-time Feedback (Telegram):
- *    - Sends "User X updated availability" notification to the chat.
- *    - Updates the "Pinned Dashboard" with the new vote counts (Status Message).
- * 5. Quorum Detection:
- *    - Checks if the new vote triggered a "Viable" (Min Players) or "Perfect" (All + Host) state.
- *    - Notifies the Event Manager privately if a threshold is crossed for the first time.
+ * 4. Quorum Detection (in the transaction): the first time the vote makes the event viable,
+ *    `quorumReachedAt` is stamped. That alone stops voting reminders, independent of whether
+ *    the manager could be reached.
+ * 5. After the response (`after()`): dashboard sync, the "X updated availability" group post,
+ *    and the manager's quorum DM. Slow or failing Telegram/Discord calls can no longer time
+ *    out the vote and make the client retry. `quorumViableNotified`/`quorumPerfectNotified`
+ *    are set only when the DM was delivered.
  *
  * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, linkTelegram?, linkDiscord? }
  *   `linkTelegram`/`linkDiscord` (each default true): when explicitly false, opts this
- *   vote out of that platform's identity linking — `linkTelegram=false` skips passive
- *   chatId resolution/self-heal, `linkDiscord=false` doesn't write discordId/discordUsername.
+ *   vote out of that platform's identity linking — `linkTelegram=false` doesn't write the
+ *   verified chatId, `linkDiscord=false` doesn't write discordId/discordUsername.
  *   Legacy clients may still send the combined `linkIdentity`, which is used as the
  *   fallback for both when the per-platform flags are absent.
  *   Body-supplied `discordId`/`discordUsername` are accepted but IGNORED: Discord identity
@@ -148,14 +150,9 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             let existingVotes: any[] = [];
 
             if (existing) {
-                // Feature: Passive Identity Linking (Self-Healing)
-                // If this participant still has no verified chatId, this re-vote is a
-                // chance to self-heal via the same resolution as new-participant creation.
-                // Only attempt it when a chatId is missing, and never overwrite one already set.
-                let resolvedChatId: string | null = null;
-                if (!existing.chatId && telegramId && shouldLinkTelegram) {
-                    resolvedChatId = await resolvePassiveChatId(tx, telegramId);
-                }
+                // Self-heal a missing chatId from the verified Telegram cookie only; never
+                // overwrite one already set.
+                const resolvedChatId = !existing.chatId && shouldLinkTelegram ? identity.chatId : null;
 
                 participant = await tx.participant.update({
                     where: { id: existing.id },
@@ -183,16 +180,6 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
             // 4. If no valid existing participant found, create new
             if (!participant) {
-                // Feature: Passive Identity Linking
-                // Try to find an existing verified chatId for this user so their new Participant
-                // row isn't invisible to cross-device profile sync (which resolves events strictly
-                // by numeric chatId). Checks other Participant rows first, then falls back to the
-                // Event manager record (see resolvePassiveChatId for both steps).
-                let existingChatId = null;
-                if (telegramId && shouldLinkTelegram) {
-                    existingChatId = await resolvePassiveChatId(tx, telegramId);
-                }
-
                 participant = await tx.participant.create({
                     data: {
                         eventId,
@@ -200,7 +187,8 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         telegramId,
                         // Opt-out (or no Discord session): don't stamp Discord identity onto a fresh row.
                         ...(shouldLinkDiscord && discordId ? { discordId, discordUsername } : {}),
-                        chatId: existingChatId, // Inherit identity if known
+                        // Verified Telegram identity only (signed cookie), so cross-device profile sync finds the row.
+                        chatId: shouldLinkTelegram ? identity.chatId : null,
                         status: nextStatus || 'PENDING'
                     },
                 });
@@ -225,107 +213,141 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                 data: voteData,
             });
 
-            return participant;
+            // 6. Quorum: record the first time it is reached, in the same transaction as the vote.
+            const event = await tx.event.findUnique({
+                where: { id: eventId },
+                include: { timeSlots: { include: { votes: true } } }
+            });
+            let quorum = { viable: false, perfect: false };
+            if (event && !(event.quorumReachedAt && event.quorumPerfectNotified && event.quorumViableNotified)) {
+                const participantsCount = await tx.participant.count({ where: { eventId } });
+                quorum = checkEventQuorum(event, participantsCount);
+                if ((quorum.viable || quorum.perfect) && !event.quorumReachedAt) {
+                    await tx.event.updateMany({
+                        where: { id: eventId, quorumReachedAt: null },
+                        data: { quorumReachedAt: new Date() }
+                    });
+                }
+            }
+
+            return { participant, event, quorum };
         });
 
-        // --- POST-TRANSACTION LOGIC (Notifications) ---
-
-        const event = await prisma.event.findUnique({
-            where: { id: eventId },
-            include: { timeSlots: { include: { votes: true } } }
-        });
-
-        // --- NOTIFICATION PREPARATION ---
-        const userDisplay = telegramId ? `@${telegramId.replace('@', '')}` : name;
+        const { event, quorum } = result;
 
         // --- FINALIZED EVENT: WAITLIST AUTO-PROMOTION LOGIC ---
         if (event && event.status === 'FINALIZED' && event.maxPlayers) {
             await processWaitlistPromotion(event.id);
         }
 
-        // --- UNIFIED DASHBOARD SYNCHRONIZATION ---
-        const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
-        await syncDashboard(eventId);
+        // --- FAN-OUT AFTER THE RESPONSE ---
+        // Each step is isolated: one failing never skips the next.
+        if (event) {
+            const userDisplay = telegramId ? `@${telegramId.replace('@', '')}` : name;
+            after(async () => {
+                try {
+                    const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
+                    await syncDashboard(eventId);
+                } catch (e) {
+                    log.error("Dashboard sync after vote failed", e as Error);
+                }
 
-        if (event && (event.telegramChatId || event.discordChannelId)) {
-            const { broadcastToEvent } = await import("@/features/notifications");
-            await broadcastToEvent(
-                { telegramChatId: event.telegramChatId, discordChannelId: event.discordChannelId },
-                {
-                    html: `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`,
-                    discord: `🚀 **${userDisplay}** updated availability for **${event.title}**!`,
-                },
-                { slug: event.slug, kind: "vote-update" }
-            );
+                try {
+                    await broadcastVoteUpdate(event, userDisplay);
+                } catch (e) {
+                    log.error("Vote broadcast failed", e as Error);
+                }
+
+                try {
+                    await notifyManagerOfQuorum(event, quorum);
+                } catch (e) {
+                    log.error("Quorum DM failed", e as Error);
+                }
+            });
         }
 
-        // --- QUORUM & MANAGER NOTIFICATION LOGIC ---
-
-        if (event && !(event.quorumPerfectNotified && event.quorumViableNotified)) {
-            const { sendDirectMessage, isDelivered } = await import("@/features/notifications");
-            const { getBaseUrl } = await import("@/shared/lib/url");
-            const baseUrl = getBaseUrl();
-            const link = `${baseUrl}/e/${event.slug}/manage`;
-            const managerTarget = { telegramChatId: event.managerChatId, discordUserId: event.managerDiscordId };
-            const hasManagerLink = Boolean(event.managerChatId || event.managerDiscordId);
-
-            // Check Quorum Status
-            const participantsCount = await prisma.participant.count({ where: { eventId } });
-            const quorum = checkEventQuorum(event as any, participantsCount);
-
-            // Flag only once the DM landed on some platform. With no manager link, or a failed
-            // send, the flag stays unset: the next vote retries, and voting reminders (which stop
-            // at viable quorum) keep running as they always have for unlinked managers.
-
-            // 1. Perfect Match (Supersedes Viable)
-            if (quorum.perfect) {
-                if (!event.quorumPerfectNotified) {
-                    const result = hasManagerLink
-                        ? await sendDirectMessage(
-                            managerTarget,
-                            { html: `🌟 <b>Perfect Match Found</b> for <b>${event.title}</b>!\n\nEveryone can make it and you have a host!\n\n👉 <a href="${link}">Finalize Now</a>` },
-                            { slug: event.slug, kind: "quorum-perfect" }
-                        )
-                        : null;
-
-                    if (result && isDelivered(result)) {
-                        // Update both flags to prevent downgrading or double-pinging
-                        await prisma.event.update({
-                            where: { id: eventId },
-                            data: { quorumPerfectNotified: true, quorumViableNotified: true }
-                        });
-                        log.info("Notified Perfect Quorum", { slug: event.slug });
-                    }
-                }
-            }
-            // 2. Viable Match
-            else if (quorum.viable) {
-                if (!event.quorumViableNotified) {
-                    const result = hasManagerLink
-                        ? await sendDirectMessage(
-                            managerTarget,
-                            { html: `🎉 <b>Viable Quorum Reached</b> for <b>${event.title}</b>!\n\nYou have enough players for a game.\n\n👉 <a href="${link}">Manage Event</a>` },
-                            { slug: event.slug, kind: "quorum-viable" }
-                        )
-                        : null;
-
-                    if (result && isDelivered(result)) {
-                        await prisma.event.update({
-                            where: { id: eventId },
-                            data: { quorumViableNotified: true }
-                        });
-                        log.info("Notified Viable Quorum", { slug: event.slug });
-                    }
-                }
-            }
-        }
-
-        log.info(`Vote processed successfully`, { participantId: result.id, eventId });
-        const response = NextResponse.json({ success: true, participantId: result.id });
+        const participantRow = result.participant;
+        log.info(`Vote processed successfully`, { participantId: participantRow.id, eventId });
+        const response = NextResponse.json({ success: true, participantId: participantRow.id });
         // Proof of ownership for later edits from this browser (refreshed on every authorized vote).
-        response.cookies.set(cookieName, signValue(String(result.id)), identityCookieOptions());
+        response.cookies.set(cookieName, signValue(String(participantRow.id)), identityCookieOptions());
         return response;
     } catch (error) {
         return toResponse(error, log);
+    }
+}
+
+interface VotedEvent {
+    id: number;
+    slug: string;
+    title: string;
+    telegramChatId: string | null;
+    discordChannelId: string | null;
+    managerChatId: string | null;
+    managerDiscordId: string | null;
+    quorumPerfectNotified: boolean;
+    quorumViableNotified: boolean;
+}
+
+/** Posts "X updated their availability" to the event's linked group/channel. */
+async function broadcastVoteUpdate(event: VotedEvent, userDisplay: string): Promise<void> {
+    if (!event.telegramChatId && !event.discordChannelId) return;
+    const { broadcastToEvent } = await import("@/features/notifications");
+    await broadcastToEvent(
+        { telegramChatId: event.telegramChatId, discordChannelId: event.discordChannelId },
+        {
+            html: `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`,
+            discord: `🚀 **${userDisplay}** updated availability for **${event.title}**!`,
+        },
+        { slug: event.slug, kind: "vote-update" }
+    );
+}
+
+/**
+ * DMs the manager the first time a quorum threshold is crossed. The notified flags are set
+ * only once the DM landed on some platform; with no manager link or a failed send they stay
+ * unset and a later vote retries. Voting reminders stop on `quorumReachedAt`, not on these.
+ */
+async function notifyManagerOfQuorum(event: VotedEvent, quorum: { viable: boolean; perfect: boolean }): Promise<void> {
+    if (!event.managerChatId && !event.managerDiscordId) return;
+
+    const { sendDirectMessage, isDelivered } = await import("@/features/notifications");
+    const { getBaseUrl } = await import("@/shared/lib/url");
+    const link = `${getBaseUrl()}/e/${event.slug}/manage`;
+    const managerTarget = { telegramChatId: event.managerChatId, discordUserId: event.managerDiscordId };
+
+    // 1. Perfect Match (Supersedes Viable)
+    if (quorum.perfect) {
+        if (event.quorumPerfectNotified) return;
+        const result = await sendDirectMessage(
+            managerTarget,
+            { html: `🌟 <b>Perfect Match Found</b> for <b>${event.title}</b>!\n\nEveryone can make it and you have a host!\n\n👉 <a href="${link}">Finalize Now</a>` },
+            { slug: event.slug, kind: "quorum-perfect" }
+        );
+        if (isDelivered(result)) {
+            // Update both flags to prevent downgrading or double-pinging
+            await prisma.event.update({
+                where: { id: event.id },
+                data: { quorumPerfectNotified: true, quorumViableNotified: true }
+            });
+            log.info("Notified Perfect Quorum", { slug: event.slug });
+        }
+        return;
+    }
+
+    // 2. Viable Match
+    if (quorum.viable && !event.quorumViableNotified) {
+        const result = await sendDirectMessage(
+            managerTarget,
+            { html: `🎉 <b>Viable Quorum Reached</b> for <b>${event.title}</b>!\n\nYou have enough players for a game.\n\n👉 <a href="${link}">Manage Event</a>` },
+            { slug: event.slug, kind: "quorum-viable" }
+        );
+        if (isDelivered(result)) {
+            await prisma.event.update({
+                where: { id: event.id },
+                data: { quorumViableNotified: true }
+            });
+            log.info("Notified Viable Quorum", { slug: event.slug });
+        }
     }
 }

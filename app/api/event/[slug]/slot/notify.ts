@@ -12,10 +12,21 @@ interface DashboardTargets {
     discordMessageId: string | null;
 }
 
+/** Runs a cleanup call whose failure must not stop the caller (e.g. unpinning a deleted message). */
+async function bestEffort(fn: () => Promise<unknown>): Promise<void> {
+    try {
+        await fn();
+    } catch (error) {
+        log.debug("Best-effort dashboard cleanup failed", { error: String(error) });
+    }
+}
+
 /**
- * Edits the Discord dashboard message in place. If the edit fails (message deleted,
- * bot lost access) or none is stored yet, posts a fresh one, pins it and stores its id.
- * A successful edit never posts a duplicate.
+ * Edits the Discord dashboard message in place. Reposts only when the edit reports the
+ * message is definitively `gone` (or none is stored yet): a rate limit, 5xx or timeout
+ * leaves the stored message alone, since the edit may have landed and a repost would
+ * duplicate the dashboard and burn one of Discord's 50 pins. On repost the old message
+ * is unpinned (best effort) before the new one is pinned and its id stored.
  */
 export async function refreshDiscordDashboard(
     event: Pick<DashboardTargets, "discordChannelId" | "discordMessageId">,
@@ -23,25 +34,32 @@ export async function refreshDiscordDashboard(
     html: string
 ): Promise<void> {
     const token = process.env.DISCORD_BOT_TOKEN;
-    if (!event.discordChannelId || !token) return;
-    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
+    const channelId = event.discordChannelId;
+    const oldMessageId = event.discordMessageId;
+    if (!channelId || !token) return;
+    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
     const content = htmlToDiscordMarkdown(html);
 
-    if (event.discordMessageId && (await editDiscordMessage(event.discordChannelId, event.discordMessageId, content, token))) {
-        return;
+    if (oldMessageId) {
+        const edit = await editDiscordMessage(channelId, oldMessageId, content, token);
+        if (edit !== "gone") return;
     }
 
-    const res = await sendDiscordMessage(event.discordChannelId, content, token);
+    const res = await sendDiscordMessage(channelId, content, token);
     if (res.id) {
-        await pinDiscordMessage(event.discordChannelId, res.id, token);
+        if (oldMessageId) {
+            await bestEffort(() => unpinDiscordMessage(channelId, oldMessageId, token));
+        }
+        await pinDiscordMessage(channelId, res.id, token);
         await prisma.event.update({ where: { id: eventId }, data: { discordMessageId: res.id } });
     }
 }
 
 /**
- * Brings the Telegram pinned dashboard up to date. Edits in place when possible; if the
- * edit fails (message deleted, bot lost access) or none is stored yet, posts a fresh one,
- * pins it and stores its id. A successful edit never posts a duplicate.
+ * Brings the Telegram pinned dashboard up to date. Edits in place; reposts only when the
+ * edit reports the message is `gone` (or none is stored yet), never on a transient failure,
+ * which would otherwise post a duplicate and re-trigger the "promote me to Admin" notice.
+ * On repost the old message is unpinned (best effort) before the new one is pinned.
  */
 export async function refreshTelegramDashboard(
     event: Pick<DashboardTargets, "telegramChatId" | "pinnedMessageId">,
@@ -49,16 +67,22 @@ export async function refreshTelegramDashboard(
     html: string
 ): Promise<void> {
     const token = process.env.TELEGRAM_BOT_TOKEN;
-    if (!event.telegramChatId || !token) return;
-    const { sendTelegramMessage, editMessageText, pinChatMessage } = await import("@/features/telegram");
+    const chatId = event.telegramChatId;
+    const oldMessageId = event.pinnedMessageId;
+    if (!chatId || !token) return;
+    const { sendTelegramMessage, editMessageText, pinChatMessage, unpinChatMessage } = await import("@/features/telegram");
 
-    if (event.pinnedMessageId && (await editMessageText(event.telegramChatId, event.pinnedMessageId, html, token))) {
-        return;
+    if (oldMessageId) {
+        const edit = await editMessageText(chatId, oldMessageId, html, token);
+        if (edit !== "gone") return;
     }
 
-    const newMsgId = await sendTelegramMessage(event.telegramChatId, html, token);
+    const newMsgId = await sendTelegramMessage(chatId, html, token);
     if (newMsgId) {
-        await pinChatMessage(event.telegramChatId, newMsgId, token);
+        if (oldMessageId) {
+            await bestEffort(() => unpinChatMessage(chatId, oldMessageId, token));
+        }
+        await pinChatMessage(chatId, newMsgId, token);
         await prisma.event.update({ where: { id: eventId }, data: { pinnedMessageId: newMsgId } });
     }
 }

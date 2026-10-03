@@ -2,8 +2,15 @@
  * Pure scheduling rules for automated reminders. No I/O: callers pass `now`.
  */
 
-const LATE_WINDOW_MINUTES = 90;
-const DEDUPE_MS = 18 * 60 * 60 * 1000;
+/**
+ * How long after its target a voting reminder may still go out. The scheduler is a
+ * 10-minute pg_cron job with an hours-apart GitHub Actions backstop, so a run can land
+ * well after the target; any run inside this window catches up. It is shorter than a
+ * day so a missed reminder never collides with the next day's.
+ */
+export const VOTING_CATCHUP_MS = 18 * 60 * 60 * 1000;
+/** A voting reminder is sent at most once per this span (the claim in voting.ts uses it too). */
+export const VOTING_DEDUPE_MS = 18 * 60 * 60 * 1000;
 const WEEKDAYS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
 export interface VotingReminderSchedule {
@@ -43,10 +50,11 @@ function localClock(now: Date, timezone: string): { minutes: number; weekday: nu
 /**
  * True when a voting reminder should post now.
  *
- * The target is "reminderTime on a reminder day". It is due from the target
- * until 90 minutes after (hourly cron plus delay). The window wraps midnight:
- * a 23:30 target is still due at 00:15 the next day, judged against the
- * target's own weekday (yesterday), not today's.
+ * The target is the most recent "reminderTime on a reminder day". It is due from
+ * the target until 18 hours after (catch-up for late scheduler runs), provided no
+ * reminder went out in the last 18 hours. The window wraps midnight: a 23:30
+ * target is still due at 00:15 the next day, judged against the target's own
+ * weekday (yesterday), not today's.
  */
 export function isVotingReminderDue(schedule: VotingReminderSchedule, now: Date): boolean {
     if (!schedule.reminderTime || !schedule.reminderDays) return false;
@@ -71,26 +79,22 @@ export function isVotingReminderDue(schedule: VotingReminderSchedule, now: Date)
         targetWeekday = (clock.weekday + 6) % 7;
     }
 
-    if (diff > LATE_WINDOW_MINUTES) return false;
+    if (diff * 60_000 >= VOTING_CATCHUP_MS) return false;
     if (!days.includes(targetWeekday)) return false;
 
-    if (schedule.lastReminderSent && now.getTime() - schedule.lastReminderSent.getTime() < DEDUPE_MS) {
+    if (schedule.lastReminderSent && now.getTime() - schedule.lastReminderSent.getTime() < VOTING_DEDUPE_MS) {
         return false;
     }
     return true;
 }
 
-export interface SessionReminderSchedule {
-    startTime: Date;
-    leadMinutes: number | null;
-    sentAt: Date | null;
-}
-
-/** True when `start - lead <= now < start` and the session has not been announced yet. */
-export function isSessionReminderDue(schedule: SessionReminderSchedule, now: Date): boolean {
-    if (schedule.sentAt) return false;
-    if (!schedule.leadMinutes || schedule.leadMinutes <= 0) return false;
-    const start = schedule.startTime.getTime();
+/**
+ * True when `slotStart - lead <= now < slotStart`. Any run inside that span sends
+ * (catch-up); whether it was already sent is decided by the claim, not here.
+ */
+export function isSessionReminderDue(slotStart: Date, leadMinutes: number | null, now: Date): boolean {
+    if (!leadMinutes || leadMinutes <= 0) return false;
+    const start = slotStart.getTime();
     const nowMs = now.getTime();
-    return nowMs >= start - schedule.leadMinutes * 60_000 && nowMs < start;
+    return nowMs >= start - leadMinutes * 60_000 && nowMs < start;
 }

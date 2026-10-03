@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import Logger from "@/shared/lib/logger";
 import { reliableFetch } from "@/shared/lib/fetch";
+import type { EditResult } from "@/shared/lib/edit-result";
 
 const log = Logger.get("Telegram");
 
@@ -176,14 +177,15 @@ export async function pinChatMessage(chatId: string | number, messageId: number,
  * @param {number} messageId - Message to edit.
  * @param {string} text - New content.
  * @param {string} token - Bot Token.
- * @returns {Promise<boolean>} True if the message now shows `text` (including Telegram's
- * "message is not modified" response); false if the edit failed, e.g. the message is gone.
+ * @returns {Promise<EditResult>} 'edited' when the message shows `text` (including "message is
+ * not modified"); 'gone' on 400 "message to edit not found" / "message can't be edited";
+ * 'failed' for anything else (rate limit, 5xx, timeout), where the caller must not repost.
  */
-export async function editMessageText(chatId: string | number, messageId: number, text: string, token: string): Promise<boolean> {
+export async function editMessageText(chatId: string | number, messageId: number, text: string, token: string): Promise<EditResult> {
     return editMessage(chatId, messageId, text, token, true);
 }
 
-async function editMessage(chatId: string | number, messageId: number, text: string, token: string, allowMigrationRetry: boolean): Promise<boolean> {
+async function editMessage(chatId: string | number, messageId: number, text: string, token: string, allowMigrationRetry: boolean): Promise<EditResult> {
     log.debug(`Editing message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
     try {
@@ -201,7 +203,8 @@ async function editMessage(chatId: string | number, messageId: number, text: str
         if (!res.ok) {
             const err = await res.text();
             // Intent: Re-rendering an unchanged dashboard is a success, not a reason to repost it.
-            if (err.includes("message is not modified")) return true;
+            if (err.includes("message is not modified")) return "edited";
+            if (res.status === 400 && (err.includes("message to edit not found") || err.includes("message can't be edited"))) return "gone";
             // Group upgraded to a supergroup: record the new id and retry once there. Message
             // ids do not carry over, so the retry usually fails and the caller reposts, now
             // into the right chat.
@@ -211,13 +214,13 @@ async function editMessage(chatId: string | number, messageId: number, text: str
                 return editMessage(newChatId, messageId, text, token, false);
             }
             log.error("API Error (editMessageText)", { error: err });
-            return false;
+            return "failed";
         }
         log.debug(`Message ${messageId} edited successfully.`);
-        return true;
+        return "edited";
     } catch (e) {
         log.error("Failed to edit message", e as Error);
-        return false;
+        return "failed";
     }
 }
 
