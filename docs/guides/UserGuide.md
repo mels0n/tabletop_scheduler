@@ -45,7 +45,7 @@ As the organizer, you use this page to control the event.
     - **Bot Status**: Shows whether a Telegram group or Discord channel is connected, and the `/connect` command for Telegram.
     - **Reminders**: Turn on voting reminders (a time and weekdays, in the event's timezone) and session reminders (2 hours, 1 day or 2 days before each finalized session) for the connected group or channel.
 - **Manage Event Details**:
-    - **Participants**: You can remove attendees if they can no longer make it. If the event is finalized and full, removing an ACCEPTED participant will automatically promote the next person on the waitlist.
+    - **Participants**: You can remove attendees if they can no longer make it. If the event is finalized and full, removing an ACCEPTED participant will automatically promote the next person on the waitlist. "If Needed" players are seated automatically only when the table is below its minimum, "Yes" voters whenever a seat is open; players can switch to "Yes" to claim an open seat.
     - **Time Slots**: You can add, edit, or delete time slots dynamically to adjust the options available for voting. (Note: Modifying slots is disabled once the event is finalized).
 - **Finalize Event**:
     - Select the winning time slot.

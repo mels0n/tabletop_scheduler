@@ -12,7 +12,7 @@ TabletopTime helps your gaming group find the best time to meet. A host proposes
 ### Key Features
 - **Host**: Create, edit, and delete time slots dynamically. Manage quorum rules (min players) and capacity limits (max players). Remove accepted participants to trigger waitlist auto-promotion.
 - **Vote & Suggest**: No login required. Simple "Yes", "If Needed", or "No" voting. Attendees can also suggest new time slots if none work.
-- **Waitlist**: Automatic waitlist management with First-Come-First-Serve promotion when spots open up.
+- **Waitlist**: Automatic waitlist management with First-Come-First-Serve promotion when spots open up. "If Needed" players are seated automatically only when the table is below its minimum, "Yes" voters whenever a seat is open; a waitlisted player can switch to "Yes" to claim an open seat.
 - **Finalize**: Select a host/location and generate calendar invites (.ics / Google Calendar). Once finalized, slot management is locked.
 - **Telegram / Discord Bot**:
   - Pins a live-updating dashboard in your group chat or channel.
