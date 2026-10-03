@@ -61,7 +61,7 @@ All Discord variables are optional. Without them the Discord buttons are hidden 
 
 **In the connected channel:**
 *   **Live dashboard:** The pinned message is edited in place when people vote. If Discord says the message is gone (it was deleted), the bot posts and pins a fresh one and unpins the old one. A temporary Discord error does not trigger a repost.
-*   **Vote updates:** A short "updated their availability" post each time someone votes. It names the voter.
+*   **Vote updates:** A short "updated their availability" post when someone votes. It names the voter. Availability updates are announced at most once per hour per person; the pinned dashboard always shows the latest votes. Self-hosters can change the window with `VOTE_ANNOUNCE_COOLDOWN_MINUTES`.
 *   **Slot changes:** A short message when the organizer adds, changes, or removes a time option.
 *   **Location updates:** A short message when the organizer sets or changes the location.
 *   **Finalize announcement:** The result, once the organizer finalizes.

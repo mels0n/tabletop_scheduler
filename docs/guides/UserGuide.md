@@ -78,6 +78,8 @@ To get notifications in your group chat:
     - The event is finalized (updates the pin).
     - The event is cancelled.
 
+    Availability updates are announced at most once per hour per person; the pinned dashboard always shows the latest votes.
+
 ---
 
 ## 6. My Events (Profile)

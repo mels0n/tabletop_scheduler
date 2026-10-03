@@ -56,6 +56,12 @@ All three are optional, but Discord features need all three together.
 |----------|:--------:|:-------:|-------------|
 | `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, or `error`. Logs are one JSON object per line. Prisma queries are logged only at `debug`. |
 
+## Notifications
+
+| Variable | Required | Default | Description |
+|----------|:--------:|:-------:|-------------|
+| `VOTE_ANNOUNCE_COOLDOWN_MINUTES` | No | `60` | Minimum minutes between two "updated their availability" posts to the group or channel for the same participant. A participant who changes their vote again inside the window does not trigger another post; the pinned dashboard is still updated on every vote. Whole number from `0` to `1440`; `0` announces every vote. |
+
 ## Event Retention (Cleanup)
 
 *Control how long events stay in the database after they pass.*
