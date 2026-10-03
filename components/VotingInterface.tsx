@@ -8,7 +8,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
 import { QuickSelectionCalendar } from "./QuickSelectionCalendar";
 import type { PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
-import { voteErrorMessage } from "@/features/event-management/model/vote-errors";
+import { PARTICIPANT_NOT_OWNED, voteErrorMessage } from "@/features/event-management/model/vote-errors";
 
 type Slot = PublicSlot & {
     counts: { yes: number; maybe: number; no: number };
@@ -50,6 +50,9 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
     // when that platform is synced in this browser; both default to on.
     const [linkTelegram, setLinkTelegram] = useState(true);
     const [linkDiscord, setLinkDiscord] = useState(true);
+    // Set when the server refused to edit the stored participant (403 participant_not_owned):
+    // holds the votes so they can be resubmitted as a brand new participant.
+    const [notOwned, setNotOwned] = useState<{ message: string; votes: Record<number, string | undefined> } | null>(null);
 
     useEffect(() => {
         let pid = serverParticipantId;
@@ -104,8 +107,12 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
 
     // Accepts an optional override so quick view can pass in NOs-filled map
     // without hitting React's async state update timing issue.
-    const submitVotes = async (votesOverride?: Record<number, string | undefined>) => {
+    const submitVotes = async (
+        votesOverride?: Record<number, string | undefined>,
+        participantIdOverride?: number | null
+    ) => {
         const effectiveVotes = votesOverride ?? votes;
+        const effectiveParticipantId = participantIdOverride !== undefined ? participantIdOverride : participantId;
 
         if (!userName) return alert("Please enter your name");
         if (Object.values(effectiveVotes).filter(v => v !== undefined).length === 0)
@@ -124,7 +131,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 name: userName,
                 telegramId: linkTelegram ? effectiveTelegram : "",
                 discordUsername: linkDiscord ? discordIdentity?.username : undefined,
-                participantId,
+                participantId: effectiveParticipantId,
                 linkTelegram,
                 linkDiscord,
                 votes: Object.entries(effectiveVotes)
@@ -150,9 +157,15 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 setHasVoted(true);
                 window.location.reload();
             } else {
-                // A 403 participant_not_owned gets its own message (sign in to edit).
+                // A 403 participant_not_owned gets its own message (sign in to edit) and an
+                // offer to vote as a new participant instead.
                 const body = await res.json().catch(() => null);
-                alert(voteErrorMessage(body));
+                const code = typeof body === "object" && body !== null ? (body as { code?: unknown }).code : undefined;
+                if (res.status === 403 && code === PARTICIPANT_NOT_OWNED) {
+                    setNotOwned({ message: voteErrorMessage(body), votes: effectiveVotes });
+                } else {
+                    alert(voteErrorMessage(body));
+                }
             }
         } catch (e) {
             console.error("Failed to submit votes", e);
@@ -160,6 +173,20 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // Forget the participant this browser remembered for the event and submit the same votes fresh.
+    const voteAsNewParticipant = () => {
+        if (!notOwned) return;
+        const pending = notOwned.votes;
+        try {
+            localStorage.removeItem(`tabletop_participant_${eventId}`);
+        } catch {
+            // Storage can be unavailable; the resubmit below still sends no participant id.
+        }
+        setParticipantId(null);
+        setNotOwned(null);
+        submitVotes(pending, null);
     };
 
     // Called by QuickSelectionCalendar — fills NOs then submits
@@ -339,6 +366,29 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 </div>
 
                 {/* ── Detailed view ── */}
+                {notOwned && (
+                    <div role="alert" className="p-4 rounded-xl border border-amber-700/60 bg-amber-900/20 text-amber-200 space-y-3">
+                        <p className="text-sm">{notOwned.message}</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={voteAsNewParticipant}
+                                disabled={isSubmitting}
+                                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-semibold"
+                            >
+                                Vote as a new participant
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNotOwned(null)}
+                                className="px-4 py-2 rounded-lg border border-amber-700/60 text-amber-200 hover:bg-amber-900/30 text-sm"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {viewMode === "detailed" && (
                     <div className="space-y-4">
                         {/* Legend */}
