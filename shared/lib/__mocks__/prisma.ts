@@ -46,6 +46,9 @@ export const prisma = {
     loginToken: {
         create: vi.fn(),
         findFirst: vi.fn(),
+        findUnique: vi.fn(),
+        count: vi.fn(),
+        delete: vi.fn(),
         deleteMany: vi.fn(),
     },
     finalizedSession: {

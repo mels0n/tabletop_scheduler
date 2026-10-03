@@ -102,24 +102,41 @@ export async function assertManagerLinkCooldown(manager: ManagerIdentity): Promi
     }
 }
 
+export type LoginPlatform = "telegram" | "discord";
+
 /**
- * Creates a 15-minute LoginToken bound to the event's stored manager identity and
- * returns the `/auth/login` URL that redeems it. The admin token is never rotated.
+ * Creates a 15-minute LoginToken carrying ONLY the manager identity for one platform and
+ * returns the `/auth/login` URL that redeems it. Each platform gets its own token so the
+ * link DMed to one identity can never mint the other identity's cookie: an event's two
+ * manager identities may belong to different people. The admin token is never rotated.
  * Only the hash is stored.
  */
-export async function createManagerLoginLink(manager: ManagerIdentity): Promise<string> {
-    if (!manager.managerChatId && !manager.managerDiscordId) {
-        throw new ForbiddenError("No linked manager to notify");
-    }
+export async function createManagerLoginLink(manager: ManagerIdentity, platform: LoginPlatform): Promise<string> {
+    const data =
+        platform === "telegram"
+            ? manager.managerChatId
+                ? {
+                    chatId: manager.managerChatId,
+                    telegramUsername: normalizeHandle(manager.managerTelegram) || null,
+                    discordId: null,
+                    discordUsername: null,
+                }
+                : null
+            : manager.managerDiscordId
+                ? {
+                    chatId: null,
+                    telegramUsername: null,
+                    discordId: manager.managerDiscordId,
+                    discordUsername: manager.managerDiscordUsername,
+                }
+                : null;
+    if (!data) throw new ForbiddenError("No linked manager to notify");
 
     const rawToken = randomUUID();
     await prisma.loginToken.create({
         data: {
             token: hashToken(rawToken),
-            chatId: manager.managerChatId,
-            telegramUsername: manager.managerChatId ? normalizeHandle(manager.managerTelegram) || null : null,
-            discordId: manager.managerDiscordId,
-            discordUsername: manager.managerDiscordId ? manager.managerDiscordUsername : null,
+            ...data,
             expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MS),
         },
     });

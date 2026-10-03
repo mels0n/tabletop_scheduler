@@ -74,15 +74,15 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
     });
 
     it('binds the 15-minute login token to the stored manager identity, storing only a hash', async () => {
-        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
+        mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
         const before = Date.now();
 
         await dmManagerLink('abc');
 
         const data = mockPrisma.loginToken.create.mock.calls[0][0].data;
         expect(data).toMatchObject({
-            chatId: '555',
-            telegramUsername: 'steve_tg',
+            chatId: null,
+            telegramUsername: null,
             discordId: '123456789012345678',
             discordUsername: 'GmSteve',
         });
@@ -92,6 +92,33 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         const ttl = (data.expiresAt as Date).getTime() - before;
         expect(ttl).toBeGreaterThan(14 * 60_000);
         expect(ttl).toBeLessThanOrEqual(15 * 60_000 + 1000);
+    });
+
+    it('mints one token per platform so neither DM can log in as the other identity', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
+        mockSend
+            .mockResolvedValueOnce({ telegram: sent, discord: skipped })
+            .mockResolvedValueOnce({ telegram: skipped, discord: sent });
+
+        const res = await dmManagerLink('abc');
+
+        expect(res).toMatchObject({ success: true, message: expect.stringContaining('Telegram and Discord') });
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(2);
+        expect(mockSend).toHaveBeenCalledTimes(2);
+
+        const [tgCall, dcCall] = mockSend.mock.calls;
+        const [tgRow, dcRow] = mockPrisma.loginToken.create.mock.calls.map((c) => c[0].data);
+
+        // Telegram DM: Telegram-only token.
+        expect(tgCall[0]).toEqual({ telegramChatId: '555', discordUserId: null });
+        expect(tgRow).toMatchObject({ chatId: '555', telegramUsername: 'steve_tg', discordId: null, discordUsername: null });
+        // Discord DM: Discord-only token.
+        expect(dcCall[0]).toEqual({ telegramChatId: null, discordUserId: '123456789012345678' });
+        expect(dcRow).toMatchObject({ chatId: null, telegramUsername: null, discordId: '123456789012345678', discordUsername: 'GmSteve' });
+
+        // Each DM carries a different raw token.
+        const tokenOf = (html: string) => html.match(/token=([0-9a-f-]+)/)![1];
+        expect(tokenOf(tgCall[1].html)).not.toBe(tokenOf(dcCall[1].html));
     });
 
     it('escapes the event title in the HTML DM', async () => {
@@ -124,20 +151,19 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(mockSend).not.toHaveBeenCalled();
     });
 
-    it('sends to both platforms when the manager linked both', async () => {
+    it('sends to both platforms when the manager linked both, reporting partial delivery', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({
             ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555',
         });
-        mockSend.mockResolvedValue({ telegram: sent, discord: sent });
+        mockSend
+            .mockResolvedValueOnce({ telegram: { status: 'failed', error: 'blocked' }, discord: skipped })
+            .mockResolvedValueOnce({ telegram: skipped, discord: sent });
 
         const res = await recoverManagerLink('abc', 'steve_tg');
 
-        expect(mockSend).toHaveBeenCalledWith(
-            { telegramChatId: '555', discordUserId: '123456789012345678' },
-            expect.anything(),
-            expect.anything()
-        );
-        expect(res).toMatchObject({ success: true, message: expect.stringContaining('Telegram and Discord') });
+        expect(mockSend).toHaveBeenNthCalledWith(1, { telegramChatId: '555', discordUserId: null }, expect.anything(), expect.anything());
+        expect(mockSend).toHaveBeenNthCalledWith(2, { telegramChatId: null, discordUserId: '123456789012345678' }, expect.anything(), expect.anything());
+        expect(res).toMatchObject({ success: true, message: 'Login link sent to your Discord DMs!' });
     });
 
     it('reports an error when no platform delivered', async () => {
