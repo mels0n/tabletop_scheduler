@@ -7,24 +7,23 @@ import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
 import { QuickSelectionCalendar } from "./QuickSelectionCalendar";
+import type { PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
 
-interface Slot {
-    id: number;
-    startTime: Date;
-    endTime: Date;
+type Slot = PublicSlot & {
     counts: { yes: number; maybe: number; no: number };
-    votes: any[];
-}
+};
 
 interface VotingInterfaceProps {
     eventId: number;
     initialSlots: Slot[];
-    participants: any[];
+    participants: PublicParticipant[];
     minPlayers: number;
     slug: string;
     serverParticipantId?: number;
-    discordIdentity?: { id: string, username: string };
+    discordIdentity?: { username: string };
     telegramIdentity?: { handle: string };
+    /** The viewer's own handle, resolved on the server from their verified identity. */
+    myTelegramHandle?: string | null;
     eventType?: "ONE_SHOT" | "CAMPAIGN";
     isTelegramSynced?: boolean;
     isDiscordSynced?: boolean;
@@ -32,7 +31,7 @@ interface VotingInterfaceProps {
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, slug, serverParticipantId, discordIdentity, telegramIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, slug, serverParticipantId, discordIdentity, telegramIdentity, myTelegramHandle, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
@@ -68,15 +67,15 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
             const existing = participants.find(p => p.id === pid);
             if (existing) {
                 setUserName(existing.name);
-                setUserTelegram(existing.telegramId || "");
+                setUserTelegram((serverParticipantId ? myTelegramHandle : null) || localStorage.getItem('tabletop_telegram') || "");
 
                 const myVotes: Record<number, string> = {};
                 const myHosting: Record<number, boolean> = {};
 
                 initialSlots.forEach(slot => {
-                    const userVote = slot.votes.find((v: any) => v.participantId === pid);
+                    const userVote = slot.votes.find(v => v.participantId === pid);
                     if (userVote) {
-                        myVotes[slot.id] = userVote.preference;
+                        myVotes[slot.id] = userVote.value;
                         if (userVote.canHost) myHosting[slot.id] = true;
                     }
                 });
@@ -89,7 +88,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
             setUserName(prev => prev || urlUserId || localStorage.getItem('tabletop_username') || "");
             setUserTelegram(prev => prev || localStorage.getItem('tabletop_telegram') || "");
         }
-    }, [serverParticipantId, eventId, participants, initialSlots, searchParams]);
+    }, [serverParticipantId, myTelegramHandle, eventId, participants, initialSlots, searchParams]);
 
     const handleVote = (slotId: number, preference: string) => {
         setVotes(prev => ({
@@ -123,7 +122,6 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
             const payload = {
                 name: userName,
                 telegramId: linkTelegram ? effectiveTelegram : "",
-                discordId: linkDiscord ? discordIdentity?.id : undefined,
                 discordUsername: linkDiscord ? discordIdentity?.username : undefined,
                 participantId,
                 linkTelegram,
@@ -360,7 +358,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                         {slots.map(slot => {
                             const myVote = votes[slot.id];
                             const hasHostOffer = slot.votes.some(
-                                (v: any) => (v.preference === "YES" || v.preference === "MAYBE") && v.canHost
+                                v => (v.value === "YES" || v.value === "MAYBE") && v.canHost
                             );
 
                             return (
