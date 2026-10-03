@@ -4,8 +4,9 @@ import { verifyEventAdmin } from "@/features/auth/server/actions";
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { slug: string; participantId: string } }
+    props: { params: Promise<{ slug: string; participantId: string }> }
 ) {
+    const params = await props.params;
     try {
         const { slug, participantId } = params;
         const participantIdInt = parseInt(participantId, 10);

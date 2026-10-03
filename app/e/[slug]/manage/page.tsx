@@ -8,7 +8,6 @@ import { ManagerControls } from "@/components/ManagerControls";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
-import { CampaignFinalizeModal } from "./CampaignFinalizeModal";
 import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
 import { getBotUsername } from "@/features/telegram/lib/telegram-client";
@@ -27,7 +26,7 @@ import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
  * @description Standard Next.js page props interface with dynamic route parameters.
  */
 interface PageProps {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }
 
 /**
@@ -82,7 +81,8 @@ async function getEventWithVotes(slug: string) {
  * - Pre-sorts TimeSlots based on a heuristic: Perfect > Total Votes > Yes Votes > Has Host.
  * - Conditional Rendering: Switches between "Voting Mode" (list of slots) and "Finalized Mode" (Big Green Success Card).
  */
-export default async function ManageEventPage({ params }: PageProps) {
+export default async function ManageEventPage(props: PageProps) {
+    const params = await props.params;
     // Security: Verify Admin Access Server-Side
     // Middleware only checks for cookie presence, not validity.
     const isAdmin = await verifyEventAdmin(params.slug);
@@ -96,7 +96,7 @@ export default async function ManageEventPage({ params }: PageProps) {
         notFound();
     }
 
-    const botUsername = await getBotUsername(process.env.TELEGRAM_BOT_TOKEN || '') || 'TabletopSchedulerBot';
+    const botUsername = (await getBotUsername(process.env.TELEGRAM_BOT_TOKEN || '')) || 'TabletopSchedulerBot';
 
     // Algorithm: Score and Sort Slots
     const slots = event.timeSlots.map(slot => {

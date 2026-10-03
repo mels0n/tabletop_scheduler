@@ -77,7 +77,7 @@ describe('POST /api/event/[slug]/finalize', () => {
     });
 
     it('DMs a Discord-only accepted participant', async () => {
-        await POST(oneShotRequest(), { params: { slug: 'evt' } });
+        await POST(oneShotRequest(), { params: Promise.resolve({ slug: 'evt' }) });
 
         expect(mockSend).toHaveBeenCalledTimes(1);
         expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd-7' });
@@ -85,7 +85,7 @@ describe('POST /api/event/[slug]/finalize', () => {
     });
 
     it('deletes the old Discord dashboard message after unpinning, then posts and stores the new one', async () => {
-        await POST(oneShotRequest(), { params: { slug: 'evt' } });
+        await POST(oneShotRequest(), { params: Promise.resolve({ slug: 'evt' }) });
 
         expect(discord.unpinDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
         expect(discord.deleteDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
@@ -96,7 +96,7 @@ describe('POST /api/event/[slug]/finalize', () => {
     it('still announces on Discord when Telegram throws', async () => {
         (telegram.deleteMessage as any).mockRejectedValue(new Error('telegram down'));
 
-        await POST(oneShotRequest(), { params: { slug: 'evt' } });
+        await POST(oneShotRequest(), { params: Promise.resolve({ slug: 'evt' }) });
 
         expect(discord.sendDiscordMessage).toHaveBeenCalled();
         expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { discordMessageId: 'new-msg' } });
@@ -105,7 +105,7 @@ describe('POST /api/event/[slug]/finalize', () => {
     it('still announces on Telegram when Discord throws', async () => {
         (discord.unpinDiscordMessage as any).mockRejectedValue(new Error('discord down'));
 
-        await POST(oneShotRequest(), { params: { slug: 'evt' } });
+        await POST(oneShotRequest(), { params: Promise.resolve({ slug: 'evt' }) });
 
         expect(telegram.sendTelegramMessage).toHaveBeenCalled();
         expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pinnedMessageId: 99 } });

@@ -39,22 +39,21 @@ const log = Logger.get("API:Vote");
  * @param {Object} context - Route parameters.
  * @param {string} context.params.slug - The event identifier (Note: actually treated as ID in logic but slug in route).
  */
-export async function POST(
-    req: Request,
-    { params }: { params: { slug: string } } // slug is actually eventId in path for some reason? No, route is /api/event/[slug]/vote.
-) {
+export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     try {
         // Intent: Parse 'slug' as ID because the frontend passes the numerical ID here.
         // Legacy: Ideally strictly slug-based, but currently numeric ID is used in API calls.
         const eventId = parseInt(params.slug);
         const body = await req.json();
-        let { name, telegramId, votes, participantId, linkIdentity, linkTelegram, linkDiscord } = body;
+        const { name, participantId, linkIdentity, linkTelegram, linkDiscord } = body;
+        let { telegramId, votes } = body;
 
         // Security: Discord identity comes from the OAuth session cookies only. The body's
         // discordId/discordUsername (still sent by clients) are ignored so a forged payload
         // can't attach an arbitrary Discord user to a participant (and later cause the bot
         // to DM someone who never authorized us).
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const discordId = cookieStore.get("tabletop_user_discord_id")?.value;
         const discordUsername = cookieStore.get("tabletop_user_discord_name")?.value;
 

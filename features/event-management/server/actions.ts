@@ -43,7 +43,7 @@ export async function checkEventStatus(slug: string) {
  * Updates the manager's Telegram handle.
  */
 export async function updateManagerHandle(slug: string, handle: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     // Canonicalize: accept the handle with or without '@' and store it '@'-less
     // (lowercased), matching every other write path. Display code re-adds one '@'.
@@ -69,7 +69,7 @@ export async function updateManagerHandle(slug: string, handle: string) {
  * Updates the Telegram invite link associated with the event.
  */
 export async function updateTelegramInviteLink(slug: string, link: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     if (!link || !link.startsWith("https://t.me/")) {
         return { error: "Invalid Telegram link. It should start with https://t.me/" };
@@ -92,7 +92,7 @@ export async function updateTelegramInviteLink(slug: string, link: string) {
  * Permanently deletes an event and all associated data.
  */
 export async function deleteEvent(slug: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     const event = await prisma.event.findUnique({
         where: { slug }
@@ -152,7 +152,7 @@ export async function deleteEvent(slug: string) {
  * Marks an event as CANCELLED without deleting it.
  */
 export async function cancelEvent(slug: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     const event = await prisma.event.findUnique({
         where: { slug }
@@ -254,7 +254,7 @@ export async function cancelEvent(slug: string) {
  */
 export async function updateReminderSettings(slug: string, enabled: boolean, time: string, days: number[]) {
     try {
-        if (!await verifyEventAdmin(slug)) return { success: false, error: "Unauthorized" };
+        if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
 
         const event = await prisma.event.findUnique({ where: { slug } });
         if (!event) return { success: false, error: "Event not found" };
@@ -291,7 +291,7 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
  */
 export async function updateSessionReminderSettings(slug: string, enabled: boolean, leadMinutes: number) {
     try {
-        if (!await verifyEventAdmin(slug)) return { success: false, error: "Unauthorized" };
+        if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
 
         if (typeof enabled !== "boolean" || !SESSION_REMINDER_LEADS.includes(leadMinutes)) {
             return { success: false, error: "Invalid lead time" };

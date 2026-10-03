@@ -26,7 +26,7 @@ export const metadata: Metadata = {
  */
 export default async function ProfilePage() {
     // Security: Only read the HTTP-only cookie.
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const telegramChatId = cookieStore.get("tabletop_user_chat_id")?.value;
     const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
     const discordUserName = cookieStore.get("tabletop_user_discord_name")?.value;

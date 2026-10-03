@@ -59,14 +59,14 @@ export async function GET(request: NextRequest) {
         // 3. Set Cookie (HTTP Only, Secure)
         // Intent: Authenticate the user globally across the app based on their Telegram Chat ID OR Discord ID.
         if (validToken.chatId) {
-            cookies().set("tabletop_user_chat_id", validToken.chatId, {
+            (await cookies()).set("tabletop_user_chat_id", validToken.chatId, {
                 ...COOKIE_BASE_OPTIONS,
                 maxAge: COOKIE_MAX_AGE
             });
             // Also set username for display (mirrors Discord below), so the vote
             // form can show a Telegram identity badge instead of an empty field.
             if (validToken.telegramUsername) {
-                cookies().set("tabletop_user_telegram_name", validToken.telegramUsername, {
+                (await cookies()).set("tabletop_user_telegram_name", validToken.telegramUsername, {
                     ...COOKIE_BASE_OPTIONS,
                     httpOnly: false, // Readable by client
                     maxAge: COOKIE_MAX_AGE
@@ -75,13 +75,13 @@ export async function GET(request: NextRequest) {
         }
 
         if (validToken.discordId) {
-            cookies().set("tabletop_user_discord_id", validToken.discordId, {
+            (await cookies()).set("tabletop_user_discord_id", validToken.discordId, {
                 ...COOKIE_BASE_OPTIONS,
                 maxAge: COOKIE_MAX_AGE
             });
             // Also set username for display
             if (validToken.discordUsername) {
-                cookies().set("tabletop_user_discord_name", validToken.discordUsername, {
+                (await cookies()).set("tabletop_user_discord_name", validToken.discordUsername, {
                     ...COOKIE_BASE_OPTIONS,
                     httpOnly: false, // Readable by client
                     maxAge: COOKIE_MAX_AGE

@@ -16,7 +16,7 @@ import { cookies } from "next/headers";
  * - tabletop_user_discord_name  — Discord display name (non-sensitive, public)
  */
 export async function POST() {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
 
     const AUTH_COOKIES = [
         "tabletop_user_chat_id",

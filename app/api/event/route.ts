@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
         // Identity Pre-Sync: If user is logged in via Magic Link globally, auto-populate credentials
         const { cookies } = await import("next/headers");
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const globalChatId = cookieStore.get("tabletop_user_chat_id")?.value || null;
         const globalDiscordId = cookieStore.get("tabletop_user_discord_id")?.value || null;
         const globalDiscordName = cookieStore.get("tabletop_user_discord_name")?.value || null;

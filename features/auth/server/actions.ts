@@ -12,7 +12,7 @@ import prisma from "@/shared/lib/prisma";
  * @param {string} token - The administrative token.
  */
 export async function setAdminCookie(slug: string, token: string) {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const opts = {
         ...COOKIE_BASE_OPTIONS,
         maxAge: COOKIE_MAX_AGE
@@ -25,7 +25,7 @@ export async function setAdminCookie(slug: string, token: string) {
  * Uses the HTTP-Only cookie and Hashing logic.
  */
 export async function verifyEventAdmin(slug: string): Promise<boolean> {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get(`tabletop_admin_${slug}`)?.value;
 
     let hasAdminTokenAccess = false;

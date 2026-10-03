@@ -8,7 +8,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 interface Props {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
@@ -21,7 +21,8 @@ export async function generateStaticParams() {
     }));
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+    const params = await props.params;
     const post = getPostBySlug(params.slug);
     if (!post) {
         return {
@@ -43,7 +44,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-export default function BlogPost({ params }: Props) {
+export default async function BlogPost(props: Props) {
+    const params = await props.params;
     const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
     if (!isHosted) {
@@ -117,6 +119,7 @@ export default function BlogPost({ params }: Props) {
                         components={{
                             h1: ({ children }) => <h2>{children}</h2>,
                             img: ({ src, alt }) => (
+                                // eslint-disable-next-line @next/next/no-img-element -- markdown images of unknown size; images.unoptimized is on
                                 <img src={src} alt={alt ?? ''} className="w-full rounded-lg my-6" />
                             ),
                         }}

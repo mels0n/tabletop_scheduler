@@ -11,7 +11,6 @@ const log = Logger.get("Auth:Discord");
 import { setAdminCookie } from "@/features/auth/server/actions";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 import { hashToken } from "@/shared/lib/token";
-import { v4 as uuidv4 } from "uuid";
 import prisma from "@/shared/lib/prisma";
 import { normalizeHandle } from "@/shared/lib/handle";
 
@@ -93,7 +92,7 @@ export async function GET(req: Request) {
     const user = await userRes.json();
 
     // 3. Handle Flow Logic
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
 
     // Intent: Use shared configuration for 400-day persistence
     const cookieOpts = {
@@ -114,7 +113,7 @@ export async function GET(req: Request) {
         // This acts as the "Magic Link" for Discord users.
         if (returnTo.includes("/manage")) {
             // Extract slug from path: /e/[slug]/manage
-            const match = returnTo.match(/\/e\/([^\/]+)\/manage/);
+            const match = returnTo.match(/\/e\/([^/]+)\/manage/);
             if (match && match[1]) {
                 const slug = match[1];
 
@@ -127,7 +126,7 @@ export async function GET(req: Request) {
                     // because verifyEventAdmin expects Cookie(Plaintext) -> Hash(Cookie) === DB(Hash).
                     // Solution: Rotate the token.
 
-                    const newToken = uuidv4();
+                    const newToken = crypto.randomUUID();
                     const newHash = hashToken(newToken);
 
                     await prisma.event.update({
@@ -140,7 +139,7 @@ export async function GET(req: Request) {
                 } else if (event && !event.managerDiscordId) {
                     // Claiming: If no Discord ID is set but they are logging in via the Manage page...
                     // Allow the user to "Claim" this event as the manager since they had the admin link.
-                    const newToken = uuidv4();
+                    const newToken = crypto.randomUUID();
                     const newHash = hashToken(newToken);
 
                     await prisma.event.update({

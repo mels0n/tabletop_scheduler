@@ -27,7 +27,7 @@ export async function refreshDiscordDashboard(
     const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage } = await import("@/features/discord/model/discord");
     const content = htmlToDiscordMarkdown(html);
 
-    if (event.discordMessageId && await editDiscordMessage(event.discordChannelId, event.discordMessageId, content, token)) {
+    if (event.discordMessageId && (await editDiscordMessage(event.discordChannelId, event.discordMessageId, content, token))) {
         return;
     }
 
@@ -52,7 +52,7 @@ export async function refreshTelegramDashboard(
     if (!event.telegramChatId || !token) return;
     const { sendTelegramMessage, editMessageText, pinChatMessage } = await import("@/features/telegram");
 
-    if (event.pinnedMessageId && await editMessageText(event.telegramChatId, event.pinnedMessageId, html, token)) {
+    if (event.pinnedMessageId && (await editMessageText(event.telegramChatId, event.pinnedMessageId, html, token))) {
         return;
     }
 

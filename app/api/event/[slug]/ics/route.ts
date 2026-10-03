@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
-import { format } from "date-fns";
 import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("API:ICS");
@@ -24,10 +23,8 @@ const log = Logger.get("API:ICS");
  * @param {string} context.params.slug - The event identifier.
  * @returns {NextResponse} The ICS file download or Error.
  */
-export async function GET(
-    req: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function GET(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     try {
         log.debug("Generating ICS", { slug: params.slug });
         const event = await prisma.event.findUnique({

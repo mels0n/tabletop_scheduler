@@ -28,7 +28,8 @@ const log = Logger.get("AuthRoute");
  * @param {string} context.params.slug - The event identifier.
  * @returns {NextResponse} Redirect response.
  */
-export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     const searchParams = request.nextUrl.searchParams;
     const token = searchParams.get("token");
     const slug = params.slug;
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
         // WHY: Without this, the user appears anonymous on the public Voting page
         // because VotingInterface reads global cookies, not event-specific admin tokens.
         // Uses the same cookie options as the Discord OAuth callback for consistency.
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const cookieOpts = { ...COOKIE_BASE_OPTIONS, maxAge: COOKIE_MAX_AGE };
 
         if (event.managerDiscordId) {
