@@ -6,6 +6,7 @@ import { verifyEventAdmin } from "@/features/auth";
 import { ConflictError, ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
 import { campaignFinalizeSchema, oneShotFinalizeSchema } from "@/features/event-management/model/schemas";
 import { escapeHtml } from "@/shared/lib/escape";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("API:Finalize");
 
@@ -448,7 +449,7 @@ async function announceFinalized(
     event: { id: number; slug: string; telegramChatId: string | null; pinnedMessageId: number | null; discordChannelId: string | null; discordMessageId: string | null },
     htmlMsg: string
 ) {
-    const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+    const telegramToken = getServerConfig().telegram.token ?? undefined;
     if (event.telegramChatId && telegramToken) {
         try {
             const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
@@ -465,7 +466,7 @@ async function announceFinalized(
         }
     }
 
-    const discordToken = process.env.DISCORD_BOT_TOKEN;
+    const discordToken = getServerConfig().discord.botToken ?? undefined;
     if (event.discordChannelId && discordToken) {
         try {
             const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } = await import("@/features/integrations/discord/model/discord");

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from "next/navigation";
 import { getAllPosts } from '@/shared/lib/blog';
 import { Metadata } from 'next';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'Blog: D&D Scheduling Tips & MTG Logistics',
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default function BlogIndex() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         notFound();

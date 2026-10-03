@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'Legal | Terms of Service & Privacy Policy',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default function LegalPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         return (

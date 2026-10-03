@@ -5,6 +5,7 @@ import { getDonations } from "@/entities/donation";
 import { getEventStats } from "@/shared/lib/event-stats";
 import DonationTicker from "@/components/DonationTicker";
 import { FaqJsonLd } from "@/components/FaqJsonLd";
+import { publicConfig } from "@/shared/config/public";
 
 const HOME_FAQ = [
   {
@@ -42,7 +43,7 @@ export const revalidate = 43200; // 12 hours
  */
 export default async function Home() {
   // Intent: Determine deployment mode to toggle text/features (e.g., "Free & Open" vs "Self Hosted").
-  const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+  const isHosted = publicConfig.isHosted;
 
   // Fetch public donations for the ticker, only in hosted mode to preserve self-hosted static generation.
   const donations = isHosted ? await getDonations(20) : [];

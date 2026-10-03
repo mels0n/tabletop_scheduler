@@ -13,6 +13,7 @@ import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 import { identityCookieOptions, IDENTITY_COOKIES, signIdentity, signValue } from "@/shared/lib/session";
 import prisma from "@/shared/lib/prisma";
 import { normalizeHandle } from "@/shared/lib/handle";
+import { getServerConfig } from "@/shared/config/server";
 import {
     GUILD_GRANT_MAX_AGE,
     OAUTH_NONCE_COOKIE,
@@ -105,8 +106,8 @@ export async function GET(req: Request) {
     cookieStore.delete({ name: OAUTH_NONCE_COOKIE, path: OAUTH_NONCE_COOKIE_PATH });
 
     const { returnTo, flow } = state;
-    const clientId = process.env.DISCORD_APP_ID;
-    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+    const clientId = getServerConfig().discord.appId ?? undefined;
+    const clientSecret = getServerConfig().discord.clientSecret ?? undefined;
     const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
     if (!clientId || !clientSecret) {

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Check, X, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'Doodle Alternative for Game Night',
@@ -63,7 +64,7 @@ const rows: { label: string; tt: boolean; doodle: boolean | string; note?: strin
 ];
 
 export default function VsDoodlePage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
+    const isHosted = publicConfig.isHosted;
     if (!isHosted) notFound();
 
     return (

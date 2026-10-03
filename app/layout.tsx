@@ -23,7 +23,7 @@ const inter = Inter({
     variable: "--font-inter",
 });
 
-const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+const isHosted = publicConfig.isHosted;
 
 /**
  * @constant metadata
@@ -76,6 +76,7 @@ export const metadata: Metadata = {
 
 import { Navbar } from "@/components/Navbar";
 import Script from "next/script";
+import { publicConfig } from "@/shared/config/public";
 
 
 

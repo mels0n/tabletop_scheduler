@@ -6,13 +6,14 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { publicConfig } from "@/shared/config/public";
 
 interface Props {
     params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-    if (process.env.NEXT_PUBLIC_IS_HOSTED !== "true") {
+    if (!publicConfig.isHosted) {
         return [];
     }
     const posts = getAllPosts();
@@ -46,7 +47,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function BlogPost(props: Props) {
     const params = await props.params;
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         notFound();

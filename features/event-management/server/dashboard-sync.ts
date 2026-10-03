@@ -3,6 +3,7 @@ import Logger from "@/shared/lib/logger";
 import { broadcastToEvent } from "@/features/notifications";
 import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
 import { escapeHtml } from "@/shared/lib/escape";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("DashboardSync");
 
@@ -34,7 +35,7 @@ export async function refreshDiscordDashboard(
     eventId: number,
     html: string
 ): Promise<void> {
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = getServerConfig().discord.botToken ?? undefined;
     const channelId = event.discordChannelId;
     const oldMessageId = event.discordMessageId;
     if (!channelId || !token) return;
@@ -67,7 +68,7 @@ export async function refreshTelegramDashboard(
     eventId: number,
     html: string
 ): Promise<void> {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const token = getServerConfig().telegram.token ?? undefined;
     const chatId = event.telegramChatId;
     const oldMessageId = event.pinnedMessageId;
     if (!chatId || !token) return;

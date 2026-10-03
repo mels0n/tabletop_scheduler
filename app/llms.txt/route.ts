@@ -1,4 +1,5 @@
 import { getAllPosts } from '@/shared/lib/blog';
+import { publicConfig } from "@/shared/config/public";
 
 export const dynamic = 'force-static';
 
@@ -7,7 +8,7 @@ export const dynamic = 'force-static';
 // appear automatically when the fortnightly deploy rebuilds the site on/after
 // their date. NEXT_PUBLIC_IS_HOSTED is baked in at build time either way.
 export async function GET() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         return new Response('Not Found', { status: 404 });
