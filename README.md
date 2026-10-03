@@ -64,7 +64,7 @@ All configuration is through environment variables, validated once at boot. A mi
 | `NEXT_PUBLIC_BASE_URL` | When a bot token is set | URL of the app, used for every link the bots send. Required with any bot token in every Telegram mode, polling included (a LAN address works behind NAT). | `https://scheduler.example.com` |
 | `NEXT_PUBLIC_BOT_NAME` | No | Telegram bot username used to build "Add to group" links. | `MyGroupBot` |
 | `SESSION_SECRET` | Production | Signs identity cookies. Docker generates one if unset. | 32+ random bytes, base64 |
-| `CRON_SECRET` | Hosted | Bearer token for `/api/cron/*` and the outbound webhook signature. Docker generates one if unset. | 32+ random bytes, base64 |
+| `CRON_SECRET` | Hosted | Bearer token for `/api/cron/*`. Docker generates one if unset. Outbound webhooks are signed with a key derived from `SESSION_SECRET`, not this value. | 32+ random bytes, base64 |
 | `TELEGRAM_BOT_TOKEN` | No | Token from @BotFather. | `123456:ABC...` |
 | `TELEGRAM_MODE` | No | `webhook`, `polling`, or `off`. Derived from the token and base URL when unset. | derived |
 | `DISCORD_BOT_TOKEN` | No | Discord bot token. | |
