@@ -7,7 +7,7 @@ import { GET } from './route';
 
 vi.mock('@/shared/lib/prisma');
 
-const mockPrisma = prisma as unknown as { event: { findUnique: ReturnType<typeof vi.fn> } };
+const mockPrisma = prisma as unknown as { event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> } };
 const RAW = 'raw-admin-token';
 
 function call(query: string) {
@@ -48,5 +48,27 @@ describe('GET /api/event/[slug]/auth', () => {
         const names = store.set.mock.calls.map((c) => c[0]);
         expect(names).toEqual(['tabletop_admin_abc']);
         expect(store.set.mock.calls[0][1]).toBe(RAW);
+    });
+
+    it('accepts a legacy plaintext row, upgrades it to the hash, and sets the admin cookie', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ slug: 'abc', adminToken: RAW });
+
+        const res = await call(`?token=${RAW}`);
+
+        expect(res.headers.get('location')).toBe('http://selfhost.lan:3000/e/abc/manage');
+        expect(mockPrisma.event.update).toHaveBeenCalledWith({
+            where: { slug: 'abc' },
+            data: { adminToken: hashToken(RAW) },
+        });
+        expect(store.set.mock.calls.map((c) => c[0])).toEqual(['tabletop_admin_abc']);
+    });
+
+    it('rejects a wrong token for a legacy plaintext row without upgrading it', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ slug: 'abc', adminToken: RAW });
+
+        const res = await call('?token=nope');
+
+        expect(res.headers.get('location')).toBe('http://selfhost.lan:3000/e/abc?error=invalid_token');
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
 });
