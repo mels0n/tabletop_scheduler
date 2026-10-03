@@ -52,4 +52,9 @@ describe('htmlToDiscordMarkdown', () => {
         expect(out).not.toContain('<a href');
         expect(out).not.toContain('<b>');
     });
+
+    it('decodes HTML entities so escaped titles read naturally', () => {
+        expect(htmlToDiscordMarkdown('<b>D&amp;D Night &lt;3</b>')).toBe('**D&D Night <3**');
+        expect(htmlToDiscordMarkdown('&amp;lt;')).toBe('&lt;');
+    });
 });

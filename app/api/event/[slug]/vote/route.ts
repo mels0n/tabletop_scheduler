@@ -241,60 +241,76 @@ export async function POST(
         const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
         await syncDashboard(eventId);
 
-        if (event && event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/features/telegram");
-            await sendTelegramMessage(event.telegramChatId, `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`, process.env.TELEGRAM_BOT_TOKEN);
-        }
-
-        if (event && event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage } = await import("@/features/discord/model/discord");
-            await sendDiscordMessage(event.discordChannelId, `🚀 **${userDisplay}** updated availability for **${event.title}**!`, process.env.DISCORD_BOT_TOKEN);
+        if (event && (event.telegramChatId || event.discordChannelId)) {
+            const { broadcastToEvent } = await import("@/features/notifications");
+            await broadcastToEvent(
+                { telegramChatId: event.telegramChatId, discordChannelId: event.discordChannelId },
+                {
+                    html: `🚀 <b>${userDisplay}</b> just updated their availability for <b>${event.title}</b>!`,
+                    discord: `🚀 **${userDisplay}** updated availability for **${event.title}**!`,
+                },
+                { slug: event.slug, kind: "vote-update" }
+            );
         }
 
         // --- QUORUM & MANAGER NOTIFICATION LOGIC ---
 
-        if (event && event.managerChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/features/telegram");
+        if (event && !(event.quorumPerfectNotified && event.quorumViableNotified)) {
+            const { sendDirectMessage, isDelivered } = await import("@/features/notifications");
             const { getBaseUrl } = await import("@/shared/lib/url");
             const { headers } = await import("next/headers");
             const baseUrl = getBaseUrl(headers());
             const link = `${baseUrl}/e/${event.slug}/manage`;
+            const managerTarget = { telegramChatId: event.managerChatId, discordUserId: event.managerDiscordId };
+            const hasManagerLink = Boolean(event.managerChatId || event.managerDiscordId);
 
             // Check Quorum Status
             const participantsCount = await prisma.participant.count({ where: { eventId } });
             const quorum = checkEventQuorum(event as any, participantsCount);
 
+            // Flag only once the DM landed on some platform. With no manager link, or a failed
+            // send, the flag stays unset: the next vote retries, and voting reminders (which stop
+            // at viable quorum) keep running as they always have for unlinked managers.
+
             // 1. Perfect Match (Supersedes Viable)
             if (quorum.perfect) {
                 if (!event.quorumPerfectNotified) {
-                    await sendTelegramMessage(
-                        event.managerChatId,
-                        `🌟 <b>Perfect Match Found</b> for <b>${event.title}</b>!\n\nEveryone can make it and you have a host!\n\n👉 <a href="${link}">Finalize Now</a>`,
-                        process.env.TELEGRAM_BOT_TOKEN
-                    );
+                    const result = hasManagerLink
+                        ? await sendDirectMessage(
+                            managerTarget,
+                            { html: `🌟 <b>Perfect Match Found</b> for <b>${event.title}</b>!\n\nEveryone can make it and you have a host!\n\n👉 <a href="${link}">Finalize Now</a>` },
+                            { slug: event.slug, kind: "quorum-perfect" }
+                        )
+                        : null;
 
-                    // Update both flags to prevent downgrading or double-pinging
-                    await prisma.event.update({
-                        where: { id: eventId },
-                        data: { quorumPerfectNotified: true, quorumViableNotified: true }
-                    });
-                    log.info("Notified Perfect Quorum", { slug: event.slug });
+                    if (result && isDelivered(result)) {
+                        // Update both flags to prevent downgrading or double-pinging
+                        await prisma.event.update({
+                            where: { id: eventId },
+                            data: { quorumPerfectNotified: true, quorumViableNotified: true }
+                        });
+                        log.info("Notified Perfect Quorum", { slug: event.slug });
+                    }
                 }
             }
             // 2. Viable Match
             else if (quorum.viable) {
                 if (!event.quorumViableNotified) {
-                    await sendTelegramMessage(
-                        event.managerChatId,
-                        `🎉 <b>Viable Quorum Reached</b> for <b>${event.title}</b>!\n\nYou have enough players for a game.\n\n👉 <a href="${link}">Manage Event</a>`,
-                        process.env.TELEGRAM_BOT_TOKEN
-                    );
+                    const result = hasManagerLink
+                        ? await sendDirectMessage(
+                            managerTarget,
+                            { html: `🎉 <b>Viable Quorum Reached</b> for <b>${event.title}</b>!\n\nYou have enough players for a game.\n\n👉 <a href="${link}">Manage Event</a>` },
+                            { slug: event.slug, kind: "quorum-viable" }
+                        )
+                        : null;
 
-                    await prisma.event.update({
-                        where: { id: eventId },
-                        data: { quorumViableNotified: true }
-                    });
-                    log.info("Notified Viable Quorum", { slug: event.slug });
+                    if (result && isDelivered(result)) {
+                        await prisma.event.update({
+                            where: { id: eventId },
+                            data: { quorumViableNotified: true }
+                        });
+                        log.info("Notified Viable Quorum", { slug: event.slug });
+                    }
                 }
             }
         }

@@ -26,7 +26,7 @@ export async function POST(
 
         const currentEvent = await prisma.event.findUnique({
             where: { slug: params.slug },
-            select: { id: true, maxPlayers: true, minPlayers: true, title: true, eventType: true, minSessions: true }
+            select: { id: true, maxPlayers: true, minPlayers: true, title: true, eventType: true, minSessions: true, timezone: true }
         });
 
         if (!currentEvent) {
@@ -171,67 +171,26 @@ export async function POST(
         const origin = getBaseUrl(req.headers);
         const eventLink = `${origin}/e/${params.slug}`;
 
-        if (process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/features/telegram");
-            const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
-            for (const p of acceptedParticipants) {
-                if (p.participant.chatId) {
-                    await sendTelegramMessage(
-                        p.participant.chatId,
-                        `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n<a href="${eventLink}">View Details</a>`,
-                        process.env.TELEGRAM_BOT_TOKEN
-                    );
-                }
-            }
-            const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
-            for (const p of waitlistedParticipants) {
-                if (p.participant.chatId) {
-                    await sendTelegramMessage(
-                        p.participant.chatId,
-                        `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nWe'll let you know if a spot opens up!`,
-                        process.env.TELEGRAM_BOT_TOKEN
-                    );
-                }
-            }
-        }
+        // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+        const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
+        const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
+        await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
 
-        if (finalizedEvent.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
-            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-            const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
-
-            if (finalizedEvent.pinnedMessageId) {
-                await deleteMessage(finalizedEvent.telegramChatId, finalizedEvent.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
-            }
-            const msg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
-            const msgId = await sendTelegramMessage(finalizedEvent.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
-            if (msgId) {
-                await pinChatMessage(finalizedEvent.telegramChatId, msgId, process.env.TELEGRAM_BOT_TOKEN);
-                await prisma.event.update({ where: { id: finalizedEvent.id }, data: { pinnedMessageId: msgId } });
-            }
-        }
-
-        if (finalizedEvent.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
-            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-            const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
-
-            if (finalizedEvent.discordMessageId) {
-                await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
-            }
-            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
-            const htmlMsg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
-            const discordMsg = htmlToDiscordMarkdown(htmlMsg);
-
-            const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-            const msgId = res.id;
-            if (msgId) {
-                await pinDiscordMessage(finalizedEvent.discordChannelId, msgId, process.env.DISCORD_BOT_TOKEN);
-                await prisma.event.update({ where: { id: finalizedEvent.id }, data: { discordMessageId: msgId } });
-            } else {
-                log.warn("Failed to send Discord finalize message", { error: res.error });
-            }
-        }
+        const { sendDirectMessage } = await import("@/features/notifications");
+        const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
+        const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
+        await Promise.all([
+            ...acceptedParticipants.map(p => sendDirectMessage(
+                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n<a href="${eventLink}">View Details</a>` },
+                { slug: params.slug, kind: "finalize-accepted" }
+            )),
+            ...waitlistedParticipants.map(p => sendDirectMessage(
+                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nWe'll let you know if a spot opens up!` },
+                { slug: params.slug, kind: "finalize-waitlist" }
+            )),
+        ]);
 
         log.info("One-shot event finalized successfully", { slug: params.slug });
 
@@ -252,6 +211,7 @@ interface CampaignEventMeta {
     title: string;
     eventType: string;
     minSessions: number | null;
+    timezone: string;
 }
 
 async function handleCampaignFinalize(
@@ -414,74 +374,40 @@ async function handleCampaignFinalize(
     const origin = getBaseUrl(req.headers as any);
     const eventLink = `${origin}/e/${slug}`;
 
-    // ── DM NOTIFICATIONS ─────────────────────────────────────────────────────────
-    if (process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage } = await import("@/features/telegram");
-
-        const sessionList = validSlots
-            .map(s => `📅 ${s.startTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`)
-            .join('\n');
-
-        const notifiedAccepted = new Set<number>();
-        for (const vote of allVotes.filter(v => acceptedIds.includes(v.participantId))) {
-            if (!notifiedAccepted.has(vote.participantId) && vote.participant.chatId) {
-                notifiedAccepted.add(vote.participantId);
-                await sendTelegramMessage(
-                    vote.participant.chatId,
-                    `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n\nSessions locked in:\n${sessionList}\n\n<a href="${eventLink}">View Details</a>`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-        }
-
-        const notifiedWaitlist = new Set<number>();
-        for (const vote of allVotes.filter(v => waitlistIds.includes(v.participantId))) {
-            if (!notifiedWaitlist.has(vote.participantId) && vote.participant.chatId) {
-                notifiedWaitlist.add(vote.participantId);
-                await sendTelegramMessage(
-                    vote.participant.chatId,
-                    `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nYou may be called in as a substitute if a regular player can't make a session.`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-        }
-    }
-
     // ── GROUP CHANNEL NOTIFICATIONS ───────────────────────────────────────────────
-    if (finalizedEvent.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
-        const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
+    // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+    const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
+    await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
 
-        if (finalizedEvent.pinnedMessageId) {
-            await deleteMessage(finalizedEvent.telegramChatId, finalizedEvent.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
-        }
-        const msg = buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames);
-        const msgId = await sendTelegramMessage(finalizedEvent.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
-        if (msgId) {
-            await pinChatMessage(finalizedEvent.telegramChatId, msgId, process.env.TELEGRAM_BOT_TOKEN);
-            await prisma.event.update({ where: { id: finalizedEvent.id }, data: { pinnedMessageId: msgId } });
-        }
-    }
+    // ── DM NOTIFICATIONS ─────────────────────────────────────────────────────────
+    const { sendDirectMessage } = await import("@/features/notifications");
 
-    if (finalizedEvent.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-        const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
-        const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
+    const sessionList = validSlots
+        .map(s => `📅 ${s.startTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: currentEvent.timezone || 'UTC' })}`)
+        .join('\n');
 
-        if (finalizedEvent.discordMessageId) {
-            await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
-        }
-        const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
-        const htmlMsg = buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames);
-        const discordMsg = htmlToDiscordMarkdown(htmlMsg);
+    // One DM per participant even when they voted on several sessions.
+    const uniqueParticipants = (ids: number[]) => {
+        const seen = new Set<number>();
+        return allVotes.filter(v => {
+            if (!ids.includes(v.participantId) || seen.has(v.participantId)) return false;
+            seen.add(v.participantId);
+            return true;
+        });
+    };
 
-        const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-        if (res.id) {
-            await pinDiscordMessage(finalizedEvent.discordChannelId, res.id, process.env.DISCORD_BOT_TOKEN);
-            await prisma.event.update({ where: { id: finalizedEvent.id }, data: { discordMessageId: res.id } });
-        } else {
-            log.warn("Failed to send Discord campaign finalize message", { error: res.error });
-        }
-    }
+    await Promise.all([
+        ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
+            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n\nSessions locked in:\n${sessionList}\n\n<a href="${eventLink}">View Details</a>` },
+            { slug, kind: "finalize-campaign-accepted" }
+        )),
+        ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
+            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+            { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
+            { slug, kind: "finalize-campaign-waitlist" }
+        )),
+    ]);
 
     log.info("Campaign finalized successfully", { slug, sessionCount: slotIds.length });
 
@@ -490,4 +416,55 @@ async function handleCampaignFinalize(
         : null;
 
     return NextResponse.json({ success: true, warning, sessionCount: slotIds.length });
+}
+
+// ─── GROUP ANNOUNCEMENT ────────────────────────────────────────────────────────
+
+/**
+ * Replaces the event's pinned status message on each linked platform with the finalized
+ * announcement. Telegram and Discord are independent: each runs in its own try/catch so
+ * a failure (or absence) on one never blocks the other.
+ */
+async function announceFinalized(
+    event: { id: number; slug: string; telegramChatId: string | null; pinnedMessageId: number | null; discordChannelId: string | null; discordMessageId: string | null },
+    htmlMsg: string
+) {
+    const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (event.telegramChatId && telegramToken) {
+        try {
+            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
+            if (event.pinnedMessageId) {
+                await deleteMessage(event.telegramChatId, event.pinnedMessageId, telegramToken);
+            }
+            const msgId = await sendTelegramMessage(event.telegramChatId, htmlMsg, telegramToken);
+            if (msgId) {
+                await pinChatMessage(event.telegramChatId, msgId, telegramToken);
+                await prisma.event.update({ where: { id: event.id }, data: { pinnedMessageId: msgId } });
+            }
+        } catch (e) {
+            log.warn("Telegram finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+        }
+    }
+
+    const discordToken = process.env.DISCORD_BOT_TOKEN;
+    if (event.discordChannelId && discordToken) {
+        try {
+            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } = await import("@/features/discord/model/discord");
+            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
+
+            if (event.discordMessageId) {
+                await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+                await deleteDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+            }
+            const res = await sendDiscordMessage(event.discordChannelId, htmlToDiscordMarkdown(htmlMsg), discordToken);
+            if (res.id) {
+                await pinDiscordMessage(event.discordChannelId, res.id, discordToken);
+                await prisma.event.update({ where: { id: event.id }, data: { discordMessageId: res.id } });
+            } else {
+                log.warn("Failed to send Discord finalize message", { error: res.error });
+            }
+        } catch (e) {
+            log.warn("Discord finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+        }
+    }
 }

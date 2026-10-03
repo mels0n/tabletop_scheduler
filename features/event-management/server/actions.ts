@@ -7,6 +7,9 @@ import { normalizeHandle, formatHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("EventActions");
 
+// Allowed session reminder lead times in minutes: 1 hour, 2 hours, 1 day, 2 days.
+const SESSION_REMINDER_LEADS = [120, 1440, 2880];
+
 /**
  * Checks the manager's connection status (Telegram linkage).
  */
@@ -101,34 +104,33 @@ export async function deleteEvent(slug: string) {
 
     log.warn("Deleting event", { slug, title: event.title });
 
-    if (process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage, unpinChatMessage } = await import("@/features/telegram");
-
-        if (event.telegramChatId) {
-            if (event.pinnedMessageId) {
-                await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
-            }
-            await sendTelegramMessage(
-                event.telegramChatId,
-                `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been removed by the organizer.`,
-                process.env.TELEGRAM_BOT_TOKEN
-            );
+    // Unpin dashboards: each platform independently, failures never block deletion.
+    try {
+        if (event.telegramChatId && event.pinnedMessageId && process.env.TELEGRAM_BOT_TOKEN) {
+            const { unpinChatMessage } = await import("@/features/telegram");
+            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
         }
+    } catch (e) {
+        log.warn("Failed to unpin Telegram dashboard on delete", { slug, error: String(e) });
     }
-
-    if (process.env.DISCORD_BOT_TOKEN && event.discordChannelId) {
-        const { sendDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
-
-        if (event.discordMessageId) {
+    try {
+        if (event.discordChannelId && event.discordMessageId && process.env.DISCORD_BOT_TOKEN) {
+            const { unpinDiscordMessage } = await import("@/features/discord/model/discord");
             await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
         }
-
-        await sendDiscordMessage(
-            event.discordChannelId,
-            `🚫 **Event Deleted**\n\nThe event "**${event.title}**" has been removed by the organizer.`,
-            process.env.DISCORD_BOT_TOKEN
-        );
+    } catch (e) {
+        log.warn("Failed to unpin Discord dashboard on delete", { slug, error: String(e) });
     }
+
+    const { broadcastToEvent } = await import("@/features/notifications");
+    await broadcastToEvent(
+        event,
+        {
+            html: `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been removed by the organizer.`,
+            discord: `🚫 **Event Deleted**\n\nThe event "**${event.title}**" has been removed by the organizer.`,
+        },
+        { slug, kind: "event-deleted" }
+    );
 
     try {
         await prisma.$transaction(async (tx) => {
@@ -172,47 +174,46 @@ export async function cancelEvent(slug: string) {
         const { headers } = await import("next/headers");
         const baseUrl = getBaseUrl(headers());
 
-        if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { editMessageText, sendTelegramMessage } = await import("@/features/telegram");
-            const token = process.env.TELEGRAM_BOT_TOKEN;
-
-            if (event.pinnedMessageId) {
+        // Edit the pinned dashboards: each platform independently.
+        try {
+            if (event.telegramChatId && event.pinnedMessageId && process.env.TELEGRAM_BOT_TOKEN) {
+                const { editMessageText } = await import("@/features/telegram");
                 await editMessageText(
                     event.telegramChatId,
                     event.pinnedMessageId,
                     `🚫 <b>Event Cancelled</b> (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\n` +
                     `The event "<b>${event.title}</b>" has been cancelled by the host.\n\n` +
                     `<a href="${baseUrl}/e/${slug}">View Event Details</a>`,
-                    token
+                    process.env.TELEGRAM_BOT_TOKEN
                 );
             }
-
-            await sendTelegramMessage(
-                event.telegramChatId,
-                `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been cancelled by the organizer.`,
-                token
-            );
+        } catch (e) {
+            log.warn("Failed to edit Telegram dashboard on cancel", { slug, error: String(e) });
         }
 
-        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { editDiscordMessage, sendDiscordMessage } = await import("@/features/discord/model/discord");
-            const token = process.env.DISCORD_BOT_TOKEN!;
-
-            if (event.discordMessageId) {
+        try {
+            if (event.discordChannelId && event.discordMessageId && process.env.DISCORD_BOT_TOKEN) {
+                const { editDiscordMessage } = await import("@/features/discord/model/discord");
                 await editDiscordMessage(
                     event.discordChannelId,
                     event.discordMessageId,
                     `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${event.title}**" has been cancelled by the host.\n\n[View Event Details](<${baseUrl}/e/${slug}>)`,
-                    token
+                    process.env.DISCORD_BOT_TOKEN
                 );
             }
-
-            await sendDiscordMessage(
-                event.discordChannelId,
-                `🚫 **Event Cancelled**\n\nThe event "**${event.title}**" has been cancelled by the organizer.`,
-                token
-            );
+        } catch (e) {
+            log.warn("Failed to edit Discord dashboard on cancel", { slug, error: String(e) });
         }
+
+        const { broadcastToEvent } = await import("@/features/notifications");
+        await broadcastToEvent(
+            event,
+            {
+                html: `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been cancelled by the organizer.`,
+                discord: `🚫 **Event Cancelled**\n\nThe event "**${event.title}**" has been cancelled by the organizer.`,
+            },
+            { slug, kind: "event-cancelled" }
+        );
 
         if (event.fromUrl) {
             log.info("Queueing cancellation webhook", { slug, fromUrl: event.fromUrl });
@@ -277,6 +278,40 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
         return { success: true };
     } catch (e) {
         log.error("Failed to update reminder settings", e as Error);
+        return { success: false, error: "Internal Error" };
+    }
+}
+
+/**
+ * Updates the session reminder settings (a one-time post before each scheduled session).
+ *
+ * @param {string} slug - The event slug.
+ * @param {boolean} enabled - Whether session reminders are active.
+ * @param {number} leadMinutes - Minutes before session start (120, 1440 or 2880).
+ * @returns {Promise<Object>} Success status or error.
+ */
+export async function updateSessionReminderSettings(slug: string, enabled: boolean, leadMinutes: number) {
+    try {
+        if (!await verifyEventAdmin(slug)) return { success: false, error: "Unauthorized" };
+
+        if (typeof enabled !== "boolean" || !SESSION_REMINDER_LEADS.includes(leadMinutes)) {
+            return { success: false, error: "Invalid lead time" };
+        }
+
+        const event = await prisma.event.findUnique({ where: { slug } });
+        if (!event) return { success: false, error: "Event not found" };
+
+        await prisma.event.update({
+            where: { id: event.id },
+            data: {
+                sessionReminderEnabled: enabled,
+                sessionReminderLeadMinutes: leadMinutes,
+            }
+        });
+
+        return { success: true };
+    } catch (e) {
+        log.error("Failed to update session reminder settings", e as Error);
         return { success: false, error: "Internal Error" };
     }
 }

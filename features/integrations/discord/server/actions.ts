@@ -14,7 +14,7 @@ import {
     getGuildChannels,
     createDMChannel
 } from "@/features/discord/model/discord";
-import { generateManagerMagicLink } from "@/features/event-management/server/recovery";
+import { dmManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
 
 const log = Logger.get("DiscordActions");
@@ -142,35 +142,14 @@ export async function listDiscordChannels(guildId: string) {
 /**
  * Sends a Magic Link to the manager via Discord DM.
  *
- * Transport-only wrapper around `generateManagerMagicLink`.
- * Identical in intent to the Telegram `dmManagerLink`.
+ * Thin alias of the platform-neutral `dmManagerLink` (recovery.ts), kept for the
+ * Discord UI. The link goes to every platform the manager has linked.
  *
  * @param {string} slug - The event slug.
  */
 export async function dmDiscordManagerLink(slug: string) {
-    const event = await prisma.event.findUnique({ where: { slug } });
-    if (!event || !event.managerDiscordId) return { error: "No manager linked." };
-
-    const botToken = process.env.DISCORD_BOT_TOKEN || "";
-
-    // 1. Generate link (rotates adminToken, builds auth-endpoint URL)
-    const magicLink = await generateManagerMagicLink(slug);
-
-    // 2. Open DM Channel
-    const dmRes = await createDMChannel(event.managerDiscordId, botToken);
-    if (dmRes.error || !dmRes.id) {
-        return { error: "Could not open DM channel. Bot might be blocked." };
-    }
-
-    // 3. Send Message
-    const msg = `**Magic Link Request**\nHere is your link to manage **${event.title}**:\n${magicLink}\n\n(This link expires when a new one is requested)`;
-    const sendRes = await sendDiscordMessage(dmRes.id, msg, botToken);
-
-    if (sendRes.error) {
-        return { error: "Failed to send DM." };
-    }
-
-    return { success: true };
+    // Delegates to the platform-neutral sender: DMs every linked platform.
+    return dmManagerLink(slug);
 }
 
 

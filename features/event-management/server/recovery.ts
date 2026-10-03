@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID, randomBytes } from "crypto";
-import { sendTelegramMessage } from "@/features/telegram/lib/telegram-client";
+import { sendDirectMessage, isDelivered } from "@/features/notifications";
 import { normalizeHandle } from "@/shared/lib/handle";
 
 const log = Logger.get("RecoveryActions");
@@ -33,64 +33,81 @@ export async function generateManagerMagicLink(slug: string): Promise<string> {
     return `${baseUrl}/api/event/${slug}/auth?token=${rawToken}`;
 }
 
+type ManagerLinkEvent = {
+    title: string;
+    managerChatId: string | null;
+    managerDiscordId: string | null;
+};
+
 /**
- * Initiates the recovery process for a manager link via Telegram DM.
- * Verifies the handle, generates a magic link, and sends it via Telegram.
+ * Rotates the admin token and DMs the magic link on every platform the manager
+ * has linked (Telegram, Discord, or both). Succeeds if at least one DM lands.
+ */
+async function deliverManagerLink(slug: string, event: ManagerLinkEvent) {
+    const magicLink = await generateManagerMagicLink(slug);
+    const result = await sendDirectMessage(
+        { telegramChatId: event.managerChatId, discordUserId: event.managerDiscordId },
+        { html: `🔐 <b>Manager Link Recovery</b>\n\nClick here to manage <b>${event.title}</b>:\n${magicLink}\n\nThis link expires when a new one is requested.` },
+        { slug, purpose: "manager-recovery" }
+    );
+
+    if (!isDelivered(result)) {
+        log.warn("Manager recovery DM was not delivered", { slug, telegram: result.telegram.status, discord: result.discord.status });
+        return { error: "Could not deliver the link. Check that the bot can message you, then try again." };
+    }
+
+    const platforms = [
+        result.telegram.status === "sent" ? "Telegram" : null,
+        result.discord.status === "sent" ? "Discord" : null,
+    ].filter(Boolean).join(" and ");
+    log.info("Manager recovery DM sent", { slug, platforms });
+    return { success: true, message: `Recovery link sent to your ${platforms} DMs!` };
+}
+
+/**
+ * Initiates the recovery process for a manager link.
+ * Verifies the handle (Telegram handle or Discord username), generates a magic
+ * link, and DMs it on every platform the manager has linked.
  */
 export async function recoverManagerLink(slug: string, handle: string) {
     const event = await prisma.event.findUnique({ where: { slug } });
 
-    if (!event || !event.managerTelegram) {
+    if (!event || (!event.managerTelegram && !event.managerDiscordId)) {
         return { error: "No manager linked to this event." };
     }
 
-    const formattedHandle = handle.startsWith("@") ? handle : `@${handle}`;
+    const input = normalizeHandle(handle);
+    const matchesTelegram = !!input && normalizeHandle(event.managerTelegram) === input;
+    const matchesDiscord = !!input && normalizeHandle(event.managerDiscordUsername) === input;
 
-    if (normalizeHandle(event.managerTelegram) !== normalizeHandle(handle)) {
-        log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: formattedHandle });
-        return { error: "Telegram handle does not match our records." };
+    if (!matchesTelegram && !matchesDiscord) {
+        log.warn("Manager recovery failed: Handle mismatch", { slug, inputHandle: handle });
+        return { error: "Handle does not match our records." };
     }
 
-    if (!event.managerChatId) {
+    if (!event.managerChatId && !event.managerDiscordId) {
         return { error: "Handle matched, but the bot hasn't connected with you yet. Please open the bot and click 'Start' first." };
     }
 
-    const magicLink = await generateManagerMagicLink(slug);
-    await sendTelegramMessage(
-        event.managerChatId,
-        `🔐 <b>Login Request</b>\n\nClick here to manage "${event.title}":\n${magicLink}`,
-        process.env.TELEGRAM_BOT_TOKEN!
-    );
-
-    log.info("Manager recovery DM sent", { slug, chatId: event.managerChatId });
-    return { success: true, message: "Recovery link sent to your Telegram DMs!" };
+    return deliverManagerLink(slug, event);
 }
 
 /**
- * Sends a magic link to the manager's Telegram DM without requiring handle verification.
- * Used for the "I already know who I am" one-click flow from the manage page.
+ * Sends a magic link to the manager's linked DMs (Telegram and/or Discord) without
+ * requiring handle verification. Used for the one-click flow from the manage page.
  */
 export async function dmManagerLink(slug: string) {
     const event = await prisma.event.findUnique({ where: { slug } });
 
-    if (!event || !event.managerTelegram) {
+    if (!event || (!event.managerTelegram && !event.managerDiscordId)) {
         return { error: "No manager linked to this event." };
     }
 
-    if (!event.managerChatId) {
+    if (!event.managerChatId && !event.managerDiscordId) {
         return { error: `Bot doesn't know you yet. Please start the bot first!` };
     }
 
-    const magicLink = await generateManagerMagicLink(slug);
-    log.info("Sending DM recovery link", { slug, chatId: event.managerChatId });
-
-    await sendTelegramMessage(
-        event.managerChatId,
-        `🔑 <b>Manager Link Recovery</b>\n\nClick here to manage <b>${event.title}</b>:\n${magicLink}`,
-        process.env.TELEGRAM_BOT_TOKEN!
-    );
-
-    return { success: true };
+    return deliverManagerLink(slug, event);
 }
 
 /**

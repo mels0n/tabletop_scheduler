@@ -339,6 +339,8 @@ export default async function ManageEventPage({ params }: PageProps) {
                                 initialReminderEnabled={event.reminderEnabled}
                                 initialReminderTime={event.reminderTime}
                                 initialReminderDays={event.reminderDays}
+                                initialSessionReminderEnabled={event.sessionReminderEnabled}
+                                initialSessionReminderLeadMinutes={event.sessionReminderLeadMinutes}
                             />
                         </div>
 
