@@ -10,7 +10,7 @@ import { requireEventAdmin } from "@/features/auth/server/verify";
 import { sendDirectMessage, isDelivered, type DeliveryOutcome, type DeliveryResult } from "@/features/notifications";
 import {
     assertManagerLinkCooldown,
-    createManagerLoginLink,
+    createManagerLoginLinks,
     generateShortRecoveryToken,
     getConnectCommand,
     type LoginPlatform,
@@ -64,35 +64,28 @@ async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResul
     if (!event.managerChatId && !event.managerDiscordId) return { error: NO_MANAGER };
 
     try {
+        // Cheap early refusal; createManagerLoginLinks re-checks after creating, race free.
         await assertManagerLinkCooldown(event);
+        const links = await createManagerLoginLinks(event);
         const manageUrl = `${getBaseUrl()}/e/${event.slug}/manage`;
         const notLinked: DeliveryOutcome = { status: "skipped", reason: "not_linked" };
 
-        // One token per platform: each DM carries a link that logs in ONLY that platform's
-        // identity, so whoever controls one manager identity never receives the other's.
+        // One token per platform, each DMed only to its own platform, so whoever controls
+        // one manager identity never receives a link that logs in as the other.
         const sendTo = async (platform: LoginPlatform): Promise<DeliveryOutcome> => {
             const linked = platform === "telegram" ? event.managerChatId : event.managerDiscordId;
-            if (!linked) return notLinked;
-            const loginUrl = await createManagerLoginLink(event, platform);
+            const loginUrl = links[platform];
+            if (!linked || !loginUrl) return notLinked;
             const res = await sendDirectMessage(
                 platform === "telegram"
                     ? { telegramChatId: linked, discordUserId: null }
                     : { telegramChatId: null, discordUserId: linked },
                 {
                     html:
-                        `🔐 <b>Manager login</b>
-
-` +
-                        `Someone (hopefully you) asked for a login link for <b>${escapeHtml(event.title)}</b>.
-
-` +
-                        `${loginUrl}
-
-` +
-                        `After logging in, manage the event here:
-${manageUrl}
-
-` +
+                        `🔐 <b>Manager login</b>\n\n` +
+                        `Someone (hopefully you) asked for a login link for <b>${escapeHtml(event.title)}</b>.\n\n` +
+                        `${loginUrl}\n\n` +
+                        `After logging in, manage the event here:\n${manageUrl}\n\n` +
                         `(Valid for 15 minutes. If you did not ask for this, you can ignore it.)`,
                 },
                 { slug: event.slug, purpose: "manager-recovery", platform }
