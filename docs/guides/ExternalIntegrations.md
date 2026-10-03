@@ -48,7 +48,21 @@ Webhooks are queued when the event happens and delivered by a background job tha
 X-Tabletop-Signature: sha256=<hex>
 ```
 
-`<hex>` is the HMAC-SHA256 of the **raw request body**, keyed with the instance's `CRON_SECRET`. On a self-hosted instance you know that key, and you should verify the header before trusting a payload:
+`<hex>` is the HMAC-SHA256 of the **raw request body**, keyed with the instance's webhook signing key. Every delivery is signed; there is no unsigned mode.
+
+The signing key is derived from the instance's `SESSION_SECRET`, so there is no separate variable to set:
+
+```text
+signing_key = hex( HMAC-SHA256( key = SESSION_SECRET, message = "webhook-signing" ) )
+```
+
+The 64 lowercase hex characters of `signing_key` are themselves the HMAC key for the body signature (use the string as is, do not hex-decode it). `CRON_SECRET` is not involved, so holding the signing key does not let anyone call the instance's cron routes, and the key reveals nothing about `SESSION_SECRET`. An operator prints it with:
+
+```sh
+node -e "console.log(require('crypto').createHmac('sha256', process.env.SESSION_SECRET).update('webhook-signing').digest('hex'))"
+```
+
+The operator shares that value with each integrator out of band (it is never shown in the app). Changing `SESSION_SECRET` changes the key, so integrators need the new value after a rotation. Verify the header before trusting a payload:
 
 ```js
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -61,7 +75,7 @@ function isValid(rawBody, header, secret) {
 }
 ```
 
-On tabletoptime.us the key is held by the operator and is not shared, so a hosted integration cannot recompute the signature. Rely on the checks under Security Notes instead.
+On tabletoptime.us, ask the operator for the signing key. Until you have it, rely on the checks under Security Notes.
 
 **Retries.** A failed delivery is retried with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The job runs every 5 minutes, so actual times are rounded up to the next run.
 
@@ -144,5 +158,5 @@ Generate links dynamically in your system:
 
 ## Security Notes
 
-1.  **Signatures**: Every delivery is signed with `X-Tabletop-Signature` (see Delivery above). On a self-hosted instance, verify it. On any instance, also verify the `fromUrlId` against your own database to ensure the update relates to a known request.
+1.  **Signatures**: Every delivery is signed with `X-Tabletop-Signature`, keyed with the signing key derived from `SESSION_SECRET` (see Delivery above). Verify it whenever you hold the key. On any instance, also verify the `fromUrlId` against your own database to ensure the update relates to a known request.
 2.  **HTTPS**: `fromUrl` must be an `https` URL. Plain `http` URLs are rejected when the event is created.
