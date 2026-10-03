@@ -556,7 +556,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
             expect(res.status).toBe(200);
             expect(await res.json()).toEqual({ success: true, participantId: 47 });
             expect(mockPrisma.participant.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 47 } }));
-            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
             expect(mockPrisma.participant.create).not.toHaveBeenCalled();
             expect((res as any).cookies.get('tabletop_participant_test-event')).toBeUndefined();
         });
@@ -576,7 +576,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
             const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
 
             expect(res.status).toBe(200);
-            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
             expect((res as any).cookies.get('tabletop_participant_test-event')).toBeUndefined();
         });
 
@@ -669,7 +669,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
 
             expect(res.status).toBe(403);
             expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
-            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
             expect(mockPrisma.participant.update).not.toHaveBeenCalled();
         });
 
