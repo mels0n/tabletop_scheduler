@@ -23,6 +23,7 @@ const LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000;
 const SHORT_TOKEN_TTL_MS = 15 * 60 * 1000;
 /** Minimum gap between login links for one manager identity. */
 export const MANAGER_LINK_COOLDOWN_MS = 60 * 1000;
+const RATE_LIMITED = "A link was just sent. Please wait a minute before requesting another.";
 
 /**
  * Rotates the event's admin token and returns a ready-to-use admin link.
@@ -116,47 +117,79 @@ export async function assertManagerLinkCooldown(manager: ManagerIdentity): Promi
         select: { token: true },
     });
     if (recent) {
-        throw new RateLimitError("A link was just sent. Please wait a minute before requesting another.");
+        throw new RateLimitError(RATE_LIMITED);
     }
 }
 
 export type LoginPlatform = "telegram" | "discord";
 
-/**
- * Creates a 15-minute LoginToken carrying ONLY the manager identity for one platform and
- * returns the `/auth/login` URL that redeems it. Each platform gets its own token so the
- * link DMed to one identity can never mint the other identity's cookie: an event's two
- * manager identities may belong to different people. The admin token is never rotated.
- * Only the hash is stored.
- */
-export async function createManagerLoginLink(manager: ManagerIdentity, platform: LoginPlatform): Promise<string> {
-    const data =
-        platform === "telegram"
-            ? manager.managerChatId
-                ? {
-                    chatId: manager.managerChatId,
-                    telegramUsername: normalizeHandle(manager.managerTelegram) || null,
-                    discordId: null,
-                    discordUsername: null,
-                }
-                : null
-            : manager.managerDiscordId
-                ? {
-                    chatId: null,
-                    telegramUsername: null,
-                    discordId: manager.managerDiscordId,
-                    discordUsername: manager.managerDiscordUsername,
-                }
-                : null;
-    if (!data) throw new ForbiddenError("No linked manager to notify");
+/** The LoginToken identity columns for one platform, or null when it is not linked. */
+function identityFor(manager: ManagerIdentity, platform: LoginPlatform) {
+    if (platform === "telegram") {
+        return manager.managerChatId
+            ? {
+                chatId: manager.managerChatId,
+                telegramUsername: normalizeHandle(manager.managerTelegram) || null,
+                discordId: null,
+                discordUsername: null,
+            }
+            : null;
+    }
+    return manager.managerDiscordId
+        ? {
+            chatId: null,
+            telegramUsername: null,
+            discordId: manager.managerDiscordId,
+            discordUsername: manager.managerDiscordUsername,
+        }
+        : null;
+}
 
-    const rawToken = randomUUID();
-    await prisma.loginToken.create({
-        data: {
-            token: hashToken(rawToken),
-            ...data,
-            expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MS),
-        },
-    });
-    return `${getBaseUrl()}/auth/login?token=${rawToken}`;
+/**
+ * Creates 15-minute LoginTokens for every platform the manager linked, one token per
+ * platform carrying ONLY that platform's identity, and returns the `/auth/login` URL for
+ * each. Separate tokens mean the link DMed to one identity can never mint the other
+ * identity's cookie: an event's two manager identities may belong to different people.
+ * The admin token is never rotated. Only hashes are stored.
+ *
+ * Cooldown without a check-then-create race: each token is created first, then the tokens
+ * for that identity inside the cooldown window are counted. More than one means another
+ * request got there first, so every token this call created is deleted and RateLimitError
+ * is thrown. Two concurrent requests can both refuse; neither can both succeed.
+ */
+export async function createManagerLoginLinks(
+    manager: ManagerIdentity
+): Promise<Partial<Record<LoginPlatform, string>>> {
+    const platforms = (["telegram", "discord"] as const).filter((p) => identityFor(manager, p));
+    if (platforms.length === 0) throw new ForbiddenError("No linked manager to notify");
+
+    const created: string[] = [];
+    const links: Partial<Record<LoginPlatform, string>> = {};
+    try {
+        for (const platform of platforms) {
+            const identity = identityFor(manager, platform)!;
+            const rawToken = randomUUID();
+            const tokenHash = hashToken(rawToken);
+            await prisma.loginToken.create({
+                data: { token: tokenHash, ...identity, expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MS) },
+            });
+            created.push(tokenHash);
+
+            const inWindow = await prisma.loginToken.count({
+                where: {
+                    ...(platform === "telegram" ? { chatId: identity.chatId } : { discordId: identity.discordId }),
+                    createdAt: { gt: new Date(Date.now() - MANAGER_LINK_COOLDOWN_MS) },
+                },
+            });
+            if (inWindow > 1) throw new RateLimitError(RATE_LIMITED);
+
+            links[platform] = `${getBaseUrl()}/auth/login?token=${rawToken}`;
+        }
+    } catch (e) {
+        if (created.length > 0) {
+            await prisma.loginToken.deleteMany({ where: { token: { in: created } } }).catch(() => undefined);
+        }
+        throw e;
+    }
+    return links;
 }

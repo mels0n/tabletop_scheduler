@@ -31,7 +31,12 @@ vi.mock('@/features/notifications', () => ({
 
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
-    loginToken: { create: ReturnType<typeof vi.fn>; findFirst: ReturnType<typeof vi.fn> };
+    loginToken: {
+        create: ReturnType<typeof vi.fn>;
+        findFirst: ReturnType<typeof vi.fn>;
+        count: ReturnType<typeof vi.fn>;
+        deleteMany: ReturnType<typeof vi.fn>;
+    };
 };
 const mockSend = sendDirectMessage as unknown as ReturnType<typeof vi.fn>;
 const mockAdmin = verifyEventAdmin as unknown as ReturnType<typeof vi.fn>;
@@ -58,6 +63,8 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         mockPrisma.loginToken.findFirst.mockResolvedValue(null);
         mockPrisma.event.update.mockResolvedValue({});
         mockPrisma.loginToken.create.mockResolvedValue({});
+        mockPrisma.loginToken.count.mockResolvedValue(1);
+        mockPrisma.loginToken.deleteMany.mockResolvedValue({ count: 0 });
         mockSend.mockResolvedValue({ telegram: skipped, discord: sent });
     });
 
@@ -211,6 +218,33 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
             const since = (where.createdAt.gt as Date).getTime();
             expect(before - since).toBeGreaterThanOrEqual(59_000);
             expect(before - since).toBeLessThanOrEqual(61_000);
+        });
+
+        it('closes the check-then-create race: refuses and deletes its tokens when another link landed in the window', async () => {
+            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerChatId: '555', managerTelegram: 'steve_tg' });
+            // The pre-check saw nothing, but a concurrent request created a Discord token meanwhile.
+            mockPrisma.loginToken.count.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+
+            expect(await dmManagerLink('abc')).toMatchObject({ code: 'rate_limited' });
+
+            expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(2);
+            const hashes = mockPrisma.loginToken.create.mock.calls.map((c) => c[0].data.token);
+            expect(mockPrisma.loginToken.deleteMany).toHaveBeenCalledWith({ where: { token: { in: hashes } } });
+            expect(mockSend).not.toHaveBeenCalled();
+        });
+
+        it('counts tokens for each identity inside the cooldown window after creating', async () => {
+            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerChatId: '555', managerTelegram: 'steve_tg' });
+            mockSend.mockResolvedValue({ telegram: sent, discord: sent });
+
+            expect(await dmManagerLink('abc')).toMatchObject({ success: true });
+
+            const wheres = mockPrisma.loginToken.count.mock.calls.map((c) => c[0].where);
+            expect(wheres[0]).toMatchObject({ chatId: '555' });
+            expect(wheres[1]).toMatchObject({ discordId: '123456789012345678' });
+            expect(mockPrisma.loginToken.count.mock.invocationCallOrder[0])
+                .toBeGreaterThan(mockPrisma.loginToken.create.mock.invocationCallOrder[0]);
+            expect(mockPrisma.loginToken.deleteMany).not.toHaveBeenCalled();
         });
 
         it('only includes the platforms the manager linked', async () => {
