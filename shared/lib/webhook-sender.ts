@@ -105,12 +105,19 @@ export function isPrivateAddress(ip: string): boolean {
     return false;
 }
 
+/** One address a webhook host resolved to, already checked to be public. */
+export interface VettedAddress {
+    address: string;
+    family: 4 | 6;
+}
+
 /**
- * Throws `ValidationError` unless `url` is https and every address its host resolves to is
- * public. Called when an event is created with a callback URL and again before each delivery,
- * so a host that later re-points at a private address is still refused.
+ * Validates `url` and resolves its host once: https only, no credentials, and every address
+ * the host resolves to must be public. Returns the parsed URL and those vetted addresses so
+ * the caller can connect to exactly them (closing the DNS-rebinding window between check and
+ * connect). Throws `ValidationError`.
  */
-export async function assertSafeWebhookUrl(url: string): Promise<void> {
+export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL; addresses: VettedAddress[] }> {
     let parsed: URL;
     try {
         parsed = new URL(url);
@@ -125,13 +132,26 @@ export async function assertSafeWebhookUrl(url: string): Promise<void> {
     }
 
     const host = parsed.hostname.replace(/^\[(.*)\]$/, "$1");
-    let addresses: { address: string }[];
+    let resolved: { address: string; family: number }[];
     try {
-        addresses = await lookup(host, { all: true, verbatim: true });
+        resolved = await lookup(host, { all: true, verbatim: true });
     } catch {
         throw new ValidationError("Webhook URL host does not resolve");
     }
-    if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
+    if (resolved.length === 0 || resolved.some((a) => isPrivateAddress(a.address))) {
         throw new ValidationError("Webhook URL must resolve to a public address");
     }
+    return {
+        url: parsed,
+        addresses: resolved.map((a) => ({ address: a.address, family: isIP(a.address) === 6 ? 6 : 4 })),
+    };
+}
+
+/**
+ * Throws `ValidationError` unless `url` is https and every address its host resolves to is
+ * public. Used when an event is created with a callback URL; delivery uses
+ * `resolveSafeWebhookTarget` so it can pin the vetted addresses.
+ */
+export async function assertSafeWebhookUrl(url: string): Promise<void> {
+    await resolveSafeWebhookTarget(url);
 }

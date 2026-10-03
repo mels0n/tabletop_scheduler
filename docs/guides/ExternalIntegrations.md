@@ -79,7 +79,7 @@ On tabletoptime.us, ask the operator for the signing key. Until you have it, rel
 
 **Retries.** A failed delivery is retried with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The job runs every 5 minutes, so actual times are rounded up to the next run.
 
-**Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected.
+**Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected. Each delivery resolves the host once, checks every address, and connects only to the addresses it checked, so a DNS record that changes mid-delivery cannot redirect the request.
 
 ### Response Expectations
 
