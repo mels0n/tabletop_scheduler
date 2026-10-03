@@ -61,7 +61,7 @@ All configuration is through environment variables, validated once at boot. A mi
 | `DATABASE_URL` | **Yes** | SQLite path (Docker) or pooled Postgres URL (hosted). | `file:/app/data/scheduler.db` |
 | `DIRECT_URL` | Hosted only | Direct (non-pooled) Postgres URL used for migrations. | `postgresql://...:5432/postgres` |
 | `NEXT_PUBLIC_IS_HOSTED` | No | `true` enables hosted behavior (indexing, sitemap). | `false` |
-| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | Public URL of the app, used for every link the bots send. Not needed for Telegram polling on a self-hosted instance. | `https://scheduler.example.com` |
+| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | URL of the app, used for every link the bots send. Required with any bot token in every Telegram mode, polling included (a LAN address works behind NAT). | `https://scheduler.example.com` |
 | `NEXT_PUBLIC_BOT_NAME` | No | Telegram bot username used to build "Add to group" links. | `MyGroupBot` |
 | `SESSION_SECRET` | Production | Signs identity cookies. Docker generates one if unset. | 32+ random bytes, base64 |
 | `CRON_SECRET` | Hosted | Bearer token for `/api/cron/*` and the outbound webhook signature. Docker generates one if unset. | 32+ random bytes, base64 |

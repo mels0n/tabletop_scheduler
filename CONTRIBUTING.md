@@ -75,7 +75,7 @@ The schema exists twice, once per database target, and the two must describe the
 Self-hosters get the SQLite schema through `prisma db push` at container start, so there is no SQLite migration folder to maintain.
 
 ### Telegram Bot Testing
-Testing the bot locally is handled via **Long Polling**, which is enabled automatically when you run `npm run dev` with a `TELEGRAM_BOT_TOKEN` set and no `NEXT_PUBLIC_BASE_URL` (or with `TELEGRAM_MODE=polling`).
+Testing the bot locally is handled via **Long Polling**: run `npm run dev` with `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_BASE_URL=http://localhost:3000` and `TELEGRAM_MODE=polling`. The base URL is required whenever a bot token is set.
 
 - **Polling (dev)**: the poller in `features/telegram/lib/telegram-service.ts` fetches updates and passes each one to the shared handler.
 - **Webhook (prod)**: Telegram pushes updates to `app/api/telegram/webhook/route.ts`, which authenticates the request and passes the update to the same shared handler.

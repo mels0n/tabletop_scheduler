@@ -119,9 +119,9 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
         if (telegramMode === "polling" && e.VERCEL) {
             problems.push("TELEGRAM_MODE: polling is not supported on Vercel; use webhook");
         }
-        const anyBotToken = Boolean(telegramToken || discordToken);
-        const pollingSelfHostOnly = telegramMode === "polling" && !e.NEXT_PUBLIC_IS_HOSTED && !discordToken;
-        if (anyBotToken && !resolvedBaseUrl && !pollingSelfHostOnly) {
+        // Every bot sends absolute links (logins, events, reminders, recovery), so the base URL
+        // is required in every Telegram mode, polling included.
+        if ((telegramToken || discordToken) && !resolvedBaseUrl) {
             problems.push(BASE_URL_REQUIRED);
         }
     }

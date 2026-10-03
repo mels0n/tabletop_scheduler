@@ -17,7 +17,7 @@ All variables are parsed and validated once, at server boot, by `shared/config/s
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `NEXT_PUBLIC_IS_HOSTED` | No | `false` | `true` enables hosted behavior (indexing, sitemap). Leave unset for self-hosted privacy defaults. Inlined at build time. |
-| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | - | Public URL of the app, for example `https://scheduler.example.com`. Every link the bots send (magic logins, event links, reminders) is built from it. **Required whenever any bot token is set**, with one exception: Telegram polling mode on a self-hosted instance. Omitting it otherwise stops the server at boot. |
+| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | - | Public URL of the app, for example `https://scheduler.example.com`. Every link the bots send (magic logins, event links, reminders) is built from it. **Required whenever any bot token is set**, in every Telegram mode including polling. Omitting it stops the server at boot. For a self-hosted instance behind NAT, use an address your players can reach (a LAN URL is fine) together with `TELEGRAM_MODE=polling`. |
 | `NEXT_PUBLIC_BOT_NAME` | No | - | Telegram bot username (without `@`), used to build the "Add Bot to Group" link in the manage page. Inlined at build time. |
 
 ## Secrets
@@ -32,7 +32,7 @@ All variables are parsed and validated once, at server boot, by `shared/config/s
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `TELEGRAM_BOT_TOKEN` | No | - | HTTP API token from @BotFather. Leave unset to disable Telegram. |
-| `TELEGRAM_MODE` | No | derived | `webhook`, `polling`, or `off`. When unset: `webhook` if a token and `NEXT_PUBLIC_BASE_URL` are set, `polling` if a token is set without a base URL (never on Vercel), otherwise `off`. |
+| `TELEGRAM_MODE` | No | derived | `webhook`, `polling`, or `off`. When unset: `webhook` if a token is set, otherwise `off`. Polling is never chosen automatically: set `polling` explicitly for a self-hosted instance that Telegram cannot reach (not supported on Vercel). `NEXT_PUBLIC_BASE_URL` is required in every mode. |
 
 ## Discord
 
