@@ -20,6 +20,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run tests/integration",
     "lint": "eslint . --max-warnings=0",
+    "depcruise": "depcruise --config .dependency-cruiser.cjs app components features shared lib hooks",
     "blog:queue": "node scripts/blog-queue.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -49,6 +50,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^4.1.11",
+    "dependency-cruiser": "^18.5.0",
     "eslint": "^10.12.0",
     "eslint-config-next": "16.3.8",
     "jsdom": "^27.4.0",
