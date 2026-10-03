@@ -17,7 +17,7 @@ import {
 } from "@/shared/lib/session";
 import { AppError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
 import { idParam, voteSchema } from "@/features/event-management/model/schemas";
-import { isLegacyUnlinkedParticipant } from "@/features/event-management/model/legacy";
+import { isLegacyParticipant } from "@/entities/participant";
 import { PARTICIPANT_NOT_OWNED } from "@/features/event-management/model/vote-errors";
 import { escapeDiscordMarkdown, escapeHtml } from "@/shared/lib/escape";
 
@@ -41,11 +41,14 @@ class ParticipantNotOwnedError extends AppError {
  *      `tabletop_participant_<slug>` cookie names that participant, or a verified identity
  *      cookie matches the row's chatId/discordId. Anyone else gets 403 with
  *      `code: 'participant_not_owned'`.
- *    - Rollout grace: a row with no identity, created before the configured
- *      `LEGACY_PARTICIPANT_CUTOFF` (when the cookie did not exist yet; never expires), is accepted when this browser holds no
- *      participant cookie for the event; the response then issues the cookie, so later
- *      edits from this browser go through the normal check.
- *    - Or Creates new participant and sets the signed participant cookie on the response.
+ *    - Legacy rows: a row with no `ownerCookieIssuedAt` marker was created before participant
+ *      cookies existed, so it is accepted by its stored id from any browser. The same
+ *      transaction marks it with a conditional update (`ownerCookieIssuedAt: null` in the
+ *      where), and the response issues the cookie. If that update matches nothing, another
+ *      browser claimed the row first and the normal check applies. A marked row never
+ *      reverts, so the legacy path is single-use per row and needs no date cutoff.
+ *    - Or Creates new participant, marked in the same create, and sets the signed participant
+ *      cookie on the response.
  *    - Identity is linked only from verified (signed) cookies: the Telegram chatId from
  *      `tabletop_user_chat_id`, Discord from `tabletop_user_discord_id`. A typed handle never
  *      resolves to a chatId.
@@ -111,13 +114,12 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         const cookieName = participantCookieName(targetEvent.slug);
         const cookiePurpose = participantPurpose(targetEvent.slug);
         const ownedParticipantId = verifyValue(cookiePurpose, cookieStore.get(cookieName)?.value);
-        const hasParticipantCookie = cookieStore.get(cookieName) !== undefined;
-        const ownsParticipant = (row: { id: number; chatId: string | null; discordId: string | null; createdAt?: Date | null }) =>
+        const ownsParticipant = (row: { id: number; chatId: string | null; discordId: string | null }) =>
             ownedParticipantId === String(row.id)
             || (identity.chatId !== null && row.chatId === identity.chatId)
-            || (identity.discordId !== null && row.discordId === identity.discordId)
-            // Permanent rollout grace (see LEGACY_PARTICIPANT_CUTOFF); the response issues the cookie.
-            || (!hasParticipantCookie && isLegacyUnlinkedParticipant(row));
+            || (identity.discordId !== null && row.discordId === identity.discordId);
+        // One instant for every ownership marker this request writes.
+        const now = new Date();
 
         // Action: Atomic Transaction for Participant & Votes
 
@@ -138,7 +140,18 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                 existing = await tx.participant.findFirst({
                     where: { id: participantId, eventId }
                 });
-                if (existing && !ownsParticipant(existing)) {
+                if (existing && isLegacyParticipant(existing)) {
+                    // Created before participant cookies existed: the stored id is all this voter
+                    // has. Claim the row for this browser; the response issues the cookie. The
+                    // conditional where makes exactly one concurrent claimant win.
+                    const claim = await tx.participant.updateMany({
+                        where: { id: existing.id, ownerCookieIssuedAt: null },
+                        data: { ownerCookieIssuedAt: now }
+                    });
+                    if (claim?.count !== 1 && !ownsParticipant(existing)) {
+                        throw new ParticipantNotOwnedError();
+                    }
+                } else if (existing && !ownsParticipant(existing)) {
                     throw new ParticipantNotOwnedError();
                 }
             }
@@ -217,7 +230,9 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         ...(shouldLinkDiscord && discordId ? { discordId, ...(discordUsername ? { discordUsername } : {}) } : {}),
                         // Verified Telegram identity only (signed cookie), so cross-device profile sync finds the row.
                         chatId: shouldLinkTelegram ? identity.chatId : null,
-                        status: nextStatus || 'PENDING'
+                        status: nextStatus || 'PENDING',
+                        // The response issues this row's participant cookie.
+                        ownerCookieIssuedAt: now
                     },
                 });
             }

@@ -4,12 +4,15 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
 import {
+    identityCookieOptions,
     participantCookieName,
     participantPurpose,
     readDiscordDisplayName,
     readIdentityCookie,
+    signValue,
     verifyValue,
 } from "@/shared/lib/session";
+import { isLegacyParticipant } from "@/entities/participant";
 import type { Participant } from "@prisma/client";
 
 const log = Logger.get("ParticipantLink");
@@ -76,6 +79,12 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
  * caller must also hold the signed `tabletop_participant_<slug>` cookie the vote route set
  * when this browser cast the vote, and it must name this row.
  *
+ * Legacy rows: a row without `ownerCookieIssuedAt` was created before participant cookies
+ * existed, so its voter has only the stored id. Such a row is claimed for this browser
+ * (conditional update on `ownerCookieIssuedAt: null`, so exactly one browser wins) and the
+ * participant cookie is set here, the same cookie the vote route issues. If the claim
+ * matches nothing, another browser got there first and the cookie is required as usual.
+ *
  * Idempotent: re-linking a row already stamped with the caller's own identity is a no-op
  * success. Linking a row already claimed by a *different* verified identity is refused.
  *
@@ -92,21 +101,34 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
         const { participant, eventSlug } = loaded;
 
         const cookieStore = await cookies();
-        const ownedId = verifyValue(
-            participantPurpose(eventSlug),
-            cookieStore.get(participantCookieName(eventSlug))?.value
-        );
-        if (ownedId !== String(participant.id)) {
-            log.warn("Refused participant link: browser does not own the row", { slug: eventSlug, participantId });
-            return { error: "This browser did not cast this vote. Link it from the browser you voted with." };
-        }
-
         const identityId = readIdentityCookie(cookieStore, platform);
 
         // Guard: UI shouldn't offer linking a platform the user hasn't synced, but a
         // stale page or replayed request could still hit this action without the cookie.
+        // Checked before any legacy claim so a request that cannot link never marks the row.
         if (!identityId) {
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };
+        }
+
+        const cookieName = participantCookieName(eventSlug);
+        const cookiePurpose = participantPurpose(eventSlug);
+        let claimedLegacy = false;
+        if (isLegacyParticipant(participant)) {
+            const claim = await prisma.participant.updateMany({
+                where: { id: participant.id, ownerCookieIssuedAt: null },
+                data: { ownerCookieIssuedAt: new Date() }
+            });
+            claimedLegacy = claim?.count === 1;
+        }
+
+        if (claimedLegacy) {
+            cookieStore.set(cookieName, signValue(cookiePurpose, String(participant.id)), identityCookieOptions());
+        } else {
+            const ownedId = verifyValue(cookiePurpose, cookieStore.get(cookieName)?.value);
+            if (ownedId !== String(participant.id)) {
+                log.warn("Refused participant link: browser does not own the row", { slug: eventSlug, participantId });
+                return { error: "This browser did not cast this vote. Link it from the browser you voted with." };
+            }
         }
 
         if (platform === 'telegram') {
