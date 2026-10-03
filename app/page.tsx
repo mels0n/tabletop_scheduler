@@ -14,7 +14,7 @@ const HOME_FAQ = [
   },
   {
     question: "Do my players need to create an account to respond?",
-    answer: "No. Tabletop Time is a no-login, no-app scheduling tool. Your players simply click the link you share and select the times they are available. There is no account to create, no email required, and no friction. The organizer can optionally create a profile to manage multiple events, but it is never required for players to participate.",
+    answer: "No. Tabletop Time is a no-login, no-app scheduling tool. Your players simply click the link you share and select the times they are available. There is no account to create, no email required, and no friction. Anyone can optionally link Telegram or Discord to see their events on every device, but it is never required for players to participate.",
   },
   {
     question: "How is Tabletop Time different from Doodle or When2Meet?",

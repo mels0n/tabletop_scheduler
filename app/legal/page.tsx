@@ -113,7 +113,7 @@ export default function LegalPage() {
                     <h2 className="text-3xl font-bold text-slate-200 border-b border-slate-800 pb-4">
                         Formal Privacy Disclosures
                     </h2>
-                    <p className="text-sm text-slate-500">Last Updated: October 2, 2026</p>
+                    <p className="text-sm text-slate-500">Last Updated: October 3, 2026</p>
 
                     <div className="prose prose-invert max-w-none space-y-6">
                         <p className="text-slate-300 leading-relaxed">
@@ -144,10 +144,10 @@ export default function LegalPage() {
                         <div className="space-y-4">
                             <h3 className="text-xl font-semibold text-slate-200">Optional Integrations (Discord &amp; Telegram)</h3>
                             <p className="text-slate-300 leading-relaxed">
-                                If you choose to link Discord or Telegram, here is exactly what we store: your user ID and username on the participant and event records you link, plus the server ID, channel ID, and pinned message ID for any event a host connects to a channel. We never store your access tokens, and we never read your friend lists, message history, or other profile data.
+                                If you choose to link Discord or Telegram, here is exactly what we store: your user ID and username on the participant and event records you link, plus the server ID, channel ID, and pinned message ID for any event a host connects to a channel. If you change your direct message setting, we store that choice with your platform user ID (and nothing else) so the bots respect it. We never store your access tokens, and we never read your friend lists, message history, or other profile data.
                             </p>
                             <p className="text-slate-300 leading-relaxed">
-                                Our bots send direct messages for these purposes and nothing else: magic login links you request, waitlist promotion and removal notices, finalize results for events you joined, and quorum alerts to the organizer. If you linked Telegram or Discord, you can turn off these direct messages from your My Events page; login links you request are still sent. Automated posts in a connected group or channel are the live dashboard, a short announcement with the event title and link when a host connects a Discord channel, a notice in a Telegram group asking for the Pin Messages permission if the bot cannot pin the dashboard, a short &quot;updated their availability&quot; post each time someone votes (naming that voter), slot changes, dashboard edits for location changes, finalize announcements, cancel and delete announcements, and the voting or session reminders the organizer enabled. We do not send promotional messages, and we never contact you outside of these functions.
+                                Our bots send direct messages for these purposes and nothing else: magic login links you request (including an organizer&apos;s manager login link), waitlist promotion and removal notices, finalize results for events you joined, and quorum alerts to the organizer. If you linked Telegram or Discord, you can turn off these direct messages from your My Events page; login links you request are still sent, and group or channel posts are not affected. Automated posts in a connected group or channel are the live dashboard, a short announcement with the event title and link when a host connects a Discord channel, a notice in a Telegram group asking for the Pin Messages permission if the bot cannot pin the dashboard, a short &quot;updated their availability&quot; post when someone votes (naming that voter, at most once per person per hour), slot changes, dashboard edits for location changes, finalize announcements, cancel and delete announcements, and the voting or session reminders the organizer enabled. We do not send promotional messages, and we never contact you outside of these functions.
                             </p>
                             <p className="text-slate-300 leading-relaxed">
                                 This linked identity data is deleted together with the event by the automated cleanup (see Data Rights below for the schedule), and you can delete it yourself at any time.
