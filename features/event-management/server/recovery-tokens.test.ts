@@ -45,8 +45,14 @@ describe('recovery token minting requires admin', () => {
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
 
-    it('getConnectCommand derives the code from the stored admin token hash', async () => {
-        expect(await getConnectCommand('abc')).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64))}`);
+    it('getConnectCommand derives the code from the stored admin token hash and current binding', async () => {
+        expect(await getConnectCommand('abc')).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), null)}`);
+        expect(mockPrisma.event.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+            select: expect.objectContaining({ adminToken: true, telegramChatId: true }),
+        }));
+
+        mockPrisma.event.findUnique.mockResolvedValue({ slug: 'abc', adminToken: 'e'.repeat(64), telegramChatId: '-1001' });
+        expect(await getConnectCommand('abc')).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), '-1001')}`);
     });
 });
 

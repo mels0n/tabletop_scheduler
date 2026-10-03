@@ -46,9 +46,9 @@ function update(text: string, chatType = 'group', chatId = -1001, username = 'ma
     };
 }
 
-/** Every event.update payload the handler wrote. */
+/** Every event.update / event.updateMany payload the handler wrote. */
 function writes() {
-    return mockPrisma.event.update.mock.calls.map((c) => c[0].data);
+    return [...mockPrisma.event.updateMany.mock.calls, ...mockPrisma.event.update.mock.calls].map((c) => c[0].data);
 }
 
 beforeEach(() => {
@@ -57,7 +57,7 @@ beforeEach(() => {
     process.env.TELEGRAM_BOT_TOKEN = 'test-token';
     mockPrisma.event.findUnique.mockResolvedValue(event);
     mockPrisma.event.update.mockResolvedValue({});
-    mockPrisma.event.updateMany.mockResolvedValue({ count: 0 });
+    mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
     mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
     mockPrisma.participant.count.mockResolvedValue(0);
     mockPrisma.loginToken.create.mockResolvedValue({});
@@ -91,10 +91,13 @@ describe('handleTelegramUpdate: idempotency', () => {
 
 describe('handleTelegramUpdate: /connect', () => {
     it('binds the chat for /connect <slug> <valid code>, pins the dashboard, and never touches manager identity', async () => {
-        const code = connectCodeFor('abc123', ADMIN_HASH);
+        const code = connectCodeFor('abc123', ADMIN_HASH, null);
         await handleTelegramUpdate(update(`/connect abc123 ${code}`));
 
-        expect(writes()[0]).toEqual({ telegramChatId: '-1001' });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 7, telegramChatId: null },
+            data: { telegramChatId: '-1001' },
+        });
         expect(writes()).toContainEqual({ pinnedMessageId: 555 });
         expect(pinned).toHaveBeenCalledWith(-1001, 555, 'test-token');
         for (const data of writes()) {
@@ -103,10 +106,43 @@ describe('handleTelegramUpdate: /connect', () => {
         }
     });
 
+    it('refuses a replay of a used code once the chat is bound', async () => {
+        const code = connectCodeFor('abc123', ADMIN_HASH, null);
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, telegramChatId: '-1001' });
+
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+
+        expect(writes()).toEqual([]);
+        expect(sent).toHaveBeenCalledWith(-3003, expect.stringMatching(/not valid/i), 'test-token');
+    });
+
+    it('refuses when the binding changed between check and write (concurrent replay)', async () => {
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 0 });
+        const code = connectCodeFor('abc123', ADMIN_HASH, null);
+
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+        expect(pinned).not.toHaveBeenCalled();
+        expect(sent).toHaveBeenCalledWith(-3003, expect.stringMatching(/not valid/i), 'test-token');
+    });
+
+    it('accepts a rebind code derived from the current binding', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, telegramChatId: '-1001' });
+        const code = connectCodeFor('abc123', ADMIN_HASH, '-1001');
+
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 7, telegramChatId: '-1001' },
+            data: { telegramChatId: '-3003' },
+        });
+    });
+
     it('rejects a wrong code and binds nothing', async () => {
         await handleTelegramUpdate(update('/connect abc123 deadbeef'));
 
-        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+        expect(writes()).toEqual([]);
         expect(sent).toHaveBeenCalledWith(-1001, expect.stringMatching(/not valid/i), 'test-token');
     });
 
