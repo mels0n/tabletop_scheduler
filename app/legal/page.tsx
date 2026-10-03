@@ -112,7 +112,7 @@ export default function LegalPage() {
                     <h2 className="text-3xl font-bold text-slate-200 border-b border-slate-800 pb-4">
                         Formal Privacy Disclosures
                     </h2>
-                    <p className="text-sm text-slate-500">Last Updated: May 1, 2026</p>
+                    <p className="text-sm text-slate-500">Last Updated: October 2, 2026</p>
 
                     <div className="prose prose-invert max-w-none space-y-6">
                         <p className="text-slate-300 leading-relaxed">
@@ -146,10 +146,10 @@ export default function LegalPage() {
                                 If you choose to link Discord or Telegram, here is exactly what we store: your user ID and username on the participant and event records you link, plus the server ID, channel ID, and pinned message ID for any event a host connects to a channel. We never store your access tokens, and we never read your friend lists, message history, or other profile data.
                             </p>
                             <p className="text-slate-300 leading-relaxed">
-                                Our bots send direct messages only in three cases: a magic login link you requested, a notice that a spot opened up for an event you joined, and a recovery link for an event you manage. We do not send promotional messages, and we never contact you outside of these functions.
+                                Our bots send direct messages for these purposes and nothing else: magic login links you request, waitlist promotion and removal notices, finalize results for events you joined, and quorum alerts to the organizer. Automated posts in a connected group or channel are the live dashboard, slot changes, finalize announcements, and the voting or session reminders the organizer enabled. We do not send promotional messages, and we never contact you outside of these functions.
                             </p>
                             <p className="text-slate-300 leading-relaxed">
-                                This linked identity data is deleted together with the event by the automated purge described above, and you can delete it yourself at any time (see Data Rights below).
+                                This linked identity data is deleted together with the event by the automated cleanup (see Data Rights below for the schedule), and you can delete it yourself at any time.
                             </p>
                         </div>
 
@@ -159,7 +159,7 @@ export default function LegalPage() {
                                 If you linked Discord or Telegram, you can delete that data yourself: open the <Link href="/profile/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy &amp; Data page</Link> while logged in with that platform and use &quot;Unlink&quot; under Linked Accounts. This immediately removes your platform identity from every participant record, every event you manage, and any pending login links.
                             </p>
                             <p className="text-slate-300 leading-relaxed">
-                                For anonymous event data (names and votes entered without any linked account), ask your Event Host to delete the event, or wait for the automated 24-hour server purge. For anything else, including deletion requests we should handle manually, open an issue on our GitHub Repository and we will respond there.
+                                For anonymous event data (names and votes entered without any linked account), ask your Event Host to delete the event, or wait for the automated cleanup: one-shot events are deleted 1 day after their finalized slot, campaigns 1 day after their last scheduled session, drafts after 30 days of inactivity, and cancelled events after 7 days. For anything else, including deletion requests we should handle manually, open an issue on our GitHub Repository and we will respond there.
                             </p>
                         </div>
                     </div>

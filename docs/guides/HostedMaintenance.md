@@ -12,8 +12,7 @@ provider).
 
 ```
 prisma/
-  schema.prisma            # sqlite   - self-hosted Docker + local dev
-  migrations/              # sqlite history (applied by start.sh via db push)
+  schema.prisma            # sqlite   - self-hosted Docker + local dev (applied with db push, no history)
   hosted/
     schema.prisma          # postgres - Vercel + Supabase
     migrations/            # postgres history (applied by the Vercel build)
@@ -27,16 +26,23 @@ differs. `tests/schema-parity.test.ts` enforces that.
 Production deploys apply migrations themselves. `vercel.json` points the Build
 Command at `scripts/vercel-build.sh`, which runs `prisma generate`, then
 `prisma migrate deploy` (production only), then `next build`. A failed migration
-fails the deploy.
+fails the deploy. Preview builds skip the migration step, so a preview of a branch
+with a schema change will error against the shared database until it is merged.
 
-`npm test` covers schema parity: `tests/schema-parity.test.ts` fails if the two
-schema files stop describing the same models.
+Two checks guard the history before it gets that far:
+
+- `npm test` runs `tests/schema-parity.test.ts`, which fails if the two schema
+  files stop describing the same models.
+- CI runs `prisma migrate diff` from `prisma/hosted/migrations` to
+  `prisma/hosted/schema.prisma` against a scratch Postgres and fails if they
+  differ, so a schema edit without a matching migration cannot merge.
+
 ## Making a schema change
 
 1. Edit **both** schema files (`prisma/schema.prisma` and
    `prisma/hosted/schema.prisma`).
-2. Self-hosted history: `npx prisma migrate dev --name <change>` (writes to
-   `prisma/migrations/`, applies to your local `dev.db`).
+2. Self-hosted and local dev: `npx prisma db push` applies the SQLite schema to
+   your local `dev.db`. There is no SQLite migration history to update.
 3. Hosted history:
 
    ```bash
@@ -45,14 +51,16 @@ schema files stop describing the same models.
    ```
 
    This writes `prisma/hosted/migrations/<timestamp>_<change_name>/migration.sql`.
-4. Review the generated SQL, run `npm test`, commit both migrations with the
-   schema edits.
+   Prefer `IF NOT EXISTS` forms where Postgres allows them, so a migration is safe
+   to re-run.
+4. Review the generated SQL, run `npm test`, commit both schema files and the new
+   migration together.
 5. Push. The production deploy applies it.
 
 `db:new:hosted` diffs against the live database rather than replaying the
 migration history, because Supabase does not provide a shadow database. That is
-equivalent as long as production matches the history -- which the prod-drift job
-verifies on every push to `main`.
+equivalent as long as production matches the history, which the CI migration-diff
+check keeps true.
 
 ## Environment
 
@@ -60,9 +68,62 @@ verifies on every push to `main`.
 |---|---|---|
 | `DATABASE_URL` | Vercel | pooled connection (port 6543), app queries |
 | `DIRECT_URL` | Vercel | direct connection (port 5432), DDL |
+| `CRON_SECRET` | Vercel | bearer token for `/api/cron/*`; also the same value you store in the Vault (below) |
+| `SESSION_SECRET` | Vercel | signs identity cookies |
+| `NEXT_PUBLIC_BASE_URL` | Vercel | public origin, used for every bot link |
 
-Prisma Migrate cannot run through the transaction pooler, which is why
-`prisma/hosted/schema.prisma` declares `directUrl`.
+The two database URLs differ in host port and query string:
+
+```text
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
+DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+```
+
+`pgbouncer=true` tells Prisma the connection is transaction-pooled (it must not use
+prepared statements), and `connection_limit=1` keeps each serverless instance from
+holding more than one pooled connection. Prisma Migrate cannot run through the
+transaction pooler, which is why `prisma/hosted/schema.prisma` declares
+`directUrl`.
+
+## Scheduling reminders with pg_cron
+
+Vercel's free plan runs a cron at most once a day, which is far too coarse for
+reminders. Reminders and the outbound webhook queue are driven from inside
+Supabase instead, using `pg_cron` to schedule HTTP calls through `pg_net`. This is
+free-tier compatible and has no per-run cost.
+
+Do this once per environment, in the Supabase SQL editor. First store the two
+secrets the job needs in Supabase Vault (use the real `CRON_SECRET` value from
+Vercel):
+
+```sql
+select vault.create_secret('<the CRON_SECRET value>', 'cron_secret');
+select vault.create_secret('https://tabletoptime.us', 'app_base_url');
+```
+
+Then run the contents of `scripts/sql/pg-cron-reminders.sql` in the same editor.
+That script enables `pg_cron` and `pg_net`, reads both secrets from
+`vault.decrypted_secrets`, and schedules two jobs:
+
+| Job | Schedule | Calls |
+|-----|----------|-------|
+| `tabletop-reminders` | every 10 minutes | `<app_base_url>/api/cron/reminders` |
+| `tabletop-webhooks` | every 5 minutes | `<app_base_url>/api/cron/webhooks` |
+
+Each call sends `Authorization: Bearer <cron_secret>`.
+
+To check that it is working:
+
+```sql
+select jobname, schedule, active from cron.job;
+select * from cron.job_run_details order by start_time desc limit 10;
+select id, status_code, created from net._http_response order by created desc limit 10;
+```
+
+If you rotate `CRON_SECRET`, update the Vault entry too (`vault.update_secret`),
+or the jobs will start receiving 401 responses. The GitHub Actions reminder
+workflow remains as a slower backstop; it is safe to leave running because a
+reminder is claimed in the database before it is sent.
 
 ## Adopting the pre-existing database (one time)
 
@@ -78,19 +139,22 @@ DIRECT_URL="<supabase direct url>" npm run db:baseline:hosted
 That is `migrate resolve --applied 0_init`: it writes the ledger and marks the
 baseline applied without touching a table. Every later migration then applies
 normally on deploy. Run once, ever.
-## Escape hatch
 
-`npm run db:push:hosted` still exists for emergencies. It syncs the whole schema
-with no history and leaves the ledger stale, so if you use it, follow up with
-`npm run db:diff:hosted` to confirm the result and add a matching migration.
+## Recovering from a failed migration
 
-## Why this is automated now
+A failed `migrate deploy` fails the build and leaves the previous deployment
+serving, so users are not affected. Fix forward: correct the migration SQL, or add
+a new migration that repairs the state, and push again. If a migration partly
+applied and the ledger records it as failed, resolve it explicitly with
+`prisma migrate resolve --rolled-back <name>` (or `--applied <name>` if you
+finished it by hand) against the direct URL, then redeploy. Take a Supabase backup
+from the dashboard before any manual repair.
 
-It used to be deliberately manual, to keep the live database decoupled from CI
-during rapid open-source development. That tradeoff had one failure mode with no
-detection: nothing noticed when a human skipped the step. On 2026-07-23 a commit
-added `LoginToken.telegramUsername` to both schemas and shipped code that wrote
-it; the column was never applied to production. Every magic-link login -- Telegram
-and Discord -- threw for a month behind a 500 that only Telegram's retry queue
-ever saw. Automating the apply and gating on drift removes that failure mode
-entirely.
+## Why this is automated
+
+Applying the schema used to be a manual step. On 2026-07-23 a commit added
+`LoginToken.telegramUsername` to both schemas and shipped code that wrote it; the
+column was never applied to production, and every magic-link login threw for a
+month behind a 500 that only Telegram's retry queue ever saw. Applying migrations
+as part of the production build, and failing the build when the history and schema
+disagree, removes that failure mode.
