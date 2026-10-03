@@ -3,7 +3,6 @@ import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import prisma from '@/shared/lib/prisma';
 import { hashToken } from '@/shared/lib/token';
-import { verifyValue } from '@/shared/lib/session';
 import { GET } from './route';
 
 vi.mock('@/shared/lib/prisma');
@@ -42,14 +41,12 @@ describe('GET /api/event/[slug]/auth', () => {
         expect(store.set).not.toHaveBeenCalled();
     });
 
-    it('accepts the raw token, sets the admin cookie and signed identity cookies', async () => {
+    it('accepts the raw token and sets only the admin cookie, never an identity cookie from event fields', async () => {
         const res = await call(`?token=${RAW}`);
         expect(res.headers.get('location')).toBe('http://selfhost.lan:3000/e/abc/manage');
 
-        const byName = new Map(store.set.mock.calls.map((c) => [c[0], c[1]]));
-        expect(byName.get('tabletop_admin_abc')).toBe(RAW);
-        expect(verifyValue('identity:discord', byName.get('tabletop_user_discord_id'))).toBe('987654321');
-        expect(verifyValue('identity:telegram', byName.get('tabletop_user_chat_id'))).toBe('555');
-        expect(byName.get('tabletop_user_discord_name')).toBe('chris');
+        const names = store.set.mock.calls.map((c) => c[0]);
+        expect(names).toEqual(['tabletop_admin_abc']);
+        expect(store.set.mock.calls[0][1]).toBe(RAW);
     });
 });

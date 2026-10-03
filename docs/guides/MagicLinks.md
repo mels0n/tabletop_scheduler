@@ -29,7 +29,7 @@ The header of that page always shows two status pills, one per platform:
 2.  In the "Sync & Recover" section, look for the **Discord** panel.
 3.  Enter your Discord Username.
 4.  *Note: This only works if you have previously clicked "Log in with Discord" on a voting page.*
-5.  The bot will DM you a link. Click it to hydrates your browser with your Discord identity.
+5.  The bot will DM you a link. Click it to sign this browser in with your Discord identity.
 
 ### Per-Event Sync Badges
 *Best for: seeing at a glance which events will follow you across devices, and fixing the ones that won't.*
@@ -106,6 +106,6 @@ When you enter a Telegram handle (e.g., `@YourName`) and request a Magic Link:
 2.  **Lookup**: It searches the database for any Participant or Manager record that matches this handle.
 3.  **Verification**:
     *   **If you have used the bot before**: We have your numeric `Chat ID`. The system generates a token and sends the link directly to your Telegram DMs.
-    *   **If you are new**: We only know your text handle, not your numeric ID. The system cannot DM you yet. You will be prompted to "Start" the bot to establish this connection.
+    *   **If you are new**: We only know your text handle, not your numeric ID, and the system cannot DM you. Messaging the bot does not change that: a manager's Telegram account is linked only from the manage page (the **Register for Magic Links** button opens the bot with a one-time code), and a voter's only by signing in through a magic link.
 
 **No linking by typed handle:** a Telegram handle typed into the voting form is not proof of who you are. It never attaches a Chat ID to your participant row and never matches you to other events under the same handle. Your identity is linked only when you sign in through the bot: open a magic link the bot sent you on Telegram, or log in with Discord. That sign-in sets a signed cookie in your browser, and votes cast from that browser are tied to your verified account unless you untick the option to link it.
