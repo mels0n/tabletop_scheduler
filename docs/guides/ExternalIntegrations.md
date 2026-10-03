@@ -6,7 +6,7 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 
 1.  **Event Pre-filling**: Create "One-Click" event creation links from your community Discord, Wiki, or Website.
 2.  **Identity Hand-off**: Send users to the voting page with their name pre-filled, removing friction.
-3.  **Webhook Callbacks**: Receive real-time JSON notifications when an event is created or finalized.
+3.  **Webhook Callbacks**: Receive JSON notifications when an event is created, finalized, or cancelled.
 
 ---
 
@@ -24,7 +24,7 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 | `description` | string | Optional description text. |
 | `minPlayers` | number | Minimum players required (default: 3). |
 | `maxPlayers` | number | Maximum players allowed. |
-| `fromUrl` | url | **Required for Webhooks**. The generic HTTP endpoint we will POST JSON updates to (not Discord-specific). |
+| `fromUrl` | url | **Required for Webhooks**. The `https` endpoint we will POST JSON updates to (not Discord-specific). Private, loopback and link-local addresses are rejected. |
 | `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID). |
 
 ### Example Link
@@ -38,14 +38,41 @@ https://tabletoptime.us/new?title=Raid+Night&minPlayers=8&fromUrl=https://api.my
 
 If you provide `fromUrl` during creation, Tabletop Scheduler will send `POST` requests to that URL with a JSON payload.
 
-> **Reliability**: We attempt delivery every 5 minutes for up to **1 hour**. If your server is down for more than an hour, the webhook will fail permanently.
+### Delivery
+
+Webhooks are queued when the event happens and delivered by a background job that runs every 5 minutes. A delivery usually arrives within a few minutes, not inside the request that caused it.
+
+**Signature.** Every request carries this header:
+
+```text
+X-Tabletop-Signature: sha256=<hex>
+```
+
+`<hex>` is the HMAC-SHA256 of the **raw request body**, keyed with the instance's `CRON_SECRET`. On a self-hosted instance you know that key, and you should verify the header before trusting a payload:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function isValid(rawBody, header, secret) {
+  const expected = "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(header ?? "");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+```
+
+On tabletoptime.us the key is held by the operator and is not shared, so a hosted integration cannot recompute the signature. Rely on the checks under Security Notes instead.
+
+**Retries.** A failed delivery is retried with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The job runs every 5 minutes, so actual times are rounded up to the next run.
+
+**Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected.
 
 ### Response Expectations
 
-Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or timeout) triggers the retry policy.
+Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or timeout) counts as a failed attempt and follows the retry schedule above. Deliveries can repeat, so treat `eventId` plus `type` as an idempotency key.
 
 ### Event Created (`CREATED`)
-Sent immediately after the user effectively creates the event.
+Queued when the event is created.
 
 **Payload:**
 ```json
@@ -61,7 +88,7 @@ Sent immediately after the user effectively creates the event.
 ```
 
 ### Event Finalized (`FINALIZED`)
-Sent when the host locks in a time slot and location.
+Queued when the host locks in a time slot and location.
 
 **Payload:**
 ```json
@@ -74,7 +101,7 @@ Sent when the host locks in a time slot and location.
   "title": "Raid Night",
   "finalizedSlot": {
     "id": 456,
-    "startTime": "2023-12-01T18:00:00.000Z", // ISO 8601
+    "startTime": "2023-12-01T18:00:00.000Z",
     "endTime": "2023-12-01T22:00:00.000Z"
   },
   "attendees": ["Leeroy", "Jaina"],
@@ -85,7 +112,7 @@ Sent when the host locks in a time slot and location.
 ```
 
 ### Event Cancelled (`CANCELLED`)
-Sent if the organizer cancels the event.
+Queued if the organizer cancels the event. It is delivered like the other types, with the same signature and retry policy.
 
 **Payload:**
 ```json
@@ -117,5 +144,5 @@ Generate links dynamically in your system:
 
 ## Security Notes
 
-1.  **Validation**: We do not currently sign webhook payloads with a shared secret. It is recommended to verify the `fromUrlId` against your own database to ensure the update relates to a known request.
-2.  **HTTPS**: We strongly recommend using `https` URLs for `fromUrl` to ensure payload privacy.
+1.  **Signatures**: Every delivery is signed with `X-Tabletop-Signature` (see Delivery above). On a self-hosted instance, verify it. On any instance, also verify the `fromUrlId` against your own database to ensure the update relates to a known request.
+2.  **HTTPS**: `fromUrl` must be an `https` URL. Plain `http` URLs are rejected when the event is created.

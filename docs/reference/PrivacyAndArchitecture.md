@@ -10,16 +10,30 @@ The application behaves differently based on the deployment environment. This is
 
 | Feature | Self-Hosted / Docker | Hosted (Cloud) |
 | :--- | :--- | :--- |
-| **Google Analytics** | **Disabled** | Enabled |
+| **Third-party analytics** | None | None |
 | **Robots.txt** | `Disallow: /` (No Crawl) | `Allow: /` |
 | **Sitemap** | Hidden | Public |
+| **Database** | SQLite | Postgres (Supabase) |
+
+No version of the app, hosted or self-hosted, loads Google Analytics or any other third-party analytics or advertising script. The hosted flag only changes indexing behavior and the database target.
 
 ## Privacy Enforcement
 
-For self-hosted (Docker) instances, privacy is enforced at the component and routing level:
-- Components check `NEXT_PUBLIC_IS_HOSTED` at runtime before loading any external scripts or analytics.
-- This ensures self-hosted instances never load external tracking scripts.
-- The `IS_DOCKER_BUILD=true` flag at build time switches Next.js to `standalone` output mode for containerized deployments.
+- There is no analytics or tracking code in the repository to enable, so a self-hosted instance never loads external tracking scripts.
+- The `IS_DOCKER_BUILD=true` flag at build time switches Next.js to `standalone` output mode for containerized deployments. The Dockerfile also hardcodes `NEXT_PUBLIC_IS_HOSTED=false`.
+
+## Data Retention
+
+Event data is deleted automatically by the cleanup job. These are the defaults, and self-hosters can change them with the `CLEANUP_RETENTION_DAYS_*` variables (see [EnvVariables.md](EnvVariables.md)):
+
+| Data | Deleted |
+| :--- | :--- |
+| One-shot event (finalized) | 1 day after its finalized slot |
+| Campaign (finalized) | 1 day after its last scheduled session |
+| Draft | 30 days after its last activity |
+| Cancelled event | 7 days after cancellation |
+
+Deleting an event deletes its participants, votes, slots, and queued webhooks with it.
 
 ## SEO and Privacy
 
