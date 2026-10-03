@@ -189,7 +189,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
         submitVotes(pending, null);
     };
 
-    // Called by QuickSelectionCalendar — fills NOs then submits
+    // Called by QuickSelectionCalendar: fills NOs then submits
     const handleQuickSave = (completeVotes: Record<number, string | undefined>) => {
         setVotes(completeVotes); // sync so detailed view reflects them if user switches back
         submitVotes(completeVotes);
@@ -262,7 +262,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                         )}
                     </div>
 
-                    {/* Per-platform link toggles — each shown only when that platform
+                    {/* Per-platform link toggles: each shown only when that platform
                         is synced in this browser. */}
                     {(isTelegramSynced || isDiscordSynced) && (
                         <div className="flex flex-col gap-2 mt-4">
@@ -313,7 +313,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                     <div className="bg-indigo-950/50 border border-indigo-800/50 rounded-lg p-3 flex items-start gap-3">
                         <CalendarRange className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
                         <div className="flex-1 text-sm text-indigo-200">
-                            This is a multi-session campaign. Vote on every date you&apos;re available — the organizer will lock in multiple sessions.
+                            This is a multi-session campaign. Vote on every date you&apos;re available, and the organizer will lock in multiple sessions.
                         </div>
                         <div className="relative shrink-0">
                             <button
