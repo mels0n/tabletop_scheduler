@@ -16,6 +16,12 @@ const MAX_ATTEMPTS = 12;
 const BACKOFF_MINUTES = 5;
 /** A claim older than this is treated as abandoned (the run that took it crashed or timed out). */
 const LOCK_TTL_MS = 10 * 60 * 1000;
+/**
+ * Work budget per run, well inside `maxDuration`. Once it is spent no further row is started;
+ * the rest of this run's claim is released so the next run picks those rows up immediately
+ * instead of waiting out the lock TTL.
+ */
+const RUN_BUDGET_MS = 45 * 1000;
 
 /**
  * @function GET
@@ -25,6 +31,9 @@ const LOCK_TTL_MS = 10 * 60 * 1000;
  * lock older than 10 minutes), then claimed with a conditional `updateMany` that stamps
  * `lockedAt = now`. The lock condition is re-checked inside that update, so two overlapping runs
  * can never both claim a row. Only rows carrying this run's `lockedAt` are processed.
+ *
+ * Time budget: no row is started once 45 seconds have passed since the run began; claimed rows
+ * that were not started get `lockedAt` reset to null before the response.
  *
  * Outcome per row (sequential, at most 50 per run):
  * - 2xx: status DELIVERED, lock released.
@@ -36,7 +45,8 @@ export async function GET(req: Request) {
     try {
         requireCronAuth(req);
 
-        const now = new Date();
+        const startedAt = Date.now();
+        const now = new Date(startedAt);
         const staleBefore = new Date(now.getTime() - LOCK_TTL_MS);
         const claimable = {
             status: { in: ["PENDING", "RETRY"] },
@@ -51,7 +61,7 @@ export async function GET(req: Request) {
             take: BATCH_SIZE,
         });
 
-        const summary = { processed: 0, sent: 0, retried: 0, failed: 0 };
+        const summary = { processed: 0, sent: 0, retried: 0, failed: 0, deferred: 0 };
         if (candidates.length === 0) return NextResponse.json(summary);
 
         const ids = candidates.map(c => c.id);
@@ -68,7 +78,17 @@ export async function GET(req: Request) {
 
         log.info("Processing webhooks", { count: claimed.length });
 
-        for (const row of claimed) {
+        for (const [index, row] of claimed.entries()) {
+            if (Date.now() - startedAt >= RUN_BUDGET_MS) {
+                const unstarted = claimed.slice(index).map(r => r.id);
+                await prisma.webhookEvent.updateMany({
+                    where: { id: { in: unstarted }, lockedAt: now },
+                    data: { lockedAt: null },
+                });
+                summary.deferred = unstarted.length;
+                log.info("Webhook run budget spent; released the rest of the claim", { deferred: unstarted.length });
+                break;
+            }
             summary.processed++;
             try {
                 await deliverWebhook(row);
