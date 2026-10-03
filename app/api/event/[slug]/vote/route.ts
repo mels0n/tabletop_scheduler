@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
+import { getServerConfig } from "@/shared/config/server";
 
 import { checkEventQuorum } from "@/shared/lib/quorum";
 import { processWaitlistPromotion } from "@/features/event-management/server/waitlist";
@@ -65,7 +66,9 @@ class ParticipantNotOwnedError extends AppError {
  *    `quorumReachedAt` is stamped. That alone stops voting reminders, independent of whether
  *    the manager could be reached.
  * 5. After the response (`after()`): dashboard sync, the "X updated availability" group post,
- *    and the manager's quorum DM. Slow or failing Telegram/Discord calls can no longer time
+ *    and the manager's quorum DM. The group post is rate limited per participant: it goes out
+ *    only when `lastAnnouncedAt` is unset or older than VOTE_ANNOUNCE_COOLDOWN_MINUTES (0 =
+ *    every vote), decided and stamped in the transaction. The dashboard syncs on every vote. Slow or failing Telegram/Discord calls can no longer time
  *    out the vote and make the client retry. `quorumViableNotified`/`quorumPerfectNotified`
  *    are set only when the DM was delivered.
  *
@@ -251,7 +254,9 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         chatId: shouldLinkTelegram ? identity.chatId : null,
                         status: nextStatus || 'PENDING',
                         // The response issues this row's participant cookie.
-                        ownerCookieIssuedAt: now
+                        ownerCookieIssuedAt: now,
+                        // A first vote is always announced; this starts the cooldown.
+                        lastAnnouncedAt: now
                     },
                 });
             }
@@ -275,6 +280,25 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                 data: voteData,
             });
 
+            // 5b. Group announcement cooldown. A re-vote is announced only when the row's last
+            //     announcement is unset or older than the window. The stamp is conditional, so of
+            //     two concurrent votes only the one that moves it (count 1) announces.
+            let shouldAnnounce = true;
+            const cooldownMs = getServerConfig().voteAnnounceCooldownMinutes * 60_000;
+            if (existing && cooldownMs > 0) {
+                const cutoff = new Date(now.getTime() - cooldownMs);
+                const lastAnnouncedAt: Date | null = existing.lastAnnouncedAt ?? null;
+                if (lastAnnouncedAt && lastAnnouncedAt >= cutoff) {
+                    shouldAnnounce = false;
+                } else {
+                    const stamp = await tx.participant.updateMany({
+                        where: { id: existing.id, OR: [{ lastAnnouncedAt: null }, { lastAnnouncedAt: { lt: cutoff } }] },
+                        data: { lastAnnouncedAt: now }
+                    });
+                    shouldAnnounce = stamp?.count === 1;
+                }
+            }
+
             // 6. Quorum: record the first time it is reached, in the same transaction as the vote.
             const event = await tx.event.findUnique({
                 where: { id: eventId },
@@ -292,10 +316,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                 }
             }
 
-            return { participant, event, quorum, actingAsEventAdmin };
+            return { participant, event, quorum, actingAsEventAdmin, shouldAnnounce };
         });
 
-        const { event, quorum } = result;
+        const { event, quorum, shouldAnnounce } = result;
 
         // --- FINALIZED EVENT: WAITLIST AUTO-PROMOTION LOGIC ---
         if (event && event.status === 'FINALIZED' && event.maxPlayers) {
@@ -314,10 +338,12 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                     log.error("Dashboard sync after vote failed", e as Error);
                 }
 
-                try {
-                    await broadcastVoteUpdate(event, userDisplay);
-                } catch (e) {
-                    log.error("Vote broadcast failed", e as Error);
+                if (shouldAnnounce) {
+                    try {
+                        await broadcastVoteUpdate(event, userDisplay);
+                    } catch (e) {
+                        log.error("Vote broadcast failed", e as Error);
+                    }
                 }
 
                 try {
