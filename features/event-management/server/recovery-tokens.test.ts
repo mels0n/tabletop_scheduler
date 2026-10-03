@@ -22,7 +22,7 @@ vi.mock('@/features/auth/server/verify', async () => {
 });
 
 const mockPrisma = prisma as unknown as {
-    event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+    event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
 };
 const mockAdmin = verifyEventAdmin as unknown as ReturnType<typeof vi.fn>;
 
@@ -45,14 +45,31 @@ describe('recovery token minting requires admin', () => {
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
 
-    it('getConnectCommand derives the code from the stored admin token hash and current binding', async () => {
-        expect(await getConnectCommand('abc')).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), null)}`);
+    it('getConnectCommand derives the code from the stored admin token hash, current binding and nonce', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ id: 1, slug: 'abc', adminToken: 'e'.repeat(64), telegramChatId: '-1001', telegramConnectNonce: 'n1' });
+        expect(await getConnectCommand('abc')).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), '-1001', 'n1')}`);
         expect(mockPrisma.event.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-            select: expect.objectContaining({ adminToken: true, telegramChatId: true }),
+            select: expect.objectContaining({ adminToken: true, telegramChatId: true, telegramConnectNonce: true }),
         }));
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalled();
+    });
 
-        mockPrisma.event.findUnique.mockResolvedValue({ slug: 'abc', adminToken: 'e'.repeat(64), telegramChatId: '-1001' });
-        expect(await getConnectCommand('abc')).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), '-1001')}`);
+    it('getConnectCommand persists a nonce first when the event has none', async () => {
+        let stored: string | null = null;
+        mockPrisma.event.findUnique.mockImplementation(async () => ({ id: 1, slug: 'abc', adminToken: 'e'.repeat(64), telegramChatId: null, telegramConnectNonce: stored }));
+        mockPrisma.event.updateMany.mockImplementation(async ({ data }: { data: { telegramConnectNonce: string } }) => {
+            stored = data.telegramConnectNonce;
+            return { count: 1 };
+        });
+
+        const command = await getConnectCommand('abc');
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 1, telegramConnectNonce: null },
+            data: { telegramConnectNonce: expect.stringMatching(/^[0-9a-f]{32}$/) },
+        });
+        expect(stored).toBeTruthy();
+        expect(command).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), null, stored)}`);
     });
 });
 

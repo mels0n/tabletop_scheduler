@@ -41,6 +41,8 @@ const sent = { status: 'sent', messageId: '1' };
 
 const discordOnlyEvent = {
     id: 1,
+    telegramChatId: null,
+    telegramConnectNonce: 'n1',
     slug: 'abc',
     title: 'Game Night',
     adminToken: 'f'.repeat(64),
@@ -257,7 +259,7 @@ describe('admin-only recovery setup actions', () => {
 
         expect(await connectCommandForAdmin('abc')).toEqual({
             success: true,
-            command: `/connect abc ${connectCodeFor('abc', discordOnlyEvent.adminToken, null)}`,
+            command: `/connect abc ${connectCodeFor('abc', discordOnlyEvent.adminToken, null, 'n1')}`,
         });
     });
 });
