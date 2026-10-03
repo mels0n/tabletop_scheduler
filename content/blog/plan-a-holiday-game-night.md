@@ -16,7 +16,7 @@ faq:
   - question: "How far ahead should you schedule a holiday game night?"
     answer: "Ask in early to mid October for Thanksgiving or Friendsgiving and in early November for December dates. Holiday calendars fill up fast, and people commit to the first reasonable invite they get. Offer two or three candidate dates instead of asking when everyone is free."
   - question: "How do you schedule a game night when everyone is busy?"
-    answer: "Offer two or three candidate dates, decide how many people make it worth going ahead (your quorum), and name a backup date up front. Tabletop Time is free and does the voting and quorum check for you, and players vote from a magic link with no account or login."
+    answer: "Offer two or three candidate dates, decide how many people make it worth going ahead (your quorum), and name a backup date up front. Tabletop Time is free and does the voting and quorum check for you, and players vote from a shared link with no account or login."
   - question: "How long should a holiday game night last?"
     answer: "Plan for two or three games and about three hours, then publish the end time in the invite. A known end time makes it easier for guests with a second holiday stop or a drive home to say yes. It also gives you a natural place to stop when energy dips."
 ---
@@ -55,7 +55,7 @@ A quorum is the minimum number of people who have to say yes before the night go
 
 Set the number by what your games need. A word game like Codenames wants at least four. Pick your quorum, then invite two or three more than your table seats, because someone will cancel. For the concept in more depth, see [what quorum scheduling is](/blog/what-is-quorum-scheduling).
 
-This is the point where a tool earns its keep. [Tabletop Time](/features) checks the quorum for you and shows which dates clear the bar. Players vote from a magic link with no account and no login, and reminders go out so the date does not quietly slip off everyone's radar. It is free.
+This is the point where a tool earns its keep. [Tabletop Time](/features) checks the quorum for you and shows which dates clear the bar. Players vote from a shared link with no account and no login, and if you connect the Telegram or Discord bot, reminders go out so the date does not quietly slip off everyone's radar. It is free.
 
 ### Name a backup date before you need one
 

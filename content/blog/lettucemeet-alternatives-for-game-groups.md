@@ -18,7 +18,7 @@ faq:
   - question: "Is there a free Doodle alternative for a gaming group?"
     answer: "Yes. Doodle's help center documents a 10 time slot cap per group poll on the free plan. Rallly, Crab Fit and Tabletop Time are free alternatives, and Tabletop Time adds quorum logic and recurring series aimed at game groups."
   - question: "How do I schedule a recurring game night without re-polling every week?"
-    answer: "Use a tool that supports a recurring series, so the session repeats and you only re-vote when something changes. Tabletop Time does this and pairs it with reminders. With a plain poll tool, you end up building a new poll every week."
+    answer: "Use a tool that can lock in several sessions from one poll, so you only re-vote when the run ends. Tabletop Time's campaign mode does this and pairs it with reminders. With a plain poll tool, you end up building a new poll every week."
 ---
 
 Your LettuceMeet link spins, the group chat is filling with "did anyone vote yet?", and your Friday game is quietly dying. Before you panic, there is a quick way to check whether it is the site or your connection, and a short list of free tools that can take over.
@@ -87,7 +87,7 @@ A shared calendar works when your group already agrees on a slot and only needs 
 
 ### Tabletop Time
 
-Tabletop Time is my own tool, so weigh that accordingly. It is free, and players vote through a magic link with no account, and it has quorum logic, so you can set a minimum player count and see which dates clear it. It also supports recurring series, reminders, and Telegram and Discord bots. It is aimed at game groups specifically, which is both the point and the limit: for a one-time dentist-office meeting, any tool above will do.
+Tabletop Time is my own tool, so weigh that accordingly. It is free, and players vote from a shared link with no account, and it has quorum logic, so you can set a minimum player count and see which dates clear it. It also supports multi-session campaigns, reminders, and Telegram and Discord bots. It is aimed at game groups specifically, which is both the point and the limit: for a one-time dentist-office meeting, any tool above will do.
 
 <div role="img" aria-label="Bar chart: how many of six game-group needs each scheduling tool states on its own site. When2meet 0, LettuceMeet 1, Doodle free 0, Rallly 2, Crab Fit 2, Tabletop Time 5." style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;margin:24px 0;color:#e2e8f0;font-family:system-ui,sans-serif;">
   <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Game-group needs each tool's own site states</div>
