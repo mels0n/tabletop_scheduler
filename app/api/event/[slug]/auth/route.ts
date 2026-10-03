@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminToken, setAdminCookie } from "@/features/auth";
+import { isAdminToken, setAdminCookie, upgradeLegacyAdminToken } from "@/features/auth";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 
@@ -11,7 +11,8 @@ const log = Logger.get("AuthRoute");
  *
  * Flow:
  * 1. User clicks Telegram/Discord link (`/api/event/[slug]/auth?token=...`).
- * 2. System checks that the SHA-256 hash of `token` equals the event's stored `adminToken` hash.
+ * 2. System checks that the SHA-256 hash of `token` equals the event's stored `adminToken` hash
+ *    (a legacy plaintext row matches the token itself and is upgraded to its hash).
  * 3. On Success: sets the event-specific admin cookie (`tabletop_admin_[slug]`) and
  *    redirects to `/manage`. It never sets a global identity cookie: the event's stored
  *    manager IDs say nothing about who holds this token.
@@ -47,6 +48,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
             log.warn("Invalid Magic Link attempt", { slug });
             return redirectTo(`${eventPath}?error=invalid_token`);
         }
+
+        // A legacy plaintext row is rewritten as its hash now that the token has proven itself.
+        await upgradeLegacyAdminToken(slug, token, event.adminToken);
 
         // 1. Set the event-specific admin cookie for /manage access.
         await setAdminCookie(slug, token);
