@@ -41,6 +41,7 @@ describe('getServerConfig: defaults', () => {
             logLevel: 'info',
             cleanupRetentionDays: { finalized: 1, draft: 1, cancelled: 1 },
             acceptDataLoss: false,
+            voteAnnounceCooldownMinutes: 60,
         });
     });
 
@@ -197,5 +198,19 @@ describe('getServerConfig: telegram edge cases', () => {
     it('refuses explicit polling on Vercel', () => {
         const err = loadError({ VERCEL: '1', CRON_SECRET: 'c', NEXT_PUBLIC_BASE_URL: 'https://x.example', TELEGRAM_BOT_TOKEN: 't', TELEGRAM_MODE: 'polling' });
         expect(err.message).toContain('TELEGRAM_MODE');
+    });
+});
+
+describe('getServerConfig: vote announcement cooldown', () => {
+    it('defaults to 60 minutes and accepts 0 (disabled) through 1440', () => {
+        expect(load().voteAnnounceCooldownMinutes).toBe(60);
+        expect(load({ VOTE_ANNOUNCE_COOLDOWN_MINUTES: '0' }).voteAnnounceCooldownMinutes).toBe(0);
+        expect(load({ VOTE_ANNOUNCE_COOLDOWN_MINUTES: '15' }).voteAnnounceCooldownMinutes).toBe(15);
+        expect(load({ VOTE_ANNOUNCE_COOLDOWN_MINUTES: '1440' }).voteAnnounceCooldownMinutes).toBe(1440);
+    });
+
+    it.each(['1441', '-1', '1.5', 'abc'])('rejects %s', (value) => {
+        const err = loadError({ VOTE_ANNOUNCE_COOLDOWN_MINUTES: value });
+        expect(err.message).toContain('VOTE_ANNOUNCE_COOLDOWN_MINUTES');
     });
 });
