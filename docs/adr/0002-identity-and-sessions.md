@@ -42,3 +42,4 @@ So the question is how to tell a host from a guest, and how to recognize a retur
 - Someone who loses their manage link and has not linked Telegram or Discord has no recovery path. This is the cost of having no accounts. The manage page encourages linking an identity for exactly this reason.
 - A signed cookie proves "this browser logged in as this platform user", not "this person is who they say". That is the intended strength of the model, and it is enough to gate event administration and cross-device history.
 - Because identity is optional, features that depend on it (direct messages, cross-device history) quietly do nothing for people who never linked an account.
+- A deploy must never invalidate admin links, stored participant ids or live tokens, because people who never linked an account cannot recover. Auth changes therefore carry an accept-the-old-form-and-upgrade path instead of a hard cutover.
