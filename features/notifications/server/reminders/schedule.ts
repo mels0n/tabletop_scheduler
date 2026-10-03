@@ -9,8 +9,6 @@
  * day so a missed reminder never collides with the next day's.
  */
 export const VOTING_CATCHUP_MS = 18 * 60 * 60 * 1000;
-/** A voting reminder is sent at most once per this span (the claim in voting.ts uses it too). */
-export const VOTING_DEDUPE_MS = 18 * 60 * 60 * 1000;
 const WEEKDAYS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
 export interface VotingReminderSchedule {
@@ -48,22 +46,21 @@ function localClock(now: Date, timezone: string): { minutes: number; weekday: nu
 }
 
 /**
- * True when a voting reminder should post now.
+ * The instant of the most recent "reminderTime on a reminder day", or null when no
+ * target is open right now.
  *
- * The target is the most recent "reminderTime on a reminder day". It is due from
- * the target until 18 hours after (catch-up for late scheduler runs), provided no
- * reminder went out in the last 18 hours. The window wraps midnight: a 23:30
- * target is still due at 00:15 the next day, judged against the target's own
- * weekday (yesterday), not today's.
+ * A target stays open from its instant until 18 hours after (catch-up for late scheduler
+ * runs). The window wraps midnight: a 23:30 target is still open at 00:15 the next day,
+ * judged against the target's own weekday (yesterday), not today's.
  */
-export function isVotingReminderDue(schedule: VotingReminderSchedule, now: Date): boolean {
-    if (!schedule.reminderTime || !schedule.reminderDays) return false;
+export function currentVotingTarget(schedule: VotingReminderSchedule, now: Date): Date | null {
+    if (!schedule.reminderTime || !schedule.reminderDays) return null;
 
     const target = parseReminderTime(schedule.reminderTime);
-    if (target === null) return false;
+    if (target === null) return null;
 
     const days = schedule.reminderDays.split(",").map(d => parseInt(d, 10)).filter(n => !Number.isNaN(n));
-    if (days.length === 0) return false;
+    if (days.length === 0) return null;
 
     let clock: { minutes: number; weekday: number };
     try {
@@ -79,13 +76,23 @@ export function isVotingReminderDue(schedule: VotingReminderSchedule, now: Date)
         targetWeekday = (clock.weekday + 6) % 7;
     }
 
-    if (diff * 60_000 >= VOTING_CATCHUP_MS) return false;
-    if (!days.includes(targetWeekday)) return false;
+    if (diff * 60_000 >= VOTING_CATCHUP_MS) return null;
+    if (!days.includes(targetWeekday)) return null;
 
-    if (schedule.lastReminderSent && now.getTime() - schedule.lastReminderSent.getTime() < VOTING_DEDUPE_MS) {
-        return false;
-    }
-    return true;
+    const minuteStart = now.getTime() - (now.getTime() % 60_000);
+    return new Date(minuteStart - diff * 60_000);
+}
+
+/**
+ * True when a voting reminder should post now: a target is open and nothing was sent
+ * (or the settings were last changed) at or after that target. Dedupe is keyed on the
+ * target instant, so each target sends at most once, a late catch-up never blocks the
+ * next day's target, and enabling reminders after today's target waits for tomorrow.
+ */
+export function isVotingReminderDue(schedule: VotingReminderSchedule, now: Date): boolean {
+    const target = currentVotingTarget(schedule, now);
+    if (!target) return false;
+    return !schedule.lastReminderSent || schedule.lastReminderSent.getTime() < target.getTime();
 }
 
 /**

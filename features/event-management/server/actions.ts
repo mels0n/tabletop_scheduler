@@ -271,12 +271,22 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
         const event = await prisma.event.findUnique({ where: { slug } });
         if (!event) return { success: false, error: "Event not found" };
 
+        const reminderDays = parsed.data.days.join(',');
+        const changed =
+            event.reminderEnabled !== parsed.data.enabled ||
+            event.reminderTime !== parsed.data.time ||
+            event.reminderDays !== reminderDays;
+
         await prisma.event.update({
             where: { id: event.id },
             data: {
                 reminderEnabled: parsed.data.enabled,
                 reminderTime: parsed.data.time,
-                reminderDays: parsed.data.days.join(','),
+                reminderDays,
+                // Reminders dedupe on the target instant, so stamping "now" means a target that
+                // already passed today (turned on late, or time moved earlier) waits for its next
+                // occurrence instead of firing at once.
+                ...(changed ? { lastReminderSent: new Date() } : {}),
                 // Intent: Do NOT reset notification flags here. Changing schedule shouldn't spam users if quorum was already reached.
             }
         });
