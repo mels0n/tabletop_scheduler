@@ -9,9 +9,9 @@
 #
 # PRIVACY GUARANTEES:
 # - NEXT_TELEMETRY_DISABLED=1 (Hardcoded)
-# - NEXT_PUBLIC_IS_HOSTED=false (Hardcoded alias in Webpack)
+# - NEXT_PUBLIC_IS_HOSTED=false (Hardcoded)
 # ==============================================================================
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # SECURITY & PRIVACY HARDENING
 # ASSERTION: The Docker image MUST act as a "Self-Hosted" instance.
-# ACTION: Force 'IS_HOSTED' to false to trigger Webpack aliasing of Ad components to NoOp.
+# ACTION: Force IS_HOSTED to false so hosted-only code paths are compiled out.
 ARG IS_DOCKER_BUILD=true
 ENV IS_DOCKER_BUILD=true
 ENV NEXT_PUBLIC_IS_HOSTED=false
