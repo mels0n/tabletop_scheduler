@@ -5,7 +5,7 @@
 # 1. Base:    Common Alpine node environment + telemetry config.
 # 2. Deps:    Clean install of dependencies (cached layer).
 # 3. Builder: Full source compilation with Privacy Hardening enabled.
-# 4. Runner:  Production runtime. Includes 'start.sh' wrapper for auto-migrations.
+# 4. Runner:  Production runtime. Includes 'start.sh' wrapper that syncs the SQLite schema on boot.
 #
 # PRIVACY GUARANTEES:
 # - NEXT_TELEMETRY_DISABLED=1 (Hardcoded)
@@ -92,7 +92,7 @@ RUN chown node:node .next
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
-# ARCHITECTURAL DECISION: Self-Contained Migrations
+# ARCHITECTURAL DECISION: Self-Contained Schema Sync
 #
 # RATIONALE:
 # To simplify the self-hosted user experience ("One-Click Start"), this container
@@ -100,13 +100,18 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 #
 # IMPLEMENTATION:
 # We explicitly copy the Prisma CLI and engines from the 'builder' stage.
-# This allows 'start.sh' to execute 'npx prisma migrate deploy' on startup.
+# This allows 'start.sh' to run 'npx prisma db push' against the SQLite file on
+# startup (self-host has no migration history; 'db push' is the contract).
+# Non-SQLite URLs fall back to 'prisma migrate deploy' in start.sh.
 #
 # TRADEOFF:
 # Increases image size slightly, but removes the need for an external 'initContainer'.
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
+# Only the 'prisma' entry point is needed on PATH for 'npx prisma' (not the whole
+# .bin directory, which carries every dev tool's shim).
+RUN mkdir -p node_modules/.bin && \
+    ln -s ../prisma/build/index.js node_modules/.bin/prisma
 
 # Fix permissions so node user can run prisma (which might download engines or write logs)
 RUN chown -R node:node /app/node_modules
@@ -120,6 +125,10 @@ USER node
 
 EXPOSE 3000
 
+# Liveness probe (shallow: no database round trip; use /api/health?deep=1 for that).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+
 ENV PORT=3000
 # NETWORK BINDING:
 # Bind to 0.0.0.0 to ensure the app is accessible outside the container.
@@ -127,5 +136,5 @@ ENV HOSTNAME="0.0.0.0"
 
 # ENTRYPOINT STRATEGY
 # We use a wrapper script 'start.sh' instead of direct 'node server.js'
-# to orchestrate the migration-before-startup sequence.
+# to orchestrate the schema-sync-before-startup sequence.
 CMD ["./start.sh"]
