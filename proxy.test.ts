@@ -20,7 +20,7 @@ function setCookies(res: Response): Map<string, string> {
 
 describe('proxy sliding refresh', () => {
     it('re-sets a signed identity cookie with a fresh max-age', () => {
-        const signed = signValue('987654321');
+        const signed = signValue('identity:discord', '987654321');
         const res = proxy(req('/e/abc', { tabletop_user_discord_id: signed, tabletop_user_discord_name: 'Chris' }));
         const sc = setCookies(res);
         expect(sc.get('tabletop_user_discord_id')).toContain(`tabletop_user_discord_id=${encodeURIComponent(signed)}`);
@@ -38,6 +38,13 @@ describe('proxy sliding refresh', () => {
         expect(sc.get('tabletop_user_telegram_name')).toMatch(/tabletop_user_telegram_name=;/);
     });
 
+    it('deletes a participant cookie value copied into an identity cookie', () => {
+        const copied = signValue('participant:abc', '987654321');
+        const res = proxy(req('/e/abc', { tabletop_user_chat_id: copied }));
+        expect(setCookies(res).get('tabletop_user_chat_id')).toMatch(/tabletop_user_chat_id=;/);
+        expect(proxy(req('/e/abc/manage', { tabletop_user_chat_id: copied })).status).toBe(307);
+    });
+
     it('still refreshes admin cookies', () => {
         const res = proxy(req('/e/abc', { tabletop_admin_abc: 'raw-token' }));
         expect(setCookies(res).get('tabletop_admin_abc')).toMatch(/Max-Age=34560000/);
@@ -52,7 +59,7 @@ describe('proxy manage gate', () => {
     });
 
     it('lets /manage through with a signed identity cookie', () => {
-        const res = proxy(req('/e/abc/manage', { tabletop_user_discord_id: signValue('987654321') }));
+        const res = proxy(req('/e/abc/manage', { tabletop_user_discord_id: signValue('identity:discord', '987654321') }));
         expect(res.headers.get('location')).toBeNull();
     });
 

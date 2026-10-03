@@ -29,6 +29,7 @@ export {
     manageSlugFrom,
     isDiscordSnowflake,
     guildCookieName,
+    guildGrantPurpose,
 } from "./model/oauth-state";
 export type { OAuthFlow, OAuthState } from "./model/oauth-state";
 export {

@@ -19,7 +19,7 @@ describe('disconnectPlatformFromBrowser', () => {
 
     it('clears only the Discord session cookies and never touches the database', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_discord_id' ? { value: signValue('discord-42') } : undefined
+            name === 'tabletop_user_discord_id' ? { value: signValue('identity:discord', 'discord-42') } : undefined
         );
 
         const result = await disconnectPlatformFromBrowser('discord');
@@ -40,7 +40,7 @@ describe('disconnectPlatformFromBrowser', () => {
 
     it('clears only the Telegram session cookies', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+            name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
         );
 
         const result = await disconnectPlatformFromBrowser('telegram');

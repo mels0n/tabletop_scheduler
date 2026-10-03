@@ -48,8 +48,8 @@ describe('GET /api/event/[slug]/auth', () => {
 
         const byName = new Map(store.set.mock.calls.map((c) => [c[0], c[1]]));
         expect(byName.get('tabletop_admin_abc')).toBe(RAW);
-        expect(verifyValue(byName.get('tabletop_user_discord_id'))).toBe('987654321');
-        expect(verifyValue(byName.get('tabletop_user_chat_id'))).toBe('555');
+        expect(verifyValue('identity:discord', byName.get('tabletop_user_discord_id'))).toBe('987654321');
+        expect(verifyValue('identity:telegram', byName.get('tabletop_user_chat_id'))).toBe('555');
         expect(byName.get('tabletop_user_discord_name')).toBe('chris');
     });
 });

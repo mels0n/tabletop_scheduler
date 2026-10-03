@@ -19,7 +19,7 @@ import { generateStatusMessage } from "@/shared/lib/status";
 import { verifyValue } from "@/shared/lib/session";
 import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
-import { guildCookieName, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
+import { guildCookieName, guildGrantPurpose, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
 
 const log = Logger.get("DiscordActions");
 
@@ -80,7 +80,7 @@ function toActionError(e: unknown, fallback: string): ActionFailure {
  */
 async function requireGuildGrant(slug: string, guildId: string): Promise<void> {
     const cookieStore = await cookies();
-    if (verifyValue(cookieStore.get(guildCookieName(slug))?.value) !== guildId) {
+    if (verifyValue(guildGrantPurpose(slug), cookieStore.get(guildCookieName(slug))?.value) !== guildId) {
         throw new ForbiddenError("Discord connection expired. Connect the server again.");
     }
 }

@@ -6,17 +6,19 @@ import Logger from "@/shared/lib/logger";
 import { checkEventQuorum } from "@/shared/lib/quorum";
 import { processWaitlistPromotion } from "@/features/event-management/server/waitlist";
 import { normalizeHandle } from "@/shared/lib/handle";
-import { identityCookieOptions, readIdentity, signValue, verifyValue } from "@/shared/lib/session";
+import {
+    identityCookieOptions,
+    participantCookieName,
+    participantPurpose,
+    readIdentity,
+    signValue,
+    verifyValue,
+} from "@/shared/lib/session";
 import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
 import { idParam, voteSchema } from "@/features/event-management/model/schemas";
 import { escapeDiscordMarkdown, escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Vote");
-
-/** Signed cookie proving this browser created a participant row: value `signValue(String(participantId))`. */
-function participantCookieName(eventSlug: string): string {
-    return `tabletop_participant_${eventSlug}`;
-}
 
 /**
  * @function POST
@@ -89,8 +91,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             throw new NotFoundError("Event not found");
         }
 
+        // Signed cookie proving this browser created a participant row on this event.
         const cookieName = participantCookieName(targetEvent.slug);
-        const ownedParticipantId = verifyValue(cookieStore.get(cookieName)?.value);
+        const cookiePurpose = participantPurpose(targetEvent.slug);
+        const ownedParticipantId = verifyValue(cookiePurpose, cookieStore.get(cookieName)?.value);
         const ownsParticipant = (row: { id: number; chatId: string | null; discordId: string | null }) =>
             ownedParticipantId === String(row.id)
             || (identity.chatId !== null && row.chatId === identity.chatId)
@@ -271,7 +275,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         log.info(`Vote processed successfully`, { participantId: participantRow.id, eventId });
         const response = NextResponse.json({ success: true, participantId: participantRow.id });
         // Proof of ownership for later edits from this browser (refreshed on every authorized vote).
-        response.cookies.set(cookieName, signValue(String(participantRow.id)), identityCookieOptions());
+        response.cookies.set(cookieName, signValue(cookiePurpose, String(participantRow.id)), identityCookieOptions());
         return response;
     } catch (error) {
         return toResponse(error, log.forRequest(req));

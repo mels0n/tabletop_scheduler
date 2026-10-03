@@ -2,7 +2,7 @@
 
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
-import { IDENTITY_COOKIES, verifyValue } from "@/shared/lib/session";
+import { IDENTITY_COOKIES, readIdentityCookie } from "@/shared/lib/session";
 
 const log = Logger.get("BrowserDisconnect");
 
@@ -41,7 +41,7 @@ const PLATFORM_NAME_COOKIE: Record<Platform, string> = {
 export async function disconnectPlatformFromBrowser(platform: Platform): Promise<{ success: true, message: string } | { error: string }> {
     try {
         const cookieStore = await cookies();
-        const identityId = verifyValue(cookieStore.get(PLATFORM_ID_COOKIE[platform])?.value);
+        const identityId = readIdentityCookie(cookieStore, platform);
 
         if (!identityId) {
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };

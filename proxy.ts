@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { IDENTITY_COOKIES, identityCookieOptions, verifyValue } from '@/shared/lib/session'
+import { IDENTITY_COOKIES, IDENTITY_PURPOSES, identityCookieOptions, verifyValue } from '@/shared/lib/session'
 import { REQUEST_ID_HEADER, resolveRequestId } from '@/shared/lib/logger'
 
 /** Matches /e/<slug>/manage and anything below it; capture group 1 is the slug. */
@@ -10,8 +10,8 @@ const ADMIN_COOKIE_PREFIX = 'tabletop_admin_';
 
 /** Each signed identity cookie and the display-name cookie that only means something alongside it. */
 const IDENTITY_PAIRS = [
-    { id: IDENTITY_COOKIES.telegram, name: 'tabletop_user_telegram_name' },
-    { id: IDENTITY_COOKIES.discord, name: 'tabletop_user_discord_name' },
+    { id: IDENTITY_COOKIES.telegram, purpose: IDENTITY_PURPOSES.telegram, name: 'tabletop_user_telegram_name' },
+    { id: IDENTITY_COOKIES.discord, purpose: IDENTITY_PURPOSES.discord, name: 'tabletop_user_discord_name' },
 ] as const;
 
 /**
@@ -59,7 +59,7 @@ function refreshSessionsAndGuard(request: NextRequest, response: NextResponse): 
         const idCookie = request.cookies.get(pair.id);
         if (!idCookie) continue;
 
-        if (verifyValue(idCookie.value) === null) {
+        if (verifyValue(pair.purpose, idCookie.value) === null) {
             response.cookies.delete(pair.id);
             if (request.cookies.has(pair.name)) response.cookies.delete(pair.name);
             continue;

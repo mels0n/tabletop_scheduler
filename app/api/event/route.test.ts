@@ -137,7 +137,7 @@ describe('POST /api/event', () => {
     });
 
     it('uses a signed identity cookie for the manager', async () => {
-        cookieJar.set('tabletop_user_discord_id', signValue('123456789012345678'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', '123456789012345678'));
         cookieJar.set('tabletop_user_discord_name', 'Owner');
 
         await POST(request(valid));

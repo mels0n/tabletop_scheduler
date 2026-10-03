@@ -150,7 +150,7 @@ describe('Discord channel binding requires admin and a guild this admin just add
         process.env.DISCORD_BOT_TOKEN = 'test-bot-token';
         mockAdmin.mockResolvedValue(true);
         mockCookies.mockResolvedValue(cookieJar({
-            tabletop_discord_guild_abc: signValue(GUILD),
+            tabletop_discord_guild_abc: signValue('discord-guild:abc', GUILD),
             tabletop_user_discord_id: '999999999999999999',
         }));
         mockGuildChannels.mockResolvedValue([{ id: CHANNEL, name: 'general' }]);
@@ -182,7 +182,19 @@ describe('Discord channel binding requires admin and a guild this admin just add
     });
 
     it('connectDiscordChannel with a guild cookie issued for another event -> forbidden', async () => {
-        mockCookies.mockResolvedValue(cookieJar({ tabletop_discord_guild_other: signValue(GUILD) }));
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_discord_guild_other: signValue('discord-guild:other', GUILD) }));
+
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
+    });
+
+    it('connectDiscordChannel with a guild value signed for another event, copied under this name -> forbidden', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_discord_guild_abc: signValue('discord-guild:other', GUILD) }));
+
+        expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
+    });
+
+    it('connectDiscordChannel with a signed identity value copied into the guild cookie -> forbidden', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_discord_guild_abc: signValue('identity:discord', GUILD) }));
 
         expect(await connectDiscordChannel('abc', GUILD, CHANNEL)).toMatchObject({ code: 'forbidden' });
     });

@@ -28,7 +28,7 @@ describe('unlinkPlatformEverywhere', () => {
 
     it('wipes Discord identity from participants, managed events, and login tokens, then clears the session cookies', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_discord_id' ? { value: signValue('discord-42') } : undefined
+            name === 'tabletop_user_discord_id' ? { value: signValue('identity:discord', 'discord-42') } : undefined
         );
 
         const result = await unlinkPlatformEverywhere('discord');
@@ -64,7 +64,7 @@ describe('unlinkPlatformEverywhere', () => {
 
     it('wipes Telegram identity (verified chatId) from participants, managed events, and login tokens, then clears the session cookies', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
+            name === 'tabletop_user_chat_id' ? { value: signValue('identity:telegram', '999') } : undefined
         );
 
         const result = await unlinkPlatformEverywhere('telegram');
