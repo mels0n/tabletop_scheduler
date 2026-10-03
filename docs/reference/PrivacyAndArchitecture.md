@@ -28,10 +28,10 @@ Event data is deleted automatically by the cleanup job. These are the defaults, 
 
 | Data | Deleted |
 | :--- | :--- |
-| One-shot event (finalized) | 1 day after its finalized slot |
-| Campaign (finalized) | 1 day after its last scheduled session |
-| Draft | 30 days after its last activity |
-| Cancelled event | 7 days after cancellation |
+| One-shot event (finalized) | 1 day after its finalized slot ends |
+| Campaign (finalized) | 1 day after its last scheduled session ends |
+| Draft | 1 day after its last proposed slot ends (no slots: 1 day after creation) |
+| Cancelled event | 1 day after cancellation |
 
 Deleting an event deletes its participants, votes, slots, and queued webhooks with it.
 

@@ -17,10 +17,10 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  * Responsibilities:
  * 1. Security: `requireCronAuth` (Bearer CRON_SECRET; rejected outright when no secret is set).
  * 2. Retention Logic: Defines different expiration periods based on event status:
- *    - FINALIZED one-shot: X days after the finalized slot starts.
+ *    - FINALIZED one-shot: X days after the finalized slot ends.
  *    - FINALIZED campaign: X days after its last finalized session ends.
  *    - CANCELLED: Y days after cancellation (last update).
- *    - DRAFT: Z days without an edit, unless a proposed slot still ends inside that window.
+ *    - DRAFT: Z days after its last proposed slot ends; a draft with no slots, Z days after creation.
  * 3. Execution: Deletes expired events in batches; the schema cascades to participants, votes, slots,
  *    finalized sessions and queued webhooks.
  * 4. Cleanup: Unpins associated Telegram messages to keep chat history clean.
@@ -165,25 +165,30 @@ function expiredEventsWhere(cutoffFinalized: Date, cutoffDraft: Date, cutoffCanc
                 finalizedSessions: { none: {} },
                 updatedAt: { lt: cutoffFinalized },
             },
-            // One-shot: some slot started before the cutoff (confirmed against the finalized slot below).
+            // One-shot: some slot ended before the cutoff (confirmed against the finalized slot below).
             {
                 status: "FINALIZED",
                 eventType: { not: "CAMPAIGN" },
                 finalizedSlotId: { not: null },
-                timeSlots: { some: { startTime: { lt: cutoffFinalized } } },
+                timeSlots: { some: { endTime: { lt: cutoffFinalized } } },
             },
             { status: "CANCELLED", updatedAt: { lt: cutoffCancelled } },
-            // Draft: no edit inside the window and no proposed slot still ending inside it.
+            // Draft: its last proposed slot ended before the cutoff. Edits do not extend it.
             {
                 status: "DRAFT",
-                updatedAt: { lt: cutoffDraft },
-                timeSlots: { none: { endTime: { gte: cutoffDraft } } },
+                timeSlots: { some: {}, none: { endTime: { gte: cutoffDraft } } },
+            },
+            // Draft with no proposed slots at all: counted from creation.
+            {
+                status: "DRAFT",
+                timeSlots: { none: {} },
+                createdAt: { lt: cutoffDraft },
             },
         ],
     };
 }
 
-/** Keeps a finalized one-shot only if its own finalized slot started before the cutoff. */
+/** Keeps a finalized one-shot only if its own finalized slot ended before the cutoff. */
 async function dropLiveOneShots(batch: Candidate[], cutoffFinalized: Date): Promise<Candidate[]> {
     const oneShots = batch.filter((e) => e.status === "FINALIZED" && e.eventType !== "CAMPAIGN");
     if (oneShots.length === 0) return batch;
@@ -191,7 +196,7 @@ async function dropLiveOneShots(batch: Candidate[], cutoffFinalized: Date): Prom
     const expiredSlots = await prisma.timeSlot.findMany({
         where: {
             id: { in: oneShots.map((e) => e.finalizedSlotId).filter((id): id is number => id !== null) },
-            startTime: { lt: cutoffFinalized },
+            endTime: { lt: cutoffFinalized },
         },
         select: { id: true, eventId: true },
     });

@@ -72,9 +72,9 @@ All configuration is through environment variables, validated once at boot. A mi
 | `DISCORD_CLIENT_SECRET` | No | Discord OAuth client secret. | |
 | `KOFI_VERIFICATION_TOKEN` | No | Verification token for the Ko-fi donation webhook. | |
 | `LOG_LEVEL` | No | `debug`, `info`, `warn`, or `error`. | `info` |
-| `CLEANUP_RETENTION_DAYS_FINALIZED` | No | Days to keep a finalized event after its last session. | `1` |
-| `CLEANUP_RETENTION_DAYS_DRAFT` | No | Days to keep an inactive draft. | `30` |
-| `CLEANUP_RETENTION_DAYS_CANCELLED` | No | Days to keep a cancelled event. | `7` |
+| `CLEANUP_RETENTION_DAYS_FINALIZED` | No | Days to keep a finalized event after its chosen slot (or a campaign's last session) ends. | `1` |
+| `CLEANUP_RETENTION_DAYS_DRAFT` | No | Days to keep a draft after its last proposed time ends. | `1` |
+| `CLEANUP_RETENTION_DAYS_CANCELLED` | No | Days to keep a cancelled event after cancellation. | `1` |
 | `PRISMA_ACCEPT_DATA_LOSS` | No | Self-host only. Set to `1` to let startup apply a schema change that drops data. | unset |
 | `IS_DOCKER_BUILD` | No | Build-time flag set by the Dockerfile (standalone output). | `false` |
 

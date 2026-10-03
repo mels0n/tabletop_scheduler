@@ -62,9 +62,9 @@ All three are optional, but Discord features need all three together.
 
 | Variable | Default (Days) | Description |
 |----------|:--------------:|-------------|
-| `CLEANUP_RETENTION_DAYS_FINALIZED` | `1` | Days to keep a finalized event after its finalized slot (one-shot) or its last scheduled session (campaign). |
-| `CLEANUP_RETENTION_DAYS_DRAFT` | `30` | Days to keep a draft with no activity. |
-| `CLEANUP_RETENTION_DAYS_CANCELLED` | `7` | Days to keep a cancelled event. |
+| `CLEANUP_RETENTION_DAYS_FINALIZED` | `1` | Days to keep a finalized event after its finalized slot ends (one-shot) or its last scheduled session ends (campaign). |
+| `CLEANUP_RETENTION_DAYS_DRAFT` | `1` | Days to keep a draft after its last proposed time ends. A draft with no proposed times is counted from its creation. Editing a draft does not extend it. |
+| `CLEANUP_RETENTION_DAYS_CANCELLED` | `1` | Days to keep a cancelled event after cancellation. |
 
 ## Build
 
