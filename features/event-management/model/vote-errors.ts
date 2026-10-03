@@ -12,7 +12,7 @@ const GENERIC = "Failed to save votes";
 export function voteErrorMessage(body: unknown): string {
     const code = typeof body === "object" && body !== null ? (body as { code?: unknown }).code : undefined;
     if (code === PARTICIPANT_NOT_OWNED) {
-        return "This vote was saved from another browser. Sign in with Telegram or Discord to edit this vote.";
+        return "This vote was saved from another browser. If you linked it to Telegram or Discord, sign in with that account to edit this vote.";
     }
     return GENERIC;
 }

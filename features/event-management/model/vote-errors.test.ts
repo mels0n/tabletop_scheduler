@@ -4,7 +4,7 @@ import { PARTICIPANT_NOT_OWNED, voteErrorMessage } from './vote-errors';
 describe('voteErrorMessage', () => {
     it('asks the voter to sign in when the row is not theirs', () => {
         const message = voteErrorMessage({ error: 'x', code: PARTICIPANT_NOT_OWNED });
-        expect(message).toMatch(/Sign in with Telegram or Discord to edit this vote/);
+        expect(message).toMatch(/sign in with that account to edit this vote/);
         expect(message).not.toContain('—');
     });
 

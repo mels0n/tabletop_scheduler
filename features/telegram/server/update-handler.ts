@@ -229,7 +229,7 @@ async function handleShortLinkRecovery(
     }
 
     if (!event.recoveryTokenExpires || new Date() > event.recoveryTokenExpires) {
-        await sendTelegramMessage(chatId, "⚠️ <b>Expired Link</b>\n\nThis recovery link has expired. Please refresh the Manage page to get a new one.", token);
+        await sendTelegramMessage(chatId, "⚠️ <b>Expired Link</b>\n\nThis recovery link has expired. Click Register for Magic Links on the Manage page again to get a new one.", token);
         return;
     }
 

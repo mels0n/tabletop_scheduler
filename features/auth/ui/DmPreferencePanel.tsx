@@ -91,8 +91,9 @@ export function DmPreferencePanel({ preferences }: { preferences: DmPreferenceSt
                 Direct Messages
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-                Turns off reminders and results sent to you by direct message. Group and channel
-                posts are not affected. Login links you request are always sent.
+                Turns off results, waitlist and removal notices, and organizer alerts sent to you by
+                direct message. Group and channel posts are not affected. Login links you request
+                are always sent.
             </p>
             <div className="bg-slate-900 border border-slate-700 rounded-xl px-6 py-3 divide-y divide-slate-800">
                 {linked.map(platform => (
