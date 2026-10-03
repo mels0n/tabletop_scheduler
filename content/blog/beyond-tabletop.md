@@ -18,7 +18,7 @@ Tabletop Time was born out of a very specific frustration: trying to get four ad
 
 But once you solve the problem of coordinating four busy schedules for a niche hobby, you quickly realize you've solved the problem for *everything else*. 
 
-While we love targeting the tabletop gaming community, the core philosophy of Tabletop Time—**speed, consensus, and zero friction**—makes it the ideal tool for almost any group gathering.
+While we love targeting the tabletop gaming community, the core philosophy of Tabletop Time (**speed, consensus, and zero friction**) makes it the ideal tool for almost any group gathering.
 
 ## 1. The Fantasy Football Draft
 

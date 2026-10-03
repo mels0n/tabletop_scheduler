@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'No Ads, No Tracking — Schedule Board Games Privately',
+    title: 'No Ads, No Tracking: Schedule Board Games Privately',
     description: 'Schedule game nights with zero tracking, no ads, and no account required. Free, open-source scheduler for board games, D&D, MTG, and tabletop gaming groups.',
     alternates: {
         canonical: '/privacy',
@@ -18,7 +18,7 @@ const schema = SchemaGenerator.faq([
     },
     {
         question: 'Do I need an account to schedule a board game night?',
-        answer: 'Absolutely not. You can schedule, vote, and manage events as a guest. Tabletop Time does not require an email or password from anyone — organizer or participant. Optionally, link Telegram or Discord for cross-device session recovery.',
+        answer: 'Absolutely not. You can schedule, vote, and manage events as a guest. Tabletop Time does not require an email or password from anyone (organizer or participant). Optionally, link Telegram or Discord for cross-device session recovery.',
     },
     {
         question: 'What data does Tabletop Time collect when scheduling games?',
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
                         The &quot;Zero Tracking&quot; Promise
                     </h1>
                     <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-                        We believe that scheduling a board game night shouldn&apos;t require surrendering your personal data — or sitting through ads.
+                        We believe that scheduling a board game night shouldn&apos;t require surrendering your personal data or sitting through ads.
                     </p>
                 </div>
 
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
                         <Ban className="w-8 h-8 text-amber-400" />
                         <h2 className="text-2xl font-bold text-slate-200">No Ads. Ever.</h2>
                         <p className="text-slate-400 leading-relaxed">
-                            There are no ads on any page of Tabletop Time — no banners, no sponsored results, no promoted listings. Scheduling a board game, D&amp;D session, or MTG draft night should not come with an ad tax.
+                            There are no ads on any page of Tabletop Time: no banners, no sponsored results, no promoted listings. Scheduling a board game, D&amp;D session, or MTG draft night should not come with an ad tax.
                         </p>
                     </div>
 
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
                         <Server className="w-8 h-8 text-indigo-400" />
                         <h2 className="text-2xl font-bold text-slate-200">Self-Hostable</h2>
                         <p className="text-slate-400 leading-relaxed">
-                            Want 100% control? Host Tabletop Scheduler on your own server using our Docker image. In self-hosted mode, no data ever leaves your network — not even anonymized telemetry.
+                            Want 100% control? Host Tabletop Scheduler on your own server using our Docker image. In self-hosted mode, no data ever leaves your network, not even anonymized telemetry.
                         </p>
                     </div>
                 </div>

@@ -63,7 +63,7 @@ export default function TelegramSetupPage() {
 
                     <p className="lead text-xl text-slate-400 mb-8">
                         Since Tabletop Time is privacy-first and self-hosted, you need to provide your own Telegram Bot for group notifications to work.
-                        Don&apos;t worry—it takes about 2 minutes.
+                        Don&apos;t worry, it takes about 2 minutes.
                     </p>
 
                     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-10 not-prose">

@@ -16,7 +16,7 @@ faq:
     answer: "No. The Knaves of the Deepwood (Skunks) utilize the same components as the original Vagabond, so they cannot be played in the same game."
 ---
 
-If you’ve spent any time in the modern board gaming hobby, you already know about *Root*. Designed by Cole Wehrle and published by Leder Games, *Root* lures you in with Kyle Ferrin’s overwhelmingly charming, storybook woodland aesthetic—only to trap you in a brutally aggressive, deeply asymmetric game of political dominance and warfare. It’s cute animals doing terrible things to each other, and it is glorious.
+If you’ve spent any time in the modern board gaming hobby, you already know about *Root*. Designed by Cole Wehrle and published by Leder Games, *Root* lures you in with Kyle Ferrin’s overwhelmingly charming, storybook woodland aesthetic, only to trap you in a brutally aggressive, deeply asymmetric game of political dominance and warfare. It’s cute animals doing terrible things to each other, and it is glorious.
 
 For fans of the game, the wait is finally over. The highly anticipated **Root: The Homeland Expansion** has officially finished production and is currently loading onto boats and shipping out to Kickstarter backers! This expansion marks a triumphant return to the woodland, bringing three entirely new factions, two new maps, and a massive overhaul to the game's core ecosystem. 
 
@@ -47,7 +47,7 @@ The Knaves of the Deepwood are a band of miscreants that creatively re-use your 
 The Gorge Map has a wild geography defined by tough, natural chokepoints. This restricts movement and concentrates warfare into the central clearings, further emphasizing the importance of map position.
 
 ### Why is the Marsh Map significant?
-The Marsh Map features a revolutionary dynamic setup that can easily expand to 12 or more clearings. This finally provides a perfectly scaled map explicitly designed to accommodate massive 5-6 player games without feeling incredibly cramped. To enable this, the expansion includes three new Landmarks—Foxburrow, Mousehold, and Rabbit-town—which can actually be used on *any* Root map!
+The Marsh Map features a revolutionary dynamic setup that can easily expand to 12 or more clearings. This finally provides a perfectly scaled map explicitly designed to accommodate massive 5-6 player games without feeling incredibly cramped. To enable this, the expansion includes three new Landmarks (Foxburrow, Mousehold, and Rabbit-town) which can actually be used on *any* Root map!
 
 ### What is the Squires & Disciples Deck?
 The Squires & Disciples Deck is a full replacement deck for the base game, packed with entirely new abilities and crafting effects. It includes cards inspired by the Marauder and Homeland factions, featuring abilities that depend on your hand composition with a dash of "shenanigans." If you've ever wanted to change when the game ends or how Dominance cards work, this deck allows exactly that.

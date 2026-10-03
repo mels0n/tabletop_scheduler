@@ -20,8 +20,8 @@ const schema = [
         alternateName: 'Tabletop Scheduler',
         featureList: [
             'No sign-up required for organizers or participants',
-            'No ads — ever',
-            'Quorum logic — minimum player threshold before a date is viable',
+            'No ads, ever',
+            'Quorum logic: minimum player threshold before a date is viable',
             'Waitlists with automatic promotion when spots open',
             'Discord and Telegram bot integration',
             'Campaign mode for multi-session scheduling',
@@ -44,7 +44,7 @@ const schema = [
         },
         {
             question: 'When would I still use When2Meet instead?',
-            answer: 'When2Meet\'s hourly grid is excellent for finding overlapping time windows within a single day — useful for events where time of day matters as much as the date. If you just need to pick a night from a set of candidate dates, Tabletop Time is simpler and adds the gaming-specific features When2Meet lacks.',
+            answer: 'When2Meet\'s hourly grid is excellent for finding overlapping time windows within a single day, which is useful for events where time of day matters as much as the date. If you just need to pick a night from a set of candidate dates, Tabletop Time is simpler and adds the gaming-specific features When2Meet lacks.',
         },
     ]),
 ];
@@ -107,7 +107,7 @@ export default function VsWhen2MeetPage() {
                         When2Meet&apos;s hourly availability grid is genuinely elegant. You drag across time blocks, the overlap heat-map appears instantly, and everyone sees the same picture. No account required on either side. It&apos;s been solving the &ldquo;when is everyone free?&rdquo; problem cleanly since 2006.
                     </p>
                     <p className="text-slate-300 leading-relaxed">
-                        If you need to find a two-hour window on a specific day — say, a one-shot on Saturday where start time matters — When2Meet&apos;s grid is hard to beat.
+                        If you need to find a two-hour window on a specific day (say, a one-shot on Saturday where start time matters), When2Meet&apos;s grid is hard to beat.
                     </p>
                 </section>
 
@@ -125,7 +125,7 @@ export default function VsWhen2MeetPage() {
                         />
                         <Problem
                             title="Binary voting only"
-                            body="When2Meet is available or not — there's no 'If Needed' state. Players who are free but would rather skip can't express that nuance. It forces a false precision that misrepresents actual enthusiasm."
+                            body="When2Meet is available or not, so there's no 'If Needed' state. Players who are free but would rather skip can't express that nuance. It forces a false precision that misrepresents actual enthusiasm."
                         />
                         <Problem
                             title="No waitlists or seat limits"
@@ -133,7 +133,7 @@ export default function VsWhen2MeetPage() {
                         />
                         <Problem
                             title="No Discord or Telegram integration"
-                            body="When2Meet links get shared in Discord, but that's where the integration ends. Tabletop Time's bots bring voting directly into the server — players can respond without leaving the app where they already hang out."
+                            body="When2Meet links get shared in Discord, but that's where the integration ends. Tabletop Time's bots bring voting directly into the server, so players can respond without leaving the app where they already hang out."
                         />
                         <Problem
                             title="No multi-session or campaign support"
@@ -192,7 +192,7 @@ export default function VsWhen2MeetPage() {
                         When2Meet treats availability as binary: you&apos;re free or you&apos;re not. Real group dynamics are messier. The Cleric can make Saturday, but she&apos;d really rather Sunday. The Ranger is technically available but is flying back that morning and will be useless.
                     </p>
                     <p className="text-slate-400 leading-relaxed">
-                        Tabletop Time uses a three-state system: <strong className="text-white">Yes</strong>, <strong className="text-white">If Needed</strong>, and <strong className="text-white">No</strong>. The quorum algorithm counts &ldquo;If Needed&rdquo; as a soft yes — enough to hit quorum if no better option exists, but deprioritized when a date with all hard yeses is available. You get honest availability data, not forced binary answers.
+                        Tabletop Time uses a three-state system: <strong className="text-white">Yes</strong>, <strong className="text-white">If Needed</strong>, and <strong className="text-white">No</strong>. The quorum algorithm counts &ldquo;If Needed&rdquo; as a soft yes, enough to hit quorum if no better option exists, but deprioritized when a date with all hard yeses is available. You get honest availability data, not forced binary answers.
                     </p>
                 </section>
 
@@ -211,7 +211,7 @@ export default function VsWhen2MeetPage() {
                 <section className="space-y-6">
                     <h2 className="text-2xl font-bold text-white">Adding the Missing Pieces Takes Two Minutes</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        If you&apos;re already in the habit of sharing a When2Meet link, the switch is trivial. Go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, name your event, add candidate dates, and optionally set a quorum. Share the link. Your players get an experience similar to what they&apos;re used to — click a date, mark availability — with the added context of knowing which dates actually have enough players to happen.
+                        If you&apos;re already in the habit of sharing a When2Meet link, the switch is trivial. Go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, name your event, add candidate dates, and optionally set a quorum. Share the link. Your players get an experience similar to what they&apos;re used to (click a date, mark availability) with the added context of knowing which dates actually have enough players to happen.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <Link
@@ -233,10 +233,10 @@ export default function VsWhen2MeetPage() {
                 <section className="space-y-6">
                     <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
                     <div className="space-y-4">
-                        <Faq q="Is Tabletop Time as simple as When2Meet?" a="For the voter: yes. Click a date, tap Yes / If-Needed / No, done. For the organizer, there's a bit more setup (quorum, player limit) — but you only fill in what you want. Skip the advanced options and it's just as fast." />
-                        <Faq q="Can I use Tabletop Time for non-gaming events?" a="Yes. Quorum logic and waitlists are useful for any group activity with a minimum headcount. Sports teams, study groups, movie nights — anything that needs 'do we have enough people before it's worth doing' logic." />
+                        <Faq q="Is Tabletop Time as simple as When2Meet?" a="For the voter: yes. Click a date, tap Yes / If-Needed / No, done. For the organizer, there's a bit more setup (quorum, player limit), but you only fill in what you want. Skip the advanced options and it's just as fast." />
+                        <Faq q="Can I use Tabletop Time for non-gaming events?" a="Yes. Quorum logic and waitlists are useful for any group activity with a minimum headcount. Sports teams, study groups, movie nights, anything that needs 'do we have enough people before it's worth doing' logic." />
                         <Faq q="Does it work on mobile?" a="Yes. The vote page is designed for one-thumb use on mobile. Tap the date, tap your vote, submit. No install required." />
-                        <Faq q="What happens to my old When2Meet polls?" a="Nothing — they stay live. Tabletop Time doesn't import or replace old polls. Just start new events here going forward." />
+                        <Faq q="What happens to my old When2Meet polls?" a="Nothing. They stay live. Tabletop Time doesn't import or replace old polls. Just start new events here going forward." />
                     </div>
                 </section>
 
