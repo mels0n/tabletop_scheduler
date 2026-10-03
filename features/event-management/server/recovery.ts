@@ -9,7 +9,7 @@ import { AppError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
 import { sendDirectMessage, isDelivered } from "@/features/notifications";
 import {
-    claimManagerLinkCooldown,
+    assertManagerLinkCooldown,
     createManagerLoginLink,
     generateShortRecoveryToken,
     getConnectCommand,
@@ -62,7 +62,7 @@ async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResul
     if (!event.managerChatId && !event.managerDiscordId) return { error: NO_MANAGER };
 
     try {
-        claimManagerLinkCooldown(event.slug);
+        await assertManagerLinkCooldown(event);
         const loginUrl = await createManagerLoginLink(event);
         const manageUrl = `${getBaseUrl()}/e/${event.slug}/manage`;
 
