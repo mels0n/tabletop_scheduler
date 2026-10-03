@@ -20,8 +20,22 @@ describe('updateReminderSettings', () => {
         expect(await updateReminderSettings('s', true, '18:30', [1, 3, 5])).toEqual({ success: true });
         expect(mockPrisma.event.update).toHaveBeenCalledWith({
             where: { id: 3 },
-            data: { reminderEnabled: true, reminderTime: '18:30', reminderDays: '1,3,5' },
+            data: { reminderEnabled: true, reminderTime: '18:30', reminderDays: '1,3,5', lastReminderSent: expect.any(Date) },
         });
+    });
+
+    it('stamps lastReminderSent when the schedule changes, so a passed target waits for tomorrow', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ id: 3, reminderEnabled: false, reminderTime: '18:30', reminderDays: '1,3,5' });
+        const before = Date.now();
+        await updateReminderSettings('s', true, '18:30', [1, 3, 5]);
+        const stamped = mockPrisma.event.update.mock.calls[0][0].data.lastReminderSent as Date;
+        expect(stamped.getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it('leaves lastReminderSent alone when nothing changed', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ id: 3, reminderEnabled: true, reminderTime: '18:30', reminderDays: '1,3,5' });
+        await updateReminderSettings('s', true, '18:30', [1, 3, 5]);
+        expect(mockPrisma.event.update.mock.calls[0][0].data).not.toHaveProperty('lastReminderSent');
     });
 
     it('accepts all seven days and an empty list', async () => {

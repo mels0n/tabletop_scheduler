@@ -29,7 +29,6 @@ const notConfigured = { status: "skipped", reason: "not_configured" } as const;
 const failed = { status: "failed", error: "boom" } as const;
 
 const NOW = new Date("2026-10-07T10:05:00Z"); // Wednesday
-const EIGHTEEN_HOURS = 18 * 60 * 60 * 1000;
 
 function baseEvent(overrides: Record<string, unknown> = {}) {
     return {
@@ -66,8 +65,10 @@ function sessionEvents(...events: ReturnType<typeof baseEvent>[]) {
     );
 }
 
+/** Today's 10:00 UTC target: the claim only wins if nothing was sent at or after it. */
+const TARGET = new Date("2026-10-07T10:00:00Z");
 const votingClaim = (id: number, now = NOW) => ({
-    where: { id, OR: [{ lastReminderSent: null }, { lastReminderSent: { lt: new Date(now.getTime() - EIGHTEEN_HOURS) } }] },
+    where: { id, OR: [{ lastReminderSent: null }, { lastReminderSent: { lt: TARGET } }] },
     data: { lastReminderSent: now },
 });
 const slotClaim = (id: number, now = NOW) => ({
@@ -89,6 +90,31 @@ describe("runReminders: voting", () => {
         const where = prismaMock.event.findMany.mock.calls.find(([a]) => typeof a.where.status === "object")![0].where;
         expect(where.quorumReachedAt).toBeNull();
         expect(where).not.toHaveProperty("quorumViableNotified");
+    });
+
+    it("only nudges events with a proposed time still ahead", async () => {
+        await runReminders(NOW);
+        const where = prismaMock.event.findMany.mock.calls.find(([a]) => typeof a.where.status === "object")![0].where;
+        expect(where.timeSlots).toEqual({ some: { startTime: { gt: NOW } } });
+    });
+
+    it("never claims when building the message throws, so the reminder is not lost", async () => {
+        const { stubConfigEnv } = await import("@/shared/config/test-env");
+        const { resetServerConfigForTests } = await import("@/shared/config/server");
+        stubConfigEnv({});
+        resetServerConfigForTests();
+        try {
+            votingEvents(baseEvent());
+
+            const result = await runReminders(NOW);
+
+            expect(prismaMock.event.updateMany).not.toHaveBeenCalled();
+            expect(broadcastToEvent).not.toHaveBeenCalled();
+            expect(result.voting).toEqual({ sent: 0, failed: 1 });
+        } finally {
+            vi.unstubAllEnvs();
+            resetServerConfigForTests();
+        }
     });
 
     it("claims first, then sends to a Discord-only event", async () => {

@@ -69,12 +69,53 @@ describe("isVotingReminderDue", () => {
         expect(isVotingReminderDue(voting({ reminderDays: "3" }), at("2026-10-07T10:00:00Z"))).toBe(true);
     });
 
-    it("dedupes within 18 hours but not after", () => {
-        const now = at("2026-10-07T10:00:00Z");
-        const recent = new Date(now.getTime() - 17 * 3600_000);
-        const old = new Date(now.getTime() - 19 * 3600_000);
-        expect(isVotingReminderDue(voting({ lastReminderSent: recent }), now)).toBe(false);
-        expect(isVotingReminderDue(voting({ lastReminderSent: old }), now)).toBe(true);
+    it("dedupes on the target instant: once per target, never blocking the next day", () => {
+        const now = at("2026-10-07T10:30:00Z");
+        // Sent at or after today's 10:00 target: done for today.
+        expect(isVotingReminderDue(voting({ lastReminderSent: at("2026-10-07T10:00:00Z") }), now)).toBe(false);
+        // Sent before today's target (yesterday's late catch-up at 03:00): today's still fires.
+        expect(isVotingReminderDue(voting({ lastReminderSent: at("2026-10-07T03:00:00Z") }), now)).toBe(true);
+    });
+
+    /** Simulates the 10-minute scheduler from `from` to `to`; returns the instants it sent. */
+    function simulate(
+        schedule: ReturnType<typeof voting>,
+        from: string,
+        to: string,
+        down?: { from: string; to: string },
+    ): string[] {
+        const sent: string[] = [];
+        let last = schedule.lastReminderSent as Date | null;
+        for (let t = at(from).getTime(); t <= at(to).getTime(); t += 10 * 60_000) {
+            if (down && t >= at(down.from).getTime() && t < at(down.to).getTime()) continue;
+            const now = new Date(t);
+            if (isVotingReminderDue({ ...schedule, lastReminderSent: last }, now)) {
+                sent.push(now.toISOString());
+                last = now;
+            }
+        }
+        return sent;
+    }
+
+    it("enabled after today's target: nothing until tomorrow's target", () => {
+        // Settings saved at 12:00 stamp lastReminderSent = 12:00; the 10:00 target already passed.
+        const s = voting({ lastReminderSent: at("2026-10-07T12:00:00Z") });
+        expect(simulate(s, "2026-10-07T12:00:00Z", "2026-10-08T12:00:00Z")).toEqual(["2026-10-08T10:00:00.000Z"]);
+    });
+
+    it("time moved earlier: fires at the new time the next day, not immediately", () => {
+        // Sent at 15:00 under the old schedule, then moved to 10:00 at 16:00 (stamping 16:00).
+        const s = voting({ reminderTime: "10:00", lastReminderSent: at("2026-10-07T16:00:00Z") });
+        expect(simulate(s, "2026-10-07T16:00:00Z", "2026-10-08T12:00:00Z")).toEqual(["2026-10-08T10:00:00.000Z"]);
+    });
+
+    it("17 hour outage: at most one catch-up send, and the next day still fires on time", () => {
+        const s = voting({ lastReminderSent: at("2026-10-06T10:00:00Z") });
+        const sent = simulate(s, "2026-10-07T09:00:00Z", "2026-10-08T12:00:00Z", {
+            from: "2026-10-07T09:30:00Z",
+            to: "2026-10-08T02:30:00Z",
+        });
+        expect(sent).toEqual(["2026-10-08T02:30:00.000Z", "2026-10-08T10:00:00.000Z"]);
     });
 
     it("handles AM/PM times", () => {

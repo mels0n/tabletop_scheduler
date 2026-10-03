@@ -80,12 +80,7 @@ export async function runSessionReminders(now: Date): Promise<ReminderRunSummary
                 const channels = liveChannels(event);
                 if (!channels) break;
 
-                const claim = await prisma.timeSlot.updateMany({
-                    where: { id: slot.id, sessionReminderSentAt: null },
-                    data: { sessionReminderSentAt: now },
-                });
-                if (claim.count !== 1) continue;
-
+                // Build everything that can throw before claiming, so a throw never burns the reminder.
                 const link = `${getBaseUrl()}/e/${event.slug}`;
                 const when = formatSessionTime(slot.startTime, event.timezone || "UTC");
                 const lines = [
@@ -95,6 +90,12 @@ export async function runSessionReminders(now: Date): Promise<ReminderRunSummary
                 ];
                 if (event.location) lines.push(`📍 ${escapeHtml(event.location)}`);
                 lines.push(``, `👉 <a href="${link}">Event details</a>`);
+
+                const claim = await prisma.timeSlot.updateMany({
+                    where: { id: slot.id, sessionReminderSentAt: null },
+                    data: { sessionReminderSentAt: now },
+                });
+                if (claim.count !== 1) continue;
 
                 const context = { slug: event.slug, slotId: slot.id, kind: "session_reminder" };
                 let outcome: ReturnType<typeof classifyDelivery>;
