@@ -9,6 +9,7 @@ export type {
     UserTargets,
     DeliveryOutcome,
     DeliveryResult,
+    DirectMessageOptions,
 } from "./server/deliver";
 export { runReminders } from "./server/reminders";
 export type { ReminderRunResult } from "./server/reminders";
