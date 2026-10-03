@@ -34,7 +34,7 @@ Two checks guard the history before it gets that far:
 - `npm test` runs `tests/schema-parity.test.ts`, which fails if the two schema
   files stop describing the same models.
 - CI runs `prisma migrate diff` from `prisma/hosted/migrations` to
-  `prisma/hosted/schema.prisma` against a scratch Postgres and fails if they
+  `prisma/hosted/schema.prisma` against a throwaway Postgres and fails if they
   differ, so a schema edit without a matching migration cannot merge.
 
 ## Making a schema change
@@ -46,16 +46,20 @@ Two checks guard the history before it gets that far:
 3. Hosted history:
 
    ```bash
+   DIRECT_URL="<supabase direct url>" npm run db:status:hosted  # every migration must be applied first
    DIRECT_URL="<supabase direct url>" npm run db:diff:hosted   # preview the SQL
    DIRECT_URL="<supabase direct url>" npm run db:new:hosted <change_name>
    ```
 
    This writes `prisma/hosted/migrations/<timestamp>_<change_name>/migration.sql`.
    Prefer `IF NOT EXISTS` forms where Postgres allows them, so a migration is safe
-   to re-run.
+   to re-run. If the migration creates a table, add its row level security
+   statements by hand (see [Row level security](#row-level-security)).
 4. Review the generated SQL, run `npm test`, commit both schema files and the new
-   migration together.
-5. Push. The production deploy applies it.
+   migration together. If `prisma/schema.prisma` changed, also run
+   `npm run db:upgrade-check`.
+5. Open a pull request. `main` is protected, so the change merges only after CI
+   passes, and the production deploy that follows the merge applies the migration.
 
 `db:new:hosted` diffs against the live database rather than replaying the
 migration history, because Supabase does not provide a shadow database. That is
@@ -76,14 +80,31 @@ On the hosted side, `scripts/vercel-build.sh` runs `node scripts/run-data-migrat
 right after `prisma migrate deploy`, on production builds only. A failed data
 migration rolls back and fails the deploy, the same as a failed schema migration.
 
+There is no manual database step in any of this, and no separate push command for
+the hosted schema: the production build is the only thing that changes the hosted
+database's shape.
+
+## Row level security
+
+Every table in the hosted database has row level security enabled with a deny-all
+policy (`prisma/hosted/migrations/20261003000200_enable_rls`). The app connects as
+the table owner and is unaffected; the Supabase Data API roles can read and write
+nothing, so the project's public anon key exposes no data.
+
+Every new table needs the same two statements, `ENABLE ROW LEVEL SECURITY` and the
+deny-all policy, in the migration that creates it. Prisma does not diff RLS, so
+neither `db:new:hosted` nor the CI migration check will add or catch a missing
+policy.
+
 ## Environment
 
 | variable | where | purpose |
 |---|---|---|
 | `DATABASE_URL` | Vercel | pooled connection (port 6543), app queries |
 | `DIRECT_URL` | Vercel | direct connection (port 5432), DDL |
-| `CRON_SECRET` | Vercel | bearer token for `/api/cron/*`; also the same value you store in the Vault (below) |
-| `SESSION_SECRET` | Vercel | signs identity cookies |
+| `CRON_SECRET` | Vercel | bearer token for `/api/cron/*` and `/api/telegram/setup`; also the same value you store in the Vault (below) |
+| `SESSION_SECRET` | Vercel | signs identity and participant cookies and Telegram connect codes; root of the webhook signing keys |
+| `NEXT_PUBLIC_IS_HOSTED` | Vercel | `true` on the hosted site |
 | `NEXT_PUBLIC_BASE_URL` | Vercel | public origin, used for every bot link |
 
 The two database URLs differ in host port and query string:
@@ -137,8 +158,11 @@ select cron.unschedule('tabletop-webhooks');
 ```
 
 Late runs still deliver. A voting reminder goes out on any run up to 18 hours after
-its target time (at most once per 18 hours), and a session reminder goes out on any
-run between the chosen lead time (2 hours, 1 day or 2 days) and the session start.
+its target time (the chosen time on each chosen weekday, in the event's timezone,
+daylight saving included), and each target sends at most once. It only goes out
+while the event has a future time option and has not reached its minimum player
+count. A session reminder goes out once per finalized session, on any run between
+the chosen lead time (2 hours, 1 day or 2 days) and the session start.
 The reminders endpoint returns 500 when a whole run failed (for example, the database
 was unreachable), which shows up as `status_code = 500` in `net._http_response`.
 
@@ -154,7 +178,8 @@ If you rotate `CRON_SECRET`, update the Vault entry too (`vault.update_secret`),
 or the jobs will start receiving 401 responses. The GitHub Actions reminder
 workflow (`.github/workflows/cron.yml`, every two hours at minute 7) remains as a
 backstop; it is safe to leave running because a reminder is claimed in the database
-before it is sent, so overlapping runs never post twice.
+before it is sent, so overlapping runs never post twice. Event cleanup does not use
+`pg_cron`: Vercel Cron calls `/api/cron/cleanup` once a day (`vercel.json`).
 
 ## Compatibility rule
 

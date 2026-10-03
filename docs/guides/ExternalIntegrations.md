@@ -24,8 +24,9 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 | `description` | string | Optional description text. |
 | `minPlayers` | number | Minimum players required (default: 3). |
 | `maxPlayers` | number | Maximum players allowed. |
-| `fromUrl` | url | **Required for Webhooks**. The `https` endpoint we will POST JSON updates to (not Discord-specific). Private, loopback and link-local addresses are rejected. |
-| `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID). |
+| `slots` | JSON | Optional candidate times, as a JSON array of `{ "startTime": ISO, "endTime": ISO }`. |
+| `fromUrl` | url | **Required for Webhooks**. The `https` endpoint we will POST JSON updates to (not Discord-specific). Plain `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected when the event is created. |
+| `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID), up to 200 characters. |
 
 ### Example Link
 ```text
@@ -40,7 +41,7 @@ If you provide `fromUrl` during creation, Tabletop Scheduler will send `POST` re
 
 ### Delivery
 
-Each webhook is queued in the same database transaction as the change it reports (event created, finalized or cancelled). The first delivery attempt is made immediately after the action completes, once its response has been sent, so a reachable endpoint normally hears about the change within seconds. If that attempt fails, the queue retries it: a background job runs every 5 minutes and redelivers with the backoff described under Retries, and only one delivery of a given webhook is ever in flight at a time.
+`CREATED` and `FINALIZED` webhooks are queued in the same database transaction as the change they report. A `CANCELLED` webhook is queued right after the cancellation is saved. The first delivery attempt is made immediately after the action completes, once its response has been sent, so a reachable endpoint normally hears about the change within seconds. If that attempt fails, the queue retries it: a background job runs every 5 minutes and redelivers with the backoff described under Retries, and only one delivery of a given webhook is ever in flight at a time.
 
 Besides `Content-Type: application/json`, every request carries `X-Tabletop-Event-Id` (the numeric event id), `X-Webhook-Id` (unique per queued webhook, and the same on every retry of it) and `X-Tabletop-Signature` (below).
 
@@ -108,10 +109,11 @@ Queued when the event is created.
 ### Event Finalized (`FINALIZED`)
 Queued when the host locks in a time slot and location.
 
-**Payload:**
+**Payload (one-shot event):**
 ```json
 {
   "type": "FINALIZED",
+  "eventType": "ONE_SHOT",
   "eventId": 123,
   "fromUrlId": "raid-101",
   "slug": "8f8f8f8f",
@@ -128,6 +130,10 @@ Queued when the host locks in a time slot and location.
   "timestamp": "2023-11-28T10:00:00.000Z"
 }
 ```
+
+For a campaign, `eventType` is `"CAMPAIGN"` and `finalizedSlot` is replaced by `finalizedSessions`, an array of `{ "id", "startTime", "endTime" }` objects, one per locked-in session.
+
+`link` is present in `CREATED` and `FINALIZED` payloads whenever the instance has `NEXT_PUBLIC_BASE_URL` set, and omitted when it does not. `fromUrlId` is `null` when none was given.
 
 ### Event Cancelled (`CANCELLED`)
 Queued if the organizer cancels the event. It is delivered like the other types, with the same signature and retry policy.
@@ -151,8 +157,9 @@ Queued if the organizer cancels the event. It is delivered like the other types,
 To make it easier for your community members to vote, you can append `?userID=...` to the shared event link.
 
 **Logic**: 
-- If the user has visited before, their local browser storage takes precedence.
-- If they are **new**, the `userID` value is used to pre-fill the "Your Name" field.
+- If this browser has already voted on the event, the existing vote (and its name) is loaded instead.
+- Otherwise the `userID` value pre-fills the "Your Name" field, ahead of any name the browser remembers from other events.
+- It is only a pre-filled name. It does not identify or sign in the user.
 
 **Usage**:
 Generate links dynamically in your system:
@@ -163,4 +170,5 @@ Generate links dynamically in your system:
 ## Security Notes
 
 1.  **Signatures**: Every delivery is signed with `X-Tabletop-Signature`, keyed with the signing key derived from `SESSION_SECRET` (see Delivery above). Verify it whenever you hold the key. On any instance, also verify the `fromUrlId` against your own database to ensure the update relates to a known request.
-2.  **HTTPS**: `fromUrl` must be an `https` URL. Plain `http` URLs are rejected when the event is created.
+2.  **HTTPS and public addresses**: `fromUrl` must be an `https` URL on a public address. It is checked when the event is created (400 otherwise) and again before every delivery, so a destination that later resolves to a private address is refused and marked `FAILED`.
+3.  **Managing events from your server**: the `adminToken` returned by `POST /api/event` can be sent as `Authorization: Bearer <adminToken>` to every admin route (see the [API Reference](../reference/ApiReference.md)). Keep it server side.

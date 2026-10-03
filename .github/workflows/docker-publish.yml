@@ -2,8 +2,10 @@ name: Docker Build & Push
 
 # Gating: the `ci` job calls ci.yml as a reusable workflow and `build` needs it,
 # so `latest` and the sha/semver tags are only pushed from a commit that passed
-# every ci.yml job: typecheck, lint, tests, build, the migration check and the
-# self-host upgrade check (selfhost-upgrade). A workflow_run trigger
+# every ci.yml job: typecheck, lint, tests, build, the dependency-direction
+# check, the hosted migration check (migration-diff) and the self-host upgrade
+# check (selfhost-upgrade). Pushes that touch only Markdown, docs/ or content/
+# skip this workflow. A workflow_run trigger
 # would also work, but it runs from the default branch copy of the workflow and
 # loses the tag ref that the semver tags depend on. PRs build and scan the
 # image but never push, and skip the ci gate (ci.yml already runs on PRs).

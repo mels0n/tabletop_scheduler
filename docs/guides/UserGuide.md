@@ -9,7 +9,8 @@ Use this form to set up a new session.
 - **Event Title**: The name of your session (e.g., "D&D Campaign Session 4").
 - **Description**: Optional details about what you're playing or what players need to bring.
 - **Minimum Players**: The logic engine uses this to highlight "Valid" slots where enough people are available.
-- **Propose Time Slots**: Click "Add Time Slot" to pick dates and times. You can add as many as you like.
+- **Maximum Players (Optional)**: A cap. Once the event is finalized, players beyond the cap go on the waitlist.
+- **Propose Time Slots**: Pick the dates and times to vote on (up to 100). The event uses your browser's timezone, which reminders follow.
 
 **Action**: Click "Create Event & Get Link" to generate your unique event dashboard.
 
@@ -22,26 +23,27 @@ This is the public page you share with your players.
 - **Event Details**: Shows title, description, and status.
 - **Share**: Use the "Copy Link" button to send this page to your group.
 - **Voting Interface**:
-    - **Name**: Enter your name (required) and Telegram handle (optional, helps with notifications).
+    - **Name**: Enter your name (required) and, optionally, a Telegram handle. The handle is shown in group posts in place of your name; it does not link your Telegram account (see **[Magic Links](MagicLinks.md)** for how linking works).
     - **Grid**: Mark your availability for each slot:
         - ✅ **Yes**: I can play.
         - ⚠️ **If Needed**: Yes, but not my preference for day.
         - ❌ **No**: I cannot play.
     - **Suggest a Time**: If none of the proposed times work for you, click "Suggest a Time" to add a new option for everyone to vote on.
-    - **Submit**: Saves your votes. You can edit them later if you revisit the page on the same device.
+    - **Submit**: Saves your votes. You can edit them later from the same browser, or from any browser signed in with the Telegram or Discord account linked to your vote. If the page says the vote belongs to someone else, choose **"Vote as a new participant"**.
 - **Best Slot**: The app automatically highlights the slot with the most "Yes" votes that meets the minimum player count.
 - **Identity Linking**: If your browser is synced with Telegram or Discord (see **[Magic Links](MagicLinks.md)**), the vote form shows a "Will link to Telegram/Discord" indicator with an opt-out checkbox, checked by default. Leave it checked and this vote is automatically stamped with your synced identity so it follows you across devices; uncheck it to keep this particular vote anonymous. If you're synced but a past vote on this event isn't linked yet, a dismissible banner near the top of the page offers to link it.
 
 ---
 
 ## 3. Managing Your Event
-**Page:** `/e/[slug]/manage` (Accessible via the footer link "Manage Event" or the link given after creation)
+**Page:** `/e/[slug]/manage` (Accessible via the link given after creation, or the "Manage Event & Finalize Time" button under "Are you the organizer?" at the bottom of the event page)
 
 As the organizer, you use this page to control the event.
 - **Manager Controls**:
-    - **Setup Recovery**: If you haven't connected a group yet, click "Register for Magic Links" to let the bot capture your details. (See **[Magic Links](../docs/MAGIC_LINKS.md)** for details).
-    - **DM Me Manager Link**: Once connected, use this to get a private login link sent to your Telegram DMs.
-    - **Bot Status**: Shows if the Telegram bot is connected to your group.
+    - **Setup Recovery**: Click "Register for Magic Links" (Telegram) or "Recover with Discord (Magic Link)" to save your account as the event's manager, so you can get back in if you lose this link. (See **[Magic Links](MagicLinks.md)** for details.)
+    - **Send Magic Link**: Once registered, sends a private login link to your Telegram or Discord DMs (at most once a minute).
+    - **Bot Status**: Shows whether a Telegram group or Discord channel is connected, and the `/connect` command for Telegram.
+    - **Reminders**: Turn on voting reminders (a time and weekdays, in the event's timezone) and session reminders (2 hours, 1 day or 2 days before each finalized session) for the connected group or channel.
 - **Manage Event Details**:
     - **Participants**: You can remove attendees if they can no longer make it. If the event is finalized and full, removing an ACCEPTED participant will automatically promote the next person on the waitlist.
     - **Time Slots**: You can add, edit, or delete time slots dynamically to adjust the options available for voting. (Note: Modifying slots is disabled once the event is finalized).
@@ -51,8 +53,8 @@ As the organizer, you use this page to control the event.
     - Enter a **Location** (e.g., "John's House" or a URL).
     - **Confirm**: This locks the event, stops voting, and sends a notification to the group.
 - **Danger Zone**:
-    - **Cancel Event**: (If Finalized) Marks the event as cancelled, notifies the group, but keeps the page viewable for 1 day.
-    - **Delete Event**: (If Draft) Permanently removes all data immediately.
+    - **Cancel Event**: (If Finalized) Marks the event as cancelled and notifies the group. The page stays viewable until cleanup removes it (1 day after cancellation by default).
+    - **Delete Event**: (If Draft or Cancelled) Permanently removes all data immediately and notifies the group.
 
 ---
 
@@ -74,11 +76,13 @@ To get notifications in your group chat:
 2.  **Connect**: Open the manage page, copy the `/connect` command shown in the Telegram section (it includes a one-time code), and send it in the group chat. Pasting the event link alone no longer connects the group.
 3.  **Confirmation**: The bot will reply and pin the event dashboard.
 4.  **Updates**: The bot will notify the group when:
-    - People vote.
+    - People vote (at most once per hour per person by default; the pinned dashboard always shows the latest votes).
+    - A time option is added, suggested, changed, or removed.
     - The event is finalized (updates the pin).
-    - The event is cancelled.
+    - The event is cancelled or deleted.
+    - A voting or session reminder is due, if the organizer turned reminders on.
 
-    Availability updates are announced at most once per hour per person; the pinned dashboard always shows the latest votes.
+    The full list, including direct messages, is in the **[Telegram Setup Guide](TelegramSetup.md)**. Discord channels get the same posts (see the **[Discord Setup Guide](DiscordSetup.md)**).
 
 ---
 
@@ -87,8 +91,7 @@ To get notifications in your group chat:
 
 Your personal history of events.
 - **Local History**: This page tracks events you've visited or created on this device.
-- **Connect Pills**: The header shows a solid "Telegram Synced" / "Discord Synced" pill per platform you're already connected to, or a dashed "Connect Telegram" / "Connect Discord" pill (deep-link to the bot / OAuth) when you're not.
-- **Sync**: Use the "Sync & Recover" tool to merge events from your Telegram or Discord account.
+- **Connect Pills**: The header shows a solid "Telegram Synced" / "Discord Synced" pill per platform you're already connected to, or a dashed "Connect Telegram" / "Connect Discord" pill (deep-link to the bot / OAuth) when you're not. Once synced, every event you manage or voted on with that account appears here. Click a synced pill to disconnect this browser.
 - **Per-Event Badges**: Each event card carries its own badges: a colored "Telegram Synced" / "Discord Synced" badge means that event's vote is tied to your verified identity, while a gray "This Device Only" badge means it only lives in this browser's local history. Click a gray badge to link the event to a synced platform, or a colored badge to unlink it. Linking requires you to have voted on that event, and you can only unlink your own identity.
 - **Manager Badge**: Events you manage also show a separate indigo "Manager" badge marking your role there. It's independent of the sync badges, a managed event with no linked participant identity shows just "Manager" (not "This Device Only", since it's already tied to the event on the server).
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.

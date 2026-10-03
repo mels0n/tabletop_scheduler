@@ -1,6 +1,6 @@
 # API Reference
 
-TabletopTime is primarily a user-facing Next.js application, but every interaction goes through an HTTP route you can call yourself. This page documents every route handler in `app/api/**/route.ts` plus the magic-link login route at `app/auth/login/route.ts`.
+TabletopTime is primarily a user-facing Next.js application, but every interaction goes through an HTTP route you can call yourself. This page documents every route handler in `app/api/**/route.ts` plus the magic-link login route at `app/auth/login/route.ts`: 23 route files, 24 handlers. Every request body, query and path parameter is validated with a schema before use. A few manage-page actions (cancel, delete, reminder settings, connecting a Discord channel) are Next.js server actions rather than HTTP routes; they apply the same **event admin** check, including the admin token header.
 
 ## Conventions
 
@@ -43,8 +43,10 @@ Authorization: Bearer <adminToken>
 | 404 | `not_found` | The event, slot, or participant does not exist **in this event**. IDs belonging to another event return 404, never an update. |
 | 409 | `conflict` | The state changed underneath the request (for example, the event was already finalized). |
 | 429 | `rate_limited` | A cooldown is in force. |
-| 500 | `config` | The server is misconfigured. |
+| 500 | `config` | The server is misconfigured. The body is `{ "error": "Internal error", "code": "config" }` and the detail is in the server log. |
 | 500 | (none) | Unexpected failure. The body is `{ "error": "Internal error" }` and the detail is in the server log. |
+
+A few routes predate this shape and are called out below: [Get Event Details](#get-event-details), the Discord OAuth routes, [Cleanup Cron](#cleanup-cron) on an internal failure, and [Health Check](#health-check). Their failure bodies carry `error` without a `code`.
 
 ---
 
@@ -76,17 +78,17 @@ Creates a new event with candidate time slots. The response contains the plainte
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `title` | string | 1 to 120 characters. |
+| `title` | string | 1 to 120 characters (surrounding whitespace is trimmed). |
 | `description` | string | Optional, up to 2000 characters. |
-| `slots` | array | 1 to 100 entries. Each needs `startTime` and `endTime` as ISO 8601 strings, with start before end. |
-| `minPlayers` | integer | 1 to 100. |
-| `maxPlayers` | integer or null | Null for no limit, otherwise at least `minPlayers`. |
-| `timezone` | string | Must be an IANA zone known to the runtime, such as `America/Chicago`. |
+| `slots` | array | 1 to 100 entries. Each needs `startTime` and `endTime` as ISO 8601 strings with an explicit offset (`Z` or `+hh:mm`), with start before end. |
+| `minPlayers` | integer | Optional, 1 to 100. Default 3. |
+| `maxPlayers` | integer or null | Optional. Null for no limit, otherwise at least `minPlayers` (and at most 1000). |
+| `timezone` | string | Optional. Must be an IANA zone known to the runtime, such as `America/Chicago`. Default `UTC`. |
 | `telegramLink` | string | Optional group invite link. Must start with `https://t.me/`. |
 | `fromUrl` | string | Optional public `https` URL for [outbound webhooks](../guides/ExternalIntegrations.md). Plain `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected with 400. |
-| `fromUrlId` | string | Optional caller-side ID echoed back in every webhook payload. |
+| `fromUrlId` | string | Optional caller-side ID (up to 200 characters) echoed back in every webhook payload. |
 | `eventType` | string | `"ONE_SHOT"` (default) or `"CAMPAIGN"`. |
-| `minSessions` | integer | Required when `eventType` is `"CAMPAIGN"`: the minimum number of sessions to lock in when finalizing. |
+| `minSessions` | integer | 1 to 100. Required when `eventType` is `"CAMPAIGN"`: the minimum number of sessions to lock in when finalizing. |
 
 If the caller carries a verified Telegram or Discord identity cookie, that identity is stored as the event's manager.
 
@@ -95,7 +97,7 @@ If the caller carries a verified Telegram or Discord identity cookie, that ident
 { "slug": "4fQ9xK2mT7bR1z", "id": 123, "adminToken": "d9b2...uuid" }
 ```
 
-`slug` is 14 letters and digits. Keep `adminToken`: it is the credential for every **event admin** route, sent as the admin cookie or as `Authorization: Bearer <adminToken>`.
+`slug` is 14 letters and digits (random, base62). Keep `adminToken`: it is the credential for every **event admin** route, sent as the admin cookie or as `Authorization: Bearer <adminToken>`.
 
 If `fromUrl` is set, creating the event queues a `CREATED` webhook. Its first delivery attempt is made right after this response is sent; if that fails, the webhook queue retries it.
 
@@ -129,7 +131,7 @@ Read-only summary of an event.
   "_count": { "participants": 4 }
 }
 ```
-`status` is one of `DRAFT`, `FINALIZED`, `CANCELLED`. Unknown slug returns 404.
+`status` is one of `DRAFT`, `FINALIZED`, `CANCELLED`. An unknown slug returns 404 with `{ "error": "Event not found" }` (no `code`).
 
 ### Submit Vote
 **Endpoint:** `POST /api/event/[eventId]/vote`
@@ -155,9 +157,10 @@ Records a participant's availability. Votes are replaced as a set: slots you lea
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `name` | string | 1 to 60 characters. |
+| `name` | string | 1 to 60 characters (trimmed). |
+| `telegramId` | string | Optional Telegram handle, up to 64 characters, stored without `@` and lowercased. Display only: it is shown in group posts in place of the name and never links an identity. |
 | `participantId` | integer | Optional. Present when editing an existing vote. |
-| `votes` | array | At most 100 entries, each `slotId` unique. `preference` is `YES`, `MAYBE`, or `NO`. `canHost` is a boolean. Every slot must belong to this event, otherwise the request is rejected with 400. |
+| `votes` | array | At most 100 entries, each `slotId` unique. `preference` is `YES`, `MAYBE`, or `NO`. `canHost` is an optional boolean (default false). Every slot must belong to this event, otherwise the request is rejected with 400. |
 | `linkTelegram`, `linkDiscord` | boolean | Optional, default true. Set false to keep that platform identity off this participant. |
 | `linkIdentity` | boolean | Optional legacy switch that sets both of the above when they are absent. |
 
@@ -172,6 +175,8 @@ Telegram and Discord identity is taken only from the caller's signed cookies. ID
 Anything else returns 403 with `code: "participant_not_owned"`, including an admin token that belongs to a different event.
 
 **Capacity.** On a finalized event the capacity check and the participant's status change happen in one transaction, so two simultaneous votes cannot overbook the event.
+
+**After the response.** The pinned dashboards are refreshed on every vote. The group or channel gets an "updated their availability" post at most once per participant per `VOTE_ANNOUNCE_COOLDOWN_MINUTES` (default 60). The first vote that makes the event viable stamps it as having reached quorum, which stops voting reminders, and the organizer gets a quorum DM if they have a linked account.
 
 **Response (200):**
 ```json
@@ -192,7 +197,7 @@ Lets any attendee propose a new slot when existing options do not work. Not allo
   "endTime": "2026-11-05T22:00:00.000Z"
 }
 ```
-`suggesterName` is 1 to 50 characters. `startTime` must be before `endTime`.
+`suggesterName` is 1 to 50 characters. `startTime` must be before `endTime`. The connected group or channel is told who suggested the new time.
 
 **Response (200):** `{ "success": true }`
 
@@ -235,7 +240,7 @@ Locks the event on a slot (or, for campaigns, several). The slot, the host parti
 **ONE_SHOT events**
 - **Content-Type:** `multipart/form-data`
 - **Fields:** `slotId` (required), `houseId` (optional participant ID of the host), `location` (optional text, up to 200 characters).
-- **Response (200):** a redirect to the event management page.
+- **Response:** a `307` redirect to `/e/<slug>/manage`.
 
 **CAMPAIGN events**
 - **Content-Type:** `application/json`
@@ -248,8 +253,8 @@ Locks the event on a slot (or, for campaigns, several). The slot, the host parti
   "participantIds": [1, 2, 3]
 }
 ```
-- `slotIds` (required): non-empty array of slot IDs to lock in as sessions.
-- `houseId` (optional): participant ID of the host as a string.
+- `slotIds` (required): 1 to 100 unique slot IDs to lock in as sessions.
+- `houseId` (optional): participant ID of the host, as a number or a numeric string.
 - `location` (optional): text, up to 200 characters.
 - `participantIds` (optional): explicit attendee list. Without it, attendees come from the votes.
 - **Response (200):**
@@ -287,7 +292,7 @@ Downloads an iCalendar file for a finalized event. For campaigns, `?slot=<slotId
 
 Exchanges the admin token (from the link shown at creation) for the admin cookie.
 
-**Behavior:** a valid token sets `tabletop_admin_<slug>`, sets the signed identity cookies for the event's stored manager, and redirects to `/e/<slug>/manage`. A missing token redirects to `/e/<slug>`. A wrong token redirects to `/e/<slug>?error=invalid_token`. Only the real token works: the stored hash is not accepted as a password.
+**Behavior:** a valid token sets `tabletop_admin_<slug>` and redirects to `/e/<slug>/manage`. It never sets a Telegram or Discord identity cookie: holding the token says nothing about who the event's stored manager is. A missing token redirects to `/e/<slug>`. A wrong token redirects to `/e/<slug>?error=invalid_token`, and an internal failure to `/e/<slug>?error=server_error`. Only the real token works: the stored hash is not accepted as a password. A token from an older release that is still stored in plaintext is accepted and rewritten as its hash.
 
 ---
 
@@ -297,25 +302,25 @@ Exchanges the admin token (from the link shown at creation) for the admin cookie
 **Endpoint:** `GET /auth/login?token=<token>`
 **Auth:** the token itself
 
-Redeems a login link that a bot sent by direct message. The token is short-lived (15 minutes).
+Redeems a login link that a bot sent by direct message. The token is short-lived (15 minutes) and is issued for one platform. It can be opened again until it expires, so a chat app's link preview cannot use it up.
 
-**Behavior:** on success, sets the signed identity cookie for the Telegram or Discord account the link was issued to and redirects to `/profile?success=logged_in`. Failures redirect to `/profile?error=missing_token`, `invalid_token`, `expired_token`, or `server_error`.
+**Behavior:** on success, sets the signed identity cookie (and the display-name cookie) for the Telegram or Discord account the link was issued to and redirects to `/profile?success=logged_in`. Failures redirect to `/profile?error=missing_token`, `invalid_token`, `expired_token`, or `server_error`.
 
 ### Start Discord OAuth
 **Endpoint:** `GET /api/auth/discord?flow=<login|connect>&returnTo=<path>`
 **Auth:** none
 
-Redirects to Discord's authorization page. `flow=login` asks for identity only. `flow=connect` also asks to add the bot to a server. `returnTo` must be a same-site path (it must start with a single `/`). The request sets a short-lived `tabletop_oauth_nonce` cookie and puts the same nonce in the OAuth `state`.
+Redirects to Discord's authorization page. `flow=login` (the default) asks for the `identify` scope only. `flow=connect` asks for `bot identify` and the bot permissions View Channels, Send Messages, Manage Messages, Embed Links and Read Message History. `returnTo` must be a same-origin path (it must start with a single `/`); anything else falls back to `/`. The request sets a short-lived `tabletop_oauth_nonce` cookie and puts the same nonce in the OAuth `state`.
 
-**Response:** a 302 redirect to Discord, or 500 `{ "error", "code": "config" }` if `DISCORD_APP_ID` is not set.
+**Response:** a redirect to Discord, or 500 `{ "error": "Missing DISCORD_APP_ID" }` if `DISCORD_APP_ID` is not set.
 
 ### Discord OAuth Callback
 **Endpoint:** `GET /api/auth/discord/callback?code=...&state=...`
 **Auth:** none (the nonce and Discord's code are the proof)
 
-The redirect target registered in the Discord Developer Portal. The `state` nonce must match the `tabletop_oauth_nonce` cookie, otherwise the request is rejected with 400. A `login` flow sets the signed Discord identity cookies. If the caller returns to a `/manage` page, the event is bound to this Discord account only when the caller is already verified as that event's admin. With the bot-add flow, a signed one-hour `tabletop_discord_guild_<slug>` cookie records which server the admin just added the bot to, and only that server's channels can then be listed or connected.
+The redirect target registered in the Discord Developer Portal. The `state` nonce must match the `tabletop_oauth_nonce` cookie, otherwise the request is rejected with 400 `{ "error": "Invalid OAuth state" }`. Both flows set the signed Discord identity cookies. In the `login` flow, if the caller returns to a `/manage` page and is already verified as that event's admin, the Discord account is saved as the event's manager (only when no Discord manager is set). With the bot-add flow, a signed one-hour `tabletop_discord_guild_<slug>` cookie records which server the admin just added the bot to (taken from Discord's token response, never from the query string), and only that server's channels can then be listed or connected. Connecting a channel never changes the event's manager.
 
-**Response:** a redirect to `returnTo`, with an `error` query parameter on failure.
+**Response:** a redirect to `returnTo`, with an `error` query parameter (`token_failed`, `profile_failed`) on failure. If Discord itself reports an error, the redirect goes to `/?error=discord_auth_failed`.
 
 ### Clear Session
 **Endpoint:** `POST /api/auth/clear-session`
@@ -352,7 +357,7 @@ Tells the client which of its remembered event slugs still exist.
 **Endpoint:** `GET /api/health`
 **Auth:** none
 
-Returns `{ "status": "ok" }` when the process is up. With `?deep=1` it also runs `SELECT 1` against the database and reports a failure if that query does not succeed. The Docker healthcheck uses the shallow form.
+Returns `{ "status": "ok" }` when the process is up, without touching any dependency. With `?deep=1` it also runs `SELECT 1` against the database and returns `{ "status": "ok", "db": "ok" }`, or `503 { "status": "degraded", "db": "error" }` if the query fails. The Docker healthcheck uses the shallow form.
 
 ---
 
@@ -366,8 +371,8 @@ Entry point for Telegram Bot API updates when the bot runs in `webhook` mode. A 
 
 **Handled messages** (in polling mode the same handler runs, so behavior is identical):
 - `/connect <slug> <code>`: connects the chat to the event. The code is shown with the command on the event's manage page and is bound to the event, so only someone who can open that page can connect a chat. A bare `/connect <slug>`, `/start <slug>`, or a pasted event link gets a reply telling the sender to use the command from the manage page, and binds nothing.
-- `/start`, `/start login`: in a private chat, sends a login link.
-- `/start rec_<token>`: completes a short recovery link.
+- `/start login` (or a bare `/start`) in a private chat: DMs a 15-minute login link. In a group, `/start login` gets a reply asking the sender to message the bot privately, and a bare `/start` is ignored.
+- `/start rec_<token>`: completes the 15-minute, one-time registration link from the manage page's "Register for Magic Links" button, saving the sender's Telegram account as the event's manager. The sender needs a Telegram username, and if the event already has a Telegram manager handle, the sender must be that account.
 
 ### Configure Telegram Webhook
 **Endpoint:** `GET /api/telegram/setup`
@@ -375,7 +380,7 @@ Entry point for Telegram Bot API updates when the bot runs in `webhook` mode. A 
 
 Registers (or re-registers) the webhook URL with Telegram, using `NEXT_PUBLIC_BASE_URL` and the bot token.
 
-**Response (200):** `{ "success": true, "message": "Webhook configured successfully" }`. Missing configuration returns 500.
+**Response (200):** `{ "success": true, "message": "Webhook configured successfully" }`. Missing `TELEGRAM_BOT_TOKEN` or `NEXT_PUBLIC_BASE_URL` returns 500 with `code: "config"`; a failed registration returns `500 { "success": false, "error": "Webhook setup failed" }`.
 
 ### Ko-fi Donation Webhook
 **Endpoint:** `POST /api/kofi/webhook`
@@ -408,12 +413,12 @@ Receives donation notifications from Ko-fi. Configure it at `ko-fi.com/manage/we
 
 ## Scheduled Jobs
 
-These routes are called by a scheduler, never by a browser. All three require the cron bearer.
+These routes are called by a scheduler, never by a browser. All three accept `GET` only and require the cron bearer (401 `unauthorized` otherwise).
 
 | Route | Cadence | Scheduler |
 |-------|---------|-----------|
 | `GET /api/cron/cleanup` | daily | Vercel Cron at 00:00 UTC (hosted), the container's internal loop (Docker). |
-| `GET /api/cron/reminders` | every 10 minutes | Supabase `pg_cron` (hosted), the container's internal loop (Docker). A GitHub Actions workflow remains as a backstop. |
+| `GET /api/cron/reminders` | every 10 minutes | Supabase `pg_cron` (hosted), the container's internal loop (Docker). A GitHub Actions workflow calls it every two hours as a backstop. |
 | `GET /api/cron/webhooks` | every 5 minutes | Supabase `pg_cron` (hosted), the container's internal loop (Docker). |
 
 ### Cleanup Cron
@@ -427,15 +432,15 @@ Deletes expired events and their related rows in batches, unpins any dashboard m
 - drafts: 1 day after the last proposed slot ends (a draft with no slots: 1 day after creation)
 - cancelled events: 1 day after cancellation
 
-**Response (200):** `{ "success": true, "deleted": 4, "deletedLoginTokens": 2, "errors": 0, "scanned": 40 }`
+**Response (200):** `{ "success": true, "deleted": 4, "deletedLoginTokens": 2, "errors": 0, "scanned": 40 }`. An internal failure returns `500 { "error": "Internal Server Error" }`.
 
 ### Reminders Cron
 **Endpoint:** `GET /api/cron/reminders`
 **Auth:** cron bearer
 
-Runs the voting and session reminders for Telegram and Discord. A reminder is claimed in the database before it is sent, so overlapping runs send nothing twice, and a late run still sends once. If no bot is configured it returns `{ "success": true, "skipped": "no bot configured" }`.
+Runs the voting and session reminders for Telegram and Discord. A reminder is claimed in the database before it is sent, so overlapping runs send nothing twice, and a late run still sends once. Voting reminders go out at the organizer's chosen time on the chosen weekdays (in the event's timezone), up to 18 hours late, only while the event has a future time option and has not reached quorum. Session reminders go out once per finalized session, between the chosen lead time (2 hours, 1 day or 2 days) and the session start. If no bot is configured it returns `{ "success": true, "skipped": "no bot configured" }`.
 
-**Response (200):** `{ "success": true, ... }` with a summary of what ran. Returns 500 if any run threw.
+**Response (200):** `{ "success": true, "voting": ..., "session": ... }` with a summary of each run. Returns 500 if a whole run failed.
 
 ### Webhooks Cron
 **Endpoint:** `GET /api/cron/webhooks`

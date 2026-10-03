@@ -11,11 +11,13 @@ The application behaves differently based on the deployment environment. This is
 | Feature | Self-Hosted / Docker | Hosted (Cloud) |
 | :--- | :--- | :--- |
 | **Third-party analytics** | None | None |
-| **Robots.txt** | `Disallow: /` (No Crawl) | `Allow: /` |
+| **Robots.txt** | `Disallow: /` (No Crawl) | `Allow: /`, except event pages, manage pages and `/api/` |
+| **Robots meta tag** | `noindex, nofollow` | `index, follow` |
 | **Sitemap** | Hidden | Public |
+| **HSTS** | `max-age=63072000` | `max-age=63072000; includeSubDomains` |
 | **Database** | SQLite | Postgres (Supabase) |
 
-No version of the app, hosted or self-hosted, loads Google Analytics or any other third-party analytics or advertising script. The hosted flag only changes indexing behavior and the database target.
+No version of the app, hosted or self-hosted, loads Google Analytics or any other third-party analytics or advertising script. The hosted flag only changes indexing behavior, the HSTS scope and the secrets the server requires at boot; the database target is chosen by the build (the Docker image uses SQLite, the Vercel build uses the hosted Postgres schema).
 
 ## Privacy Enforcement
 
@@ -39,7 +41,22 @@ Deleting an event deletes its participants, votes, slots, and queued webhooks wi
 
 ### Robots.txt & Meta Tags
 For self-hosted (Docker) instances:
--   `app/robots.ts` generates a file disallowing all User Agents (`Disallow: /`).
+-   `app/robots.ts` generates a file disallowing all User Agents (`Disallow: /`). The hosted site serves the same file when `NEXT_PUBLIC_BASE_URL` is unset.
 -   `app/layout.tsx` injects `<meta name="robots" content="noindex, nofollow" />` into every page header via the `metadata.robots` field (controlled by `NEXT_PUBLIC_IS_HOSTED`).
 
 This ensures your private game schedule is explicitly blocked from Google Search results, keeping your instance private.
+
+## Security Headers
+
+Every response, hosted or self-hosted, carries these headers (`next.config.mjs`):
+
+| Header | Value |
+| :--- | :--- |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `X-Frame-Options` | `DENY`: no page can be loaded inside an iframe |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
+| `Strict-Transport-Security` | `max-age=63072000`, plus `includeSubDomains` on the hosted site only |
+| `Content-Security-Policy-Report-Only` | A same-origin policy with `frame-ancestors 'none'`, reported but not yet enforced |
+
+If you run a reverse proxy in front of the app, do not add a second, conflicting `X-Frame-Options` header.

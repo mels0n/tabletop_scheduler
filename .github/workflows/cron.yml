@@ -15,8 +15,9 @@ jobs:
     steps:
       - name: Call Reminder API
         run: |
-          # Replace with your actual deployed URL
-          # We use a secret for the URL to keep it flexible
+          # DEPLOYMENT_URL (the site origin) and CRON_SECRET are repository secrets.
+          # Without DEPLOYMENT_URL the job does nothing. The route fails closed, so
+          # a missing or wrong CRON_SECRET gets a 401 and turns the job red.
           if [ -n "${{ secrets.DEPLOYMENT_URL }}" ]; then
              # --location-trusted: keep the Authorization header across redirects
              #   (plain -L drops it when a redirect crosses host/scheme, e.g. www -> apex).

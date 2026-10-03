@@ -1,9 +1,11 @@
 # Development Setup Guide
 
 ## Prerequisites
-- Node.js 22 (the repo pins it in `.nvmrc`; Node 20.9 is the minimum Next.js supports)
+- Node.js 22 (pinned in `.nvmrc`; `package.json` requires 22 or newer)
 - npm
 - Git
+
+The app is built on Next.js 16 and React 19, with Prisma 5, ESLint 10 (flat config) and Vitest.
 
 ```bash
 nvm use        # picks up .nvmrc
@@ -25,7 +27,8 @@ The application reads its configuration from environment variables. For local de
 ### Variable Reference:
 - `DATABASE_URL`: Connection string for the local SQLite database.
   - Recommended: `"file:./dev.db"` (Points to `prisma/dev.db`)
-- `NEXT_PUBLIC_BASE_URL`: The URL where the app is running (e.g., `http://localhost:3000`). Required if you set any bot token, except for Telegram polling.
+- `NEXT_PUBLIC_BASE_URL`: The URL where the app is running (e.g., `http://localhost:3000`). Required whenever you set a Telegram or Discord bot token, in every Telegram mode.
+- `TELEGRAM_BOT_TOKEN` and `TELEGRAM_MODE=polling`: test the Telegram bot locally without a public URL.
 - `DISCORD_APP_ID`: Application ID from Discord Developer Portal.
 - `DISCORD_CLIENT_SECRET`: Client Secret from Discord Developer Portal.
 - `DISCORD_BOT_TOKEN`: Bot Token from Discord Developer Portal.
@@ -33,7 +36,7 @@ The application reads its configuration from environment variables. For local de
 The full list, with defaults, is in [EnvVariables.md](../reference/EnvVariables.md). Configuration is validated at boot, so a missing or invalid value stops `npm run dev` with a message that lists every problem.
 
 ## 2. Database Setup
-The project uses Prisma with SQLite for local development and self-hosting. The SQLite schema has no migration history; `db push` makes the database match the schema file.
+The project uses Prisma with SQLite for local development and self-hosting. The SQLite schema has no migration history; `db push` makes the database match the schema file. Do not use `prisma migrate dev` for the SQLite schema.
 
 1. **Generate Client:**
    ```bash
@@ -45,7 +48,7 @@ The project uses Prisma with SQLite for local development and self-hosting. The 
    ```
    *Note: This creates/updates `prisma/dev.db`.*
 
-The hosted (Postgres) target has its own schema and migrations; see [HostedMaintenance.md](HostedMaintenance.md) before changing the data model.
+The hosted (Postgres) target has its own schema and migrations; see [HostedMaintenance.md](HostedMaintenance.md) before changing the data model. Every schema change must also follow the database change rules in [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## 3. Running the Server
 ```bash
@@ -54,19 +57,23 @@ npm run dev
 The server typically starts on `http://localhost:3000`.
 
 ## 4. Checks
-Run these before opening a pull request:
+Run these before opening a pull request. CI runs the same set, and `main` only accepts changes through a pull request that passes them.
 ```bash
-npm run typecheck
-npm run lint
-npm test
+npm run typecheck          # tsc --noEmit
+npm run lint               # eslint, zero warnings allowed
+npm test                   # vitest, unit and integration tests
+npm run depcruise          # import direction between layers
+npm run db:upgrade-check   # only needed when prisma/schema.prisma changed
+npx next build             # production build
 ```
 
 ## 5. Discord Integration
 To verify Discord features:
-1. Create a generic Application in Discord Developer Portal.
-2. Create a generic Bot and reset its token.
-3. Add the credentials to `.env`.
-4. Invite the bot to a test server using the OAuth link generated in the app's "Manage" page.
+1. Create an Application in the Discord Developer Portal.
+2. On its Bot tab, reset the token. Leave every privileged gateway intent off.
+3. Add `http://localhost:3000/api/auth/discord/callback` as an OAuth2 redirect.
+4. Add the credentials to `.env`.
+5. Invite the bot to a test server with the "Connect Discord Server" button on an event's manage page.
 
 ## Troubleshooting
 - **Database Error (Code 14):** ensure `DATABASE_URL` is correct. If using `file:./dev.db`, the file lives in the `prisma/` folder; run `npx prisma db push` to create it.

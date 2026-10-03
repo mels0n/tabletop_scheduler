@@ -45,4 +45,5 @@ A scheduling poll is a small, bursty, request-response workload: a page of votes
 - Self-hosted upgrades must apply automatically from any earlier release, so self-host schema changes are additive only (expand, then contract), backfills run as recorded data migrations, and CI proves every release snapshot in `prisma/compat/` upgrades with a plain `db push`.
 - Self-hosted databases have no history to roll back to. Operators should back up the SQLite file before upgrading across a release that changes the schema.
 - Preview deployments share the production database but never apply migrations, so a preview of a branch with a schema change will fail until the change is merged. This is deliberate: it keeps feature branches from altering the live schema.
+- The Docker image refuses to start with a `DATABASE_URL` that is not a SQLite file URL, so Postgres is a hosted-only target and the self-host upgrade guarantees above only ever have to hold for SQLite.
 - SQLite and Postgres differ (case sensitivity, `JSON` handling, concurrency). Code that depends on a database-specific behavior must be tested against both or avoided.
