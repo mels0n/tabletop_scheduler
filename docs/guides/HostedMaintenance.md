@@ -151,6 +151,15 @@ or checked keeps accepting the old form and upgrades it on first successful use
 (for example, a legacy plaintext admin token is accepted and rewritten as its
 hash), and never retires the old form on a timer.
 
+Participant rows follow the same rule with a per-row marker instead of a date.
+`Participant.ownerCookieIssuedAt` is set whenever the signed participant cookie is
+issued for a row, and every new row is marked when it is created. Rows created
+before participant cookies existed carry no marker and stay editable by stored id;
+the first browser to touch such a row receives the cookie and the row is marked.
+The mark is a conditional update, so when two browsers race for the same row only
+one wins and the other gets the normal ownership check. There is nothing to
+configure and nothing expires.
+
 ## Adopting the pre-existing database (one time)
 
 Production predates this setup: created with `prisma db push`, no

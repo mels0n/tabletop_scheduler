@@ -151,7 +151,7 @@ Records a participant's availability. Votes are replaced as a set: slots you lea
 
 Telegram and Discord identity is taken only from the caller's signed cookies. IDs or handles sent in the body are never used to link an identity.
 
-**Editing.** A request that names an existing `participantId` is accepted only if it carries the signed `tabletop_participant_<slug>` cookie that was issued when that participant first voted, or a verified identity that matches the participant row. Otherwise it returns 403.
+**Editing.** A request that names an existing `participantId` is accepted only if it carries the signed `tabletop_participant_<slug>` cookie that was issued when that participant first voted, or a verified identity that matches the participant row. Otherwise it returns 403 with `code: "participant_not_owned"`. The exception is a row created before participant cookies existed (no `ownerCookieIssuedAt` marker): it is accepted by its stored id, the response sets the cookie, and the row is marked, so the next edit from any other browser gets the normal check.
 
 **Capacity.** On a finalized event the capacity check and the participant's status change happen in one transaction, so two simultaneous votes cannot overbook the event.
 
