@@ -5,19 +5,22 @@ import { Calendar, Clock, MapPin, Home, User as UserIcon, Loader2, Check } from 
 import { clsx } from "clsx";
 import { ClientDate, ClientTimezone } from "./ClientDate";
 import { AddToCalendar } from "./AddToCalendar";
+import type { PublicEvent, PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
 
 /**
  * @interface FinalizedEventViewProps
  * @description Props for the FinalizedEventView component.
- * @property {any} event - The full event object.
- * @property {any} finalizedSlot - The TimeSlot object that was selected as final.
+ * @property {PublicEvent} event - The public event DTO.
+ * @property {PublicSlot} finalizedSlot - The time slot (with votes) that was selected as final.
+ * @property {PublicParticipant[]} participants - Public participant DTOs, used to resolve voters.
  * @property {number} [serverParticipantId] - Optional ID if the user is already authenticated via server cookie.
  */
 interface FinalizedEventViewProps {
-    event: any;
-    finalizedSlot: any;
+    event: PublicEvent;
+    finalizedSlot: PublicSlot;
+    participants: PublicParticipant[];
     serverParticipantId?: number;
-    discordIdentity?: { id: string, username: string };
+    discordIdentity?: { username: string };
 }
 
 /**
@@ -29,7 +32,7 @@ interface FinalizedEventViewProps {
  * @param {FinalizedEventViewProps} props - Component props.
  * @returns {JSX.Element} The finalized event dashboard.
  */
-export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, discordIdentity }: FinalizedEventViewProps) {
+export function FinalizedEventView({ event, finalizedSlot, participants, serverParticipantId, discordIdentity }: FinalizedEventViewProps) {
     // Intent: State for handling the "Join" form inputs and submission status.
     const [userName, setUserName] = useState("");
     const [userTelegram, setUserTelegram] = useState("");
@@ -41,13 +44,18 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
     // Memoize to prevent effect dependency churn.
     const attendees = useMemo(() => {
         // 1. Filter candidates
+        const participantsById = new Map(participants.map(p => [p.id, p]));
         const candidates = finalizedSlot.votes
-            .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
-            .map((v: any) => ({
-                ...v.participant,
-                preference: v.preference,
-                voteCreatedAt: v.createdAt // Capture vote time for tie-breaking
-            }));
+            .filter(v => v.value === 'YES' || v.value === 'MAYBE')
+            .flatMap(v => {
+                const participant = participantsById.get(v.participantId);
+                if (!participant) return [];
+                return [{
+                    ...participant,
+                    preference: v.value,
+                    voteCreatedAt: v.createdAt // Capture vote time for tie-breaking
+                }];
+            });
 
         // 2. Sort candidates: YES first, then by FIFO (Time)
         candidates.sort((a: any, b: any) => {
@@ -71,7 +79,7 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                 status: existingStatus || computedStatus
             };
         });
-    }, [finalizedSlot.votes, event.maxPlayers]);
+    }, [finalizedSlot.votes, participants, event.maxPlayers]);
 
     // Intent: Separate attendees (ACCEPTED) from waitlist (WAITLIST)
     const acceptedDetails = attendees.filter((a: any) => a.status === 'ACCEPTED');
@@ -130,7 +138,6 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                 name: userName,
                 telegramId: userTelegram,
                 participantId, // Send if updating existing participant or re-joining
-                discordId: discordIdentity?.id,
                 discordUsername: discordIdentity?.username,
                 votes: [{
                     slotId: finalizedSlot.id,
@@ -220,7 +227,12 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                     {/* Add to Calendar */}
                     <div className="border-t border-slate-700/50 pt-6">
                         <AddToCalendar
-                            event={event}
+                            event={{
+                                title: event.title,
+                                description: event.description || undefined,
+                                location: event.location,
+                                slug: event.slug,
+                            }}
                             slot={finalizedSlot}
                         />
                     </div>

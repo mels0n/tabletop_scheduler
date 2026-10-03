@@ -20,6 +20,7 @@ import { ManageSlots } from "@/components/ManageSlots";
 import { SyncBadge } from "@/components/SyncBadge";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
+import { toManageParticipant } from "@/features/event-management/model/dto";
 
 /**
  * @interface PageProps
@@ -113,7 +114,7 @@ export default async function ManageEventPage(props: PageProps) {
 
         const potentialHosts = slot.votes
             .filter(v => (v.preference === 'YES' || v.preference === 'MAYBE') && v.canHost)
-            .map(v => v.participant);
+            .map(v => ({ id: v.participant.id, name: v.participant.name }));
 
         return {
             ...slot,
@@ -152,6 +153,12 @@ export default async function ManageEventPage(props: PageProps) {
 
         return 0;
     });
+
+    // Client components get DTOs and narrow props only, never Prisma rows: rows carry platform
+    // IDs and, on the event, the admin token hash.
+    const manageParticipants = event.participants.map(p => toManageParticipant(p, event.finalizedHostId));
+    const manageSlotRows = event.timeSlots.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime }));
+    const participantIds = event.participants.map(p => ({ id: p.id }));
 
     const isFinalized = event.status === 'FINALIZED';
     const isCampaign = event.eventType === 'CAMPAIGN';
@@ -348,7 +355,7 @@ export default async function ManageEventPage(props: PageProps) {
                         <div className="space-y-3">
                             <SidebarLabel>Players</SidebarLabel>
                             {event.participants.length > 0 ? (
-                                <ManageParticipants slug={event.slug} participants={event.participants} />
+                                <ManageParticipants slug={event.slug} participants={manageParticipants} />
                             ) : (
                                 <p className="text-xs text-slate-500 py-1">No players have voted yet.</p>
                             )}
@@ -528,8 +535,10 @@ export default async function ManageEventPage(props: PageProps) {
                                     <div className="border-t border-slate-700/50 pt-6">
                                         <AddToCalendar
                                             event={{
-                                                ...event,
-                                                description: event.description || undefined
+                                                title: event.title,
+                                                description: event.description || undefined,
+                                                location: event.location,
+                                                slug: event.slug,
                                             }}
                                             slot={finalizedSlot}
                                             className="justify-center"
@@ -653,7 +662,7 @@ export default async function ManageEventPage(props: PageProps) {
                                         }))}
                                     />
 
-                                    <ManageSlots slug={event.slug} slots={event.timeSlots} />
+                                    <ManageSlots slug={event.slug} slots={manageSlotRows} />
                                 </div>
                             ) : (
                                 /* ONE-SHOT VOTING: sorted slot cards */
@@ -665,7 +674,7 @@ export default async function ManageEventPage(props: PageProps) {
 
                                     <ManagerVoteWarning
                                         eventId={event.id}
-                                        participants={event.participants}
+                                        participants={participantIds}
                                         slug={event.slug}
                                     />
 
@@ -737,7 +746,7 @@ export default async function ManageEventPage(props: PageProps) {
                                         })}
                                     </div>
 
-                                    <ManageSlots slug={event.slug} slots={event.timeSlots} />
+                                    <ManageSlots slug={event.slug} slots={manageSlotRows} />
                                 </div>
                             )
                         )}
