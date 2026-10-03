@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { ConfigError } from "@/shared/errors";
+// Imported from the class file directly: the errors index pulls in the logger,
+// and the logger reads this config.
+import { ConfigError } from "@/shared/errors/errors";
 
 /**
  * Single validated source for server-side configuration. Parsed once on first use and

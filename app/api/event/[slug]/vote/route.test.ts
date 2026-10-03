@@ -4,7 +4,7 @@ import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { checkEventQuorum } from '@/shared/lib/quorum';
 import { signValue } from '@/shared/lib/session';
-import { syncDashboard } from '@/app/api/event/[slug]/slot/notify';
+import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
 import { broadcastToEvent } from '@/features/notifications';
 
 vi.mock('@/shared/lib/prisma');
@@ -18,7 +18,7 @@ vi.mock('@/shared/lib/quorum', () => ({
 }));
 // syncDashboard runs in after() on every POST; stub it out so the tests only exercise
 // what they target.
-vi.mock('@/app/api/event/[slug]/slot/notify', () => ({
+vi.mock('@/features/event-management/server/dashboard-sync', () => ({
     syncDashboard: vi.fn(),
 }));
 

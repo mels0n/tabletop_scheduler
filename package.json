@@ -20,7 +20,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run tests/integration",
     "lint": "eslint . --max-warnings=0",
-    "depcruise": "depcruise --config .dependency-cruiser.cjs app components features shared lib hooks",
+    "depcruise": "depcruise --config .dependency-cruiser.cjs app components features entities shared",
     "blog:queue": "node scripts/blog-queue.mjs",
     "typecheck": "tsc --noEmit"
   },

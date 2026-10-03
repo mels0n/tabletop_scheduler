@@ -72,7 +72,7 @@ export async function DELETE(
         await processWaitlistPromotion(participant.eventId);
 
         // Sync dashboard to reflect the removed votes and any new promotions
-        const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
+        const { syncDashboard } = await import("@/features/event-management/server/dashboard-sync");
         await syncDashboard(participant.eventId);
 
         return NextResponse.json({ success: true });

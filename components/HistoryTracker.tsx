@@ -1,6 +1,6 @@
 "use client";
 
-import { useEventHistory } from "@/hooks/useEventHistory";
+import { useEventHistory } from "@/shared/lib/hooks/useEventHistory";
 import { useEffect } from "react";
 
 /**

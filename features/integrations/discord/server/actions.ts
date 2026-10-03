@@ -13,7 +13,7 @@ import {
     pinDiscordMessage,
     getGuildChannels,
     createDMChannel
-} from "@/features/discord/model/discord";
+} from "@/features/integrations/discord/model/discord";
 import { dmManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
 import { verifyValue } from "@/shared/lib/session";

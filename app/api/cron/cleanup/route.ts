@@ -68,7 +68,7 @@ export async function GET(req: Request) {
             const toDelete = await dropLiveOneShots(batch, cutoffFinalized);
             if (toDelete.length > 0) {
                 const { unpinChatMessage } = await import("@/features/telegram");
-                const { unpinDiscordMessage } = await import("@/features/discord/model/discord");
+                const { unpinDiscordMessage } = await import("@/features/integrations/discord/model/discord");
 
                 for (const event of toDelete) {
                     // Cleanup pins: each platform independently; a failure never blocks deletion.

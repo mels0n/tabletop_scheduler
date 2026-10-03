@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Copy, PlusCircle, ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
 import { SchemaGenerator } from "@/shared/lib/aeo";
-import { getDonations } from "@/lib/donations";
-import { getEventStats } from "@/lib/event-stats";
+import { getDonations } from "@/entities/donation";
+import { getEventStats } from "@/shared/lib/event-stats";
 import DonationTicker from "@/components/DonationTicker";
 import { FaqJsonLd } from "@/components/FaqJsonLd";
 

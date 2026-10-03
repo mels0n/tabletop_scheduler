@@ -9,7 +9,7 @@ vi.mock('@/shared/lib/prisma', () => ({
     },
 }));
 vi.mock('@/features/telegram', () => ({ unpinChatMessage: vi.fn() }));
-vi.mock('@/features/discord/model/discord', () => ({ unpinDiscordMessage: vi.fn() }));
+vi.mock('@/features/integrations/discord/model/discord', () => ({ unpinDiscordMessage: vi.fn() }));
 
 import { GET } from '@/app/api/cron/cleanup/route';
 

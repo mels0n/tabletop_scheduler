@@ -115,7 +115,7 @@ export async function deleteEvent(slug: string) {
     }
     try {
         if (event.discordChannelId && event.discordMessageId && process.env.DISCORD_BOT_TOKEN) {
-            const { unpinDiscordMessage } = await import("@/features/discord/model/discord");
+            const { unpinDiscordMessage } = await import("@/features/integrations/discord/model/discord");
             await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
         }
     } catch (e) {
@@ -194,7 +194,7 @@ export async function cancelEvent(slug: string) {
 
         try {
             if (event.discordChannelId && event.discordMessageId && process.env.DISCORD_BOT_TOKEN) {
-                const { editDiscordMessage } = await import("@/features/discord/model/discord");
+                const { editDiscordMessage } = await import("@/features/integrations/discord/model/discord");
                 await editDiscordMessage(
                     event.discordChannelId,
                     event.discordMessageId,

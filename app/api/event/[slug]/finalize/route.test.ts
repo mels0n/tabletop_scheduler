@@ -21,7 +21,7 @@ vi.mock('@/features/telegram', () => ({
     deleteMessage: vi.fn(),
     pinChatMessage: vi.fn(),
 }));
-vi.mock('@/features/discord/model/discord', () => ({
+vi.mock('@/features/integrations/discord/model/discord', () => ({
     sendDiscordMessage: vi.fn(),
     pinDiscordMessage: vi.fn(),
     unpinDiscordMessage: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('@/features/discord/model/discord', () => ({
 }));
 
 import * as telegram from '@/features/telegram';
-import * as discord from '@/features/discord/model/discord';
+import * as discord from '@/features/integrations/discord/model/discord';
 
 const mockPrisma = prisma as any;
 const mockSend = sendDirectMessage as unknown as ReturnType<typeof vi.fn>;

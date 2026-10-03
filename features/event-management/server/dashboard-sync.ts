@@ -2,8 +2,9 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { broadcastToEvent } from "@/features/notifications";
 import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
+import { escapeHtml } from "@/shared/lib/escape";
 
-const log = Logger.get("API:Slot:Notify");
+const log = Logger.get("DashboardSync");
 
 interface DashboardTargets {
     telegramChatId: string | null;
@@ -37,7 +38,7 @@ export async function refreshDiscordDashboard(
     const channelId = event.discordChannelId;
     const oldMessageId = event.discordMessageId;
     if (!channelId || !token) return;
-    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
+    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/integrations/discord/model/discord");
     const content = htmlToDiscordMarkdown(html);
 
     if (oldMessageId) {
@@ -157,7 +158,7 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
             event,
             { html: `📅 <b>Time Options Updated!</b>
 
-${messageSnippet} for <b>${event.title}</b>.` },
+${messageSnippet} for <b>${escapeHtml(event.title)}</b>.` },
             { eventId, kind: "slot-update" }
         );
 

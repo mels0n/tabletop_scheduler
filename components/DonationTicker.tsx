@@ -1,4 +1,4 @@
-import type { DonorComment } from '@/lib/donations';
+import type { DonorComment } from '@/entities/donation';
 
 /**
  * @component DonationTicker

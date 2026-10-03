@@ -483,7 +483,7 @@ async function announceFinalized(
     const discordToken = process.env.DISCORD_BOT_TOKEN;
     if (event.discordChannelId && discordToken) {
         try {
-            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } = await import("@/features/discord/model/discord");
+            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } = await import("@/features/integrations/discord/model/discord");
             const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
 
             if (event.discordMessageId) {

@@ -4,7 +4,7 @@ import { verifyEventAdmin } from "@/features/auth/server/actions";
 import Logger from "@/shared/lib/logger";
 import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
 import { idParam, slotSchema } from "@/features/event-management/model/schemas";
-import { pushSlotUpdates } from "../notify";
+import { pushSlotUpdates } from "@/features/event-management/server/dashboard-sync";
 
 const log = Logger.get("API:Slot:Manage");
 

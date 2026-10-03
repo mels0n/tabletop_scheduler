@@ -1,6 +1,6 @@
 "use client";
 
-import { useEventHistory, VisitedEvent } from "@/hooks/useEventHistory";
+import { useEventHistory, VisitedEvent } from "@/shared/lib/hooks/useEventHistory";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, User as UserIcon, Clock, ShieldCheck } from "lucide-react";

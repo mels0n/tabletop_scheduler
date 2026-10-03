@@ -246,7 +246,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             const userDisplay = telegramId ? `@${telegramId.replace('@', '')}` : name;
             after(async () => {
                 try {
-                    const { syncDashboard } = await import("@/app/api/event/[slug]/slot/notify");
+                    const { syncDashboard } = await import("@/features/event-management/server/dashboard-sync");
                     await syncDashboard(eventId);
                 } catch (e) {
                     log.error("Dashboard sync after vote failed", e as Error);
