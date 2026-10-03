@@ -13,6 +13,11 @@ vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 vi.mock('@/features/notifications', () => ({ sendDirectMessage: vi.fn(), broadcastToEvent: vi.fn() }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+// The immediate webhook attempt is scheduled with after(); here it is only recorded.
+vi.mock('next/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('next/server')>()),
+    after: vi.fn(),
+}));
 
 const mockPrisma = prisma as any;
 const at = new Date('2026-01-01T00:00:00Z');

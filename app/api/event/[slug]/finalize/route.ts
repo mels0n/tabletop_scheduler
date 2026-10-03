@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { redirect } from "next/navigation";
 import Logger from "@/shared/lib/logger";
@@ -7,10 +7,28 @@ import { ConflictError, ForbiddenError, NotFoundError, toResponse } from "@/shar
 import { campaignFinalizeSchema, oneShotFinalizeSchema } from "@/features/event-management/model/schemas";
 import { escapeHtml } from "@/shared/lib/escape";
 import { getServerConfig } from "@/shared/config/server";
+import { processWebhookRow } from "@/features/integrations/webhooks";
 
 const log = Logger.get("API:Finalize");
 
 const NOT_OPEN = "Event is not open for finalizing";
+
+/**
+ * Schedules the first delivery attempt of a just-committed webhook row for after the response.
+ * Never throws: the finalize has committed, and any failure (scheduling or delivery) only
+ * leaves the row queued for the webhooks cron to retry.
+ */
+function attemptWebhookAfterResponse(webhookId: string | null): void {
+    if (!webhookId) return;
+    try {
+        after(() => processWebhookRow(webhookId).then(
+            (outcome) => log.info("Immediate webhook attempt", { id: webhookId, outcome }),
+            (e) => log.error("Immediate webhook attempt failed", e as Error),
+        ));
+    } catch (e) {
+        log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: webhookId, error: String(e) });
+    }
+}
 
 /** The one-shot modal posts FormData; campaign clients post JSON. Both become a plain object. */
 async function readBody(req: Request): Promise<unknown> {
@@ -127,6 +145,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         acceptedNames = allAccepted.map(v => v.participant.name);
         waitlistNames = allWaitlist.map(v => v.participant.name);
 
+        let webhookId: string | null = null;
         const finalizedEvent = await prisma.$transaction(async (tx) => {
             // Precondition: only a DRAFT event can be finalized, exactly once.
             const claimed = await tx.event.updateMany({
@@ -160,11 +179,12 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
             const sTime = updatedEvent.timeSlots.find(s => s.id === updatedEvent.finalizedSlotId);
 
-            // The webhook row is queued in the same transaction; /api/cron/webhooks delivers it.
+            // The webhook row is queued in the same transaction; its first delivery attempt runs
+            // after the response and /api/cron/webhooks retries it.
             if (updatedEvent.fromUrl) {
                 const { getBaseUrlOrNull } = await import("@/shared/lib/url");
                 const origin = getBaseUrlOrNull();
-                await tx.webhookEvent.create({
+                const row = await tx.webhookEvent.create({
                     data: {
                         eventId: updatedEvent.id,
                         url: updatedEvent.fromUrl,
@@ -190,10 +210,12 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         })
                     }
                 });
+                webhookId = row.id;
             }
 
             return updatedEvent;
         });
+        attemptWebhookAfterResponse(webhookId);
 
         const { getBaseUrlOrNull } = await import("@/shared/lib/url");
         const origin = getBaseUrlOrNull();
@@ -323,6 +345,7 @@ async function handleCampaignFinalize(
     const updateData: { status: string; location: string | null; finalizedHostId?: number } = { status: "FINALIZED", location };
     if (houseId !== null) updateData.finalizedHostId = houseId;
 
+    let webhookId: string | null = null;
     const finalizedEvent = await prisma.$transaction(async (tx) => {
         // Precondition: only a DRAFT campaign can be finalized, exactly once.
         const claimed = await tx.event.updateMany({
@@ -355,11 +378,12 @@ async function handleCampaignFinalize(
             await tx.participant.updateMany({ where: { id: { in: waitlistIds }, eventId: updatedEvent.id }, data: { status: 'WAITLIST' } });
         }
 
-        // The webhook row is queued in the same transaction; /api/cron/webhooks delivers it.
+        // The webhook row is queued in the same transaction; its first delivery attempt runs
+        // after the response and /api/cron/webhooks retries it.
         if (updatedEvent.fromUrl) {
             const { getBaseUrlOrNull } = await import("@/shared/lib/url");
             const origin = getBaseUrlOrNull();
-            await tx.webhookEvent.create({
+            const row = await tx.webhookEvent.create({
                 data: {
                     eventId: updatedEvent.id,
                     url: updatedEvent.fromUrl,
@@ -385,10 +409,12 @@ async function handleCampaignFinalize(
                     })
                 }
             });
+            webhookId = row.id;
         }
 
         return updatedEvent;
     });
+    attemptWebhookAfterResponse(webhookId);
 
     const { getBaseUrlOrNull } = await import("@/shared/lib/url");
     const origin = getBaseUrlOrNull();

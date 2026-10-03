@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { verifyEventAdmin } from "@/features/auth/server/verify";
@@ -9,6 +10,7 @@ import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 import { isSessionReminderLead } from "@/features/notifications/model/leads";
 import { reminderSettingsSchema } from "../model/schemas";
 import { getServerConfig } from "@/shared/config/server";
+import { processWebhookRow } from "@/features/integrations/webhooks";
 
 const log = Logger.get("EventActions");
 
@@ -149,7 +151,9 @@ export async function deleteEvent(slug: string) {
 }
 
 /**
- * Marks an event as CANCELLED without deleting it.
+ * Marks an event as CANCELLED without deleting it. When the event came from an integration
+ * (`fromUrl`), a CANCELLED webhook row is queued and its first delivery attempt runs after the
+ * action returns (`after()`); the webhooks cron retries it if that attempt fails.
  */
 export async function cancelEvent(slug: string) {
     if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
@@ -231,7 +235,7 @@ export async function cancelEvent(slug: string) {
                 title: event.title,
                 timestamp: new Date().toISOString()
             };
-            await prisma.webhookEvent.create({
+            const row = await prisma.webhookEvent.create({
                 data: {
                     eventId: event.id,
                     url: event.fromUrl,
@@ -240,6 +244,15 @@ export async function cancelEvent(slug: string) {
                     nextAttempt: new Date()
                 }
             });
+            // First delivery attempt once the action has returned; the webhooks cron retries it.
+            try {
+                after(() => processWebhookRow(row.id).then(
+                    (outcome) => log.info("Immediate webhook attempt", { id: row.id, outcome }),
+                    (e) => log.error("Immediate webhook attempt failed", e as Error),
+                ));
+            } catch (e) {
+                log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: row.id, error: String(e) });
+            }
         }
 
         log.info("Event cancelled successfully", { slug });

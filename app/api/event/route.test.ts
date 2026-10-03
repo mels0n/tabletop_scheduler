@@ -6,6 +6,14 @@ const { lookupMock, cookieJar } = vi.hoisted(() => ({
 }));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
 vi.mock('@/shared/lib/prisma');
+// after() callbacks are queued here and run by flushAfter(), standing in for Next running
+// them once the response has been sent.
+const { afterQueue } = vi.hoisted(() => ({ afterQueue: [] as Array<() => unknown> }));
+vi.mock('next/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('next/server')>()),
+    after: (task: () => unknown) => { afterQueue.push(task); },
+}));
+vi.mock('@/features/integrations/webhooks', () => ({ processWebhookRow: vi.fn() }));
 vi.mock('next/headers', () => ({
     cookies: async () => ({
         get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name)! } : undefined),
@@ -15,7 +23,12 @@ vi.mock('next/headers', () => ({
 
 import prisma from '@/shared/lib/prisma';
 import { signValue } from '@/shared/lib/session';
+import { processWebhookRow } from '@/features/integrations/webhooks';
 import { POST } from './route';
+
+async function flushAfter() {
+    while (afterQueue.length) await afterQueue.shift()!();
+}
 
 const mockPrisma = prisma as any;
 
@@ -41,6 +54,8 @@ describe('POST /api/event', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        afterQueue.length = 0;
+        (processWebhookRow as any).mockResolvedValue('delivered');
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
         mockPrisma.event.create.mockImplementation(async ({ data }: any) => ({ id: 11, slug: data.slug, title: data.title }));
         mockPrisma.webhookEvent.create.mockResolvedValue({ id: 'wh-1' });
@@ -123,6 +138,31 @@ describe('POST /api/event', () => {
         expect(fetchSpy).not.toHaveBeenCalled();
         expect(mockPrisma.webhookEvent.findUnique).not.toHaveBeenCalled();
         fetchSpy.mockRestore();
+    });
+
+    it('attempts delivery of the new CREATED row right after the response', async () => {
+        const res = await POST(request({ ...valid, fromUrl: 'https://hooks.example.com/tt', fromUrlId: 'ext-1' }));
+
+        expect(res.status).toBe(200);
+        expect(afterQueue).toHaveLength(1);
+        expect(processWebhookRow).not.toHaveBeenCalled();
+        await flushAfter();
+        expect(processWebhookRow).toHaveBeenCalledWith('wh-1');
+    });
+
+    it('swallows a failed immediate attempt (the cron retries the row)', async () => {
+        (processWebhookRow as any).mockRejectedValue(new Error('db down'));
+
+        await POST(request({ ...valid, fromUrl: 'https://hooks.example.com/tt' }));
+
+        await expect(flushAfter()).resolves.toBeUndefined();
+        expect(processWebhookRow).toHaveBeenCalledWith('wh-1');
+    });
+
+    it('schedules no delivery attempt when there is no fromUrl', async () => {
+        await POST(request(valid));
+
+        expect(afterQueue).toHaveLength(0);
     });
 
     it('ignores an unsigned identity cookie when setting the manager', async () => {
