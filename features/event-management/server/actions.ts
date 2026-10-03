@@ -2,7 +2,7 @@
 
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth/server/verify";
 import { normalizeHandle, formatHandle } from "@/shared/lib/handle";
 import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 // Allowed session reminder lead times (2 hours, 1 day, 2 days), shared with the manage page.

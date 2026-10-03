@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import Logger from "@/shared/lib/logger";
 import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
-import { slotSchema } from "@/features/event-management/model/schemas";
+import { pushSlotUpdates, slotSchema } from "@/features/event-management";
 
 const log = Logger.get("API:Slot:Create");
 
-import { pushSlotUpdates } from "@/features/event-management/server/dashboard-sync";
 
 export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
     const { slug } = await props.params;

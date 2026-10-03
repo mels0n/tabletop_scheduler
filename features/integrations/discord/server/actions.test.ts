@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sendDiscordMagicLogin, connectDiscordChannel, listDiscordChannels } from './actions';
 import prisma from '@/shared/lib/prisma';
 import { createDMChannel, sendDiscordMessage, getGuildChannels, pinDiscordMessage } from '@/features/integrations/discord/model/discord';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { cookies } from 'next/headers';
 import { signValue } from '@/shared/lib/session';
 
@@ -17,7 +17,17 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
 vi.mock('@/features/event-management/server/recovery', () => ({
     dmManagerLink: vi.fn(),
 }));
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+// requireEventAdmin keeps its real contract on top of the mocked verifyEventAdmin.
+vi.mock('@/features/auth/server/verify', async () => {
+    const { ForbiddenError } = await import('@/shared/errors');
+    const verifyEventAdmin = vi.fn();
+    return {
+        verifyEventAdmin,
+        requireEventAdmin: async (slug: string) => {
+            if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
+        },
+    };
+});
 
 const mockPrisma = prisma as unknown as {
     participant: { findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 vi.mock('@/shared/lib/url', () => ({ getBaseUrl: vi.fn(() => 'https://example.test') }));
 vi.mock('next/headers', () => ({ headers: vi.fn(() => new Headers()) }));
 vi.mock('@/features/telegram', () => ({
@@ -20,7 +20,7 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
 
 import { cancelEvent, deleteEvent } from './actions';
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { editMessageText, unpinChatMessage } from '@/features/telegram';
 import { sendTelegramMessage } from '@/features/telegram/lib/telegram-client';
 import { sendDiscordMessage, editDiscordMessage, unpinDiscordMessage } from '@/features/integrations/discord/model/discord';

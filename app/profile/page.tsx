@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
 import { readIdentity } from "@/shared/lib/session";
-import { getBotUsername } from "@/features/telegram/lib/telegram-client";
+import { getBotUsername } from "@/features/telegram";
 import { ProfileDashboard } from "./ProfileDashboard";
 
 export const dynamic = "force-dynamic";

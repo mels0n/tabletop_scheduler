@@ -9,7 +9,7 @@ import { getBaseUrl } from "@/shared/lib/url";
 import { readIdentity } from "@/shared/lib/session";
 import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
 import { ConflictError, toResponse } from "@/shared/errors";
-import { createEventSchema, type CreateEventInput } from "@/features/event-management/model/schemas";
+import { createEventSchema, type CreateEventInput } from "@/features/event-management";
 
 const log = Logger.get("API:EventCreate");
 

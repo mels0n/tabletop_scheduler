@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { LinkedAccountsPanel } from "@/features/auth/ui/LinkedAccountsPanel";
+import { LinkedAccountsPanel } from "@/features/auth";
 
 export const dynamic = "force-dynamic";
 

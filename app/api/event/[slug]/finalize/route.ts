@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { redirect } from "next/navigation";
 import Logger from "@/shared/lib/logger";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import { ConflictError, ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
 import { campaignFinalizeSchema, oneShotFinalizeSchema } from "@/features/event-management/model/schemas";
 

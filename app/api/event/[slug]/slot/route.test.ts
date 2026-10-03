@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 vi.mock('@/features/event-management/server/dashboard-sync', () => ({ pushSlotUpdates: vi.fn() }));
 
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { POST } from './route';
 import { PATCH, DELETE } from './[slotId]/route';
 import { POST as SUGGEST } from './suggest/route';

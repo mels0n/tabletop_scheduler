@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { deleteEvent, updateManagerHandle } from '@/features/event-management/server/actions';
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 
 // Mock Dependencies
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({
+vi.mock('@/features/auth/server/verify', () => ({
     verifyEventAdmin: vi.fn(),
 }));
 vi.mock('@/features/telegram', () => ({

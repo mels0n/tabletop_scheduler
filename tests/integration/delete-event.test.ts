@@ -9,7 +9,7 @@ vi.mock('@/shared/lib/prisma', () => ({
         return holder.prisma;
     },
 }));
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn(async () => true) }));
+vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn(async () => true) }));
 vi.mock('@/features/notifications', () => ({
     broadcastToEvent: vi.fn(async (event: { id: number }) => {
         holder.eventRowsAtBroadcast = await holder.prisma.event.count({ where: { id: event.id } });

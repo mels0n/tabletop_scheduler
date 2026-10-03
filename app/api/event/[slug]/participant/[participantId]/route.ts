@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 import prisma from "@/shared/lib/prisma";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import Logger from "@/shared/lib/logger";
 import { ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
-import { idParam } from "@/features/event-management/model/schemas";
+import { idParam } from "@/features/event-management";
 
 const log = Logger.get("API:Participant:Delete");
 
@@ -68,11 +68,11 @@ export async function DELETE(
         ]);
 
         // Process Waitlist Promotion if someone was removed
-        const { processWaitlistPromotion } = await import("@/features/event-management/server/waitlist");
+        const { processWaitlistPromotion } = await import("@/features/event-management");
         await processWaitlistPromotion(participant.eventId);
 
         // Sync dashboard to reflect the removed votes and any new promotions
-        const { syncDashboard } = await import("@/features/event-management/server/dashboard-sync");
+        const { syncDashboard } = await import("@/features/event-management");
         await syncDashboard(participant.eventId);
 
         return NextResponse.json({ success: true });

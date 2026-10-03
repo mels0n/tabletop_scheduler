@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from './route';
 import prisma from '@/shared/lib/prisma';
 import { cookies } from 'next/headers';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { verifyValue } from '@/shared/lib/session';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };

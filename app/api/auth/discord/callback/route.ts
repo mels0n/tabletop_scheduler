@@ -8,7 +8,7 @@ import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Auth:Discord");
 
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
 import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
 import prisma from "@/shared/lib/prisma";
@@ -22,7 +22,7 @@ import {
     manageSlugFrom,
     nonceMatches,
     parseOAuthState,
-} from "@/features/integrations/discord/model/oauth-state";
+} from "@/features/integrations/discord";
 
 /** Redirects to a same-origin path (already allow-listed by parseOAuthState) with extra query params. */
 function redirectTo(path: string, baseUrl: string, params: Record<string, string> = {}) {

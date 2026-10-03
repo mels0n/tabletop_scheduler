@@ -18,7 +18,7 @@ import { dmManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
 import { verifyValue } from "@/shared/lib/session";
 import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { requireEventAdmin } from "@/features/auth/server/verify";
 import { guildCookieName, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
 
 const log = Logger.get("DiscordActions");
@@ -71,11 +71,6 @@ function toActionError(e: unknown, fallback: string): ActionFailure {
     if (e instanceof AppError && e.status < 500) return { error: e.message, code: e.code };
     log.error(fallback, e as Error);
     return { error: fallback };
-}
-
-// TODO(Task 12): replace with requireEventAdmin from features/auth/server/verify.ts.
-async function requireEventAdmin(slug: string): Promise<void> {
-    if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
 }
 
 /**

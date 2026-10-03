@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkManagerStatus } from './actions';
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 
 const mockPrisma = prisma as unknown as { event: { findUnique: ReturnType<typeof vi.fn> } };
 const mockAdmin = verifyEventAdmin as unknown as ReturnType<typeof vi.fn>;

@@ -8,7 +8,7 @@ import {
     encodeOAuthState,
     newOAuthNonce,
     safeReturnTo,
-} from "@/features/integrations/discord/model/oauth-state";
+} from "@/features/integrations/discord";
 
 // Reads the query string and must never be prerendered (it no longer touches request headers).
 export const dynamic = "force-dynamic";

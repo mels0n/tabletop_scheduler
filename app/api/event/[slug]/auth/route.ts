@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { setAdminCookie } from "@/features/auth/server/actions";
-import { isAdminToken } from "@/features/auth/server/verify";
+import { isAdminToken, setAdminCookie } from "@/features/auth";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
