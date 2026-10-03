@@ -61,8 +61,7 @@ export default function DiscordSetupGuide() {
                         <p>Navigate to the <strong>Bot</strong> tab in the sidebar menu.</p>
                         <ul className="list-disc space-y-2 pl-4">
                             <li>Click <strong>Reset Token</strong> to generate your <code>DISCORD_BOT_TOKEN</code>. Copy it immediately.</li>
-                            <li>Scroll down to &quot;Privileged Gateway Intents&quot;.</li>
-                            <li><strong>Enable &quot;Message Content Intent&quot;</strong>. This is critical: the bot cannot function properly without it.</li>
+                                                        <li>Leave the privileged gateway intents (including &quot;Message Content Intent&quot;) turned off. The bot does not read messages, so it does not need them.</li>
                             <li>Ensure &quot;Public Bot&quot; is checked so you can easily invite it to servers.</li>
                         </ul>
                     </div>
@@ -86,25 +85,73 @@ export default function DiscordSetupGuide() {
                     </div>
                 </section>
 
+                    {/* Step 4 */}
+                    <section className="space-y-4">
+                        <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
+                            <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
+                            Configure Your Environment
+                        </h2>
+                        <div className="pl-11 space-y-4 text-slate-400">
+                            <p>Add the three values to your <code>docker-compose.yml</code> or <code>.env</code> file:</p>
+                            <pre className="bg-slate-900 p-4 rounded-lg text-slate-300 text-sm overflow-x-auto"><code>{`DISCORD_BOT_TOKEN=your_bot_token
+DISCORD_APP_ID=your_application_id
+DISCORD_CLIENT_SECRET=your_client_secret
+NEXT_PUBLIC_BASE_URL=https://your-domain.com`}</code></pre>
+                            <p><code>NEXT_PUBLIC_BASE_URL</code> is required whenever a bot token is set, because every link the bot sends points at it. The app will not start without it.</p>
+                        </div>
+                    </section>
+
+                    {/* Step 5 */}
+                    <section className="space-y-4">
+                        <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
+                            <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                            Connect an Event
+                        </h2>
+                        <div className="pl-11 space-y-4 text-slate-400">
+                            <ul className="list-disc space-y-2 pl-4">
+                                <li>Open the event&apos;s <strong>Manage</strong> page and click <strong>Connect Discord Server</strong>.</li>
+                                <li>Discord asks you to pick a server and approve the bot. It requests View Channel, Send Messages, Manage Messages (to pin the dashboard), Embed Links and Read Message History.</li>
+                                <li>You return to the Manage page. Pick the channel for event updates and click <strong>Save</strong>. Do this within an hour of adding the bot; after that, start again from <strong>Connect Discord Server</strong>.</li>
+                                <li>The bot posts a short announcement with the event link and a live dashboard that it keeps up to date.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    {/* Step 6 */}
+                    <section className="space-y-4">
+                        <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
+                            <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">6</span>
+                            What the Bot Sends
+                        </h2>
+                        <div className="pl-11 space-y-4 text-slate-400">
+                            <p>In the connected channel: the live dashboard, new or changed time slots, a short &quot;updated their availability&quot; post (at most once per person per hour), voting and session reminders if the organizer turns them on, the finalize announcement, and cancel or delete notices.</p>
+                            <p>By direct message: login links you ask for, finalize results and waitlist or removal notices for events you joined with a linked Discord account, and quorum alerts to the organizer. Anyone can turn these direct messages off from <strong>My Events</strong>; login links you ask for are still sent.</p>
+                        </div>
+                    </section>
+
                 {/* JSON-LD for AEO */}
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{
                         __html: JSON.stringify(SchemaGenerator.howTo({
                             name: "How to Setup Discord Integration for TabletopTime",
-                            description: "Learn how to create a Discord application, configure bot permissions, and set up OAuth2 for seamless integration.",
+                            description: "Learn how to create a Discord application, set up OAuth2, configure your environment, and connect an event to a channel.",
                             steps: [
                                 {
                                     name: "Create Discord Application",
                                     text: "Create a new app in the Discord Developer Portal."
                                 },
                                 {
-                                    name: "Enable Intents",
-                                    text: "Enable Message Content Intent in the Bot settings."
+                                    name: "Create the Bot",
+                                    text: "Generate the bot token in the Bot settings. No privileged intents are needed."
                                 },
                                 {
                                     name: "Configure OAuth2",
-                                    text: "Add your callback URL and copy the Client ID and Secret to your environment variables."
+                                    text: "Add your callback URL and copy the Application ID and Client Secret to your environment variables, together with NEXT_PUBLIC_BASE_URL."
+                                },
+                                {
+                                    name: "Connect an Event",
+                                    text: "On the event's Manage page, click Connect Discord Server, add the bot to your server, then pick a channel within an hour."
                                 }
                             ]
                         }))

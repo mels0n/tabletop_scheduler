@@ -89,7 +89,7 @@ export default function TelegramSetupPage() {
                     <pre className="bg-slate-900 p-4 rounded-lg"><code>TELEGRAM_BOT_TOKEN=your_token_here</code></pre>
 
                     <h2>3. Deployment Modes</h2>
-                    <p>Tabletop Time supports two modes for the Telegram Bot. Both need <code>NEXT_PUBLIC_BASE_URL</code> set whenever a bot token is configured, because every link the bot sends points at it.</p>
+                    <p>Tabletop Time supports two modes for the Telegram Bot, chosen with <code>TELEGRAM_MODE</code> (<code>webhook</code>, <code>polling</code>, or <code>off</code>). When a token and a base URL are both set, the default is webhook. Both modes need <code>NEXT_PUBLIC_BASE_URL</code> set whenever a bot token is configured, because every link the bot sends points at it, and the app will not start without it.</p>
 
                     <div className="grid md:grid-cols-2 gap-6 not-prose my-8">
                         <div className="bg-slate-900/30 p-5 rounded-lg border border-slate-800">
@@ -108,6 +108,7 @@ export default function TelegramSetupPage() {
                             <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4">
                                 <li>Requires HTTPS public domain</li>
                                 <li>Set <code>NEXT_PUBLIC_BASE_URL</code> to your app URL</li>
+                                <li>The webhook is registered automatically when the app starts</li>
                             </ul>
                         </div>
                     </div>
@@ -117,11 +118,17 @@ export default function TelegramSetupPage() {
                         Once your event is created:
                     </p>
                     <ol>
-                        <li>Go to the <strong>Manager Dashboard</strong>.</li>
-                        <li>Click <strong>&quot;Connect Telegram&quot;</strong>.</li>
-                        <li>This will open Telegram and prompt you to add the bot as an Admin.</li>
-                        <li>Once added, the bot will automatically post the event dashboard to the group!</li>
+                        <li>Open the event&apos;s <strong>Manage</strong> page.</li>
+                        <li>In <strong>Connect Telegram Group</strong>, add the bot to your group if it is not there yet. The &quot;Add to Group&quot; button asks for the Pin Messages permission.</li>
+                        <li>Copy the connect command shown on the Manage page. It looks like <code>/connect your-event-code 1a2b3c4d</code>.</li>
+                        <li>Send that command in the group. The bot posts the live event dashboard and pins it.</li>
                     </ol>
+                    <p>
+                        Adding the bot, pasting the event link, or sending <code>/connect</code> without the code does not connect anything. Each code works once; to connect again, copy the fresh command from the Manage page.
+                    </p>
+                    <p>
+                        Anyone can sign in from a new device by sending <code>/start login</code> to the bot in a private chat. The bot replies with a login link that is valid for 15 minutes.
+                    </p>
 
                 </article>
             </div>
