@@ -161,8 +161,8 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
             // The webhook row is queued in the same transaction; /api/cron/webhooks delivers it.
             if (updatedEvent.fromUrl) {
-                const { getBaseUrl } = await import("@/shared/lib/url");
-                const origin = getBaseUrl();
+                const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+                const origin = getBaseUrlOrNull();
                 await tx.webhookEvent.create({
                     data: {
                         eventId: updatedEvent.id,
@@ -175,7 +175,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                             eventId: updatedEvent.id,
                             fromUrlId: updatedEvent.fromUrlId || null,
                             slug: updatedEvent.slug,
-                            link: `${origin}/e/${updatedEvent.slug}`,
+                            ...(origin ? { link: `${origin}/e/${updatedEvent.slug}` } : {}),
                             title: updatedEvent.title,
                             finalizedSlot: {
                                 id: updatedEvent.finalizedSlotId,
@@ -194,9 +194,9 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             return updatedEvent;
         });
 
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const origin = getBaseUrl();
-        const eventLink = `${origin}/e/${slug}`;
+        const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+        const origin = getBaseUrlOrNull();
+        const detailsLink = origin ? `\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
         // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
         const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
@@ -209,7 +209,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         await Promise.all([
             ...acceptedParticipants.map(p => sendDirectMessage(
                 { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n<a href="${eventLink}">View Details</a>` },
+                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.${detailsLink}` },
                 { slug, kind: "finalize-accepted" }
             )),
             ...waitlistedParticipants.map(p => sendDirectMessage(
@@ -356,8 +356,8 @@ async function handleCampaignFinalize(
 
         // The webhook row is queued in the same transaction; /api/cron/webhooks delivers it.
         if (updatedEvent.fromUrl) {
-            const { getBaseUrl } = await import("@/shared/lib/url");
-            const origin = getBaseUrl();
+            const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+            const origin = getBaseUrlOrNull();
             await tx.webhookEvent.create({
                 data: {
                     eventId: updatedEvent.id,
@@ -370,7 +370,7 @@ async function handleCampaignFinalize(
                         eventId: updatedEvent.id,
                         fromUrlId: updatedEvent.fromUrlId || null,
                         slug: updatedEvent.slug,
-                        link: `${origin}/e/${updatedEvent.slug}`,
+                        ...(origin ? { link: `${origin}/e/${updatedEvent.slug}` } : {}),
                         title: updatedEvent.title,
                         finalizedSessions: validSlots.map(s => ({
                             id: s.id,
@@ -389,9 +389,9 @@ async function handleCampaignFinalize(
         return updatedEvent;
     });
 
-    const { getBaseUrl } = await import("@/shared/lib/url");
-    const origin = getBaseUrl();
-    const eventLink = `${origin}/e/${slug}`;
+    const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+    const origin = getBaseUrlOrNull();
+    const detailsLink = origin ? `\n\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
     // ── GROUP CHANNEL NOTIFICATIONS ───────────────────────────────────────────────
     // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
@@ -418,7 +418,7 @@ async function handleCampaignFinalize(
     await Promise.all([
         ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
             { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}\n\n<a href="${eventLink}">View Details</a>` },
+            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}${detailsLink}` },
             { slug, kind: "finalize-campaign-accepted" }
         )),
         ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(

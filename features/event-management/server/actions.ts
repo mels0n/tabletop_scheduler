@@ -173,8 +173,9 @@ export async function cancelEvent(slug: string) {
             return { success: true };
         }
 
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const baseUrl = getBaseUrl();
+        // Post-commit: a missing base URL drops the link, it never fails the cancellation.
+        const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+        const baseUrl = getBaseUrlOrNull();
 
         // Edit the pinned dashboards: each platform independently.
         try {
@@ -184,8 +185,8 @@ export async function cancelEvent(slug: string) {
                     event.telegramChatId,
                     event.pinnedMessageId,
                     `🚫 <b>Event Cancelled</b> (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\n` +
-                    `The event "<b>${escapeHtml(event.title)}</b>" has been cancelled by the host.\n\n` +
-                    `<a href="${baseUrl}/e/${slug}">View Event Details</a>`,
+                    `The event "<b>${escapeHtml(event.title)}</b>" has been cancelled by the host.` +
+                    (baseUrl ? `\n\n<a href="${baseUrl}/e/${slug}">View Event Details</a>` : ''),
                     process.env.TELEGRAM_BOT_TOKEN
                 );
             }
@@ -199,7 +200,7 @@ export async function cancelEvent(slug: string) {
                 await editDiscordMessage(
                     event.discordChannelId,
                     event.discordMessageId,
-                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${escapeDiscordMarkdown(event.title)}**" has been cancelled by the host.\n\n[View Event Details](<${baseUrl}/e/${slug}>)`,
+                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${escapeDiscordMarkdown(event.title)}**" has been cancelled by the host.${baseUrl ? `\n\n[View Event Details](<${baseUrl}/e/${slug}>)` : ''}`,
                     process.env.DISCORD_BOT_TOKEN
                 );
             }

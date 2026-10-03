@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
-vi.mock('@/shared/lib/url', () => ({ getBaseUrl: vi.fn(() => 'https://example.test') }));
+vi.mock('@/shared/lib/url', () => ({ getBaseUrl: vi.fn(() => 'https://example.test'), getBaseUrlOrNull: vi.fn(() => 'https://example.test') }));
 vi.mock('next/headers', () => ({ headers: vi.fn(() => new Headers()) }));
 vi.mock('@/features/telegram', () => ({
     editMessageText: vi.fn(),

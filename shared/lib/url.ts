@@ -17,6 +17,16 @@ export function getBaseUrl(): string {
 }
 
 /**
+ * Like `getBaseUrl()` but returns null instead of throwing. Use it on paths that run after
+ * a database commit (finalize, cancel, creation webhooks, reminders): a self-hosted install
+ * with no bots may leave `NEXT_PUBLIC_BASE_URL` unset, and the committed change must still
+ * succeed. Callers omit the link when this is null.
+ */
+export function getBaseUrlOrNull(): string | null {
+    return getServerConfig().baseUrl || null;
+}
+
+/**
  * Display-only origin for links shown back to the same requester (for example the event
  * link inside a downloaded .ics). Prefers the configured base URL, else the request's own
  * host. NEVER use for links delivered to anyone else (magic links, bot messages, redirects

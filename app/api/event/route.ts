@@ -5,7 +5,7 @@ import { randomBytes, randomUUID } from "crypto";
 import Logger from "@/shared/lib/logger";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { hashToken } from "@/shared/lib/token";
-import { getBaseUrl } from "@/shared/lib/url";
+import { getBaseUrlOrNull } from "@/shared/lib/url";
 import { readIdentity } from "@/shared/lib/session";
 import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
 import { ConflictError, toResponse } from "@/shared/errors";
@@ -111,6 +111,7 @@ async function createEvent(input: CreateEventInput, slug: string, hashedAdminTok
         // External callback: only ENQUEUE here. Delivery happens out of band (webhooks cron),
         // so event creation never makes an outbound request on the caller's behalf.
         if (input.fromUrl) {
+            const origin = getBaseUrlOrNull();
             await tx.webhookEvent.create({
                 data: {
                     eventId: newEvent.id,
@@ -122,7 +123,7 @@ async function createEvent(input: CreateEventInput, slug: string, hashedAdminTok
                         eventId: newEvent.id,
                         fromUrlId: input.fromUrlId,
                         slug: newEvent.slug,
-                        link: `${getBaseUrl()}/e/${slug}`,
+                        ...(origin ? { link: `${origin}/e/${slug}` } : {}),
                         title: newEvent.title,
                         timestamp: new Date().toISOString()
                     })

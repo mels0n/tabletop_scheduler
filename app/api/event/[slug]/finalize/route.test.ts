@@ -11,7 +11,7 @@ vi.mock('@/features/notifications', () => ({
     broadcastToEvent: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
-vi.mock('@/shared/lib/url', () => ({ getBaseUrl: () => 'https://example.test' }));
+vi.mock('@/shared/lib/url', () => ({ getBaseUrl: () => 'https://example.test', getBaseUrlOrNull: () => 'https://example.test' }));
 // Canned group messages by default; the escaping tests switch to the real builders.
 const { realMessages } = vi.hoisted(() => ({ realMessages: { on: false } }));
 vi.mock('@/shared/lib/eventMessage', async (importOriginal) => {
