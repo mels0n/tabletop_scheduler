@@ -7,12 +7,13 @@ import { escapeHtml } from "@/shared/lib/escape";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { AppError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
-import { sendDirectMessage, isDelivered } from "@/features/notifications";
+import { sendDirectMessage, isDelivered, type DeliveryOutcome, type DeliveryResult } from "@/features/notifications";
 import {
     assertManagerLinkCooldown,
     createManagerLoginLink,
     generateShortRecoveryToken,
     getConnectCommand,
+    type LoginPlatform,
 } from "./recovery-tokens";
 
 /**
@@ -54,7 +55,8 @@ type ManagerEvent = {
 };
 
 /**
- * DMs a 15-minute login link to every platform the manager has linked. The link logs the
+ * DMs a 15-minute login link to every platform the manager has linked, one token per
+ * platform. The link logs the
  * browser in as the stored manager identity, which grants admin on the manage page. The
  * admin token is never rotated, so nobody can lock the manager out by calling this.
  */
@@ -63,21 +65,44 @@ async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResul
 
     try {
         await assertManagerLinkCooldown(event);
-        const loginUrl = await createManagerLoginLink(event);
         const manageUrl = `${getBaseUrl()}/e/${event.slug}/manage`;
+        const notLinked: DeliveryOutcome = { status: "skipped", reason: "not_linked" };
 
-        const result = await sendDirectMessage(
-            { telegramChatId: event.managerChatId, discordUserId: event.managerDiscordId },
-            {
-                html:
-                    `🔐 <b>Manager login</b>\n\n` +
-                    `Someone (hopefully you) asked for a login link for <b>${escapeHtml(event.title)}</b>.\n\n` +
-                    `${loginUrl}\n\n` +
-                    `After logging in, manage the event here:\n${manageUrl}\n\n` +
-                    `(Valid for 15 minutes. If you did not ask for this, you can ignore it.)`,
-            },
-            { slug: event.slug, purpose: "manager-recovery" }
-        );
+        // One token per platform: each DM carries a link that logs in ONLY that platform's
+        // identity, so whoever controls one manager identity never receives the other's.
+        const sendTo = async (platform: LoginPlatform): Promise<DeliveryOutcome> => {
+            const linked = platform === "telegram" ? event.managerChatId : event.managerDiscordId;
+            if (!linked) return notLinked;
+            const loginUrl = await createManagerLoginLink(event, platform);
+            const res = await sendDirectMessage(
+                platform === "telegram"
+                    ? { telegramChatId: linked, discordUserId: null }
+                    : { telegramChatId: null, discordUserId: linked },
+                {
+                    html:
+                        `🔐 <b>Manager login</b>
+
+` +
+                        `Someone (hopefully you) asked for a login link for <b>${escapeHtml(event.title)}</b>.
+
+` +
+                        `${loginUrl}
+
+` +
+                        `After logging in, manage the event here:
+${manageUrl}
+
+` +
+                        `(Valid for 15 minutes. If you did not ask for this, you can ignore it.)`,
+                },
+                { slug: event.slug, purpose: "manager-recovery", platform }
+            );
+            return res[platform];
+        };
+
+        const telegram = await sendTo("telegram");
+        const discord = await sendTo("discord");
+        const result: DeliveryResult = { telegram, discord };
 
         if (!isDelivered(result)) {
             log.warn("Manager recovery DM was not delivered", {
