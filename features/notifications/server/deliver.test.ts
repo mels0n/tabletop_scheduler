@@ -7,7 +7,7 @@ const { sendTelegramMessage, sendDiscordMessage, sendDiscordDM } = vi.hoisted(()
 }));
 
 vi.mock("@/features/telegram/lib/telegram-client", () => ({ sendTelegramMessage }));
-vi.mock("@/features/discord/model/discord", () => ({ sendDiscordMessage, sendDiscordDM }));
+vi.mock("@/features/integrations/discord/model/discord", () => ({ sendDiscordMessage, sendDiscordDM }));
 
 import { broadcastToEvent, isDelivered } from "./deliver";
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
-vi.mock('./notify', () => ({ pushSlotUpdates: vi.fn() }));
+vi.mock('@/features/event-management/server/dashboard-sync', () => ({ pushSlotUpdates: vi.fn() }));
 
 import prisma from '@/shared/lib/prisma';
 import { verifyEventAdmin } from '@/features/auth/server/actions';

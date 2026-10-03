@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sendDiscordMagicLogin, connectDiscordChannel, listDiscordChannels } from './actions';
 import prisma from '@/shared/lib/prisma';
-import { createDMChannel, sendDiscordMessage, getGuildChannels, pinDiscordMessage } from '@/features/discord/model/discord';
+import { createDMChannel, sendDiscordMessage, getGuildChannels, pinDiscordMessage } from '@/features/integrations/discord/model/discord';
 import { verifyEventAdmin } from '@/features/auth/server/actions';
 import { cookies } from 'next/headers';
 import { signValue } from '@/shared/lib/session';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/discord/model/discord', () => ({
+vi.mock('@/features/integrations/discord/model/discord', () => ({
     getDiscordUser: vi.fn(),
     sendDiscordMessage: vi.fn(),
     pinDiscordMessage: vi.fn(),

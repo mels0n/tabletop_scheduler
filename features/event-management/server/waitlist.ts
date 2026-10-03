@@ -1,7 +1,7 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
-import { syncDashboard } from "@/app/api/event/[slug]/slot/notify";
+import { syncDashboard } from "@/features/event-management/server/dashboard-sync";
 
 const log = Logger.get("WaitlistService");
 

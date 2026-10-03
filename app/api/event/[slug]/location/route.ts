@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { syncDashboard } from "@/app/api/event/[slug]/slot/notify";
+import { syncDashboard } from "@/features/event-management/server/dashboard-sync";
 
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { ForbiddenError, toResponse } from "@/shared/errors";

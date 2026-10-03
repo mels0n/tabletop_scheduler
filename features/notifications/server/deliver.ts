@@ -1,7 +1,7 @@
 import Logger from "@/shared/lib/logger";
 import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
 import { sendTelegramMessage } from "@/features/telegram/lib/telegram-client";
-import { sendDiscordMessage, sendDiscordDM } from "@/features/discord/model/discord";
+import { sendDiscordMessage, sendDiscordDM } from "@/features/integrations/discord/model/discord";
 
 const log = Logger.get("Notifications");
 

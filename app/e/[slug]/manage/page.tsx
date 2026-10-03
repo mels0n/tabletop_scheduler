@@ -13,7 +13,7 @@ import { EditLocationModal } from "./EditLocationModal";
 import { getBotUsername } from "@/features/telegram/lib/telegram-client";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
-import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
+import { DiscordConnect } from "@/features/integrations/discord/ui/DiscordConnect";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";

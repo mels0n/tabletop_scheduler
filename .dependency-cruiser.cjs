@@ -19,8 +19,7 @@
 // Baseline mode while the graph is being fixed; flipped to 'error' once clean.
 const GATE = 'warn';
 
-// lib/ and hooks/ are legacy folders that sit at the shared level until moved.
-const LAYERS = ['app', 'components', 'features', 'entities', '(shared|lib|hooks)'];
+const LAYERS = ['app', 'components', 'features', 'entities', 'shared'];
 
 /** One rule per layer: it may not import from any layer above it. */
 const upwardRules = LAYERS.slice(1).map((layer, i) => {

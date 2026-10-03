@@ -11,7 +11,7 @@ vi.mock('@/features/telegram', () => ({
 vi.mock('@/features/telegram/lib/telegram-client', () => ({
     sendTelegramMessage: vi.fn(),
 }));
-vi.mock('@/features/discord/model/discord', () => ({
+vi.mock('@/features/integrations/discord/model/discord', () => ({
     sendDiscordMessage: vi.fn(),
     sendDiscordDM: vi.fn(),
     editDiscordMessage: vi.fn(),
@@ -23,7 +23,7 @@ import prisma from '@/shared/lib/prisma';
 import { verifyEventAdmin } from '@/features/auth/server/actions';
 import { editMessageText, unpinChatMessage } from '@/features/telegram';
 import { sendTelegramMessage } from '@/features/telegram/lib/telegram-client';
-import { sendDiscordMessage, editDiscordMessage, unpinDiscordMessage } from '@/features/discord/model/discord';
+import { sendDiscordMessage, editDiscordMessage, unpinDiscordMessage } from '@/features/integrations/discord/model/discord';
 
 const mockPrisma = prisma as unknown as {
     event: {

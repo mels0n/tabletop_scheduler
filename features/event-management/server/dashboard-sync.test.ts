@@ -7,7 +7,10 @@ vi.mock('@/features/telegram', () => ({
     pinChatMessage: vi.fn(),
     unpinChatMessage: vi.fn(),
 }));
-vi.mock('@/features/discord/model/discord', () => ({
+vi.mock('@/features/notifications', () => ({ broadcastToEvent: vi.fn() }));
+vi.mock('@/shared/lib/url', () => ({ getBaseUrl: () => 'https://example.test' }));
+vi.mock('@/shared/lib/status', () => ({ generateStatusMessage: () => 'status' }));
+vi.mock('@/features/integrations/discord/model/discord', () => ({
     editDiscordMessage: vi.fn(),
     sendDiscordMessage: vi.fn(),
     pinDiscordMessage: vi.fn(),
@@ -15,9 +18,10 @@ vi.mock('@/features/discord/model/discord', () => ({
 }));
 
 import prisma from '@/shared/lib/prisma';
-import { refreshTelegramDashboard, refreshDiscordDashboard } from './notify';
+import { refreshTelegramDashboard, refreshDiscordDashboard, pushSlotUpdates } from './dashboard-sync';
+import { broadcastToEvent } from '@/features/notifications';
 import { editMessageText, sendTelegramMessage, pinChatMessage, unpinChatMessage } from '@/features/telegram';
-import { editDiscordMessage, sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } from '@/features/discord/model/discord';
+import { editDiscordMessage, sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } from '@/features/integrations/discord/model/discord';
 
 const m = (fn: unknown) => fn as ReturnType<typeof vi.fn>;
 const update = (prisma as any).event.update as ReturnType<typeof vi.fn>;
@@ -110,5 +114,33 @@ describe('refreshDiscordDashboard: EditResult matrix', () => {
         m(unpinDiscordMessage).mockRejectedValue(new Error('nope'));
         await refreshDiscordDashboard(event, 7, '<b>x</b>');
         expect(pinDiscordMessage).toHaveBeenCalledWith('dc1', 'dm2', 'dc-token');
+    });
+});
+
+describe('pushSlotUpdates', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+    });
+
+    it('escapes the event title in the announcement', async () => {
+        (prisma as any).event.findUnique.mockResolvedValue({
+            id: 7,
+            title: '<a href="https://evil">x</a>',
+            status: 'ACTIVE',
+            finalizedSlotId: null,
+            timeSlots: [],
+            finalizedHost: null,
+            telegramChatId: null,
+            pinnedMessageId: null,
+            discordChannelId: null,
+            discordMessageId: null,
+        });
+        (prisma as any).participant.count.mockResolvedValue(0);
+
+        await pushSlotUpdates(7, 'A new time option was added by the creator');
+
+        const html = m(broadcastToEvent).mock.calls[0][1].html as string;
+        expect(html).toContain('&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;');
+        expect(html).not.toContain('<a href');
     });
 });

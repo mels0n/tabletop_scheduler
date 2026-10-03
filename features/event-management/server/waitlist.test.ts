@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/app/api/event/[slug]/slot/notify', () => ({ syncDashboard: vi.fn() }));
+vi.mock('@/features/event-management/server/dashboard-sync', () => ({ syncDashboard: vi.fn() }));
 vi.mock('@/features/notifications', () => ({ sendDirectMessage: vi.fn() }));
 
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
-import { syncDashboard } from '@/app/api/event/[slug]/slot/notify';
+import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
 import { processWaitlistPromotion } from './waitlist';
 
 const mockPrisma = prisma as any;

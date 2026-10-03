@@ -7,7 +7,7 @@ import { slotSchema } from "@/features/event-management/model/schemas";
 
 const log = Logger.get("API:Slot:Create");
 
-import { pushSlotUpdates } from "./notify";
+import { pushSlotUpdates } from "@/features/event-management/server/dashboard-sync";
 
 export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
     const { slug } = await props.params;

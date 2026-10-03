@@ -1,4 +1,7 @@
 import prisma from '@/shared/lib/prisma';
+import Logger from '@/shared/lib/logger';
+
+const log = Logger.get('EventStats');
 
 export interface EventStats {
   totalEvents: number;
@@ -40,7 +43,7 @@ export async function getEventStats(): Promise<EventStats> {
       finalizedEvents,
     };
   } catch (error) {
-    console.error('[EventStats] Failed to fetch stats:', error);
+    log.error('Failed to fetch stats', error as Error);
     return {
       totalEvents: 0,
       activeEvents: 0,

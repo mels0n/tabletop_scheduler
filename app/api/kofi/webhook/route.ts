@@ -6,7 +6,7 @@ import prisma from '@/shared/lib/prisma';
 import Logger from '@/shared/lib/logger';
 import { getServerConfig } from '@/shared/config/server';
 import { ConfigError, UnauthorizedError, ValidationError, toResponse } from '@/shared/errors';
-import { parseAmountToCents } from '@/lib/donations';
+import { parseAmountToCents } from '@/entities/donation';
 
 const log = Logger.get('API:KofiWebhook');
 

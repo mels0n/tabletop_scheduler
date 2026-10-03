@@ -1,4 +1,7 @@
 import prisma from '@/shared/lib/prisma';
+import Logger from '@/shared/lib/logger';
+
+const log = Logger.get('Donations');
 
 /**
  * Public-safe DTO for rendering donation social proof.
@@ -66,7 +69,7 @@ export async function getDonations(limit = 20): Promise<DonorComment[]> {
       date: r.donatedAt.toISOString(),
     }));
   } catch (error) {
-    console.error('[Donations] Failed to fetch donations:', error);
+    log.error('Failed to fetch donations', error as Error);
     return [];
   }
 }
@@ -91,7 +94,7 @@ export async function getDonationStats(): Promise<DonationStats> {
 
     return { totalSupporters, totalCoffees };
   } catch (error) {
-    console.error('[Donations] Failed to fetch donation stats:', error);
+    log.error('Failed to fetch donation stats', error as Error);
     return { totalSupporters: 0, totalCoffees: 0 };
   }
 }
