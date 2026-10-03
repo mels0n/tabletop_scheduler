@@ -23,7 +23,7 @@ model Event {
   description String?
   
   // Security & Management
-  adminToken  String?       @default(uuid()) // Saved in cookie to allow edits without login
+  adminToken  String?       // SHA-256 hash of the admin token; always written explicitly
   
   // Telegram Integration
   telegramLink String?      // Invite link to the group chat
@@ -49,6 +49,7 @@ model Event {
   sessionReminderLeadMinutes Int?    // Lead time before session start: 60 | 120 | 1440 | 2880
   quorumViableNotified Boolean   @default(false)
   quorumPerfectNotified Boolean  @default(false)
+  quorumReachedAt      DateTime? // Set when quorum is first met (voting reminders stop)
   
   // Recovery
   recoveryToken        String?   @unique // Short temporary token for deep linking
@@ -59,7 +60,7 @@ model Event {
   maxPlayers  Int?
   eventType   String        @default("ONE_SHOT") // ONE_SHOT | CAMPAIGN
   minSessions Int?          // Minimum sessions to schedule (campaigns only)
-  status      String        @default("DRAFT") // DRAFT -> ACTIVE -> FINALIZED
+  status      String        @default("DRAFT") // DRAFT | FINALIZED | CANCELLED
   
   // Finalization State
   finalizedSlotId Int?
@@ -80,12 +81,17 @@ model Event {
   participants      Participant[]
   finalizedSessions FinalizedSession[]
   webhooks          WebhookEvent[]
+
+  @@index([managerChatId])
+  @@index([managerDiscordId])
+  @@index([managerTelegram])
+  @@index([status])
 }
 
 // Represents a voteable window of time.
 model TimeSlot {
   id        Int       @id @default(autoincrement())
-  event     Event     @relation(fields: [eventId], references: [id])
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId   Int
   startTime DateTime
   endTime   DateTime
@@ -100,7 +106,7 @@ model TimeSlot {
 // Identity is loosely tracked via localStorage or Telegram ID.
 model Participant {
   id         Int      @id @default(autoincrement())
-  event      Event    @relation(fields: [eventId], references: [id])
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId    Int
   name       String
   telegramId  String? // The handle (e.g. @user), captured from input or bot
@@ -116,14 +122,17 @@ model Participant {
   hostedEvents Event[] @relation("FinalizedHost")
 
   @@index([eventId])
+  @@index([chatId])
+  @@index([discordId])
+  @@index([telegramId])
 }
 
 // Linking table for preferences.
 model Vote {
   id            Int         @id @default(autoincrement())
-  participant   Participant @relation(fields: [participantId], references: [id])
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   participantId Int
-  timeSlot      TimeSlot    @relation(fields: [timeSlotId], references: [id])
+  timeSlot      TimeSlot    @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
   timeSlotId    Int
   
   preference    String      // YES: Available, MAYBE: If needed, NO: Busy
@@ -150,19 +159,22 @@ model FinalizedSession {
 
 // Temporary tokens for global "My Events" login
 model LoginToken {
-  token     String   @id @default(uuid())
+  token     String   @id // SHA-256 hash of the emailed/DM'd token; always written explicitly
   chatId    String?   // The Telegram Chat ID being authenticated
   telegramUsername String? // For display purposes (mirrors discordUsername)
   discordId String?   // The Discord User ID being authenticated
   discordUsername String? // For display purposes
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([discordId, createdAt])
+  @@index([expiresAt])
 }
 
 // Webhook Delivery Queue
 model WebhookEvent {
   id          String   @id @default(uuid())
-  event       Event    @relation(fields: [eventId], references: [id])
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId     Int
   
   url         String
@@ -170,6 +182,7 @@ model WebhookEvent {
   status      String   // PENDING, DELIVERED, FAILED
   attempts    Int      @default(0)
   nextAttempt DateTime
+  lockedAt    DateTime? // Set while a cron run is delivering this row
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -185,6 +198,7 @@ model Donation {
   fromName            String           // Supporter's display name
   message             String?          // Optional public message left by the supporter
   amount              String           // Dollar amount as string (e.g., "5.00")
+  amountCents         Int?             // Parsed amount in minor units; null on rows stored before it existed
   currency            String   @default("USD")
   isPublic            Boolean  @default(true) // Only display if supporter opted for public visibility
   type                String   @default("Donation") // Donation, Subscription, Commission, Shop Order
