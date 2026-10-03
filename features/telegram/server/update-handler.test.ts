@@ -200,3 +200,16 @@ describe('handleTelegramUpdate: /start', () => {
         expect(text).not.toContain('<a href="https://evil">');
     });
 });
+
+describe('handleTelegramUpdate: no passive identity capture', () => {
+    it('does not set managerChatId or participant chatId for a user whose handle matches', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, managerTelegram: 'victim', managerChatId: null });
+
+        await handleTelegramUpdate(update('hello everyone', 'group', -1001, 'victim'));
+        await handleTelegramUpdate(update('/start login', 'private', 4242, 'victim'));
+
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalled();
+        expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+        for (const data of writes()) expect(data).not.toHaveProperty('managerChatId');
+    });
+});

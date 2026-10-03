@@ -119,7 +119,7 @@ export async function recoverManagerLink(slug: string, handle: string): Promise<
     }
 
     if (!event.managerChatId && !event.managerDiscordId) {
-        return { error: "Handle matched, but the bot hasn't connected with you yet. Please open the bot and click 'Start' first." };
+        return { error: "Handle matched, but no Telegram or Discord account has been linked as this event's manager yet, so there is nowhere to send a link." };
     }
 
     return deliverManagerLink(event);

@@ -30,8 +30,9 @@ const log = Logger.get("Telegram:Updates");
  * - `/start login` (or `recover_handle`, or a bare `/start` in a private chat, since
  *   clients sometimes drop the deep-link payload) DMs a 15-minute magic login link.
  *   A bare `/start` in a group stays silent: it is usually meant for another bot.
- * - Passive capture: when a user with a username speaks, their user id is recorded on
- *   participant and manager rows that carry that handle and have no chat id yet.
+ * - No passive capture: a typed handle is never proof of identity, so a message never
+ *   writes a chat id onto a participant or manager row. Managers link through
+ *   `/start rec_<token>` or `/start login`; participants through verified identity cookies.
  *
  * Errors propagate to the caller, which logs them. The webhook still answers 200 so
  * Telegram does not redeliver and re-run side effects.
@@ -40,7 +41,7 @@ const log = Logger.get("Telegram:Updates");
 // Idempotency: the last MAX_REMEMBERED_UPDATES update ids seen by THIS instance.
 // Per-instance only: on serverless each warm lambda keeps its own set, so a redelivery
 // that lands on a different instance is processed again. The handlers tolerate that
-// (binding, capture and recovery are idempotent writes; a repeated login request just
+// (binding and recovery are idempotent writes; a repeated login request just
 // mints another short-lived link). The set exists to absorb same-instance retries.
 const MAX_REMEMBERED_UPDATES = 1000;
 const processedUpdateIds = new Set<number>();
@@ -94,11 +95,6 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     } else if (text.startsWith("/start")) {
         await handleStart(text, chatId, message.chat.type, user, token);
     }
-
-    if (user?.username) {
-        await captureParticipantIdentity(user);
-        await captureManagerIdentity(user);
-    }
 }
 
 async function handleStart(
@@ -120,45 +116,6 @@ async function handleStart(
     } else if (chatType === "private") {
         // Bare or unrecognized /start in a DM: silence would look like a broken bot.
         await handleGlobalLogin(chatId, user, token);
-    }
-}
-
-/** Bare handle (lowercase, no @) and its @-prefixed form, as stored by older rows. */
-function handleVariants(username: string): [string, string] {
-    const handle = username.toLowerCase().replace("@", "");
-    return [handle, `@${handle}`];
-}
-
-async function captureManagerIdentity(user: TelegramUser): Promise<void> {
-    // The user's own id, never the group chat id, so DMs reach the person.
-    const userId = user.id?.toString();
-    if (!user.username || !userId) return;
-    const [handle, formatted] = handleVariants(user.username);
-
-    try {
-        const { count } = await prisma.event.updateMany({
-            where: { managerTelegram: { in: [handle, formatted] }, managerChatId: null },
-            data: { managerChatId: userId },
-        });
-        if (count > 0) log.info("Passively captured manager chat ids", { handle, count });
-    } catch (e) {
-        log.error("Failed passive manager capture", e as Error);
-    }
-}
-
-async function captureParticipantIdentity(user: TelegramUser): Promise<void> {
-    const userId = user.id?.toString();
-    if (!user.username || !userId) return;
-    const [handle, formatted] = handleVariants(user.username);
-
-    try {
-        const { count } = await prisma.participant.updateMany({
-            where: { OR: [{ telegramId: handle }, { telegramId: formatted }], chatId: null },
-            data: { chatId: userId },
-        });
-        if (count > 0) log.info("Passively captured participant chat ids", { handle, count });
-    } catch (e) {
-        log.error("Failed passive participant capture", e as Error);
     }
 }
 
