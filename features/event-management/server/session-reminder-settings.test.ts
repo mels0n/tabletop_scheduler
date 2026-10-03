@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { updateSessionReminderSettings } from './actions';
 import { SESSION_REMINDER_LEADS } from '@/features/notifications/model/leads';
 

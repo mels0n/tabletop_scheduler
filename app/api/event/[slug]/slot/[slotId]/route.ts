@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import Logger from "@/shared/lib/logger";
 import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
-import { idParam, slotSchema } from "@/features/event-management/model/schemas";
-import { pushSlotUpdates } from "@/features/event-management/server/dashboard-sync";
+import { idParam, pushSlotUpdates, slotSchema } from "@/features/event-management";
 
 const log = Logger.get("API:Slot:Manage");
 

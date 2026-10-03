@@ -6,7 +6,7 @@ import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { ForbiddenError, NotFoundError, RateLimitError } from "@/shared/errors";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { requireEventAdmin } from "@/features/auth/server/verify";
 import { connectCodeFor } from "@/features/telegram/model/connect-code";
 
 /**
@@ -23,11 +23,6 @@ const LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000;
 const SHORT_TOKEN_TTL_MS = 15 * 60 * 1000;
 /** Minimum gap between manager link DMs for one event. */
 export const MANAGER_LINK_COOLDOWN_MS = 60 * 1000;
-
-// TODO(Task 12): replace with requireEventAdmin from features/auth/server/verify.ts.
-async function requireEventAdmin(slug: string): Promise<void> {
-    if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
-}
 
 /**
  * Rotates the event's admin token and returns a ready-to-use admin link.

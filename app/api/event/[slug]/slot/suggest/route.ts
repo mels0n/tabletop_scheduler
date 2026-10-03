@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { NotFoundError, ValidationError, toResponse } from "@/shared/errors";
-import { slotSuggestionSchema } from "@/features/event-management/model/schemas";
-import { pushSlotUpdates } from "@/features/event-management/server/dashboard-sync";
+import { pushSlotUpdates, slotSuggestionSchema } from "@/features/event-management";
 import { escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Slot:Suggest");

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { syncDashboard } from "@/features/event-management/server/dashboard-sync";
 
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import { ForbiddenError, toResponse } from "@/shared/errors";
-import { locationSchema } from "@/features/event-management/model/schemas";
+import { locationSchema, syncDashboard } from "@/features/event-management";
 
 const log = Logger.get("API:Location");
 

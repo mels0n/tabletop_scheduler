@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import type { Metadata, ResolvingMetadata } from "next";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { Calendar, Users } from "lucide-react";
-import { ManagerRecovery } from "@/features/auth/ui/ManagerRecovery";
+import { ManagerRecovery } from "@/features/auth";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
 import { CampaignStatusBanner } from "@/components/CampaignStatusBanner";
@@ -15,7 +15,7 @@ import {
     toPublicEvent,
     toPublicParticipant,
     toPublicSlot,
-} from "@/features/event-management/model/dto";
+} from "@/features/event-management";
 
 interface PageProps {
     params: Promise<{ slug: string }>;

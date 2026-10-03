@@ -10,17 +10,17 @@ import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
 import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
-import { getBotUsername } from "@/features/telegram/lib/telegram-client";
+import { getBotUsername } from "@/features/telegram";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
-import { DiscordConnect } from "@/features/integrations/discord/ui/DiscordConnect";
+import { DiscordConnect } from "@/features/integrations/discord";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
 import { SyncBadge } from "@/components/SyncBadge";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
-import { toManageParticipant } from "@/features/event-management/model/dto";
+import { toManageParticipant } from "@/features/event-management";
 
 /**
  * @interface PageProps

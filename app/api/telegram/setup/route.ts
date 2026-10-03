@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ensureWebhook } from "@/features/telegram/lib/telegram-client";
+import { ensureWebhook } from "@/features/telegram";
 import { requireCronAuth } from "@/shared/lib/cron-auth";
 import { getServerConfig } from "@/shared/config/server";
 import { ConfigError, toResponse } from "@/shared/errors";

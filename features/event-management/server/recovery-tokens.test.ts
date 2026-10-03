@@ -3,13 +3,23 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { generateManagerMagicLink, generateShortRecoveryToken, getConnectCommand } from './recovery-tokens';
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { ForbiddenError } from '@/shared/errors';
 import { connectCodeFor } from '@/features/telegram/model/connect-code';
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+// requireEventAdmin keeps its real contract on top of the mocked verifyEventAdmin.
+vi.mock('@/features/auth/server/verify', async () => {
+    const { ForbiddenError } = await import('@/shared/errors');
+    const verifyEventAdmin = vi.fn();
+    return {
+        verifyEventAdmin,
+        requireEventAdmin: async (slug: string) => {
+            if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
+        },
+    };
+});
 
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };

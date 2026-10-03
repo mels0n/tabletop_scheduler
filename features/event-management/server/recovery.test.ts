@@ -8,12 +8,22 @@ import {
 import { resetManagerLinkCooldownForTests } from './recovery-tokens';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { connectCodeFor } from '@/features/telegram/model/connect-code';
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({ verifyEventAdmin: vi.fn() }));
+// requireEventAdmin keeps its real contract on top of the mocked verifyEventAdmin.
+vi.mock('@/features/auth/server/verify', async () => {
+    const { ForbiddenError } = await import('@/shared/errors');
+    const verifyEventAdmin = vi.fn();
+    return {
+        verifyEventAdmin,
+        requireEventAdmin: async (slug: string) => {
+            if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
+        },
+    };
+});
 vi.mock('@/features/notifications', () => ({
     sendDirectMessage: vi.fn(),
     isDelivered: (r: { telegram: { status: string }; discord: { status: string } }) =>

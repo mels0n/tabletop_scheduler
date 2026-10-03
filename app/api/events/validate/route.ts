@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { toResponse } from "@/shared/errors";
-import { validateSlugsSchema } from "@/features/event-management/model/schemas";
+import { validateSlugsSchema } from "@/features/event-management";
 
 const log = Logger.get("API:EventsValidate");
 

@@ -5,8 +5,8 @@ import Logger from "@/shared/lib/logger";
 import { getBaseUrl } from "@/shared/lib/url";
 import { escapeHtml } from "@/shared/lib/escape";
 import { normalizeHandle } from "@/shared/lib/handle";
-import { AppError, ForbiddenError } from "@/shared/errors";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { AppError } from "@/shared/errors";
+import { requireEventAdmin } from "@/features/auth/server/verify";
 import { sendDirectMessage, isDelivered } from "@/features/notifications";
 import {
     claimManagerLinkCooldown,
@@ -33,11 +33,6 @@ function toActionError(e: unknown, fallback: string): ActionFailure {
     if (e instanceof AppError && e.status < 500) return { error: e.message, code: e.code };
     log.error(fallback, e as Error);
     return { error: fallback };
-}
-
-// TODO(Task 12): replace with requireEventAdmin from features/auth/server/verify.ts.
-async function requireEventAdmin(slug: string): Promise<void> {
-    if (!(await verifyEventAdmin(slug))) throw new ForbiddenError();
 }
 
 const managerSelect = {
