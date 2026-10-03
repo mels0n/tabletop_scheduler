@@ -6,9 +6,31 @@ import prisma from '@/shared/lib/prisma';
  */
 export interface DonorComment {
   name: string;
-  coffees: number;       // Derived: ceil(parseFloat(amount) / 3) — Ko-fi uses $3/coffee
+  coffees: number;       // Derived: ceil(amountCents / 300); Ko-fi uses $3/coffee
   message: string | null;
   date: string;          // ISO string for rendering or schema generation
+}
+
+/** Ko-fi prices a coffee at $3. */
+const CENTS_PER_COFFEE = 300;
+
+/**
+ * Parses a Ko-fi amount string ("5.00", "3", "1,000.50") into integer cents.
+ * Returns null for anything that is not a finite, non-negative number.
+ */
+export function parseAmountToCents(amount: string | null | undefined): number | null {
+  if (typeof amount !== 'string') return null;
+  const normalized = amount.trim().replace(/,/g, '');
+  if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.round(value * 100);
+}
+
+/** Coffees for display; an unparseable amount counts as zero instead of poisoning totals with NaN. */
+function coffeesFor(amount: string): number {
+  const cents = parseAmountToCents(amount);
+  return cents === null ? 0 : Math.ceil(cents / CENTS_PER_COFFEE);
 }
 
 export interface DonationStats {
@@ -39,7 +61,7 @@ export async function getDonations(limit = 20): Promise<DonorComment[]> {
 
     return records.map((r) => ({
       name: r.fromName,
-      coffees: Math.ceil(parseFloat(r.amount) / 3),
+      coffees: coffeesFor(r.amount),
       message: r.message,
       date: r.donatedAt.toISOString(),
     }));
@@ -63,7 +85,7 @@ export async function getDonationStats(): Promise<DonationStats> {
 
     const totalSupporters = records.length;
     const totalCoffees = records.reduce(
-      (sum, r) => sum + Math.ceil(parseFloat(r.amount) / 3),
+      (sum, r) => sum + coffeesFor(r.amount),
       0
     );
 

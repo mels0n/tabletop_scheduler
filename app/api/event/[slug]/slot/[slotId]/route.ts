@@ -2,48 +2,47 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import Logger from "@/shared/lib/logger";
+import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
+import { idParam, slotSchema } from "@/features/event-management/model/schemas";
 import { pushSlotUpdates } from "../notify";
 
 const log = Logger.get("API:Slot:Manage");
 
+/**
+ * Shared guard for slot edits: caller is the event admin, the event is still editable, and the
+ * slot belongs to this event. Returns the event id; throws a typed error otherwise.
+ */
+async function requireEditableSlot(slug: string, slotId: number): Promise<number> {
+    if (!(await verifyEventAdmin(slug))) {
+        throw new ForbiddenError();
+    }
+
+    const eventInfo = await prisma.event.findUnique({ where: { slug }, select: { id: true, status: true } });
+    if (!eventInfo) {
+        throw new NotFoundError("Event not found");
+    }
+
+    if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
+        throw new ValidationError("Cannot modify slots on a finalized or cancelled event.");
+    }
+
+    const existingSlot = await prisma.timeSlot.findFirst({
+        where: { id: slotId, eventId: eventInfo.id },
+        select: { id: true }
+    });
+    if (!existingSlot) {
+        throw new NotFoundError("Slot not found");
+    }
+
+    return eventInfo.id;
+}
+
 export async function PATCH(req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
-    const params = await props.params;
+    const { slug, slotId } = await props.params;
     try {
-        const { slug, slotId } = params;
-        const body = await req.json();
-        const { startTime, endTime } = body;
-        const slotIdInt = parseInt(slotId, 10);
-
-        if (isNaN(slotIdInt)) {
-            return NextResponse.json({ error: "Invalid slot ID" }, { status: 400 });
-        }
-
-        if (!startTime || !endTime) {
-            return NextResponse.json({ error: "Missing start or end time" }, { status: 400 });
-        }
-
-        const isAdmin = await verifyEventAdmin(slug);
-        if (!isAdmin) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-        }
-
-        const eventInfo = await prisma.event.findUnique({
-            where: { slug },
-            include: { timeSlots: true }
-        });
-
-        if (!eventInfo) {
-            return NextResponse.json({ error: "Event not found" }, { status: 404 });
-        }
-
-        if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
-            return NextResponse.json({ error: "Cannot modify slots on a finalized or cancelled event." }, { status: 400 });
-        }
-
-        const existingSlot = eventInfo.timeSlots.find(s => s.id === slotIdInt);
-        if (!existingSlot) {
-            return NextResponse.json({ error: "Slot not found" }, { status: 404 });
-        }
+        const slotIdInt = idParam.parse(slotId);
+        const eventId = await requireEditableSlot(slug, slotIdInt);
+        const { startTime, endTime } = slotSchema.parse(await req.json());
 
         // Wipe old votes and update the time slot
         await prisma.$transaction([
@@ -59,47 +58,19 @@ export async function PATCH(req: Request, props: { params: Promise<{ slug: strin
             }),
         ]);
 
-        await pushSlotUpdates(eventInfo.id, "A time option was modified by the creator");
+        await pushSlotUpdates(eventId, "A time option was modified by the creator");
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        log.error("Failed to update slot", error as Error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return toResponse(error, log);
     }
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
-    const params = await props.params;
+export async function DELETE(_req: Request, props: { params: Promise<{ slug: string; slotId: string }> }) {
+    const { slug, slotId } = await props.params;
     try {
-        const { slug, slotId } = params;
-        const slotIdInt = parseInt(slotId, 10);
-
-        if (isNaN(slotIdInt)) {
-            return NextResponse.json({ error: "Invalid slot ID" }, { status: 400 });
-        }
-
-        const isAdmin = await verifyEventAdmin(slug);
-        if (!isAdmin) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-        }
-
-        const eventInfo = await prisma.event.findUnique({
-            where: { slug },
-            include: { timeSlots: true }
-        });
-
-        if (!eventInfo) {
-            return NextResponse.json({ error: "Event not found" }, { status: 404 });
-        }
-
-        if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
-            return NextResponse.json({ error: "Cannot modify slots on a finalized or cancelled event." }, { status: 400 });
-        }
-
-        const existingSlot = eventInfo.timeSlots.find(s => s.id === slotIdInt);
-        if (!existingSlot) {
-            return NextResponse.json({ error: "Slot not found" }, { status: 404 });
-        }
+        const slotIdInt = idParam.parse(slotId);
+        const eventId = await requireEditableSlot(slug, slotIdInt);
 
         // Wipe old votes and delete the time slot
         await prisma.$transaction([
@@ -111,11 +82,10 @@ export async function DELETE(req: Request, props: { params: Promise<{ slug: stri
             }),
         ]);
 
-        await pushSlotUpdates(eventInfo.id, "A time option was removed by the creator");
+        await pushSlotUpdates(eventId, "A time option was removed by the creator");
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        log.error("Failed to delete slot", error as Error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return toResponse(error, log);
     }
 }

@@ -1,0 +1,139 @@
+import { z } from "zod";
+
+/**
+ * Request schemas for the event API routes. Every route parses its body with one of these
+ * before touching the database; a `ZodError` maps to 400 in `shared/errors` `toResponse`.
+ */
+
+const SUPPORTED_TIMEZONES: ReadonlySet<string> = new Set(Intl.supportedValuesOf("timeZone"));
+
+/**
+ * True when `tz` is an IANA zone the runtime can format with. `Intl.supportedValuesOf` lists
+ * canonical zones only (no `UTC`, and some ICU builds omit aliases such as `Asia/Kolkata` that
+ * browsers still report), so a zone missing from that list is accepted only if
+ * `Intl.DateTimeFormat` resolves it. Either way, an accepted zone never throws later.
+ */
+export function isValidTimezone(tz: string): boolean {
+    if (SUPPORTED_TIMEZONES.has(tz)) return true;
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone: tz });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+const timezone = z.string().max(64).refine(isValidTimezone, "Unknown timezone");
+
+/** ISO 8601 timestamp with an explicit offset (`Z` or `+hh:mm`), as `Date#toISOString` emits. */
+const isoDateTime = z.iso.datetime({ offset: true });
+
+const slotTimes = z
+    .object({ startTime: isoDateTime, endTime: isoDateTime })
+    .refine((s) => new Date(s.startTime) < new Date(s.endTime), {
+        message: "startTime must be before endTime",
+        path: ["endTime"],
+    });
+
+const httpsUrl = z
+    .url({ protocol: /^https$/ })
+    .max(2048);
+
+const positiveInt = z.number().int().positive();
+
+/** Form fields arrive as strings; empty strings mean "not provided". */
+const formInt = z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : v),
+    z.coerce.number().int().positive().optional(),
+);
+
+const optionalText = (max: number) =>
+    z.preprocess((v) => (v === "" || v === undefined ? null : v), z.string().max(max).nullable());
+
+export const createEventSchema = z
+    .object({
+        title: z.string().trim().min(1).max(120),
+        description: z.string().max(2000).nullish().transform((v) => v || null),
+        slots: z.array(slotTimes).min(1).max(100),
+        minPlayers: z.number().int().min(1).max(100).nullish().transform((v) => v ?? 3),
+        maxPlayers: z.number().int().min(1).max(1000).nullish().transform((v) => v ?? null),
+        timezone: timezone.nullish().transform((v) => v || "UTC"),
+        eventType: z.enum(["ONE_SHOT", "CAMPAIGN"]).nullish().transform((v) => v ?? "ONE_SHOT"),
+        minSessions: z.number().int().min(1).max(100).nullish().transform((v) => v ?? null),
+        telegramLink: z.string().max(200).nullish().transform((v) => v || null),
+        fromUrl: httpsUrl.nullish().transform((v) => v || null),
+        fromUrlId: z.string().max(200).nullish().transform((v) => v || null),
+    })
+    .refine((e) => e.maxPlayers === null || e.maxPlayers >= e.minPlayers, {
+        message: "maxPlayers must be at least minPlayers",
+        path: ["maxPlayers"],
+    })
+    .refine((e) => e.eventType !== "CAMPAIGN" || e.minSessions !== null, {
+        message: "CAMPAIGN events require minSessions",
+        path: ["minSessions"],
+    });
+export type CreateEventInput = z.infer<typeof createEventSchema>;
+
+export const voteSchema = z.object({
+    name: z.string().trim().min(1).max(60),
+    telegramId: z.string().max(64).nullish(),
+    participantId: positiveInt.nullish(),
+    linkIdentity: z.boolean().optional(),
+    linkTelegram: z.boolean().optional(),
+    linkDiscord: z.boolean().optional(),
+    votes: z
+        .array(z.object({
+            slotId: positiveInt,
+            preference: z.enum(["YES", "NO", "MAYBE"]),
+            canHost: z.boolean().optional().default(false),
+        }))
+        .max(100)
+        .refine((votes) => new Set(votes.map((v) => v.slotId)).size === votes.length, {
+            message: "Each slot may be voted on once",
+        }),
+});
+export type VoteInput = z.infer<typeof voteSchema>;
+
+export const slotSchema = slotTimes;
+export type SlotInput = z.infer<typeof slotSchema>;
+
+export const slotSuggestionSchema = z
+    .object({
+        startTime: isoDateTime,
+        endTime: isoDateTime,
+        suggesterName: z.string().trim().min(1).max(50),
+    })
+    .refine((s) => new Date(s.startTime) < new Date(s.endTime), {
+        message: "startTime must be before endTime",
+        path: ["endTime"],
+    });
+
+export const locationSchema = z.object({
+    location: z.string().max(200).nullable(),
+});
+
+export const validateSlugsSchema = z.object({
+    slugs: z.array(z.string().min(1).max(64)).max(50),
+});
+
+/** One-shot finalize, sent as FormData by the manage page. */
+export const oneShotFinalizeSchema = z.object({
+    slotId: z.coerce.number().int().positive(),
+    houseId: formInt.transform((v) => v ?? null),
+    location: optionalText(200),
+});
+
+/** Campaign finalize, sent as JSON. `participantIds` is the explicit roster when the UI picked one. */
+export const campaignFinalizeSchema = z.object({
+    slotIds: z
+        .array(positiveInt)
+        .min(1)
+        .max(100)
+        .refine((ids) => new Set(ids).size === ids.length, { message: "Duplicate slot IDs" }),
+    houseId: formInt.transform((v) => v ?? null),
+    location: optionalText(200),
+    participantIds: z.array(positiveInt).max(1000).optional(),
+});
+
+/** Numeric route params (`[slotId]`, `[participantId]`, the vote route's event id). */
+export const idParam = z.coerce.number().int().positive();

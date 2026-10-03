@@ -1,0 +1,100 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@/shared/lib/prisma');
+vi.mock('@/app/api/event/[slug]/slot/notify', () => ({ syncDashboard: vi.fn() }));
+vi.mock('@/features/notifications', () => ({ sendDirectMessage: vi.fn() }));
+
+import prisma from '@/shared/lib/prisma';
+import { sendDirectMessage } from '@/features/notifications';
+import { syncDashboard } from '@/app/api/event/[slug]/slot/notify';
+import { processWaitlistPromotion } from './waitlist';
+
+const mockPrisma = prisma as any;
+const mockSend = sendDirectMessage as unknown as ReturnType<typeof vi.fn>;
+
+const t = (iso: string) => new Date(iso);
+const oneShot = { id: 1, title: 'Game Night', status: 'FINALIZED', maxPlayers: 2, finalizedSlotId: 3 };
+
+const maybeEarly = { id: 10, chatId: 'c10', discordId: null, votes: [{ timeSlotId: 3, preference: 'MAYBE', createdAt: t('2026-01-01T00:00:00Z') }] };
+const yesLate = { id: 11, chatId: 'c11', discordId: null, votes: [{ timeSlotId: 3, preference: 'YES', createdAt: t('2026-01-02T00:00:00Z') }] };
+
+describe('processWaitlistPromotion', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(mockPrisma));
+        mockPrisma.event.findUnique.mockResolvedValue(oneShot);
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+        mockPrisma.participant.findMany.mockResolvedValue([maybeEarly, yesLate]);
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+        mockSend.mockResolvedValue({});
+    });
+
+    it('promotes the best candidate with a conditional update inside one transaction and a recount', async () => {
+        mockPrisma.participant.count.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+
+        await processWaitlistPromotion(1);
+
+        expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(mockPrisma.participant.updateMany).toHaveBeenCalledTimes(1);
+        expect(mockPrisma.participant.updateMany).toHaveBeenCalledWith({
+            where: { id: 11, eventId: 1, status: 'WAITLIST' },
+            data: { status: 'ACCEPTED' },
+        });
+        expect(mockPrisma.participant.count).toHaveBeenCalledTimes(2);
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: 'c11', discordUserId: null });
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('sends nothing when a concurrent run already promoted the candidate', async () => {
+        mockPrisma.participant.count.mockResolvedValue(1);
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
+
+        await processWaitlistPromotion(1);
+
+        expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('reverts the promotion when the recount shows the event overbooked', async () => {
+        mockPrisma.participant.count.mockResolvedValueOnce(1).mockResolvedValueOnce(3);
+
+        await processWaitlistPromotion(1);
+
+        expect(mockPrisma.participant.updateMany).toHaveBeenLastCalledWith({
+            where: { id: 11, eventId: 1, status: 'ACCEPTED' },
+            data: { status: 'WAITLIST' },
+        });
+        expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the event is full', async () => {
+        mockPrisma.participant.count.mockResolvedValue(2);
+
+        await processWaitlistPromotion(1);
+
+        expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+        expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('uses the FinalizedSession slots for campaigns (finalizedSlotId is null)', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...oneShot, finalizedSlotId: null });
+        mockPrisma.finalizedSession.findMany.mockResolvedValue([{ timeSlotId: 7 }, { timeSlotId: 8 }]);
+        mockPrisma.participant.findMany.mockResolvedValue([
+            { id: 20, chatId: null, discordId: 'd20', votes: [{ timeSlotId: 8, preference: 'YES', createdAt: t('2026-01-01T00:00:00Z') }] },
+        ]);
+        mockPrisma.participant.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+        await processWaitlistPromotion(1);
+
+        expect(mockPrisma.finalizedSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId: 1 } }));
+        const where = mockPrisma.participant.findMany.mock.calls[0][0].include.votes.where;
+        expect(where).toEqual({ timeSlotId: { in: [7, 8] } });
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd20' });
+    });
+
+    it('never throws to the caller', async () => {
+        mockPrisma.event.findUnique.mockRejectedValue(new Error('db down'));
+        await expect(processWaitlistPromotion(1)).resolves.toBeUndefined();
+    });
+});

@@ -3,6 +3,8 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { getServerConfig } from "@/shared/config/server";
 import type { Prisma } from "@prisma/client";
+import { requireCronAuth } from "@/shared/lib/cron-auth";
+import { toResponse } from "@/shared/errors";
 
 const log = Logger.get("API:CronCleanup");
 
@@ -13,7 +15,7 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  * @description Cron Job Handler for Automatic Data Retention / Cleanup.
  *
  * Responsibilities:
- * 1. Security: Validates requester source (Localhost Loopback OR Vercel Cron Secret).
+ * 1. Security: `requireCronAuth` (Bearer CRON_SECRET; loopback Host only when no secret is set).
  * 2. Retention Logic: Defines different expiration periods based on event status:
  *    - FINALIZED one-shot: X days after the finalized slot starts.
  *    - FINALIZED campaign: X days after its last finalized session ends.
@@ -27,24 +29,15 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  * @returns {NextResponse} JSON summary of the operation.
  */
 export async function GET(req: Request) {
+    // Security: Bearer CRON_SECRET (or loopback Host on a self-host box with no secret).
+    try {
+        requireCronAuth(req);
+    } catch (e) {
+        return toResponse(e, log);
+    }
+
     try {
         log.info("Cleanup job started");
-
-        // Security: Restrict to Localhost (Docker internal cron) OR Authorized Vercel Cron
-        // Requests from 127.0.0.1 or ::1 allowed.
-        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
-        const isLocal = ip.includes("127.0.0.1") || ip.includes("::1");
-
-        // Check for CRON_SECRET authorization
-        const authHeader = req.headers.get("authorization");
-        // Bearer token check
-        const isAuthorized = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
-
-        // STRICT SECURITY: We ONLY allow local requests (from loopback) OR verified secret.
-        if (!isLocal && !isAuthorized) {
-            log.warn("Blocked external cron attempt", { ip, hasAuth: !!authHeader });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
 
         const { cleanupRetentionDays, telegram, discord } = getServerConfig();
         const now = Date.now();

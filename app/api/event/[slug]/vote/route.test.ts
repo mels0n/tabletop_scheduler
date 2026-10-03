@@ -33,8 +33,9 @@ vi.mock('next/headers', () => ({
 
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn> },
-    participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn> },
+    participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },
     vote: { findMany: ReturnType<typeof vi.fn>, deleteMany: ReturnType<typeof vi.fn>, createMany: ReturnType<typeof vi.fn> },
+    timeSlot: { findMany: ReturnType<typeof vi.fn> },
     $transaction: ReturnType<typeof vi.fn>,
 };
 
@@ -63,6 +64,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
         (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
     });
 
@@ -144,8 +146,9 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     });
 
     it('sources Discord identity from the cookie on participant update as well', async () => {
-        mockPrisma.participant.findUnique.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
         mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        cookieJar.set('tabletop_participant_test-event', signValue('47'));
         cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-2'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser2');
 
@@ -230,6 +233,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         cookieJar.clear();
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
         mockPrisma.participant.create.mockResolvedValue({ id: 1 });
         mockParticipantCount.mockResolvedValue(4);
         mockQuorum.mockReturnValue({ perfect: false, viable: true });
@@ -284,6 +288,118 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
 
         expect(mockSend).not.toHaveBeenCalled();
         expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+});
+
+describe('POST /api/event/[slug]/vote - validation and ownership', () => {
+    const vote = { slotId: 1, preference: 'YES', canHost: false };
+    const call = (body: any, slug = '1') => POST(mockRequest(body), { params: Promise.resolve({ slug }) });
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 50 });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+    });
+
+    it("rejects a vote on another event's slot with 400 and writes nothing", async () => {
+        const res = await call({ name: 'Mallory', votes: [vote, { ...vote, slotId: 999 }] });
+
+        expect(res.status).toBe(400);
+        expect(mockPrisma.timeSlot.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId: 1 } }));
+        expect(mockPrisma.participant.create).not.toHaveBeenCalled();
+        expect(mockPrisma.vote.createMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a string participantId and malformed bodies with 400', async () => {
+        expect((await call({ name: 'C', participantId: '47', votes: [vote] })).status).toBe(400);
+        expect((await call({ name: '', votes: [vote] })).status).toBe(400);
+        expect((await call({ name: 'C', votes: [vote, vote] })).status).toBe(400);
+        expect((await call({ name: 'C', votes: [vote] }, 'abc')).status).toBe(400);
+    });
+
+    it('returns 404 for an unknown event', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(null);
+        expect((await call({ name: 'C', votes: [vote] })).status).toBe(404);
+    });
+
+    it('sets a signed participant cookie when a participant is created', async () => {
+        const res = await call({ name: 'Chris', votes: [vote] });
+
+        expect(res.status).toBe(200);
+        const cookie = (res as any).cookies.get('tabletop_participant_test-event');
+        expect(cookie.value).toBe(signValue('50'));
+        expect(cookie.httpOnly).toBe(true);
+    });
+
+    it("refuses to edit someone else's participant row with 403", async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '555', discordId: 'victim' });
+
+        const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(403);
+        expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        expect(mockPrisma.vote.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('ignores an unsigned participant cookie', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null });
+        cookieJar.set('tabletop_participant_test-event', '47');
+
+        const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(403);
+    });
+
+    it('rejects a participant cookie signed for a different participant', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null });
+        cookieJar.set('tabletop_participant_test-event', signValue('48'));
+
+        expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+    });
+
+    it('allows an edit when a verified identity matches the row', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'd-47' });
+        cookieJar.set('tabletop_user_discord_id', signValue('d-47'));
+
+        const res = await call({ name: 'Dee', participantId: 47, linkIdentity: false, votes: [vote] });
+
+        expect(res.status).toBe(200);
+        expect(mockPrisma.participant.update).toHaveBeenCalled();
+    });
+
+    it('scopes the participant lookup to the event', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(null);
+
+        await call({ name: 'Chris', participantId: 47, linkIdentity: false, votes: [vote] });
+
+        expect(mockPrisma.participant.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 47, eventId: 1 } }));
+        // Not in this event: a fresh participant is created instead of touching row 47.
+        expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        expect(mockPrisma.participant.create).toHaveBeenCalled();
+    });
+
+    it('waitlists a new voter on a full finalized event, counting inside the transaction', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, status: 'FINALIZED', maxPlayers: 2, finalizedSlotId: 1 });
+        const order: string[] = [];
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+            order.push('tx-start');
+            const out = await cb(prisma);
+            order.push('tx-end');
+            return out;
+        });
+        mockPrisma.participant.count.mockImplementation(async () => { order.push('count'); return 2; });
+
+        await call({ name: 'Late', linkIdentity: false, votes: [vote] });
+
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('WAITLIST');
+        expect(order.indexOf('count')).toBeGreaterThan(order.indexOf('tx-start'));
+        expect(order.indexOf('count')).toBeLessThan(order.indexOf('tx-end'));
     });
 });
 
