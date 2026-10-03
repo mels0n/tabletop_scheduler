@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientDate } from "@/components/ClientDate";
 import { linkParticipant, unlinkParticipant } from "@/features/auth/server/participant-link";
 import { disconnectPlatformFromBrowser } from "@/features/auth/server/browser-disconnect";
+import { DmPreferencePanel, type DmPreferenceState } from "@/features/auth/ui/DmPreferencePanel";
 import { SyncBadge } from "@/components/SyncBadge";
 
 interface ServerEvent {
@@ -240,7 +241,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
 
     /** Shared badge trigger for sync-status pills: opens the card's one popover, or
      *  reads as a hint-only tooltip when neither platform is synced. The Manager tag is
-     *  intentionally NOT a trigger — it's a role indicator, not a link control. */
+     *  intentionally NOT a trigger: it's a role indicator, not a link control. */
     const badgeTrigger = (variant: 'telegram' | 'discord' | 'device') => (
         <span
             key={variant}
@@ -300,7 +301,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
                             <>
                                 {sources.map(badgeTrigger)}
                                 {/* "Not linked" pills for platforms this browser is synced
-                                    with but the event isn't linked to — the intuitive place
+                                    with but the event isn't linked to, the intuitive place
                                     to start a link, disabled with a hint until you've voted. */}
                                 {isTelegramSynced && !sources.includes('telegram') && (
                                     <NotLinkedBadge
@@ -370,7 +371,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
  * 3. Recovery:
  *    - Provides a "Magic Link" request form to elevate a session from Anonymous -> Authenticated.
  */
-export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null }) {
+export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl, dmPreferences }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null, dmPreferences?: DmPreferenceState }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
     const [telegramConnectClicked, setTelegramConnectClicked] = useState(false);
@@ -503,6 +504,8 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                         </div>
                     )}
                 </div>
+
+                {dmPreferences && <DmPreferencePanel preferences={dmPreferences} />}
 
                 {/* Quiet pointer to the account-level unlink & data deletion page. Kept
                     discoverable from the profile because privacy/legal copy (and Discord's

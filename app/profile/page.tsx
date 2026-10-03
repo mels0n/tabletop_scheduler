@@ -6,6 +6,7 @@ import { getBotUsername } from "@/features/telegram";
 import Logger from "@/shared/lib/logger";
 import { ProfileDashboard } from "./ProfileDashboard";
 import { getServerConfig } from "@/shared/config/server";
+import { getDmPreferences, type DmPreferences } from "@/features/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -236,6 +237,13 @@ export default async function ProfilePage() {
         ? getBotUsername(botToken)
         : Promise.resolve(null);
 
+    // Direct message preferences for the linked platforms. A failed read hides the toggles
+    // rather than showing a state that might be wrong.
+    const dmPreferencesPromise: Promise<DmPreferences> = getDmPreferences().catch((e) => {
+        Logger.get("Page:Profile").error("Failed to read DM preferences", e as Error);
+        return { telegram: null, discord: null };
+    });
+
     try {
         await fetchEvents(telegramChatId, discordUserId);
         // Sort by recency
@@ -253,6 +261,8 @@ export default async function ProfilePage() {
         telegramConnectUrl = botUsername ? `https://t.me/${botUsername}?start=login` : null;
     }
 
+    const dmPreferences = await dmPreferencesPromise;
+
     return (
         <ProfileDashboard
             serverEvents={serverEvents}
@@ -260,6 +270,7 @@ export default async function ProfilePage() {
             isDiscordSynced={!!discordUserId}
             serverUserName={serverUserName || undefined}
             telegramConnectUrl={telegramConnectUrl}
+            dmPreferences={dmPreferences}
         />
     );
 }

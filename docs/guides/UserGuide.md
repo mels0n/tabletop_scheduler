@@ -92,6 +92,9 @@ Your personal history of events.
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.
 - **Cleanup**: The list automatically removes events that have been deleted from the server.
 
+### Turning off bot direct messages
+Once Telegram or Discord is linked on this browser, the **Direct Messages** section of My Events shows a "Direct messages from the bot" switch for each linked platform. Set it to **Off** to stop the bot messaging you privately on that platform: finalize results, waitlist promotions, removal notices, and quorum alerts for events you organize. The setting follows your Telegram or Discord account, not the browser, so it applies to every event. Group and channel posts are not affected, and login links you request (including manager recovery links) are always sent.
+
 ---
 
 ## 7. Campaign Events (Multi-Session Scheduling)
