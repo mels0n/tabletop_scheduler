@@ -110,3 +110,5 @@ log.error("Something failed", error);
 - **Error**: Exceptions and failures that stop an operation.
 
 Never log tokens, full URLs that contain a bot token, or personal data from webhook payloads.
+
+Every new table in the hosted (Postgres) schema needs row level security statements in its migration: enable RLS and add the deny-all policy, following `prisma/hosted/migrations/20261003000200_enable_rls`. Prisma does not diff RLS, so the migration check will not catch a missing policy.

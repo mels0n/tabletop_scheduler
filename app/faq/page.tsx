@@ -40,7 +40,7 @@ export default function FAQPage() {
         },
         {
             question: "Where is my data stored?",
-            answer: "If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. If you are self-hosting, the data lives on your own server."
+            answer: "If you are using the hosted version, your data is stored securely in Supabase. We automatically delete finished events one day after they end, drafts after 30 days of inactivity, and cancelled events after 7 days. If you are self-hosting, the data lives on your own server."
         },
         {
             question: "How do I find my past events?",
@@ -106,7 +106,7 @@ export default function FAQPage() {
                         question="Where is my data stored?"
                         answer={
                             <span>
-                                If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don&apos;t mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you.
+                                If you are using the hosted version, your data is stored securely in Supabase. We automatically delete finished events one day after they end, drafts after 30 days of inactivity, and cancelled events after 7 days. We don&apos;t mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you.
                             </span>
                         }
                     />

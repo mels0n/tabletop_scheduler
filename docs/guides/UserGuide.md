@@ -71,7 +71,7 @@ Once finalized, the voting grid disappears.
 To get notifications in your group chat:
 1.  **Add Bot**: Add the bot (username provided on the dashboard) to your Telegram group.
     - *Tip*: Give the bot **Admin rights** (specifically "Pin Messages") so it can keep the event status pinned to the top of the chat.
-2.  **Connect**: Paste the **Event Link** into the group chat.
+2.  **Connect**: Open the manage page, copy the `/connect` command shown in the Telegram section (it includes a one-time code), and send it in the group chat. Pasting the event link alone no longer connects the group.
 3.  **Confirmation**: The bot will reply and pin the event dashboard.
 4.  **Updates**: The bot will notify the group when:
     - People vote.
