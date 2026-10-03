@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
@@ -526,6 +526,25 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
     describe('legacy grace for rows created before the participant cookie existed', () => {
         const BEFORE = new Date('2026-10-01T12:00:00Z');
         const AFTER = new Date('2026-10-04T00:00:01Z');
+
+        // The grace window closes at LEGACY_GRACE_UNTIL (2026-11-03); pin the clock inside it.
+        beforeEach(() => {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(new Date('2026-10-10T00:00:00Z'));
+        });
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('refuses the grace for every row once the grace window has closed', async () => {
+            vi.setSystemTime(new Date('2026-11-03T00:00:00Z'));
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, createdAt: BEFORE });
+
+            const res = await call({ name: 'Old Voter', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
 
         it('accepts an unlinked pre-cutoff row once and issues the participant cookie', async () => {
             mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, createdAt: BEFORE });
