@@ -16,8 +16,9 @@
  * Run: npm run depcruise
  */
 
-// Baseline mode while the graph is being fixed; flipped to 'error' once clean.
-const GATE = 'warn';
+// Direction, cycles and unresolvable imports fail CI. Cross-slice deep imports
+// and orphans are reported as warnings until the remaining ones are untangled.
+const GATE = 'error';
 
 const LAYERS = ['app', 'components', 'features', 'entities', 'shared'];
 
