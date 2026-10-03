@@ -55,7 +55,7 @@ jobs:
 
       # Fails on an upward import, an import cycle or an unresolvable import.
       - name: Dependency direction
-        run: npx depcruise --config .dependency-cruiser.cjs app components features entities shared
+        run: npm run depcruise
 
   migration-diff:
     # Fails when prisma/hosted/schema.prisma has changes that no migration under

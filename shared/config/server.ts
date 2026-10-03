@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
 // Imported from the class file directly: the errors index pulls in the logger,
 // and the logger reads this config.
@@ -75,6 +75,7 @@ const envSchema = z.object({
     NODE_ENV: optionalString.pipe(z.enum(["development", "test", "production"]).optional().default("development")),
     NEXT_PUBLIC_IS_HOSTED: optionalString.transform((v) => v === "true"),
     VERCEL: flag,
+    VERCEL_ENV: optionalString,
     NEXT_PUBLIC_BASE_URL: baseUrl,
     SESSION_SECRET: optionalString,
     CRON_SECRET: optionalString,
@@ -118,11 +119,11 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
     else telegramMode = "off";
 
     if (!isBuild) {
-        if (e.NODE_ENV === "production" && !e.SESSION_SECRET) {
-            problems.push("SESSION_SECRET: required in production");
+        if (sessionSecretRequired(e) && !e.SESSION_SECRET) {
+            problems.push("SESSION_SECRET: required in production (Vercel production or a non-Vercel production server)");
         }
-        if ((e.NEXT_PUBLIC_IS_HOSTED || e.VERCEL) && !e.CRON_SECRET) {
-            problems.push("CRON_SECRET: required when hosted or on Vercel");
+        if ((e.NEXT_PUBLIC_IS_HOSTED || isVercelProduction(e)) && !e.CRON_SECRET) {
+            problems.push("CRON_SECRET: required when hosted or on Vercel production");
         }
         if (telegramMode === "polling" && e.VERCEL) {
             problems.push("TELEGRAM_MODE: polling is not supported on Vercel; use webhook");
@@ -138,7 +139,7 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
         throw new ConfigError(`Invalid server configuration:\n- ${problems.join("\n- ")}`);
     }
 
-    const sessionSecret = e.SESSION_SECRET ?? DEV_SESSION_SECRET;
+    const sessionSecret = e.SESSION_SECRET ?? fallbackSessionSecret(e, isBuild);
 
     return {
         nodeEnv: e.NODE_ENV,
@@ -165,6 +166,41 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
     };
 }
 
+type ParsedEnv = z.infer<typeof envSchema>;
+
+function isVercelProduction(e: ParsedEnv): boolean {
+    return e.VERCEL_ENV === "production";
+}
+
+/** Vercel production, or a production server that is not on Vercel (Docker, bare Node). */
+function sessionSecretRequired(e: ParsedEnv): boolean {
+    return isVercelProduction(e) || (!e.VERCEL && e.NODE_ENV === "production");
+}
+
+let previewSecret: string | null = null;
+
+/**
+ * The secret used when SESSION_SECRET is unset and not required. A Vercel Preview (or
+ * development) deployment gets an ephemeral value: derived per deployment from CRON_SECRET
+ * when one is set, otherwise random per process. Either way it is never a value known in
+ * advance, and one warning is logged. Local development and tests use a fixed dev secret.
+ */
+function fallbackSessionSecret(e: ParsedEnv, isBuild: boolean): string {
+    if (!e.VERCEL || isBuild) return DEV_SESSION_SECRET;
+    if (!previewSecret) {
+        previewSecret = e.CRON_SECRET
+            ? createHmac("sha256", e.CRON_SECRET).update(`preview-session:${process.env.VERCEL_DEPLOYMENT_ID ?? ""}`).digest("hex")
+            : randomBytes(32).toString("hex");
+        // The logger reads this config, so this one warning goes straight to the console.
+        console.warn(JSON.stringify({
+            level: "warn",
+            context: "Config",
+            message: "SESSION_SECRET is unset on a Vercel non-production deployment; using an ephemeral secret, so sessions may not survive a redeploy",
+        }));
+    }
+    return previewSecret;
+}
+
 let cached: ServerConfig | null = null;
 
 /** Returns the validated server config, parsing `process.env` on first call. Throws `ConfigError`. */
@@ -176,4 +212,5 @@ export function getServerConfig(): ServerConfig {
 /** Drops the cached config so the next `getServerConfig()` re-reads `process.env`. Tests only. */
 export function resetServerConfigForTests(): void {
     cached = null;
+    previewSecret = null;
 }
