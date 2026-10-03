@@ -22,7 +22,7 @@ We believe that for a temporary event like a D&D session, a persistent user prof
 
 ### How It Works (Without the Tracking)
 
-1.  **The Organizer** creates an event. They get a unique, cryptographically random administration link.
+1.  **The Organizer** creates an event. They get a unique, cryptographically random admin token, kept in a secure cookie in their browser.
 2.  **The Players** get a public voting link.
 3.  **The Identity**: When you vote, you type a name. That's it.
 
@@ -39,7 +39,7 @@ If you are deeply concerned about digital hygiene, our system is perfect for you
 We practice **Data Minimization**. We only store exactly what is needed to make the math work:
 -   The potential dates.
 -   The names provided (which have no verification tied to them).
--   The availability booleans (True/False).
+-   The availability votes (Yes, If Needed, No).
 
 Furthermore, on our hosted instance, we have a strict **Data Purging Policy**. Old events aren't kept in a cold storage vault to be sold to advertisers later. They are deleted.
 

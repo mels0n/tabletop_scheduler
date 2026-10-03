@@ -63,7 +63,7 @@ This turns a complex multi-variable puzzle into a visual decision. You stop gues
 
 Click a group header to enter selection mode. The group gets an indigo border and all its dates are pre-ticked. From there you just uncheck any dates you want to exclude. A finalization panel expands at the bottom of the selected group with a host selector (radio pills from players who volunteered to host), a location field, and a live "Confirm X Sessions" button that updates as you adjust your selection.
 
-Click confirm and every checked session is locked simultaneously. There is no separate modal, no second form. The whole flow happens inline. Every player gets a single notification listing all the confirmed dates, and the finalized view generates per-session calendar buttons (Google, Outlook, and `.ics`) plus a single bulk `.ics` file that imports every session in one click.
+Click confirm and every checked session is locked simultaneously. There is no separate modal, no second form. The whole flow happens inline. Accepted players who linked Telegram or Discord get a single direct message listing all the confirmed dates, a connected group or channel gets one announcement, and the finalized view generates per-session calendar buttons (Google, Outlook, and `.ics`) plus a single bulk `.ics` file that imports every session in one click.
 
 No more session-by-session scheduling loops. No more stale polls. One finalization action, and the calendar is set.
 
