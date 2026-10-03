@@ -75,6 +75,15 @@ The schema exists twice, once per database target, and the two must describe the
 
 Self-hosters get the SQLite schema through `prisma db push` at container start, so there is no SQLite migration folder to maintain.
 
+### Database change rules
+Self-hosted instances upgrade by pulling a newer image and restarting, from whatever release they were on. `start.sh` then applies `prisma/schema.prisma` with a plain `prisma db push` and runs pending data migrations, with no manual step. Every database change must therefore work automatically, from any earlier release to the current one.
+
+- **Additive only (expand, then contract).** A release may add a nullable column, a column with a default, a new table or a new index. It never drops, renames or retypes a column or table. To rename or reshape, add the new column in one release, write to both and backfill, and drop the old one in a later release, only once no released code reads it.
+- **Snapshot every release.** A release that changes `prisma/schema.prisma` adds a copy of it to `prisma/compat/` (see [prisma/compat/README.md](prisma/compat/README.md)).
+- **Backfills are data migrations.** Rewriting existing rows (filling a new column from an old one, for example) goes in `scripts/data-migrations/index.mjs`, never in a manual step. Each entry runs once, in a transaction, on self-host start and on the hosted production build, and is recorded in the `AppMigration` table.
+- **`npm run db:upgrade-check` is the gate.** It pushes the current schema onto a seeded database built from every snapshot, without `--accept-data-loss`, and checks the rows survive. CI runs it as the `selfhost-upgrade` job, and the Docker image is only published from a commit that passed it.
+- **`PRISMA_ACCEPT_DATA_LOSS` is for recovery only.** It exists so an operator can repair a database that is already in a broken state. A release must never require it; if the upgrade check needs it to pass, the change is wrong.
+
 ### Telegram Bot Testing
 Testing the bot locally is handled via **Long Polling**: run `npm run dev` with `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_BASE_URL=http://localhost:3000` and `TELEGRAM_MODE=polling`. The base URL is required whenever a bot token is set.
 
