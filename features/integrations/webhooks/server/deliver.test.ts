@@ -21,7 +21,7 @@ describe('deliverWebhook', () => {
         fetchMock.mockReset();
         lookupMock.mockReset();
         vi.stubGlobal('fetch', fetchMock);
-        stubConfigEnv({ CRON_SECRET: 'cron-secret-for-tests' });
+        stubConfigEnv({ SESSION_SECRET: 'session-secret-for-tests', CRON_SECRET: 'cron-secret-for-tests' });
         resetServerConfigForTests();
     });
 
@@ -44,19 +44,20 @@ describe('deliverWebhook', () => {
         expect(init.signal).toBeInstanceOf(AbortSignal);
         expect(init.body).toBe(row.payload);
         expect(init.headers['X-Webhook-Id']).toBe('wh-1');
-        const expected = createHmac('sha256', 'cron-secret-for-tests').update(row.payload).digest('hex');
+        const key = createHmac('sha256', 'session-secret-for-tests').update('webhook-signing').digest('hex');
+        const expected = createHmac('sha256', key).update(row.payload).digest('hex');
         expect(init.headers['X-Tabletop-Signature']).toBe(`sha256=${expected}`);
     });
 
-    it('omits the signature when CRON_SECRET is not set', async () => {
-        stubConfigEnv();
+    it('always signs, even when CRON_SECRET is not set', async () => {
+        stubConfigEnv({ SESSION_SECRET: 'session-secret-for-tests' });
         resetServerConfigForTests();
         resolvesTo('93.184.216.34');
         fetchMock.mockResolvedValue({ ok: true, status: 200 });
 
         await deliverWebhook(row);
 
-        expect(fetchMock.mock.calls[0][1].headers['X-Tabletop-Signature']).toBeUndefined();
+        expect(fetchMock.mock.calls[0][1].headers['X-Tabletop-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
     });
 
     it('never sends to a URL that now resolves to a private address', async () => {

@@ -1,4 +1,3 @@
-import { getServerConfig } from "@/shared/config/server";
 import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
 import { signWebhookBody } from "./signature";
 
@@ -26,7 +25,7 @@ export class WebhookRefusedError extends Error {
 /**
  * The only outbound HTTP path for a queued webhook row. Re-checks the destination
  * (`assertSafeWebhookUrl`, so a host that now resolves to a private address is refused),
- * then performs one POST signed with `X-Tabletop-Signature` when `CRON_SECRET` is set.
+ * then performs one POST, always signed with `X-Tabletop-Signature` (see `signWebhookBody`).
  * Redirects are never followed and the request is abandoned after 10 seconds.
  *
  * Resolves on a 2xx response. Throws `WebhookRefusedError` for a refused destination and a
@@ -40,13 +39,12 @@ export async function deliverWebhook(row: OutboxRow): Promise<void> {
         throw new WebhookRefusedError((error as Error).message);
     }
 
-    const { cronSecret } = getServerConfig();
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "X-Tabletop-Event-Id": String(row.eventId),
         "X-Webhook-Id": row.id,
+        "X-Tabletop-Signature": signWebhookBody(row.payload),
     };
-    if (cronSecret) headers["X-Tabletop-Signature"] = signWebhookBody(row.payload, cronSecret);
 
     const res = await fetch(row.url, {
         method: "POST",

@@ -432,3 +432,5 @@ Delivers queued outbound webhooks. Rows are locked atomically so two runs never 
 ## Outbound Webhooks
 
 When an event is created with a `fromUrl`, TabletopTime posts JSON lifecycle updates (`CREATED`, `FINALIZED`, `CANCELLED`) to it. Payload shapes, the `X-Tabletop-Signature` header, and the retry policy are documented in [External Integrations](../guides/ExternalIntegrations.md).
+
+Every delivery carries `X-Tabletop-Signature: sha256=<hex HMAC-SHA256 of the raw body>`. The HMAC key is the instance's webhook signing key, `hex(HMAC-SHA256(key = SESSION_SECRET, message = "webhook-signing"))`, used as its 64-character hex string. The operator shares it with integrators out of band. `CRON_SECRET` is not involved in signing.
