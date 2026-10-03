@@ -105,6 +105,9 @@ export function isPrivateAddress(ip: string): boolean {
     return false;
 }
 
+/** A webhook host that does not resolve within this long is treated as unresolvable. */
+export const DNS_LOOKUP_TIMEOUT_MS = 5_000;
+
 /** One address a webhook host resolved to, already checked to be public. */
 export interface VettedAddress {
     address: string;
@@ -133,10 +136,17 @@ export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL;
 
     const host = parsed.hostname.replace(/^\[(.*)\]$/, "$1");
     let resolved: { address: string; family: number }[];
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-        resolved = await lookup(host, { all: true, verbatim: true });
+        // A hung resolver must not stall event creation or a delivery batch.
+        const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error("DNS lookup timed out")), DNS_LOOKUP_TIMEOUT_MS);
+        });
+        resolved = await Promise.race([lookup(host, { all: true, verbatim: true }), timeout]);
     } catch {
         throw new ValidationError("Webhook URL host does not resolve");
+    } finally {
+        if (timer) clearTimeout(timer);
     }
     if (resolved.length === 0 || resolved.some((a) => isPrivateAddress(a.address))) {
         throw new ValidationError("Webhook URL must resolve to a public address");

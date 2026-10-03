@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { lookupMock } = vi.hoisted(() => ({ lookupMock: vi.fn() }));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
 
-import { assertSafeWebhookUrl, isPrivateAddress, resolveSafeWebhookTarget } from './webhook-sender';
+import { assertSafeWebhookUrl, isPrivateAddress, resolveSafeWebhookTarget, DNS_LOOKUP_TIMEOUT_MS } from './webhook-sender';
 
 function resolvesTo(...addresses: string[]) {
     lookupMock.mockResolvedValue(addresses.map((address) => ({ address, family: address.includes(':') ? 6 : 4 })));
@@ -83,5 +83,25 @@ describe('resolveSafeWebhookTarget', () => {
     it('refuses a hostname that resolves to loopback', async () => {
         resolvesTo('127.0.0.1');
         await expect(resolveSafeWebhookTarget('https://rebind.example/hook')).rejects.toThrow('public address');
+    });
+});
+
+describe('DNS lookup timeout', () => {
+    beforeEach(() => {
+        lookupMock.mockReset();
+    });
+
+    it('treats a lookup that does not settle within 5 s as unresolvable', async () => {
+        vi.useFakeTimers();
+        try {
+            lookupMock.mockReturnValue(new Promise(() => {}));
+            const pending = resolveSafeWebhookTarget('https://slow.example/hook');
+            const assertion = expect(pending).rejects.toThrow('does not resolve');
+            expect(DNS_LOOKUP_TIMEOUT_MS).toBe(5_000);
+            await vi.advanceTimersByTimeAsync(DNS_LOOKUP_TIMEOUT_MS);
+            await assertion;
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
