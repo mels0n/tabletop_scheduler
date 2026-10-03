@@ -66,6 +66,12 @@ All three are optional, but Discord features need all three together.
 | `CLEANUP_RETENTION_DAYS_DRAFT` | `1` | Days to keep a draft after its last proposed time ends. A draft with no proposed times is counted from its creation. Editing a draft does not extend it. |
 | `CLEANUP_RETENTION_DAYS_CANCELLED` | `1` | Days to keep a cancelled event after cancellation. |
 
+## Compatibility
+
+| Variable | Required | Default | Description |
+|----------|:--------:|:-------:|-------------|
+| `LEGACY_PARTICIPANT_CUTOFF` | No | `2026-10-04T00:00:00Z` | ISO 8601 timestamp. Set it to the timestamp of the deploy that introduced participant cookies if you deployed after 2026-10-04. Participant rows created before it stay editable by their stored id, with no expiry. |
+
 ## Build
 
 | Variable | Required | Default | Description |
