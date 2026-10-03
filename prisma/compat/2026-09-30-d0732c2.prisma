@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  // Binary targets ensure compatibility with both local Windows dev and Docker (Linux musl)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- CORE MODELS ---
+
+// The central entity for the scheduler.
+// Managed via a secret 'adminToken' so users don't need accounts.
+model Event {
+  id          Int           @id @default(autoincrement())
+  slug        String        @unique // Publicly shareable identifier
+  title       String
+  description String?
+  
+  // Security & Management
+  adminToken  String?       @default(uuid()) // Saved in cookie to allow edits without login
+  
+  // Telegram Integration
+  telegramLink String?      // Invite link to the group chat
+  telegramChatId String?    // The numeric ID of the linked group (for bot notifications)
+  managerTelegram String?   // Creator's handle (e.g. @user) used for recovery
+  managerChatId   String?   // Creator's numeric ID (for private bot DMs)
+  pinnedMessageId Int?      // ID of the pinned status message to update/unpin
+  
+  // Discord Integration
+  discordGuildId    String? // ID of the Discord Server
+  discordChannelId  String? // ID of the Channel to post updates in
+  discordMessageId  String? // ID of the pinned "Dashboard" message
+  discordInviteLink String? // Optional direct invite link to the server
+  managerDiscordId  String? // The Discord User ID of the event manager (for recovery)
+  managerDiscordUsername String? // The Discord Username of the event manager
+  
+  // Reminders & Notifications
+  reminderEnabled      Boolean   @default(false)
+  reminderTime         String?   // "HH:mm" (24h) in Event Timezone
+  reminderDays         String?   // "0,1,2,3,4,5,6" (Comma separated, 0=Sun)
+  lastReminderSent     DateTime? // Track to avoid duplicates
+  quorumViableNotified Boolean   @default(false)
+  quorumPerfectNotified Boolean  @default(false)
+  
+  // Recovery
+  recoveryToken        String?   @unique // Short temporary token for deep linking
+  recoveryTokenExpires DateTime?
+  
+  // Game Configuration
+  minPlayers  Int           @default(3)
+  maxPlayers  Int?
+  eventType   String        @default("ONE_SHOT") // ONE_SHOT | CAMPAIGN
+  minSessions Int?          // Minimum sessions to schedule (campaigns only)
+  status      String        @default("DRAFT") // DRAFT -> ACTIVE -> FINALIZED
+  
+  // Finalization State
+  finalizedSlotId Int?
+  finalizedHostId Int?
+  finalizedHost   Participant? @relation("FinalizedHost", fields: [finalizedHostId], references: [id])
+  location        String?
+  timezone        String        @default("UTC") // Captured from creator's browser
+  
+  // External Integration
+  fromUrl         String?       // Callback URL for webhooks
+  fromUrlId       String?       // External Context ID
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  timeSlots         TimeSlot[]
+  participants      Participant[]
+  finalizedSessions FinalizedSession[]
+  webhooks          WebhookEvent[]
+}
+
+// Represents a voteable window of time.
+model TimeSlot {
+  id        Int       @id @default(autoincrement())
+  event     Event     @relation(fields: [eventId], references: [id])
+  eventId   Int
+  startTime DateTime
+  endTime   DateTime
+  votes            Vote[]
+  finalizedSession FinalizedSession?
+
+  @@index([eventId])
+}
+
+// A user who has interacted with the event.
+// Identity is loosely tracked via localStorage or Telegram ID.
+model Participant {
+  id         Int      @id @default(autoincrement())
+  event      Event    @relation(fields: [eventId], references: [id])
+  eventId    Int
+  name       String
+  telegramId  String? // The handle (e.g. @user), captured from input or bot
+  chatId      String? // Numeric ID for DM notifications (captured by bot)
+  
+  // Discord Identity
+  discordId       String? // The numeric User ID from Discord
+  discordUsername String? // The username/discriminatorvia webhook)
+  createdAt  DateTime @default(now())
+  status     String   @default("PENDING") // PENDING, ACCEPTED, WAITLIST
+  
+  votes      Vote[]
+  hostedEvents Event[] @relation("FinalizedHost")
+
+  @@index([eventId])
+}
+
+// Linking table for preferences.
+model Vote {
+  id            Int         @id @default(autoincrement())
+  participant   Participant @relation(fields: [participantId], references: [id])
+  participantId Int
+  timeSlot      TimeSlot    @relation(fields: [timeSlotId], references: [id])
+  timeSlotId    Int
+  
+  preference    String      // YES: Available, MAYBE: If needed, NO: Busy
+  canHost       Boolean     @default(false) // Specific willingness to host this slot
+  createdAt     DateTime    @default(now())
+
+  @@unique([participantId, timeSlotId])
+  @@index([participantId])
+  @@index([timeSlotId])
+}
+
+// Tracks individual locked sessions for Campaign-type events.
+// One-shot events use Event.finalizedSlotId instead.
+model FinalizedSession {
+  id         Int      @id @default(autoincrement())
+  eventId    Int
+  timeSlotId Int      @unique
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  timeSlot   TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([eventId])
+}
+
+// Temporary tokens for global "My Events" login
+model LoginToken {
+  token     String   @id @default(uuid())
+  chatId    String?   // The Telegram Chat ID being authenticated
+  telegramUsername String? // For display purposes (mirrors discordUsername)
+  discordId String?   // The Discord User ID being authenticated
+  discordUsername String? // For display purposes
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Webhook Delivery Queue
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  event       Event    @relation(fields: [eventId], references: [id])
+  eventId     Int
+  
+  url         String
+  payload     String   // JSON string
+  status      String   // PENDING, DELIVERED, FAILED
+  attempts    Int      @default(0)
+  nextAttempt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, nextAttempt])
+}
+
+// Ko-fi donation records received via webhook.
+// Used for social proof display ("Wall of Love") on the landing page.
+// Only stores public-safe fields — email is intentionally excluded.
+model Donation {
+  id                  String   @id @default(uuid())
+  kofiTransactionId   String   @unique // Deduplication key from Ko-fi webhook payload
+  fromName            String           // Supporter's display name
+  message             String?          // Optional public message left by the supporter
+  amount              String           // Dollar amount as string (e.g., "5.00")
+  currency            String   @default("USD")
+  isPublic            Boolean  @default(true) // Only display if supporter opted for public visibility
+  type                String   @default("Donation") // Donation, Subscription, Commission, Shop Order
+  rawPayload          String?          // Full JSON payload for debugging and future field extraction
+  donatedAt           DateTime         // Timestamp from Ko-fi
+  createdAt           DateTime @default(now())
+}
+

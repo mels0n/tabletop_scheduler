@@ -15,6 +15,7 @@
     "db:new:hosted": "node scripts/db-hosted-migration.mjs",
     "db:diff:hosted": "node scripts/db-hosted-migration.mjs --dry-run",
     "db:baseline:hosted": "prisma migrate resolve --applied 0_init --schema=prisma/hosted/schema.prisma",
+    "db:upgrade-check": "node scripts/selfhost-upgrade-check.mjs",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
