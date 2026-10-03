@@ -7,6 +7,7 @@ import { normalizeHandle, formatHandle } from "@/shared/lib/handle";
 import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 // Allowed session reminder lead times (2 hours, 1 day, 2 days), shared with the manage page.
 import { isSessionReminderLead } from "@/features/notifications/model/leads";
+import { reminderSettingsSchema } from "../model/schemas";
 
 const log = Logger.get("EventActions");
 
@@ -258,19 +259,23 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
     try {
         if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
 
+        // Server actions are public endpoints: validate every argument (weekdays 0..6,
+        // unique, at most 7; HH:MM when enabled so the cron can parse it).
+        const parsed = reminderSettingsSchema.safeParse({ enabled, time, days });
+        if (!parsed.success) {
+            const timeIssue = parsed.error.issues.some((i) => i.path[0] === "time");
+            return { success: false, error: timeIssue ? "Invalid time format" : "Invalid reminder settings" };
+        }
+
         const event = await prisma.event.findUnique({ where: { slug } });
         if (!event) return { success: false, error: "Event not found" };
-
-        // Intent: Validate time format to ensure cron compatibility
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        if (enabled && !timeRegex.test(time)) return { success: false, error: "Invalid time format" };
 
         await prisma.event.update({
             where: { id: event.id },
             data: {
-                reminderEnabled: enabled,
-                reminderTime: time,
-                reminderDays: days.join(','),
+                reminderEnabled: parsed.data.enabled,
+                reminderTime: parsed.data.time,
+                reminderDays: parsed.data.days.join(','),
                 // Intent: Do NOT reset notification flags here. Changing schedule shouldn't spam users if quorum was already reached.
             }
         });

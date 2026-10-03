@@ -41,6 +41,9 @@ const httpsUrl = z
 
 const positiveInt = z.number().int().positive();
 
+/** Telegram invite link, rendered as an href on the event page: https://t.me/ only. */
+const telegramInviteLink = z.string().max(200).startsWith("https://t.me/");
+
 /** Form fields arrive as strings; empty strings mean "not provided". */
 const formInt = z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? undefined : v),
@@ -60,7 +63,7 @@ export const createEventSchema = z
         timezone: timezone.nullish().transform((v) => v || "UTC"),
         eventType: z.enum(["ONE_SHOT", "CAMPAIGN"]).nullish().transform((v) => v ?? "ONE_SHOT"),
         minSessions: z.number().int().min(1).max(100).nullish().transform((v) => v ?? null),
-        telegramLink: z.string().max(200).nullish().transform((v) => v || null),
+        telegramLink: z.preprocess((v) => (v === "" ? null : v), telegramInviteLink.nullish()).transform((v) => v || null),
         fromUrl: httpsUrl.nullish().transform((v) => v || null),
         fromUrlId: z.string().max(200).nullish().transform((v) => v || null),
     })
@@ -134,6 +137,22 @@ export const campaignFinalizeSchema = z.object({
     location: optionalText(200),
     participantIds: z.array(positiveInt).max(1000).optional(),
 });
+
+/** Voting reminder settings from the manage page. `days` are weekdays (0 = Sunday .. 6). */
+export const reminderSettingsSchema = z
+    .object({
+        enabled: z.boolean(),
+        time: z.string().max(5),
+        days: z
+            .array(z.number().int().min(0).max(6))
+            .max(7)
+            .refine((days) => new Set(days).size === days.length, { message: "Duplicate days" }),
+    })
+    .refine((r) => !r.enabled || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(r.time), {
+        message: "Invalid time format",
+        path: ["time"],
+    });
+export type ReminderSettingsInput = z.infer<typeof reminderSettingsSchema>;
 
 /** Numeric route params (`[slotId]`, `[participantId]`, the vote route's event id). */
 export const idParam = z.coerce.number().int().positive();
