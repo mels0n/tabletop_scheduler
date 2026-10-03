@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { format } from "date-fns";
 import { Calendar, Clock, MapPin, Home, User as UserIcon, Loader2, Check } from "lucide-react";
 import { clsx } from "clsx";
 import { ClientDate, ClientTimezone } from "./ClientDate";

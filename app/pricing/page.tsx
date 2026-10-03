@@ -86,6 +86,7 @@ export default function PricingPage() {
                         <h3 className="text-xl font-bold text-slate-200">How to Support the Project</h3>
 
                         <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer" className="pt-2 hover:opacity-90 transition-opacity">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- external Ko-fi badge; images.unoptimized is on */}
                             <img height="36" style={{ border: 0, height: 36 }} src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" alt="Buy Me a Coffee at ko-fi.com" />
                         </a>
                     </div>

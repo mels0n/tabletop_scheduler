@@ -5,7 +5,6 @@ import prisma from '@/shared/lib/prisma';
 
 vi.mock('@/shared/lib/prisma');
 
-const mockCookies = cookies as unknown as ReturnType<typeof vi.fn>;
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn> },
     participant: { findUnique: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn> }

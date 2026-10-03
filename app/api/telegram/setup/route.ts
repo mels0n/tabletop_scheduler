@@ -3,17 +3,10 @@ import { ensureWebhook } from "@/features/telegram/lib/telegram-client";
 
 export const dynamic = 'force-dynamic'; // Ensure this never caches
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
     // Basic security check: Only allow if a secret key matches or if it's an admin (simplified for now to just be obscured or open if low risk, 
     // but better to Require a CRON_SECRET header if used by cron, or just a sophisticated check).
     // For now, we'll assume this is triggered manually by an admin or cron with a secret.
-
-    // Check for Cron Secret if available (Vercel Cron)
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}` ||
-        request.headers.get('x-vercel-cron') === '1'; // Vercel adds this header internaly
 
     // Allow manual hit if valid query param (simple protection)?
     // Let's just run it. The worst case is resetting the webhook to the same URL.

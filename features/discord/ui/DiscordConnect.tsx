@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { listDiscordChannels, connectDiscordChannel } from "@/features/integrations/discord/server/actions";
-import { checkEventStatus } from "@/features/event-management/server/actions";
 import { AlertCircle, CheckCircle, Loader2, Save } from "lucide-react";
 
 function CheckIcon({ className }: { className?: string }) {

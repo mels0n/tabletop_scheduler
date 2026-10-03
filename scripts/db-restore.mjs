@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { createDecipheriv, scryptSync } from 'crypto';
-import { createReadStream, statSync } from 'fs';
+import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 
 // --- Configuration ---

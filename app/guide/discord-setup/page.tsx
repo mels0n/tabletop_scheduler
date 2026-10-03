@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Bot, CheckCircle, ExternalLink, HelpCircle } from 'lucide-react';
+import { Bot, ExternalLink } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { recoverManagerLink } from "@/features/event-management/server/recovery";
 import { recoverDiscordManagerLink } from "@/features/integrations/discord/server/actions";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 /**
  * @component ManagerRecovery
@@ -17,7 +16,6 @@ import { useRouter } from "next/navigation";
  * @returns {JSX.Element} The recovery modal trigger and content.
  */
 export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, defaultOpen?: boolean }) {
-    const router = useRouter();
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     // Intent: Sync internal state with prop changes (e.g. from URL redirects)

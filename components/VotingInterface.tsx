@@ -32,11 +32,11 @@ interface VotingInterfaceProps {
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, telegramIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, slug, serverParticipantId, discordIdentity, telegramIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    const [slots, setSlots] = useState(initialSlots);
+    const [slots] = useState(initialSlots);
     const [userName, setUserName] = useState("");
     const [userTelegram, setUserTelegram] = useState("");
     const [votes, setVotes] = useState<Record<number, string | undefined>>({});
@@ -359,8 +359,6 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
 
                         {slots.map(slot => {
                             const myVote = votes[slot.id];
-                            const totalYes = slot.counts.yes;
-                            const isViable = totalYes >= minPlayers;
                             const hasHostOffer = slot.votes.some(
                                 (v: any) => (v.preference === "YES" || v.preference === "MAYBE") && v.canHost
                             );

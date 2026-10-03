@@ -28,8 +28,6 @@ export async function GET(req: Request) {
     // Define scopes based on flow
     // Login: Identify (just need ID/User)
     // Connect: Identify + Bot Permissions (if adding bot)
-    let scope = "identify";
-
     // If 'connect', we might be adding the bot to a server.
     // Actually, adding a bot requires 'bot' scope and 'permissions'.
     // BUT, usually we want to "Add to Server" which is a slightly different flow than "Login".
@@ -45,7 +43,7 @@ export async function GET(req: Request) {
     // 1. "Connect" flow = Add Bot Flow.
     // 2. "Login" flow = User Identity Flow.
 
-    let url = "https://discord.com/oauth2/authorize";
+    const url = "https://discord.com/oauth2/authorize";
     const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,

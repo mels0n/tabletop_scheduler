@@ -1,5 +1,4 @@
 const crypto = require('crypto');
-const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
