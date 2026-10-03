@@ -46,11 +46,13 @@ docker run -d \
 
 Open `http://localhost:3000` to start creating events.
 
+**Upgrading is automatic.** Run `docker pull ghcr.io/mels0n/tabletop_scheduler:latest` and restart the container; on start it brings your database up to date from whatever release you were on, keeping your data.
+
 **Bind mounts and UID 1000.** The container runs as the `node` user (UID 1000). A bind-mounted `./data` directory must be writable by UID 1000, or the database cannot be created and the container exits at startup. A named Docker volume needs no extra step.
 
 **Secrets.** If `SESSION_SECRET` or `CRON_SECRET` is unset, the container generates a random value on first start and keeps it in `/app/data` (`.session-secret`, `.cron-secret`), so they survive restarts as long as the data volume does. Set them explicitly if you run more than one instance against the same data.
 
-**How the schema is applied (`db push` contract).** The Docker image uses SQLite and applies the schema on every start with `prisma db push`. There is no migration history for self-hosters: the schema in the image is the schema you get. When a release changes the schema in a way that would drop data (removing a column or table, for example), startup stops and tells you so rather than deleting anything. Back up `/app/data/scheduler.db`, then start once with `PRISMA_ACCEPT_DATA_LOSS=1` to accept the change, and remove the variable afterwards.
+**How the schema is applied (`db push` contract).** The Docker image uses SQLite and applies the schema on every start with `prisma db push`. There is no migration history for self-hosters: the schema in the image is the schema you get. Releases only ever add to the schema, and CI checks that every past release upgrades without losing data. If startup ever stops with a data-loss warning (a database edited by hand, for example), it has deleted nothing: back up `/app/data/scheduler.db`, then start once with `PRISMA_ACCEPT_DATA_LOSS=1` to accept the change, and remove the variable afterwards.
 
 ### Configuration
 

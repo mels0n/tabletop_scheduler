@@ -25,8 +25,8 @@ differs. `tests/schema-parity.test.ts` enforces that.
 
 Production deploys apply migrations themselves. `vercel.json` points the Build
 Command at `scripts/vercel-build.sh`, which runs `prisma generate`, then
-`prisma migrate deploy` (production only), then `next build`. A failed migration
-fails the deploy. Preview builds skip the migration step, so a preview of a branch
+`prisma migrate deploy` and pending data migrations (production only), then
+`next build`. A failed migration fails the deploy. Preview builds skip the migration step, so a preview of a branch
 with a schema change will error against the shared database until it is merged.
 
 Two checks guard the history before it gets that far:
@@ -61,6 +61,20 @@ Two checks guard the history before it gets that far:
 migration history, because Supabase does not provide a shadow database. That is
 equivalent as long as production matches the history, which the CI migration-diff
 check keeps true.
+
+## Database change rules
+
+Self-hosted instances upgrade by pulling a newer image and restarting, from whatever release they were on. `start.sh` then applies `prisma/schema.prisma` with a plain `prisma db push` and runs pending data migrations, with no manual step. Every database change must therefore work automatically, from any earlier release to the current one.
+
+- **Additive only (expand, then contract).** A release may add a nullable column, a column with a default, a new table or a new index. It never drops, renames or retypes a column or table. To rename or reshape, add the new column in one release, write to both and backfill, and drop the old one in a later release, only once no released code reads it.
+- **Snapshot every release.** A release that changes `prisma/schema.prisma` adds a copy of it to `prisma/compat/` (see [prisma/compat/README.md](../../prisma/compat/README.md)).
+- **Backfills are data migrations.** Rewriting existing rows (filling a new column from an old one, for example) goes in `scripts/data-migrations/index.mjs`, never in a manual step. Each entry runs once, in a transaction, on self-host start and on the hosted production build, and is recorded in the `AppMigration` table.
+- **`npm run db:upgrade-check` is the gate.** It pushes the current schema onto a seeded database built from every snapshot, without `--accept-data-loss`, and checks the rows survive. CI runs it as the `selfhost-upgrade` job, and the Docker image is only published from a commit that passed it.
+- **`PRISMA_ACCEPT_DATA_LOSS` is for recovery only.** It exists so an operator can repair a database that is already in a broken state. A release must never require it; if the upgrade check needs it to pass, the change is wrong.
+
+On the hosted side, `scripts/vercel-build.sh` runs `node scripts/run-data-migrations.mjs`
+right after `prisma migrate deploy`, on production builds only. A failed data
+migration rolls back and fails the deploy, the same as a failed schema migration.
 
 ## Environment
 
