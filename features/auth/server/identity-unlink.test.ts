@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { unlinkPlatformEverywhere } from './identity-unlink';
 import { cookies } from 'next/headers';
+import { signValue } from '@/shared/lib/session';
 import prisma from '@/shared/lib/prisma';
 
 vi.mock('@/shared/lib/prisma');
@@ -27,7 +28,7 @@ describe('unlinkPlatformEverywhere', () => {
 
     it('wipes Discord identity from participants, managed events, and login tokens, then clears the session cookies', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_discord_id' ? { value: 'discord-42' } : undefined
+            name === 'tabletop_user_discord_id' ? { value: signValue('discord-42') } : undefined
         );
 
         const result = await unlinkPlatformEverywhere('discord');
@@ -48,9 +49,22 @@ describe('unlinkPlatformEverywhere', () => {
         expect(mockCookieStore.delete).toHaveBeenCalledWith('tabletop_user_discord_name');
     });
 
+    it('refuses a forged unsigned Discord identity cookie and touches nothing', async () => {
+        mockCookieStore.get.mockImplementation((name: string) =>
+            name === 'tabletop_user_discord_id' ? { value: 'discord-42' } : undefined
+        );
+
+        const result = await unlinkPlatformEverywhere('discord');
+
+        expect(result).toEqual({ error: expect.any(String) });
+        expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalled();
+        expect(mockPrisma.loginToken.deleteMany).not.toHaveBeenCalled();
+    });
+
     it('wipes Telegram identity (verified chatId) from participants, managed events, and login tokens, then clears the session cookies', async () => {
         mockCookieStore.get.mockImplementation((name: string) =>
-            name === 'tabletop_user_chat_id' ? { value: '999' } : undefined
+            name === 'tabletop_user_chat_id' ? { value: signValue('999') } : undefined
         );
 
         const result = await unlinkPlatformEverywhere('telegram');

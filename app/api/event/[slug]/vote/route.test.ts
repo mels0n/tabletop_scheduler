@@ -4,6 +4,7 @@ import { resolvePassiveChatId } from '@/features/auth/server/passive-link';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { checkEventQuorum } from '@/shared/lib/quorum';
+import { signValue } from '@/shared/lib/session';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/notifications', () => ({
@@ -67,7 +68,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('skips passive chatId resolution and discordId/discordUsername write when linkIdentity is false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 42 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
@@ -94,7 +95,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('links Discord from the session cookie (not the body) when linkDiscord=true and linkTelegram=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 44 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
@@ -145,7 +146,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     it('sources Discord identity from the cookie on participant update as well', async () => {
         mockPrisma.participant.findUnique.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
         mockPrisma.participant.update.mockResolvedValue({ id: 47 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-2');
+        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-2'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser2');
 
         const res = await POST(
@@ -168,7 +169,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     it('resolves Telegram but skips Discord write when linkTelegram=true and linkDiscord=false', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
         mockPrisma.participant.create.mockResolvedValue({ id: 45 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_id', signValue('cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(

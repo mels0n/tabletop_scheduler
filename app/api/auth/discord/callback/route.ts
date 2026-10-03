@@ -10,6 +10,7 @@ const log = Logger.get("Auth:Discord");
 
 import { setAdminCookie } from "@/features/auth/server/actions";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
+import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
 import { hashToken } from "@/shared/lib/token";
 import prisma from "@/shared/lib/prisma";
 import { normalizeHandle } from "@/shared/lib/handle";
@@ -103,7 +104,7 @@ export async function GET(req: Request) {
     if (flow === "login") {
         // --- LOGIN FLOW ---
         // Set Identity Cookie
-        cookieStore.set("tabletop_user_discord_id", user.id, cookieOpts);
+        cookieStore.set(IDENTITY_COOKIES.discord, signValue(user.id), identityCookieOptions());
 
         // Optional: Set Username cookie for display
         cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false }); // readable by client
@@ -176,7 +177,7 @@ export async function GET(req: Request) {
 
         // Also set the "Manager" cookie implicitly so they don't have to login separately? 
         // Yes, if you connect the bot, you are arguably the manager.
-        cookieStore.set("tabletop_user_discord_id", user.id, cookieOpts);
+        cookieStore.set(IDENTITY_COOKIES.discord, signValue(user.id), identityCookieOptions());
         cookieStore.set("tabletop_user_discord_name", user.username, { ...cookieOpts, httpOnly: false });
 
         return NextResponse.redirect(new URL(`${returnTo}?discord_connected=true${guildParam}`, baseUrl));

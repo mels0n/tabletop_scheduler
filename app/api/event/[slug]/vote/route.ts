@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
+import { readIdentity } from "@/shared/lib/session";
 
 import { checkEventQuorum } from "@/shared/lib/quorum";
 import { processWaitlistPromotion } from "@/features/event-management/server/waitlist";
@@ -54,8 +55,8 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         // can't attach an arbitrary Discord user to a participant (and later cause the bot
         // to DM someone who never authorized us).
         const cookieStore = await cookies();
-        const discordId = cookieStore.get("tabletop_user_discord_id")?.value;
-        const discordUsername = cookieStore.get("tabletop_user_discord_name")?.value;
+        const discordId = readIdentity(cookieStore).discordId ?? undefined;
+        const discordUsername = discordId ? cookieStore.get("tabletop_user_discord_name")?.value : undefined;
 
         // Canonicalize the handle at the write boundary: users may type it with or
         // without '@', so store it '@'-less and lowercased. Display code re-adds one '@'.

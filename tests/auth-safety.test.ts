@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setAdminCookie, verifyEventAdmin } from '@/features/auth/server/actions';
 import { cookies } from 'next/headers';
 import prisma from '@/shared/lib/prisma';
+import { hashToken } from '@/shared/lib/token';
 
 vi.mock('@/shared/lib/prisma');
 
@@ -45,23 +46,33 @@ describe('Auth Safety Net (app/actions.ts)', () => {
         });
 
         it('should return false if event not found', async () => {
-            mockCookieStore.get.mockReturnValue({ value: 'sometoekn' });
+            mockCookieStore.get.mockImplementation((name: string) =>
+                name === 'tabletop_admin_my-slug' ? { value: 'sometoken' } : undefined
+            );
             mockPrisma.event.findUnique.mockResolvedValue(null);
 
             const result = await verifyEventAdmin('my-slug');
             expect(result).toBe(false);
         });
 
-        it('should return true if token matches plaintext (migration support)', async () => {
-            mockCookieStore.get.mockReturnValue({ value: 'valid-token' });
+        it('should return false if the stored value is plaintext (legacy compare removed)', async () => {
+            mockCookieStore.get.mockImplementation((name: string) =>
+                name === 'tabletop_admin_my-slug' ? { value: 'valid-token' } : undefined
+            );
             mockPrisma.event.findUnique.mockResolvedValue({ adminToken: 'valid-token' });
+
+            const result = await verifyEventAdmin('my-slug');
+            expect(result).toBe(false);
+        });
+
+        it('should return true if the hash of the cookie token matches', async () => {
+            mockCookieStore.get.mockImplementation((name: string) =>
+                name === 'tabletop_admin_my-slug' ? { value: 'valid-token' } : undefined
+            );
+            mockPrisma.event.findUnique.mockResolvedValue({ adminToken: hashToken('valid-token') });
 
             const result = await verifyEventAdmin('my-slug');
             expect(result).toBe(true);
         });
-
-        // Note: We'd treat hash verification as a refactor goal or verify it if logic exists.
-        // The current implementation seen has hash logic, so we should test that too if practical,
-        // but for a safety net, ensuring the "Happy Path" works is critical.
     });
 });

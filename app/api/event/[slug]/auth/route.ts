@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { setAdminCookie } from "@/features/auth/server/actions";
+import { isAdminToken } from "@/features/auth/server/verify";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { getBaseUrl } from "@/shared/lib/url";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
+import { identityCookieOptions, IDENTITY_COOKIES, signValue } from "@/shared/lib/session";
 
 const log = Logger.get("AuthRoute");
 
@@ -14,14 +15,17 @@ const log = Logger.get("AuthRoute");
  *
  * Flow:
  * 1. User clicks Telegram/Discord link (`/api/event/[slug]/auth?token=...`).
- * 2. System validates the `token` against the `adminToken` stored in the DB for that event.
+ * 2. System checks that the SHA-256 hash of `token` equals the event's stored `adminToken` hash.
  * 3. On Success:
  *    a. Sets the event-specific admin cookie (`tabletop_admin_[slug]`).
- *    b. Hydrates the Global Identity cookies (Discord/Telegram) from the event's
+ *    b. Hydrates the signed Global Identity cookies (Discord/Telegram) from the event's
  *       manager fields so the user is recognized across ALL pages (Voting, Profile, etc.),
  *       not just the Manage page. This closes the "logged out on voting page" gap.
  *    c. Redirects to `/manage`.
  * 4. On Failure: Redirects to the public event page with an error query param.
+ *
+ * Redirects are built from the request's own origin, so a self-host without
+ * NEXT_PUBLIC_BASE_URL works and the target host is never taken from configuration.
  *
  * @param {NextRequest} request - The incoming request containing the token query param.
  * @param {Object} context - Route parameters.
@@ -33,10 +37,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
     const searchParams = request.nextUrl.searchParams;
     const token = searchParams.get("token");
     const slug = params.slug;
-    const baseUrl = getBaseUrl();
+    const eventPath = `/e/${encodeURIComponent(slug)}`;
+    const redirectTo = (path: string) => NextResponse.redirect(new URL(path, request.nextUrl.origin));
 
     if (!token) {
-        return NextResponse.redirect(`${baseUrl}/e/${slug}`);
+        return redirectTo(eventPath);
     }
 
     try {
@@ -44,17 +49,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
             where: { slug }
         });
 
-        // Security: Strict token equality check with Hashing.
-        // We accept that the DB might still have plaintext tokens during migration.
-        // Logic: Hash(Input) === DB OR Input === DB (Legacy Fallback)
-        const { hashToken } = await import("@/shared/lib/token");
-        const inputHash = hashToken(token);
-
-        const isValid = event && (event.adminToken === inputHash || event.adminToken === token);
-
-        if (!isValid) {
+        // Security: only the raw token is accepted; the stored hash itself is never a valid token.
+        if (!event || !isAdminToken(token, event.adminToken)) {
             log.warn("Invalid Magic Link attempt", { slug });
-            return NextResponse.redirect(`${baseUrl}/e/${slug}?error=invalid_token`);
+            return redirectTo(`${eventPath}?error=invalid_token`);
         }
 
         // 1. Set the event-specific admin cookie for /manage access.
@@ -63,26 +61,26 @@ export async function GET(request: NextRequest, props: { params: Promise<{ slug:
         // 2. Hydrate Global Identity cookies from the event's manager fields.
         // WHY: Without this, the user appears anonymous on the public Voting page
         // because VotingInterface reads global cookies, not event-specific admin tokens.
-        // Uses the same cookie options as the Discord OAuth callback for consistency.
+        // Identity cookies are HMAC-signed so they cannot be forged from a known platform ID.
         const cookieStore = await cookies();
         const cookieOpts = { ...COOKIE_BASE_OPTIONS, maxAge: COOKIE_MAX_AGE };
 
         if (event.managerDiscordId) {
-            cookieStore.set("tabletop_user_discord_id", event.managerDiscordId, cookieOpts);
+            cookieStore.set(IDENTITY_COOKIES.discord, signValue(event.managerDiscordId), identityCookieOptions());
             if (event.managerDiscordUsername) {
                 cookieStore.set("tabletop_user_discord_name", event.managerDiscordUsername, { ...cookieOpts, httpOnly: false });
             }
         }
 
         if (event.managerChatId) {
-            cookieStore.set("tabletop_user_chat_id", event.managerChatId, cookieOpts);
+            cookieStore.set(IDENTITY_COOKIES.telegram, signValue(event.managerChatId), identityCookieOptions());
         }
 
         log.info("Magic Link login successful (global identity synced)", { scope: "event", identifier: slug });
-        return NextResponse.redirect(`${baseUrl}/e/${slug}/manage`);
+        return redirectTo(`${eventPath}/manage`);
 
     } catch (e) {
         log.error("Magic Link error", e as Error);
-        return NextResponse.redirect(`${baseUrl}/e/${slug}?error=server_error`);
+        return redirectTo(`${eventPath}?error=server_error`);
     }
 }

@@ -61,10 +61,10 @@ export async function POST(req: Request) {
 
         // Identity Pre-Sync: If user is logged in via Magic Link globally, auto-populate credentials
         const { cookies } = await import("next/headers");
+        const { readIdentity } = await import("@/shared/lib/session");
         const cookieStore = await cookies();
-        const globalChatId = cookieStore.get("tabletop_user_chat_id")?.value || null;
-        const globalDiscordId = cookieStore.get("tabletop_user_discord_id")?.value || null;
-        const globalDiscordName = cookieStore.get("tabletop_user_discord_name")?.value || null;
+        const { chatId: globalChatId, discordId: globalDiscordId } = readIdentity(cookieStore);
+        const globalDiscordName = (globalDiscordId && cookieStore.get("tabletop_user_discord_name")?.value) || null;
         
         // Auto-hydrate their Telegram Handle if we know their Chat ID from a past event.
         let inferredTelegramHandle = null;
