@@ -59,8 +59,8 @@ export function buildFinalizedMessage(
     const googleLink = googleCalendarUrl(calendarEvent, slotTime, slotEndTime);
     const outlookLink = outlookCalendarUrl(calendarEvent, slotTime, slotEndTime);
 
-    let locString = event.location ? `\n📍 ${event.location}` : "";
-    let hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
+    const locString = event.location ? `\n📍 ${event.location}` : "";
+    const hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
 
     // Intent: Format time in the Event's specific timezone for clarity.
     const timeString = slotTime.toLocaleTimeString('en-US', {
@@ -136,8 +136,8 @@ export function buildCampaignFinalizedMessage(
         return `  ${i + 1}. 📅 ${dateString} ⏰ ${timeString}`;
     }).join('\n');
 
-    let hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
-    let locString = event.location ? `\n📍 ${event.location}` : "";
+    const hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
+    const locString = event.location ? `\n📍 ${event.location}` : "";
 
     // Intent: Add Attendee Lists if applicable (Max Players logic)
     let listString = "";

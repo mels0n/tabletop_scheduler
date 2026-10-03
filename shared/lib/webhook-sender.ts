@@ -60,7 +60,7 @@ export async function processWebhook(webhookId: string) {
         const TIMEOUT_MS = 60 * 60 * 1000;
 
         let newStatus = "RETRY";
-        let nextTime = new Date(now.getTime() + 5 * 60 * 1000); // Default 5 min retry
+        const nextTime = new Date(now.getTime() + 5 * 60 * 1000); // Default 5 min retry
 
         if (age > TIMEOUT_MS) {
             newStatus = "FAILED";

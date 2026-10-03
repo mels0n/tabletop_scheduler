@@ -136,7 +136,7 @@ export function FinalizeEventModal({ slug, slotId, potentialHosts, prominent = f
                                                 name="host"
                                                 value=""
                                                 checked={selectedHostId === ''}
-                                                onChange={(e) => setSelectedHostId('')}
+                                                onChange={() => setSelectedHostId('')}
                                                 className="hidden"
                                             />
                                             {selectedHostId === '' && <Check className="w-4 h-4 text-indigo-400" />}

@@ -1,7 +1,7 @@
 
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, Key, Smartphone, Lock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Lock, RefreshCw } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {

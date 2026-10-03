@@ -62,7 +62,7 @@ export function TelegramConnect({
                         router.refresh();
                     }
                 }
-            } catch (e) { }
+            } catch { /* polling is best-effort; retry on next tick */ }
         }, 3000);
 
         return () => clearInterval(interval);
@@ -148,7 +148,7 @@ export function TelegramConnect({
                                                 window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
                                                 setIsPolling(true);
                                             }
-                                        } catch (e) { } finally { setRegisterLoading(false); }
+                                        } catch { /* best-effort: the button re-enables so the user can retry */ } finally { setRegisterLoading(false); }
                                     }}
                                     disabled={registerLoading}
                                     className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
@@ -308,7 +308,7 @@ export function TelegramConnect({
                                         window.open(`https://t.me/${botUsername}?start=rec_${res.token}`, '_blank');
                                         setIsPolling(true);
                                     }
-                                } catch (e) { } finally { setRegisterLoading(false); }
+                                } catch { /* best-effort: the button re-enables so the user can retry */ } finally { setRegisterLoading(false); }
                             }}
                             disabled={registerLoading}
                             className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"

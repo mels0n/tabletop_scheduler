@@ -6,7 +6,6 @@ import prisma from '@/shared/lib/prisma';
 vi.mock('@/shared/lib/prisma');
 
 // Helper to cast mocked functions
-const mockCookies = cookies as unknown as ReturnType<typeof vi.fn>;
 const mockPrisma = prisma as unknown as { event: { findUnique: ReturnType<typeof vi.fn> } };
 
 describe('Auth Safety Net (app/actions.ts)', () => {

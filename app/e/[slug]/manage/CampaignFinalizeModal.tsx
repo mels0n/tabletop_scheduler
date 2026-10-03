@@ -97,14 +97,14 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
     const toggleSlot = (id: number) =>
         setSelectedSlotIds(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
 
     const toggleGroup = (count: number) =>
         setExpandedGroups(prev => {
             const next = new Set(prev);
-            next.has(count) ? next.delete(count) : next.add(count);
+            if (next.has(count)) next.delete(count); else next.add(count);
             return next;
         });
 
