@@ -25,7 +25,7 @@ All variables are parsed and validated once, at server boot, by `shared/config/s
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `SESSION_SECRET` | In production | `dev-session-secret` outside production | HMAC key that signs the identity cookies and Telegram connect codes. Use 32 or more random bytes. Changing it signs everyone out. The Docker image generates one into `/app/data/.session-secret` on first start if you leave it unset. |
-| `CRON_SECRET` | On hosted | - | Bearer token required by every `/api/cron/*` route and `/api/telegram/setup`, and the key for the outbound webhook signature. The Docker image generates one into `/app/data/.cron-secret` if unset, and its internal scheduler uses it automatically. On a self-hosted install without one, cron routes accept only loopback requests. |
+| `CRON_SECRET` | On hosted | - | Bearer token required by every `/api/cron/*` route and `/api/telegram/setup`, and the key for the outbound webhook signature. The Docker image generates one into `/app/data/.cron-secret` if unset, and its internal scheduler uses it automatically. Without one, every cron route rejects every request. |
 
 ## Telegram
 

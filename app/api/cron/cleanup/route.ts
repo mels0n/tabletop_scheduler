@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  * @description Cron Job Handler for Automatic Data Retention / Cleanup.
  *
  * Responsibilities:
- * 1. Security: `requireCronAuth` (Bearer CRON_SECRET; loopback Host only when no secret is set).
+ * 1. Security: `requireCronAuth` (Bearer CRON_SECRET; rejected outright when no secret is set).
  * 2. Retention Logic: Defines different expiration periods based on event status:
  *    - FINALIZED one-shot: X days after the finalized slot starts.
  *    - FINALIZED campaign: X days after its last finalized session ends.
