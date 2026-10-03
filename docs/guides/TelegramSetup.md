@@ -49,7 +49,7 @@ TabletopTime supports two ways of receiving Telegram messages. Set `TELEGRAM_MOD
 2. Go to the **Manager Dashboard** for your event.
 3. **Optional:** Click "Register for Magic Links" to securely link your Telegram account to the event (for recovery).
 4. Click the **"Add Bot to Group"** button (or "Connect Telegram Notifications"). This opens Telegram and prompts you to add the bot as an Admin.
-5. The manage page now shows a **connect command with a code**, for example `/connect a1b2c3d4 9f3a7c21`. Copy it and **send it in the group**.
+5. The manage page now shows a **connect command with a code**, for example `/connect Xk3pQ9mL2vB7nR 9f3a7c21`. Copy it and **send it in the group**.
 6. The bot replies, connects the group to the event, posts the live dashboard, and pins it.
 7. When you **Finalize** the event, the bot posts the result to the group and pins it.
 
@@ -57,6 +57,6 @@ The code is what proves you manage the event. It is tied to that one event, so p
 
 ## 5. What the Bot Sends
 
-**In a connected group:** the live dashboard, slot changes, the finalize announcement, and voting or session reminders (only the reminder types the organizer turned on).
+**In a connected group:** the live dashboard, a short "updated their availability" post each time someone votes (it names the voter), slot changes, location updates, the finalize announcement, cancel and delete announcements, and voting or session reminders (only the reminder types the organizer turned on).
 
 **By direct message** (only to people who have started a chat with the bot): magic login links you request, waitlist promotion and removal notices, finalize results for events you joined, and quorum alerts to the organizer.

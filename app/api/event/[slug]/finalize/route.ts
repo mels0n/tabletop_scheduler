@@ -258,7 +258,7 @@ async function handleCampaignFinalize(
     }
     await assertHostInEvent(houseId, currentEvent.id);
 
-    // Fetch all votes across selected slots — needed for DM notifications regardless of selection path
+    // Fetch all votes across selected slots: needed for DM notifications regardless of selection path
     const allVotes = await prisma.vote.findMany({
         where: { timeSlotId: { in: slotIds }, preference: { in: ['YES', 'MAYBE'] }, participant: { eventId: currentEvent.id } },
         include: { participant: true }
@@ -273,7 +273,7 @@ async function handleCampaignFinalize(
     let waitlistNames: string[];
 
     if (participantIds && participantIds.length > 0) {
-        // Explicit list from the UI — everyone on it is ACCEPTED, no waitlist
+        // Explicit list from the UI: everyone on it is ACCEPTED, no waitlist
         const participants = await prisma.participant.findMany({
             where: { id: { in: participantIds }, eventId: currentEvent.id },
             select: { id: true, name: true }

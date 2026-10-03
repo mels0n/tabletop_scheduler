@@ -219,7 +219,7 @@ function NewEventForm() {
                             </button>
                         </div>
 
-                        {/* Minimum Sessions — shown only for Campaign */}
+                        {/* Minimum Sessions: shown only for Campaign */}
                         {eventType === "CAMPAIGN" && (
                             <div className="flex flex-col gap-2 pt-1">
                                 <div className="flex items-center gap-2">
@@ -233,7 +233,7 @@ function NewEventForm() {
                                         />
                                         {showMinSessionsTooltip && (
                                             <div className="absolute left-0 top-5 z-10 w-72 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
-                                                You&apos;ll see a warning during finalization if you haven&apos;t selected enough dates. This is a guide — it won&apos;t block you.
+                                                You&apos;ll see a warning during finalization if you haven&apos;t selected enough dates. This is only a guide, so it won&apos;t block you.
                                             </div>
                                         )}
                                     </div>
@@ -317,7 +317,7 @@ function NewEventForm() {
                         <TimeSlotPicker value={slots} onChange={setSlots} />
                         {eventType === "CAMPAIGN" && (
                             <p className="text-xs text-slate-400 mt-1">
-                                Add all candidate dates — players will vote on each one
+                                Add all candidate dates, and players will vote on each one
                             </p>
                         )}
                     </div>

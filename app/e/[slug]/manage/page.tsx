@@ -130,9 +130,9 @@ export default async function ManageEventPage(props: PageProps) {
 
     // Custom Sort Strategy:
     // 1. "Perfect" (Everyone + Host) is top priority.
-    // 2. "Total Turnout" (Yes + Maybe) is second — availability is the scarce resource.
+    // 2. "Total Turnout" (Yes + Maybe) is second, because availability is the scarce resource.
     // 3. "Strong Preference" (Yes count) is third.
-    // 4. "Has Host" breaks ties — a location is easier to find than a person.
+    // 4. "Has Host" breaks ties, since a location is easier to find than a person.
     slots.sort((a, b) => {
         // 1. Status Category (Perfect > Viable > Low)
         // We rely on 'perfect' flag for top tier.
@@ -165,7 +165,7 @@ export default async function ManageEventPage(props: PageProps) {
     const finalizedSlot = isFinalized && !isCampaign ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
     const finalizedSessions = event.finalizedSessions ?? [];
 
-    // Campaign session grouping — order-independent algorithm:
+    // Campaign session grouping (order-independent algorithm):
     // 1. Compute pairwise intersections across all voted sessions to find candidate group keys
     // 2. Rank candidate keys by size DESC then coverage DESC
     // 3. Greedily assign each session to the largest key it qualifies for
@@ -200,7 +200,7 @@ export default async function ManageEventPage(props: PageProps) {
             }
         }
 
-        // Step 2: for each candidate key, collect ALL sessions that qualify —
+        // Step 2: for each candidate key, collect ALL sessions that qualify:
         //         sessions can and should appear in multiple groups (a date with 5 players
         //         is valid for both the 4-player group and any 2-player subset groups).
         //         Keep groups with ≥ 2 qualifying sessions; sort largest key first.
@@ -375,7 +375,7 @@ export default async function ManageEventPage(props: PageProps) {
                                     <div className="space-y-2">
                                         {finalizedSessions.map((fs, i) => {
                                             const calEvent = {
-                                                title: `${event.title} — Session ${i + 1}`,
+                                                title: `${event.title}: Session ${i + 1}`,
                                                 description: event.description ?? undefined,
                                                 location: event.location ?? undefined,
                                                 slug: event.slug,

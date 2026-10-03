@@ -9,23 +9,23 @@ import { FaqJsonLd } from "@/components/FaqJsonLd";
 const HOME_FAQ = [
   {
     question: "Is there a free app to schedule D&D sessions?",
-    answer: "Yes — Tabletop Time is a completely free D&D session scheduler and RPG game night planner built specifically for tabletop groups. There are no subscriptions, no premium tiers, and no ads. You create an event, share a link with your players, and the tool automatically finds the best time slot where your required number of players are all available. It works for D&D, Pathfinder, Call of Cthulhu, and any other tabletop RPG.",
+    answer: "Yes. Tabletop Time is a completely free D&D session scheduler and RPG game night planner built specifically for tabletop groups. There are no subscriptions, no premium tiers, and no ads. You create an event, share a link with your players, and the tool automatically finds the best time slot where your required number of players are all available. It works for D&D, Pathfinder, Call of Cthulhu, and any other tabletop RPG.",
   },
   {
     question: "Do my players need to create an account to respond?",
-    answer: "No. Tabletop Time is a no-login, no-app scheduling tool. Your players simply click the link you share and select the times they are available — no account creation, no email required, no friction. The organizer can optionally create a profile to manage multiple events, but it is never required for players to participate.",
+    answer: "No. Tabletop Time is a no-login, no-app scheduling tool. Your players simply click the link you share and select the times they are available. There is no account to create, no email required, and no friction. The organizer can optionally create a profile to manage multiple events, but it is never required for players to participate.",
   },
   {
     question: "How is Tabletop Time different from Doodle or When2Meet?",
-    answer: "Unlike generic scheduling tools, Tabletop Time is built specifically for tabletop gaming groups. It supports quorum-based scheduling — meaning you can set a minimum number of players required to run a session, and the tool finds the best slot where that quorum is met, even if not everyone can make it. It also integrates directly with Discord and Telegram for automatic reminders and poll results, which generic tools don't offer.",
+    answer: "Unlike generic scheduling tools, Tabletop Time is built specifically for tabletop gaming groups. It supports quorum-based scheduling, which means you can set a minimum number of players required to run a session, and the tool finds the best slot where that quorum is met, even if not everyone can make it. It also integrates directly with Discord and Telegram for automatic reminders and poll results, which generic tools don't offer.",
   },
   {
     question: "Does Tabletop Time work for Magic: The Gathering and board game nights?",
-    answer: "Yes. While Tabletop Time was built with D&D groups in mind, it works equally well for Magic: The Gathering Commander pods, Draft nights, and board game sessions. The quorum feature is especially useful for MTG — you can set the exact pod size you need (such as 4 players for Commander) and the tool will find the time slot that works for that many people.",
+    answer: "Yes. While Tabletop Time was built with D&D groups in mind, it works equally well for Magic: The Gathering Commander pods, Draft nights, and board game sessions. The quorum feature is especially useful for MTG, since you can set the exact pod size you need (such as 4 players for Commander) and the tool will find the time slot that works for that many people.",
   },
   {
     question: "Does Tabletop Time integrate with Discord?",
-    answer: "Yes. Tabletop Time offers an optional Discord bot integration. Once connected to your Discord server, the bot delivers instant poll results and session reminders directly in your channels — so your group never misses a game night. There is also an optional Telegram bot for groups that coordinate there instead.",
+    answer: "Yes. Tabletop Time offers an optional Discord bot integration. Once connected to your Discord server, the bot delivers instant poll results and session reminders directly in your channels, so your group never misses a game night. There is also an optional Telegram bot for groups that coordinate there instead.",
   },
 ];
 
@@ -44,10 +44,10 @@ export default async function Home() {
   // Intent: Determine deployment mode to toggle text/features (e.g., "Free & Open" vs "Self Hosted").
   const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
-  // Fetch public donations for the ticker — only in hosted mode to preserve self-hosted static generation.
+  // Fetch public donations for the ticker, only in hosted mode to preserve self-hosted static generation.
   const donations = isHosted ? await getDonations(20) : [];
 
-  // Fetch live event stats for badges — only in hosted mode.
+  // Fetch live event stats for badges, only in hosted mode.
   const eventStats = isHosted ? await getEventStats() : null;
 
   /**
@@ -142,7 +142,7 @@ export default async function Home() {
           </a>
         </div>
 
-        {/* Donation ticker — compact scrolling social proof strip (ADR-003) */}
+        {/* Donation ticker: compact scrolling social proof strip (ADR-003) */}
         {isHosted && donations.length > 0 && (
           <div className="mt-12 w-full min-w-0">
             <DonationTicker donations={donations} />
@@ -150,7 +150,7 @@ export default async function Home() {
         )}
       </div>
 
-      {/* Live Event Stats Badges — Social proof for hosted version */}
+      {/* Live Event Stats Badges: social proof for hosted version */}
       {isHosted && eventStats && (
         <div className="mt-16 flex flex-col items-center gap-4">
           <div className="flex flex-wrap justify-center gap-6">
@@ -281,7 +281,7 @@ export default async function Home() {
         <FeatureCard
           icon={<ArrowRight className="w-6 h-6 text-indigo-400" />}
           title="Smart Resolution"
-          desc="We automatically find the best slot where everyone—or just your required quorum—can play."
+          desc="We automatically find the best slot where everyone can play, or at least your required quorum."
         />
         <FeatureCard
           icon={<MessageCircle className="w-6 h-6 text-sky-400" />}

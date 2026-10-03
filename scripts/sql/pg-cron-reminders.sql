@@ -23,7 +23,7 @@ select cron.schedule(
   '*/10 * * * *',
   $$
   select net.http_get(
-    url := (select decrypted_secret from vault.decrypted_secrets where name = 'app_base_url') || '/api/cron/reminders',
+    url := rtrim((select decrypted_secret from vault.decrypted_secrets where name = 'app_base_url'), '/') || '/api/cron/reminders',
     headers := jsonb_build_object(
       'Authorization',
       'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
@@ -38,7 +38,7 @@ select cron.schedule(
   '*/5 * * * *',
   $$
   select net.http_get(
-    url := (select decrypted_secret from vault.decrypted_secrets where name = 'app_base_url') || '/api/cron/webhooks',
+    url := rtrim((select decrypted_secret from vault.decrypted_secrets where name = 'app_base_url'), '/') || '/api/cron/webhooks',
     headers := jsonb_build_object(
       'Authorization',
       'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')

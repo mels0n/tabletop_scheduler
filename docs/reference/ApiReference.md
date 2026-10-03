@@ -174,7 +174,7 @@ Lets any attendee propose a new slot when existing options do not work. Not allo
   "endTime": "2026-11-05T22:00:00.000Z"
 }
 ```
-`suggesterName` is 1 to 60 characters. `startTime` must be before `endTime`.
+`suggesterName` is 1 to 50 characters. `startTime` must be before `endTime`.
 
 **Response (200):** `{ "success": true }`
 

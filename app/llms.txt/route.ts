@@ -1,5 +1,7 @@
 import { getAllPosts } from '@/shared/lib/blog';
 
+export const dynamic = 'force-static';
+
 // Rendered at build time (no force-dynamic): getAllPosts() is date-gated, so
 // the Blog list below only ever shows published posts, and future-dated posts
 // appear automatically when the fortnightly deploy rebuilds the site on/after

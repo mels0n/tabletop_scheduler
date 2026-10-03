@@ -68,7 +68,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
     >
       <strong className="text-slate-200 font-semibold">{d.name}</strong>
       {d.message && (
-        <em className="text-slate-400 font-normal">— &ldquo;{truncate(d.message)}&rdquo;</em>
+        <em className="text-slate-400 font-normal">&ldquo;{truncate(d.message)}&rdquo;</em>
       )}
       <CoffeeIcons count={d.coffees} />
     </span>
@@ -82,7 +82,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
       className="block w-full min-w-0 ticker-wrapper relative overflow-hidden py-2 cursor-pointer group"
       aria-label="Support Tabletop Time on Ko-fi"
     >
-      {/* Gradient fade — left edge */}
+      {/* Gradient fade: left edge */}
       <div
         className="absolute left-0 top-0 bottom-0 w-16 md:w-24 z-10 pointer-events-none"
         style={{
@@ -90,7 +90,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
         }}
       />
 
-      {/* Scrolling track — two copies for seamless loop.
+      {/* Scrolling track: two copies for seamless loop.
           Duration scales with chip count to keep a consistent ~7s-per-chip pace. */}
       <div
         className="ticker-track inline-flex gap-4 group-hover:[animation-play-state:paused]"
@@ -105,7 +105,7 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
         ))}
       </div>
 
-      {/* Gradient fade — right edge */}
+      {/* Gradient fade: right edge */}
       <div
         className="absolute right-0 top-0 bottom-0 w-16 md:w-24 z-10 pointer-events-none"
         style={{

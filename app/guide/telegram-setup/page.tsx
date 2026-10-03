@@ -88,20 +88,21 @@ export default function TelegramSetupPage() {
                     <pre className="bg-slate-900 p-4 rounded-lg"><code>TELEGRAM_BOT_TOKEN=your_token_here</code></pre>
 
                     <h2>3. Deployment Modes</h2>
-                    <p>Tabletop Time supports two modes for the Telegram Bot automatically:</p>
+                    <p>Tabletop Time supports two modes for the Telegram Bot. Both need <code>NEXT_PUBLIC_BASE_URL</code> set whenever a bot token is configured, because every link the bot sends points at it.</p>
 
                     <div className="grid md:grid-cols-2 gap-6 not-prose my-8">
                         <div className="bg-slate-900/30 p-5 rounded-lg border border-slate-800">
-                            <h3 className="text-lg font-semibold text-indigo-300 mb-2">Polling (Default)</h3>
+                            <h3 className="text-lg font-semibold text-indigo-300 mb-2">Polling</h3>
                             <p className="text-sm text-slate-400 mb-3">Best for Home Servers (Docker)</p>
                             <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4">
-                                <li>No public domain required</li>
-                                <li>Simply do NOT set <code>NEXT_PUBLIC_BASE_URL</code></li>
+                                <li>No public domain required, so it works behind NAT</li>
+                                <li>Set <code>TELEGRAM_MODE=polling</code></li>
+                                <li>Still set <code>NEXT_PUBLIC_BASE_URL</code> to an address your players can open (it does not need to be public)</li>
                             </ul>
                         </div>
 
                         <div className="bg-slate-900/30 p-5 rounded-lg border border-slate-800">
-                            <h3 className="text-lg font-semibold text-indigo-300 mb-2">Webhook</h3>
+                            <h3 className="text-lg font-semibold text-indigo-300 mb-2">Webhook (Default)</h3>
                             <p className="text-sm text-slate-400 mb-3">Best for Cloud / Vercel</p>
                             <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4">
                                 <li>Requires HTTPS public domain</li>

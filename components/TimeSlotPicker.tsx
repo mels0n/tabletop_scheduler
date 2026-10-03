@@ -90,7 +90,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
 
         if (skipped.length > 0) {
             alert(
-                `${skipped.length} date${skipped.length !== 1 ? "s" : ""} skipped — they are in the past.`
+                `${skipped.length} date${skipped.length !== 1 ? "s" : ""} skipped because they are in the past.`
             );
         }
     };
@@ -111,10 +111,10 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                 <span className="text-sm text-slate-400">{value.length} slots added</span>
             </div>
 
-            {/* Input Controls — original row layout restored */}
+            {/* Input Controls: original row layout restored */}
             <div className="flex flex-wrap gap-4 p-4 border border-slate-700 rounded-lg bg-slate-900/50">
 
-                {/* Date field — opens multi-day calendar popover */}
+                {/* Date field: opens multi-day calendar popover */}
                 <div className="flex flex-col gap-1 flex-1 min-w-[160px] relative" ref={datePickerRef}>
                     <label className="text-xs text-slate-400">Date</label>
                     <button
@@ -139,7 +139,7 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                     )}
                 </div>
 
-                {/* Time inputs — unchanged */}
+                {/* Time inputs: unchanged */}
                 <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
                     <label className="text-xs text-slate-400">Start</label>
                     <input
