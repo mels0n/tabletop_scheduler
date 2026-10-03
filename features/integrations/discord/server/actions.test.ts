@@ -112,6 +112,37 @@ describe('sendDiscordMagicLogin — username matching hardening', () => {
         expect(mockCreateDM).toHaveBeenCalledWith('manager-9', 'test-bot-token');
     });
 
+    it('ignores a forged unsigned discord id cookie (no fast-path lookup, no DM to that id)', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_user_discord_id: '444444444444444444' }));
+        mockPrisma.participant.findFirst.mockResolvedValue({ discordId: '444444444444444444', discordUsername: 'victim' });
+
+        const result = await sendDiscordMagicLogin('nobody-matches');
+
+        expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+        expect(mockCreateDM).not.toHaveBeenCalled();
+    });
+
+    it('ignores a value signed for another purpose in the discord id cookie', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_user_discord_id: signValue('participant:abc', '444444444444444444') }));
+
+        const result = await sendDiscordMagicLogin('nobody-matches');
+
+        expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+    });
+
+    it('uses the fast path for a signed discord identity cookie', async () => {
+        mockCookies.mockResolvedValue(cookieJar({ tabletop_user_discord_id: signValue('identity:discord', 'signed-user') }));
+        mockPrisma.participant.findFirst.mockResolvedValue({ discordId: 'signed-user', discordUsername: 'Me' });
+
+        const result = await sendDiscordMagicLogin('me');
+
+        expect(mockPrisma.participant.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { discordId: 'signed-user' } }));
+        expect(result.success).toBe(true);
+        expect(mockCreateDM).toHaveBeenCalledWith('signed-user', 'test-bot-token');
+    });
+
     it('refuses to send another link while a recent one is still cooling down', async () => {
         mockPrisma.participant.findFirst.mockResolvedValue(null);
         mockPrisma.participant.findMany.mockResolvedValue([

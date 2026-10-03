@@ -16,7 +16,7 @@ import {
 } from "@/features/integrations/discord/model/discord";
 import { dmManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
-import { verifyValue } from "@/shared/lib/session";
+import { readIdentity, verifyValue } from "@/shared/lib/session";
 import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
 import { guildCookieName, guildGrantPurpose, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
@@ -211,9 +211,10 @@ export async function sendDiscordMagicLogin(username: string): Promise<{ success
 
     try {
         const cookieStore = await cookies();
-        const cookieDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
+        // Signed identity only: a raw cookie value would let anyone aim the DM at any ID.
+        const cookieDiscordId = readIdentity(cookieStore).discordId;
 
-        // 1. Fast-path: Prioritize Discord ID from cookie (most reliable identity signal)
+        // 1. Fast-path: Prioritize the verified Discord ID from the session cookie
         if (cookieDiscordId) {
             // Check if they are a participant
             const participantById = await prisma.participant.findFirst({
