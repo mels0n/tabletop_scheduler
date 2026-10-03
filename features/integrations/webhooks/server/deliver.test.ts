@@ -75,7 +75,7 @@ describe('deliverWebhook', () => {
         expect(opts.headers['Content-Length']).toBe(String(Buffer.byteLength(row.payload)));
         const req = requestMock.mock.results[0].value;
         expect(req.end).toHaveBeenCalledWith(row.payload);
-        const key = createHmac('sha256', 'session-secret-for-tests').update('webhook-signing').digest('hex');
+        const key = createHmac('sha256', 'session-secret-for-tests').update(`webhook-signing\0${new URL(row.url).origin}`).digest('hex');
         const expected = createHmac('sha256', key).update(row.payload).digest('hex');
         expect(opts.headers['X-Tabletop-Signature']).toBe(`sha256=${expected}`);
     });

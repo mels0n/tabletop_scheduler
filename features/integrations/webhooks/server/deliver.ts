@@ -85,7 +85,7 @@ export async function deliverWebhook(row: OutboxRow): Promise<void> {
         "Content-Type": "application/json",
         "X-Tabletop-Event-Id": String(row.eventId),
         "X-Webhook-Id": row.id,
-        "X-Tabletop-Signature": signWebhookBody(row.payload),
+        "X-Tabletop-Signature": signWebhookBody(row.payload, row.url),
     };
 
     const status = await postPinned(target.url, target.addresses, headers, row.payload);

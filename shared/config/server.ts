@@ -20,12 +20,6 @@ export interface ServerConfig {
     /** Canonical public origin without a trailing slash, or null when unset. */
     baseUrl: string | null;
     sessionSecret: string;
-    /**
-     * Key for the outbound webhook `X-Tabletop-Signature`: hex HMAC-SHA256 of the string
-     * `webhook-signing`, keyed with `sessionSecret`. Derived, so no extra env var, and
-     * independent of `CRON_SECRET` (an integrator holding it cannot call cron routes).
-     */
-    webhookSigningKey: string;
     cronSecret: string | null;
     telegram: { token: string | null; mode: TelegramMode };
     discord: { botToken: string | null; appId: string | null; clientSecret: string | null };
@@ -37,7 +31,6 @@ export interface ServerConfig {
 
 const DEV_SESSION_SECRET = "dev-session-secret";
 const BUILD_PHASE = "phase-production-build";
-const WEBHOOK_SIGNING_CONTEXT = "webhook-signing";
 const BASE_URL_REQUIRED = "NEXT_PUBLIC_BASE_URL is required when a bot token is configured";
 
 /** Empty or whitespace-only env values are treated as unset. */
@@ -147,7 +140,6 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
         isVercel: e.VERCEL,
         baseUrl: resolvedBaseUrl,
         sessionSecret,
-        webhookSigningKey: createHmac("sha256", sessionSecret).update(WEBHOOK_SIGNING_CONTEXT).digest("hex"),
         cronSecret: e.CRON_SECRET ?? null,
         telegram: { token: telegramToken, mode: telegramMode },
         discord: {

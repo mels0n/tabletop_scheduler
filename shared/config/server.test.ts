@@ -34,7 +34,6 @@ describe('getServerConfig: defaults', () => {
             isVercel: false,
             baseUrl: null,
             sessionSecret: 'dev-session-secret',
-            webhookSigningKey: createHmac('sha256', 'dev-session-secret').update('webhook-signing').digest('hex'),
             cronSecret: null,
             telegram: { token: null, mode: 'off' },
             discord: { botToken: null, appId: null, clientSecret: null },
@@ -66,16 +65,6 @@ describe('getServerConfig: defaults', () => {
         expect(cfg.cleanupRetentionDays).toEqual({ finalized: 3, draft: 30, cancelled: 7 });
         expect(cfg.logLevel).toBe('debug');
         expect(cfg.acceptDataLoss).toBe(true);
-    });
-});
-
-describe('getServerConfig: webhook signing key', () => {
-    it('is the hex HMAC-SHA256 of "webhook-signing" keyed with SESSION_SECRET', () => {
-        const cfg = load({ SESSION_SECRET: 'instance-session-secret', CRON_SECRET: 'unrelated' });
-        const expected = createHmac('sha256', 'instance-session-secret').update('webhook-signing').digest('hex');
-        expect(cfg.webhookSigningKey).toBe(expected);
-        expect(cfg.webhookSigningKey).not.toBe(cfg.sessionSecret);
-        expect(cfg.webhookSigningKey).not.toBe(cfg.cronSecret);
     });
 });
 
