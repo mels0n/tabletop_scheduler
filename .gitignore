@@ -72,3 +72,13 @@ FULL-AUDIT-REPORT.md
 
 
 scratch/
+
+# Local-only working files (never tracked)
+CLAUDE.md
+.claude/*
+!.claude/*.json
+.superpowers/
+docs/superpowers/
+memory/
+MEMORY.md
+tmp/

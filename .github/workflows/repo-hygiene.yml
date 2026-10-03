@@ -1,0 +1,58 @@
+name: Repo Hygiene
+
+# Keeps local-only working files out of the published repository and keeps
+# public-facing docs free of references to the tooling around the project.
+# A FAILING gate, not advisory. Adjust the two pattern lists per repo if needed.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No local-only paths are tracked
+        run: |
+          set -euo pipefail
+          # Top-level .claude/*.json (settings, pipeline config) is allowed;
+          # everything else under .claude/ is not.
+          bad=$(git ls-files -z | tr '\0' '\n' \
+            | grep -E '^(CLAUDE\.md|MEMORY\.md|\.superpowers/|docs/superpowers/|scratch/|memory/|\.claude/)' \
+            | grep -vE '^\.claude/[^/]+\.json$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Local-only working files are tracked. Remove them from the index and, if the repo is public, from history."
+            echo "$bad"
+            exit 1
+          fi
+          echo "ok: no local-only paths tracked"
+
+      - name: Public docs carry no internal references
+        run: |
+          set -euo pipefail
+          files=$(git ls-files -z -- AGENTS.md README.md 'docs/**' | tr '\0' '\n' | grep -E '\.(md|mdx|txt)$' || true)
+          if [ -z "$files" ]; then
+            echo "ok: no public docs to check"
+            exit 0
+          fi
+          hits=$(echo "$files" | xargs grep -inE \
+            'superpowers|melson-agents|\.secrets/|notes/(system|repos|clients|untap|homelab)|subagent|\bimplementer\b|\bverifier\b|\bresearcher\b' \
+            || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Public-facing docs mention internal tooling. Rewrite in the maintainer's voice for an outside reader."
+            echo "$hits"
+            exit 1
+          fi
+          echo "ok: public docs clean"
