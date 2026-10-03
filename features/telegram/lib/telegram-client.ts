@@ -140,8 +140,10 @@ export async function pinChatMessage(chatId: string | number, messageId: number,
  * @param {number} messageId - Message to edit.
  * @param {string} text - New content.
  * @param {string} token - Bot Token.
+ * @returns {Promise<boolean>} True if the message now shows `text` (including Telegram's
+ * "message is not modified" response); false if the edit failed, e.g. the message is gone.
  */
-export async function editMessageText(chatId: string | number, messageId: number, text: string, token: string) {
+export async function editMessageText(chatId: string | number, messageId: number, text: string, token: string): Promise<boolean> {
     log.debug(`Editing message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
     try {
@@ -158,12 +160,16 @@ export async function editMessageText(chatId: string | number, messageId: number
 
         if (!res.ok) {
             const err = await res.text();
+            // Intent: Re-rendering an unchanged dashboard is a success, not a reason to repost it.
+            if (err.includes("message is not modified")) return true;
             log.error("API Error (editMessageText)", { error: err });
-        } else {
-            log.debug(`Message ${messageId} edited successfully.`);
+            return false;
         }
+        log.debug(`Message ${messageId} edited successfully.`);
+        return true;
     } catch (e) {
         log.error("Failed to edit message", e as Error);
+        return false;
     }
 }
 

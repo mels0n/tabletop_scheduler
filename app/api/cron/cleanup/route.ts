@@ -114,14 +114,21 @@ export async function GET(req: Request) {
 
             for (const event of eventsToDelete) {
                 try {
-                    // Cleanup Telegram pins
-                    if (event.telegramChatId && event.pinnedMessageId && tgToken) {
-                        await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, tgToken);
+                    // Cleanup pins: each platform independently; a failure never blocks deletion.
+                    try {
+                        if (event.telegramChatId && event.pinnedMessageId && tgToken) {
+                            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, tgToken);
+                        }
+                    } catch (e) {
+                        log.warn(`Failed to unpin Telegram message for ${event.slug}`, e as Error);
                     }
 
-                    // Cleanup Discord Dashboard pins
-                    if (event.discordChannelId && event.discordMessageId && discordToken) {
-                        await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+                    try {
+                        if (event.discordChannelId && event.discordMessageId && discordToken) {
+                            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+                        }
+                    } catch (e) {
+                        log.warn(`Failed to unpin Discord message for ${event.slug}`, e as Error);
                     }
 
                     // Database Deletion

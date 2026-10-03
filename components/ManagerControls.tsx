@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteEvent, cancelEvent, updateReminderSettings } from "@/features/event-management/server/actions";
+import { deleteEvent, cancelEvent, updateReminderSettings, updateSessionReminderSettings } from "@/features/event-management/server/actions";
 import { Loader2, Trash2, AlertTriangle } from "lucide-react";
 
 /**
@@ -16,6 +16,8 @@ import { Loader2, Trash2, AlertTriangle } from "lucide-react";
  * @property {boolean} initialReminderEnabled - Saved state of reminder setting.
  * @property {string | null} initialReminderTime - Saved reminder time (HH:MM).
  * @property {string | null} initialReminderDays - Saved reminder days (csv string).
+ * @property {boolean} initialSessionReminderEnabled - Saved state of the session reminder setting.
+ * @property {number | null} initialSessionReminderLeadMinutes - Saved session reminder lead time in minutes.
  */
 interface ManagerControlsProps {
     slug: string;
@@ -27,7 +29,15 @@ interface ManagerControlsProps {
     initialReminderEnabled: boolean;
     initialReminderTime: string | null;
     initialReminderDays: string | null;
+    initialSessionReminderEnabled: boolean;
+    initialSessionReminderLeadMinutes: number | null;
 }
+
+const SESSION_LEAD_OPTIONS = [
+    { value: 120, label: "2 hours before" },
+    { value: 1440, label: "1 day before" },
+    { value: 2880, label: "2 days before" },
+];
 
 /**
  * @component ManagerControls
@@ -47,7 +57,9 @@ export function ManagerControls({
     isDiscordConnected,
     initialReminderEnabled,
     initialReminderTime,
-    initialReminderDays
+    initialReminderDays,
+    initialSessionReminderEnabled,
+    initialSessionReminderLeadMinutes
 }: ManagerControlsProps) {
 
     // Delete state
@@ -72,6 +84,13 @@ export function ManagerControls({
     const [isSavingReminders, setIsSavingReminders] = useState(false);
     const [reminderMessage, setReminderMessage] = useState("");
     const [reminderError, setReminderError] = useState("");
+
+    // Session Reminder State
+    const [sessionEnabled, setSessionEnabled] = useState(initialSessionReminderEnabled);
+    const [sessionLead, setSessionLead] = useState<number>(initialSessionReminderLeadMinutes ?? 1440);
+    const [isSavingSession, setIsSavingSession] = useState(false);
+    const [sessionMessage, setSessionMessage] = useState("");
+    const [sessionError, setSessionError] = useState("");
 
     /**
      * Handles Event Deletion or Cancellation depending on state.
@@ -118,6 +137,10 @@ export function ManagerControls({
                     </h3>
 
                     <div className="space-y-4">
+                        <div>
+                            <h4 className="text-sm font-semibold text-slate-300">Voting reminders</h4>
+                            <p className="text-xs text-slate-500">While voting is open, post a nudge in the group/channel on the days and time you pick.</p>
+                        </div>
                         <label className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition-colors">
                             <input
                                 type="checkbox"
@@ -126,7 +149,7 @@ export function ManagerControls({
                                 className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 bg-slate-900 border-slate-700"
                             />
                             <div className="flex-1">
-                                <span className="font-medium text-slate-200 block">Enable Automated Reminders</span>
+                                <span className="font-medium text-slate-200 block">Enable voting reminders</span>
                                 <span className="text-xs text-slate-500">Post a reminder in the group/channel automatically.</span>
                             </div>
                         </label>
@@ -195,6 +218,70 @@ export function ManagerControls({
                                 </div>
                             </div>
                         )}
+
+                        {/* Session reminders */}
+                        <div className="pt-4 border-t border-slate-800 space-y-4">
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-300">Session reminders</h4>
+                                <p className="text-xs text-slate-500">Once a session is scheduled, post a heads-up in the group/channel before it starts.</p>
+                            </div>
+
+                            <label className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={sessionEnabled}
+                                    onChange={e => setSessionEnabled(e.target.checked)}
+                                    className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 bg-slate-900 border-slate-700"
+                                />
+                                <div className="flex-1">
+                                    <span className="font-medium text-slate-200 block">Enable session reminders</span>
+                                    <span className="text-xs text-slate-500">Only sent for scheduled sessions, once per session.</span>
+                                </div>
+                            </label>
+
+                            {sessionEnabled && (
+                                <div className="space-y-4 animation-in slide-in-from-top-2 fade-in">
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-400 mb-1">Send reminder</label>
+                                        <select
+                                            value={sessionLead}
+                                            onChange={e => setSessionLead(parseInt(e.target.value))}
+                                            className="bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg block w-full p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                                        >
+                                            {SESSION_LEAD_OPTIONS.map(o => (
+                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                {sessionMessage && <p className="text-green-400 text-sm font-medium text-center">{sessionMessage}</p>}
+                                {sessionError && <p className="text-red-400 text-sm font-medium text-center">{sessionError}</p>}
+
+                                <button
+                                    onClick={async () => {
+                                        setIsSavingSession(true);
+                                        setSessionMessage("");
+                                        setSessionError("");
+
+                                        const res = await updateSessionReminderSettings(slug, sessionEnabled, sessionLead);
+
+                                        setIsSavingSession(false);
+                                        if (res.success) {
+                                            setSessionMessage("✅ Session reminders saved");
+                                            setTimeout(() => setSessionMessage(""), 3000);
+                                        } else {
+                                            setSessionError("Failed to save session reminders");
+                                        }
+                                    }}
+                                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {isSavingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Session Reminders"}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             ) : (

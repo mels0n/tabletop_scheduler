@@ -4,6 +4,16 @@ import { reliableFetch } from "@/shared/lib/fetch";
 const log = Logger.get("Discord");
 
 /**
+ * Builds a message body that cannot ping anyone. Event titles, locations and
+ * participant names are user-controlled, so a name like "@everyone" would
+ * otherwise notify the whole server.
+ */
+function withoutMentions(content: string | any): any {
+    const body = typeof content === 'string' ? { content } : { ...content };
+    return { allowed_mentions: { parse: [] }, ...body };
+}
+
+/**
  * Sends a message to a Discord channel.
  * @param channelId The Discord Channel ID.
  * @param content The text content (or embed object).
@@ -16,7 +26,7 @@ export async function sendDiscordMessage(channelId: string, content: string | an
     }
 
     const url = `https://discord.com/api/v10/channels/${channelId}/messages`;
-    const body: any = typeof content === 'string' ? { content } : content;
+    const body: any = withoutMentions(content);
 
     try {
         const res = await reliableFetch(url, {
@@ -55,7 +65,7 @@ export async function sendDiscordMessage(channelId: string, content: string | an
  */
 export async function editDiscordMessage(channelId: string, messageId: string, content: string | any, token: string): Promise<boolean> {
     const url = `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`;
-    const body: any = typeof content === 'string' ? { content } : content;
+    const body: any = withoutMentions(content);
 
     try {
         const res = await reliableFetch(url, {
@@ -138,6 +148,51 @@ export async function unpinDiscordMessage(channelId: string, messageId: string, 
         log.error("Failed to unpin message", e as Error);
         return false;
     }
+}
+
+/**
+ * Deletes a message the bot posted in a Discord channel.
+ * @param channelId The Discord Channel ID.
+ * @param messageId The Message ID to delete.
+ * @param token The Bot Token.
+ */
+export async function deleteDiscordMessage(channelId: string, messageId: string, token: string): Promise<boolean> {
+    const url = `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`;
+
+    try {
+        const res = await reliableFetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bot ${token}`,
+            }
+        });
+
+        if (!res.ok) {
+            const err = await res.text();
+            log.warn("API Error (deleteMessage)", { error: err });
+            return false;
+        }
+
+        return true;
+    } catch (e) {
+        log.error("Failed to delete message", e as Error);
+        return false;
+    }
+}
+
+/**
+ * Sends a direct message to a Discord user (opens the DM channel first).
+ * Fails when the user shares no server with the bot or has DMs disabled.
+ * @param userId The Discord User ID.
+ * @param content The text content.
+ * @param token The Bot Token.
+ */
+export async function sendDiscordDM(userId: string, content: string | any, token: string): Promise<{ id?: string; error?: any }> {
+    const dm = await createDMChannel(userId, token);
+    if (!dm.id) {
+        return { error: dm.error ?? { message: "Could not open DM channel" } };
+    }
+    return sendDiscordMessage(dm.id, content, token);
 }
 
 /**

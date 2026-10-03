@@ -12,7 +12,7 @@ vi.mock('@/features/discord/model/discord', () => ({
     createDMChannel: vi.fn(),
 }));
 vi.mock('@/features/event-management/server/recovery', () => ({
-    generateManagerMagicLink: vi.fn(),
+    dmManagerLink: vi.fn(),
 }));
 
 const mockPrisma = prisma as unknown as {

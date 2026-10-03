@@ -39,5 +39,12 @@ export function htmlToDiscordMarkdown(html: string): string {
         .replace(/<a href="(.*?)">(.*?)<\/a>/g, convertAnchor)
         .replace(/ \| /g, ' • ')
         .replace(/<br\s*\/?>/g, '\n')
-        .replace(/&nbsp;/g, ' ');
+        .replace(/&nbsp;/g, ' ')
+        // Discord renders raw text, so undo Telegram HTML escaping. &amp; goes last so an
+        // escaped literal like "&amp;lt;" ends up as "&lt;" rather than "<".
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&');
 }

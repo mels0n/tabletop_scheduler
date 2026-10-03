@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure fresh execution; no ca
 
 /**
  * @function GET
- * @description Cron endpoint to invoke the Telegram Reminder logic.
+ * @description Cron endpoint to run voting and session reminders for Telegram and Discord events.
  *
  * Pattern: Trigger-Action.
  * Why? Next.js Server Actions or long-running processes (like poller loops) are hard to keep alive in Serverless.
@@ -31,17 +31,15 @@ export async function GET(request: Request) {
     log.info("triggering reminder check via API");
 
     try {
-        const { checkReminders } = await import("@/features/telegram");
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-
-        if (!token) {
-            return NextResponse.json({ error: "No Bot Token" }, { status: 500 });
+        // Intent: Telegram and Discord are peers. Only skip when neither bot is configured.
+        if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.DISCORD_BOT_TOKEN) {
+            return NextResponse.json({ success: true, skipped: "no bot configured" });
         }
 
-        // Intent: Execute the core business logic defined in the library.
-        await checkReminders(token);
+        const { runReminders } = await import("@/features/notifications");
+        const summary = await runReminders();
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, ...summary });
     } catch (e) {
         log.error("Failed to run reminders", e as Error);
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });

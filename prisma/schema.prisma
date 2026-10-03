@@ -45,6 +45,8 @@ model Event {
   reminderTime         String?   // "HH:mm" (24h) in Event Timezone
   reminderDays         String?   // "0,1,2,3,4,5,6" (Comma separated, 0=Sun)
   lastReminderSent     DateTime? // Track to avoid duplicates
+  sessionReminderEnabled     Boolean @default(false) // Post a heads-up in the group/channel before a scheduled session
+  sessionReminderLeadMinutes Int?    // Lead time before session start: 60 | 120 | 1440 | 2880
   quorumViableNotified Boolean   @default(false)
   quorumPerfectNotified Boolean  @default(false)
   
@@ -87,6 +89,7 @@ model TimeSlot {
   eventId   Int
   startTime DateTime
   endTime   DateTime
+  sessionReminderSentAt DateTime? // Set once the session reminder has been delivered
   votes            Vote[]
   finalizedSession FinalizedSession?
 

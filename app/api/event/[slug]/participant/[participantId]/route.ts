@@ -50,26 +50,15 @@ export async function DELETE(
 
         // --- NOTIFICATION: Removed by Admin ---
         if (participant.status === 'ACCEPTED' && participant.event.status === 'FINALIZED') {
-            if (participant.chatId && process.env.TELEGRAM_BOT_TOKEN) {
-                const { sendTelegramMessage } = await import("@/features/telegram");
-                await sendTelegramMessage(
-                    participant.chatId,
-                    `⚠️ <b>Event Update</b>\n\nYou have been removed from the finalized event <b>${participant.event.title}</b> by the organizer.`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                ).catch(e => console.error("Failed to notify removed user via Telegram", e));
-            }
-
-            if (participant.discordId && process.env.DISCORD_BOT_TOKEN) {
-                const { createDMChannel, sendDiscordMessage } = await import("@/features/discord/model/discord");
-                try {
-                    const dm = await createDMChannel(participant.discordId, process.env.DISCORD_BOT_TOKEN);
-                    if (dm?.id) {
-                        await sendDiscordMessage(dm.id, `⚠️ **Event Update**\n\nYou have been removed from the finalized event **${participant.event.title}** by the organizer.`, process.env.DISCORD_BOT_TOKEN);
-                    }
-                } catch (e) {
-                    console.error("Failed to notify removed user via Discord", e);
-                }
-            }
+            const { sendDirectMessage } = await import("@/features/notifications");
+            await sendDirectMessage(
+                { telegramChatId: participant.chatId, discordUserId: participant.discordId },
+                {
+                    html: `⚠️ <b>Event Update</b>\n\nYou have been removed from the finalized event <b>${participant.event.title}</b> by the organizer.`,
+                    discord: `⚠️ **Event Update**\n\nYou have been removed from the finalized event **${participant.event.title}** by the organizer.`,
+                },
+                { slug, participantId: participantIdInt, kind: "participant-removed" }
+            );
         }
 
         // Wrap deletions in a transaction to ensure both or neither happen

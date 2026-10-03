@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { getBaseUrl } from "@/shared/lib/url";
 import { buildFinalizedMessage } from "@/shared/lib/eventMessage";
-import { editMessageText } from "@/features/telegram/lib/telegram-client";
 import Logger from "@/shared/lib/logger";
+import { refreshDiscordDashboard, refreshTelegramDashboard } from "@/app/api/event/[slug]/slot/notify";
 
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 
@@ -15,9 +15,9 @@ const log = Logger.get("API:Location");
  *
  * Responsibilities:
  * 1. Updates the `location` field in the database.
- * 2. If the event is linked to Telegram and has a pinned "Finalized" message:
- *    - Regenerates the message HTML with the new location logic.
- *    - Edits the existing Telegram message in-place using `editMessageText`.
+ * 2. If the event is finalized, regenerates the "Finalized" message and, independently on
+ *    each linked platform, edits the pinned dashboard in place, falling back to
+ *    post + pin when the old message is gone.
  *    - This ensures users see the new location without needing a new notification spam.
  *
  * @param {Request} req - JSON body containing `{ location: string }`.
@@ -48,20 +48,23 @@ export async function POST(
             }
         });
 
-        // Action: Telegram Sync
+        // Action: Dashboard Sync (Telegram and Discord, independent)
         // Intent: Keep the "pinned" message up-to-date with the latest location info.
-        if (event.telegramChatId && event.pinnedMessageId && process.env.TELEGRAM_BOT_TOKEN && event.finalizedSlotId) {
-            const slot = event.timeSlots.find(s => s.id === event.finalizedSlotId);
-            if (slot) {
-                const origin = getBaseUrl(req.headers);
-                const msg = buildFinalizedMessage(event, slot, origin);
+        const slot = event.finalizedSlotId ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : undefined;
+        if (slot) {
+            const msg = buildFinalizedMessage(event, slot, getBaseUrl(req.headers));
 
-                await editMessageText(
-                    event.telegramChatId,
-                    event.pinnedMessageId,
-                    msg,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
+            try {
+                await refreshTelegramDashboard(event, event.id, msg);
+            } catch (e) {
+                log.error("Telegram location sync failed", e as Error);
+            }
+
+            try {
+                // Edits in place; falls back to post + pin + store id if the message is gone.
+                await refreshDiscordDashboard(event, event.id, msg);
+            } catch (e) {
+                log.error("Discord location sync failed", e as Error);
             }
         }
 
