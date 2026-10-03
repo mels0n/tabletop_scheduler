@@ -48,21 +48,23 @@ Webhooks are queued when the event happens and delivered by a background job tha
 X-Tabletop-Signature: sha256=<hex>
 ```
 
-`<hex>` is the HMAC-SHA256 of the **raw request body**, keyed with the instance's webhook signing key. Every delivery is signed; there is no unsigned mode.
+`<hex>` is the HMAC-SHA256 of the **raw request body**, keyed with the signing key for that destination. Every delivery is signed; there is no unsigned mode.
 
-The signing key is derived from the instance's `SESSION_SECRET`, so there is no separate variable to set:
+Each destination's key is derived from its origin (scheme, host and port of the `fromUrl`, for example `https://hooks.example.com`) and the instance's `SESSION_SECRET`, so there is no separate variable to set:
 
 ```text
-signing_key = hex( HMAC-SHA256( key = SESSION_SECRET, message = "webhook-signing" ) )
+signing_key = hex( HMAC-SHA256( key = SESSION_SECRET, message = "webhook-signing" + "\0" + origin ) )
 ```
 
-The 64 lowercase hex characters of `signing_key` are themselves the HMAC key for the body signature (use the string as is, do not hex-decode it). `CRON_SECRET` is not involved, so holding the signing key does not let anyone call the instance's cron routes, and the key reveals nothing about `SESSION_SECRET`. An operator prints it with:
+`"\0"` is a single NUL byte. Every `fromUrl` on the same origin shares one key, and a different origin gets a different key, so one integrator's key cannot sign deliveries another destination would accept.
+
+The 64 lowercase hex characters of `signing_key` are themselves the HMAC key for the body signature (use the string as is, do not hex-decode it). `CRON_SECRET` is not involved, so holding a signing key does not let anyone call the instance's cron routes, and the key reveals nothing about `SESSION_SECRET`. An operator prints the key for one destination origin with:
 
 ```sh
-node -e "console.log(require('crypto').createHmac('sha256', process.env.SESSION_SECRET).update('webhook-signing').digest('hex'))"
+ORIGIN=https://hooks.example.com node -e "console.log(require('crypto').createHmac('sha256', process.env.SESSION_SECRET).update('webhook-signing\0' + process.env.ORIGIN).digest('hex'))"
 ```
 
-The operator shares that value with each integrator out of band (it is never shown in the app). Changing `SESSION_SECRET` changes the key, so integrators need the new value after a rotation. Verify the header before trusting a payload:
+The operator shares each destination's value with that integrator out of band (it is never shown in the app). Changing `SESSION_SECRET` changes the key, so integrators need the new value after a rotation. Verify the header before trusting a payload:
 
 ```js
 import { createHmac, timingSafeEqual } from "node:crypto";
