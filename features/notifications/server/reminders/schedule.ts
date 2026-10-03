@@ -45,6 +45,41 @@ function localClock(now: Date, timezone: string): { minutes: number; weekday: nu
     };
 }
 
+/** UTC offset of `timezone` at `at`, in ms (positive east of Greenwich). */
+function offsetMs(at: number, timezone: string): number {
+    const name = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "longOffset" })
+        .formatToParts(new Date(at))
+        .find(p => p.type === "timeZoneName")?.value ?? "GMT";
+    const m = /GMT([+-])(\d{1,2})(?::?(\d{2}))?/.exec(name);
+    if (!m) return 0;
+    const minutes = parseInt(m[2], 10) * 60 + parseInt(m[3] ?? "0", 10);
+    return (m[1] === "-" ? -1 : 1) * minutes * 60_000;
+}
+
+/**
+ * The instant whose local wall time in `timezone` is `diffMs` of wall-clock time before
+ * the local wall time of `nowMs`. Subtracting the wall-clock difference from `nowMs`
+ * directly is off by the DST shift whenever a transition lies between the two, which
+ * made a fall-back night re-send the previous day's reminder. The naive candidate is
+ * corrected by the offset change and iterated once.
+ *
+ * Wall times that do not exist (spring-forward gap) resolve to the naive candidate, which
+ * is never in the future; wall times that occur twice (fall-back overlap) resolve to the
+ * earlier instant, so both passes of the repeated hour map to one target.
+ */
+function wallClockInstant(nowMs: number, diffMs: number, timezone: string): number {
+    const naive = nowMs - diffMs;
+    const offNow = offsetMs(nowMs, timezone);
+    let t = naive + offNow - offsetMs(naive, timezone);
+    t = naive + offNow - offsetMs(t, timezone);
+    if (t > nowMs) t = naive;
+
+    const wall = t + offsetMs(t, timezone);
+    const earlier = wall - offsetMs(t - 3 * 60 * 60 * 1000, timezone);
+    if (earlier < t && earlier + offsetMs(earlier, timezone) === wall) t = earlier;
+    return t;
+}
+
 /**
  * The instant of the most recent "reminderTime on a reminder day", or null when no
  * target is open right now.
@@ -62,11 +97,13 @@ export function currentVotingTarget(schedule: VotingReminderSchedule, now: Date)
     const days = schedule.reminderDays.split(",").map(d => parseInt(d, 10)).filter(n => !Number.isNaN(n));
     if (days.length === 0) return null;
 
+    let timezone = schedule.timezone || "UTC";
     let clock: { minutes: number; weekday: number };
     try {
-        clock = localClock(now, schedule.timezone || "UTC");
+        clock = localClock(now, timezone);
     } catch {
-        clock = localClock(now, "UTC");
+        timezone = "UTC";
+        clock = localClock(now, timezone);
     }
 
     let diff = clock.minutes - target;
@@ -76,11 +113,12 @@ export function currentVotingTarget(schedule: VotingReminderSchedule, now: Date)
         targetWeekday = (clock.weekday + 6) % 7;
     }
 
-    if (diff * 60_000 >= VOTING_CATCHUP_MS) return null;
     if (!days.includes(targetWeekday)) return null;
 
     const minuteStart = now.getTime() - (now.getTime() % 60_000);
-    return new Date(minuteStart - diff * 60_000);
+    const instant = wallClockInstant(minuteStart, diff * 60_000, timezone);
+    if (minuteStart - instant >= VOTING_CATCHUP_MS) return null;
+    return new Date(instant);
 }
 
 /**
