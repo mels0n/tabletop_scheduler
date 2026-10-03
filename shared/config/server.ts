@@ -27,9 +27,15 @@ export interface ServerConfig {
     logLevel: LogLevel;
     cleanupRetentionDays: { finalized: number; draft: number; cancelled: number };
     acceptDataLoss: boolean;
+    /**
+     * Participant rows created before this instant predate the signed participant cookie and
+     * stay editable by their stored id (see `features/event-management/model/legacy.ts`).
+     */
+    legacyParticipantCutoff: Date;
 }
 
 const DEV_SESSION_SECRET = "dev-session-secret";
+const DEFAULT_LEGACY_PARTICIPANT_CUTOFF = "2026-10-04T00:00:00Z";
 const BUILD_PHASE = "phase-production-build";
 const BASE_URL_REQUIRED = "NEXT_PUBLIC_BASE_URL is required when a bot token is configured";
 
@@ -64,6 +70,13 @@ const baseUrl = optionalString.pipe(
         .optional(),
 );
 
+const isoTimestamp = optionalString.pipe(
+    z.string()
+        .refine((v) => !Number.isNaN(new Date(v).getTime()), "must be an ISO 8601 timestamp, e.g. 2026-10-04T00:00:00Z")
+        .transform((v) => new Date(v))
+        .optional(),
+);
+
 const envSchema = z.object({
     NODE_ENV: optionalString.pipe(z.enum(["development", "test", "production"]).optional().default("development")),
     NEXT_PUBLIC_IS_HOSTED: optionalString.transform((v) => v === "true"),
@@ -85,6 +98,7 @@ const envSchema = z.object({
     CLEANUP_RETENTION_DAYS_DRAFT: retentionDays(1),
     CLEANUP_RETENTION_DAYS_CANCELLED: retentionDays(1),
     PRISMA_ACCEPT_DATA_LOSS: flag,
+    LEGACY_PARTICIPANT_CUTOFF: isoTimestamp,
     NEXT_PHASE: optionalString,
 });
 
@@ -155,6 +169,7 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
             cancelled: e.CLEANUP_RETENTION_DAYS_CANCELLED,
         },
         acceptDataLoss: e.PRISMA_ACCEPT_DATA_LOSS,
+        legacyParticipantCutoff: e.LEGACY_PARTICIPANT_CUTOFF ?? new Date(DEFAULT_LEGACY_PARTICIPANT_CUTOFF),
     };
 }
 

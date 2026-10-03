@@ -41,8 +41,8 @@ class ParticipantNotOwnedError extends AppError {
  *      `tabletop_participant_<slug>` cookie names that participant, or a verified identity
  *      cookie matches the row's chatId/discordId. Anyone else gets 403 with
  *      `code: 'participant_not_owned'`.
- *    - Rollout grace: a row with no identity, created before `LEGACY_PARTICIPANT_CUTOFF`
- *      (when the cookie did not exist yet), is accepted when this browser holds no
+ *    - Rollout grace: a row with no identity, created before the configured
+ *      `LEGACY_PARTICIPANT_CUTOFF` (when the cookie did not exist yet; never expires), is accepted when this browser holds no
  *      participant cookie for the event; the response then issues the cookie, so later
  *      edits from this browser go through the normal check.
  *    - Or Creates new participant and sets the signed participant cookie on the response.
@@ -116,7 +116,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             ownedParticipantId === String(row.id)
             || (identity.chatId !== null && row.chatId === identity.chatId)
             || (identity.discordId !== null && row.discordId === identity.discordId)
-            // Rollout grace (see LEGACY_PARTICIPANT_CUTOFF); the response issues the cookie.
+            // Permanent rollout grace (see LEGACY_PARTICIPANT_CUTOFF); the response issues the cookie.
             || (!hasParticipantCookie && isLegacyUnlinkedParticipant(row));
 
         // Action: Atomic Transaction for Participant & Votes
