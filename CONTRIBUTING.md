@@ -57,10 +57,11 @@ See [docs/adr](docs/adr) for why the stack and the two database targets look the
   - `app/e/[slug]/manage/`: The admin dashboard for a specific event.
 - `components/`: Reusable React components.
 - `features/`: Self-contained vertical slices by business domain, e.g., `telegram/`, `event-management/`, `notifications/`, `auth/`.
+- `entities/`: Business nouns and their rules, shared by several features (sits between `features/` and `shared/`).
 - `shared/`: Core shared utilities (config, sessions, errors, schema generators, URL helpers, Prisma client, logger).
 - `prisma/`: Database schemas. `prisma/schema.prisma` is SQLite; `prisma/hosted/` holds the Postgres schema and its migrations.
 
-Imports flow one way: `app` and `components` may use `features`, `features` may use `shared`, and never the reverse.
+Imports flow one way: `app` and `components` may use `features`, `features` may use `entities`, `entities` may use `shared`, and never the reverse. Use another feature slice through its `index.ts`, not its internal files. `npm run depcruise` checks these rules with dependency-cruiser; CI fails on an upward import, a cycle or an unresolvable import, so run it before opening a pull request.
 
 ## Key Workflows
 
