@@ -198,7 +198,7 @@ model FinalizedSession {
 
 // Ko-fi donation records received via webhook.
 // Used for social proof display ("Wall of Love") on the landing page.
-// Only stores public-safe fields — email is intentionally excluded.
+// Only stores public-safe fields; email is intentionally excluded.
 model Donation {
   id                  String   @id @default(uuid())
   kofiTransactionId   String   @unique // Deduplication key from Ko-fi webhook payload
@@ -219,4 +219,16 @@ model Donation {
 model AppMigration {
   id        String   @id // Stable id from scripts/data-migrations/index.mjs
   appliedAt DateTime @default(now())
+}
+
+// Per-identity direct message preference. Keyed by platform and that platform's user id
+// (the Telegram chat id or Discord user id), so it holds for every event the user joins or
+// manages. No row means direct messages are on.
+model DmPreference {
+  platform   String
+  platformId String
+  dmOptOut   Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+
+  @@id([platform, platformId])
 }

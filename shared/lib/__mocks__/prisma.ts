@@ -61,6 +61,10 @@ export const prisma = {
         findMany: vi.fn(),
         upsert: vi.fn(),
     },
+    dmPreference: {
+        findUnique: vi.fn(),
+        upsert: vi.fn(),
+    },
     // Supports both forms: interactive (callback) and batch (array of pending queries).
     $transaction: vi.fn((arg) => (Array.isArray(arg) ? Promise.all(arg) : arg(prisma))),
 };
