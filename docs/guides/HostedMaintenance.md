@@ -142,6 +142,15 @@ workflow (`.github/workflows/cron.yml`, every two hours at minute 7) remains as 
 backstop; it is safe to leave running because a reminder is claimed in the database
 before it is sent, so overlapping runs never post twice.
 
+## Compatibility rule
+
+A deploy must never invalidate an admin link, a stored participant id or a live
+token. People without Telegram or Discord have no recovery path, so a change
+they cannot see must not lock them out. Any change to how credentials are stored
+or checked keeps accepting the old form and upgrades it on first successful use
+(for example, a legacy plaintext admin token is accepted and rewritten as its
+hash), and never retires the old form on a timer.
+
 ## Adopting the pre-existing database (one time)
 
 Production predates this setup: created with `prisma db push`, no
