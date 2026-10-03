@@ -1,4 +1,5 @@
 import { checkSlotQuorum } from "./quorum";
+import { escapeHtml } from "./escape";
 
 /**
  * @function generateStatusMessage
@@ -11,10 +12,10 @@ import { checkSlotQuorum } from "./quorum";
  * @param {any} event - The event object including timeSlots and votes.
  * @param {number} participantCount - Total number of unique voters.
  * @param {string} [baseUrl] - Base URL for generating the voting link (defaults to localhost).
- * @returns {string} HTML formatted status message.
+ * @returns {string} HTML formatted status message. The event title is HTML-escaped here.
  */
 export function generateStatusMessage(event: any, participantCount: number, baseUrl?: string) {
-    let statusMsg = `📊 <b>${event.title}</b>\n`;
+    let statusMsg = `📊 <b>${escapeHtml(event.title)}</b>\n`;
     statusMsg += `👥 ${participantCount} participant${participantCount === 1 ? '' : 's'}\n\n`;
 
     event.timeSlots.forEach((slot: any) => {
@@ -36,6 +37,6 @@ export function generateStatusMessage(event: any, participantCount: number, base
     });
 
     const url = baseUrl || 'http://localhost:3000';
-    statusMsg += `\n<a href="${url}/e/${event.slug}">🔗 Vote Here</a>`;
+    statusMsg += `\n<a href="${escapeHtml(`${url}/e/${event.slug}`)}">🔗 Vote Here</a>`;
     return statusMsg;
 }

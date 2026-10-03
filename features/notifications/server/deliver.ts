@@ -11,7 +11,14 @@ const log = Logger.get("Notifications");
  * one platform never prevents delivery on the other.
  */
 
-/** A message authored once. Telegram gets `html`; Discord gets `discord`, or `html` converted. */
+/**
+ * A message authored once. Telegram gets `html`; Discord gets `discord`, or `html` converted.
+ *
+ * Escaping contract: delivery never escapes. The author escapes user text once at
+ * interpolation: `escapeHtml` in `html`, `escapeDiscordMarkdown` in `discord`
+ * (both from `@/shared/lib/escape`). When `discord` is omitted, `htmlToDiscordMarkdown`
+ * converts the already-escaped HTML and escapes its text for Discord.
+ */
 export interface NotificationMessage {
     html: string;
     discord?: string;

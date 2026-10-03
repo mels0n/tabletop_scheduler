@@ -1,5 +1,6 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
+import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 import { syncDashboard } from "@/app/api/event/[slug]/slot/notify";
 
 const log = Logger.get("WaitlistService");
@@ -122,8 +123,8 @@ export async function processWaitlistPromotion(eventId: number): Promise<void> {
             await sendDirectMessage(
                 { telegramChatId: candidate.chatId, discordUserId: candidate.discordId },
                 {
-                    html: `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${event.title}</b> and you've been moved off the waitlist!`,
-                    discord: `🎟️ **You're In!**\n\nA spot opened up for **${event.title}** and you've been moved off the waitlist!`,
+                    html: `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${escapeHtml(event.title)}</b> and you've been moved off the waitlist!`,
+                    discord: `🎟️ **You're In!**\n\nA spot opened up for **${escapeDiscordMarkdown(event.title)}** and you've been moved off the waitlist!`,
                 },
                 { eventId, participantId: candidate.id, kind: "waitlist-promotion" }
             );

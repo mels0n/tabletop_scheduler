@@ -4,6 +4,7 @@ import Logger from "@/shared/lib/logger";
 import { NotFoundError, ValidationError, toResponse } from "@/shared/errors";
 import { slotSuggestionSchema } from "@/features/event-management/model/schemas";
 import { pushSlotUpdates } from "../notify";
+import { escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Slot:Suggest");
 
@@ -37,8 +38,8 @@ export async function POST(request: Request, props: { params: Promise<{ slug: st
         });
 
         // Notify Discord/Telegram
-        const safeName = suggesterName.substring(0, 50); // limit length
-        await pushSlotUpdates(event.id, `A new time option was suggested by <b>${safeName}</b>`);
+        const name = String(suggesterName).substring(0, 50); // limit length
+        await pushSlotUpdates(event.id, `A new time option was suggested by <b>${escapeHtml(name)}</b>`);
 
         return NextResponse.json({ success: true });
 

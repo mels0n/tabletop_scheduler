@@ -5,6 +5,33 @@ import { reliableFetch } from "@/shared/lib/fetch";
 const log = Logger.get("Telegram");
 
 /**
+ * When a basic group is upgraded to a supergroup, Telegram rejects sends to the old id
+ * with `parameters.migrate_to_chat_id`. Returns the new id from an error body, or null.
+ */
+function migratedChatId(errorBody: string): number | null {
+    try {
+        const id = JSON.parse(errorBody)?.parameters?.migrate_to_chat_id;
+        return typeof id === "number" ? id : null;
+    } catch {
+        return null;
+    }
+}
+
+/** Repoints every event bound to the old group at the upgraded supergroup. Never throws. */
+async function adoptMigratedChat(oldChatId: string | number, newChatId: number): Promise<void> {
+    try {
+        const { default: prisma } = await import("@/shared/lib/prisma");
+        const { count } = await prisma.event.updateMany({
+            where: { telegramChatId: String(oldChatId) },
+            data: { telegramChatId: String(newChatId) },
+        });
+        log.info("Telegram group migrated to supergroup; updated bound events", { oldChatId, newChatId, count });
+    } catch (e) {
+        log.error("Failed to record Telegram chat migration", e as Error);
+    }
+}
+
+/**
  * @function sendTelegramMessage
  * @description Sends a rich text message to a specific Telegram Chat ID.
  * Defaults to 'HTML' parse mode to support bold/italic/links.
@@ -14,7 +41,11 @@ const log = Logger.get("Telegram");
  * @param {string} token - The Bot API Token.
  * @returns {Promise<number | null>} The sent Message ID, or null if failed.
  */
-export async function sendTelegramMessage(chatId: string | number, text: string, token: string) {
+export async function sendTelegramMessage(chatId: string | number, text: string, token: string): Promise<number | null> {
+    return postMessage(chatId, text, token, true);
+}
+
+async function postMessage(chatId: string | number, text: string, token: string, allowMigrationRetry: boolean): Promise<number | null> {
     if (!token) {
         log.error("Token is missing");
         return null;
@@ -35,6 +66,11 @@ export async function sendTelegramMessage(chatId: string | number, text: string,
 
         if (!res.ok) {
             const err = await res.text();
+            const newChatId = allowMigrationRetry ? migratedChatId(err) : null;
+            if (newChatId !== null) {
+                await adoptMigratedChat(chatId, newChatId);
+                return postMessage(newChatId, text, token, false);
+            }
             log.error("API Error (sendMessage)", { error: err });
             return null;
         }
@@ -117,7 +153,7 @@ export async function pinChatMessage(chatId: string | number, messageId: number,
             try {
                 const jsonErr = JSON.parse(err);
                 if (jsonErr.error_code === 400 && jsonErr.description?.includes("not enough rights")) {
-                    await sendTelegramMessage(chatId, "⚠️ I tried to pin the message above, but I don't have permission. Please promote me to **Admin** with 'Pin Messages' rights!", token);
+                    await sendTelegramMessage(chatId, "⚠️ I tried to pin the message above, but I don't have permission. Please promote me to <b>Admin</b> with <b>Pin Messages</b> rights!", token);
                 }
             } catch (parseErr) {
                 // ignore parsing error
@@ -144,6 +180,10 @@ export async function pinChatMessage(chatId: string | number, messageId: number,
  * "message is not modified" response); false if the edit failed, e.g. the message is gone.
  */
 export async function editMessageText(chatId: string | number, messageId: number, text: string, token: string): Promise<boolean> {
+    return editMessage(chatId, messageId, text, token, true);
+}
+
+async function editMessage(chatId: string | number, messageId: number, text: string, token: string, allowMigrationRetry: boolean): Promise<boolean> {
     log.debug(`Editing message ${messageId} in chat ${chatId}`);
     const url = `https://api.telegram.org/bot${token}/editMessageText`;
     try {
@@ -162,6 +202,14 @@ export async function editMessageText(chatId: string | number, messageId: number
             const err = await res.text();
             // Intent: Re-rendering an unchanged dashboard is a success, not a reason to repost it.
             if (err.includes("message is not modified")) return true;
+            // Group upgraded to a supergroup: record the new id and retry once there. Message
+            // ids do not carry over, so the retry usually fails and the caller reposts, now
+            // into the right chat.
+            const newChatId = allowMigrationRetry ? migratedChatId(err) : null;
+            if (newChatId !== null) {
+                await adoptMigratedChat(chatId, newChatId);
+                return editMessage(newChatId, messageId, text, token, false);
+            }
             log.error("API Error (editMessageText)", { error: err });
             return false;
         }
@@ -240,33 +288,6 @@ export async function getBotUsername(token: string): Promise<string | null> {
 }
 
 /**
- * @function deleteWebhook
- * @description Removes the configured Webhook.
- * Necessary when switching from Hosted (Webhook) to Local (Long Polling) development.
- *
- * @param {string} token - Bot Token.
- * @returns {Promise<boolean>} Success status.
- */
-export async function deleteWebhook(token: string) {
-    const url = `https://api.telegram.org/bot${token}/deleteWebhook`;
-    try {
-        const res = await reliableFetch(url);
-        const data = await res.json();
-
-        if (!res.ok || !data.ok) {
-            log.warn("Failed to delete webhook", { error: data.description });
-            return false;
-        }
-
-        log.info("Webhook deleted successfully.");
-        return true;
-    } catch (e) {
-        log.error("Error deleting webhook", e as Error);
-        return false;
-    }
-}
-
-/**
  * @function getWebhookSecret
  * @description Shared secret used to authenticate incoming webhook requests.
  *
@@ -286,24 +307,77 @@ export function getWebhookSecret(token: string): string {
 }
 
 /**
+ * @function webhookUrlFor
+ * @description The URL this deployment registers with Telegram.
+ *
+ * Telegram's getWebhookInfo never returns the secret_token, so a changed secret (a rotated
+ * bot token) is undetectable from the registration alone. A short fingerprint of the
+ * secret rides along as a query parameter instead: if the secret changes, the URL changes,
+ * and the startup comparison re-registers. The fingerprint is a hash of the secret, so it
+ * reveals nothing usable; the route ignores the parameter.
+ */
+export function webhookUrlFor(domain: string, token: string): string {
+    const fingerprint = createHash("sha256").update(getWebhookSecret(token)).digest("hex").slice(0, 12);
+    return `${domain.replace(/\/+$/, "")}/api/telegram/webhook?v=${fingerprint}`;
+}
+
+/**
+ * @function getWebhookInfo
+ * @description Reads the current webhook registration. Null when the call fails.
+ */
+export async function getWebhookInfo(token: string): Promise<{ url: string } | null> {
+    try {
+        const res = await reliableFetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            log.warn("Failed to read webhook info", { error: data.description });
+            return null;
+        }
+        return { url: typeof data.result?.url === "string" ? data.result.url : "" };
+    } catch (e) {
+        log.error("Error reading webhook info", e as Error);
+        return null;
+    }
+}
+
+/**
+ * @function syncWebhook
+ * @description Startup path: registers the webhook only when Telegram's registration
+ * differs from this deployment's URL (which encodes the secret fingerprint), so a cold
+ * start costs one read instead of a write.
+ *
+ * @returns {Promise<boolean>} True when the registration is (now) correct.
+ */
+export async function syncWebhook(domain: string, token: string): Promise<boolean> {
+    const desired = webhookUrlFor(domain, token);
+    const current = await getWebhookInfo(token);
+    if (current?.url === desired) {
+        log.debug("Telegram webhook already registered");
+        return true;
+    }
+    return ensureWebhook(domain, token);
+}
+
+/**
  * @function ensureWebhook
- * @description Configures the Bot to send updates to this application's API endpoint.
- * Run during startup in hosted environments.
+ * @description Unconditionally registers this deployment's webhook URL and secret.
  *
  * @param {string} domain - The public domain of the Next.js app.
  * @param {string} token - Bot Token.
  * @returns {Promise<boolean>} Success status.
  */
 export async function ensureWebhook(domain: string, token: string) {
-    const webhookUrl = `${domain}/api/telegram/webhook`;
-    // secret_token: Telegram returns this on every update so the handler can reject
-    // forged POSTs to the public webhook endpoint.
-    const url = `https://api.telegram.org/bot${token}/setWebhook?url=${webhookUrl}&secret_token=${getWebhookSecret(token)}`;
-
+    const webhookUrl = webhookUrlFor(domain, token);
     log.info(`Setting Webhook to: ${webhookUrl}`);
 
     try {
-        const res = await reliableFetch(url);
+        // secret_token: Telegram returns this on every update so the handler can reject
+        // forged POSTs to the public webhook endpoint.
+        const res = await reliableFetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: webhookUrl, secret_token: getWebhookSecret(token) }),
+        });
         const data = await res.json();
 
         if (!res.ok || !data.ok) {
