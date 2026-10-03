@@ -81,6 +81,25 @@ export default function DevelopersPage() {
                 </div>
             </div>
 
+            {/* Integrator changes */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-16">
+                <h2 className="text-2xl font-bold text-white mb-3">What changed in October 2026</h2>
+                <p className="text-slate-400">
+                    Webhooks are now sent right after each change and retried automatically, event creation checks every field
+                    strictly, participant edits by id need your event&apos;s admin token in an <code>Authorization: Bearer</code> header,
+                    and pages can no longer be embedded in an iframe. If you already call the API, read the{" "}
+                    <a
+                        href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/reference/ApiReference.md#changes-for-integrators-2026-10"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                        changes for integrators
+                    </a>{" "}
+                    before you update.
+                </p>
+            </div>
+
             {/* Resources */}
             <div className="border-t border-slate-800 pt-12">
                 <h2 className="text-2xl font-bold text-white mb-8">Developer Resources</h2>
