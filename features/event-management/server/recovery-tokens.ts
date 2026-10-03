@@ -7,7 +7,7 @@ import { hashToken } from "@/shared/lib/token";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { ForbiddenError, NotFoundError, RateLimitError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
-import { connectCodeFor } from "@/features/telegram/model/connect-code";
+import { connectCodeFor, newConnectNonce } from "@/features/telegram/model/connect-code";
 
 /**
  * Token minting for manager recovery and chat binding.
@@ -61,16 +61,34 @@ export async function generateShortRecoveryToken(slug: string): Promise<string> 
 /**
  * The exact Telegram command that binds a chat to this event. Callers must have
  * established admin rights first; the code is as sensitive as the ability to redirect
- * the event's notifications. Derived from the current chat binding, so it is the code
- * valid for the next bind and dies once that bind succeeds.
+ * the event's notifications. Derived from the current chat binding and connect nonce, so
+ * it is the code valid for the next bind and dies once that bind succeeds. An event with
+ * no nonce yet gets one persisted first, so the code shown is always tied to a stored nonce.
  */
 export async function getConnectCommand(slug: string): Promise<string> {
     const event = await prisma.event.findUnique({
         where: { slug },
-        select: { adminToken: true, telegramChatId: true },
+        select: { id: true, adminToken: true, telegramChatId: true, telegramConnectNonce: true },
     });
     if (!event?.adminToken) throw new NotFoundError("Event not found");
-    return `/connect ${slug} ${connectCodeFor(slug, event.adminToken, event.telegramChatId ?? null)}`;
+
+    let nonce = event.telegramConnectNonce;
+    let chatId = event.telegramChatId ?? null;
+    if (!nonce) {
+        const fresh = newConnectNonce();
+        // Only set it if still null; a concurrent writer's nonce wins and is re-read below.
+        await prisma.event.updateMany({
+            where: { id: event.id, telegramConnectNonce: null },
+            data: { telegramConnectNonce: fresh },
+        });
+        const current = await prisma.event.findUnique({
+            where: { slug },
+            select: { telegramChatId: true, telegramConnectNonce: true },
+        });
+        nonce = current?.telegramConnectNonce ?? fresh;
+        chatId = current?.telegramChatId ?? null;
+    }
+    return `/connect ${slug} ${connectCodeFor(slug, event.adminToken, chatId, nonce)}`;
 }
 
 export type ManagerIdentity = {

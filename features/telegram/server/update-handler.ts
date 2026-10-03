@@ -14,6 +14,7 @@ import {
     CONNECT_INSTRUCTIONS,
     parseConnectCommand,
     verifyConnectCode,
+    newConnectNonce,
 } from "../model/connect-code";
 
 const log = Logger.get("Telegram:Updates");
@@ -164,17 +165,22 @@ async function connectEvent(slug: string | null, code: string | null, chatId: nu
     }
 
     const event = await prisma.event.findUnique({ where: { slug } });
-    if (!event || !verifyConnectCode(slug, event.adminToken, event.telegramChatId, code)) {
+    if (!event || !verifyConnectCode(slug, event.adminToken, event.telegramChatId, event.telegramConnectNonce, code)) {
         log.warn("Connect refused: unknown event or invalid code", { slug });
         await sendTelegramMessage(chatId, CONNECT_CODE_INVALID, token);
         return;
     }
 
-    // Conditional on the binding the code was checked against: of two concurrent replays
-    // of one code, only the first moves the chat; the code is dead afterwards.
+    // Conditional on the binding and nonce the code was checked against: of two concurrent
+    // replays of one code, only the first succeeds. The nonce rotates on every success, even
+    // when the chat does not change, so the posted code is dead afterwards.
     const { count } = await prisma.event.updateMany({
-        where: { id: event.id, telegramChatId: event.telegramChatId ?? null },
-        data: { telegramChatId: chatId.toString() },
+        where: {
+            id: event.id,
+            telegramChatId: event.telegramChatId ?? null,
+            telegramConnectNonce: event.telegramConnectNonce ?? null,
+        },
+        data: { telegramChatId: chatId.toString(), telegramConnectNonce: newConnectNonce() },
     });
     if (count !== 1) {
         log.warn("Connect refused: binding changed while connecting", { slug });

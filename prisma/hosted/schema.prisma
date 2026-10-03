@@ -32,6 +32,7 @@ model Event {
   // Telegram Integration
   telegramLink String?      // Invite link to the group chat
   telegramChatId String?    // The numeric ID of the linked group (for bot notifications)
+  telegramConnectNonce String? // Rotated on every successful /connect; part of the connect code HMAC so each code is single-use
   managerTelegram String?   // Creator's handle (e.g. @user) used for recovery
   managerChatId   String?   // Creator's numeric ID (for private bot DMs)
   pinnedMessageId Int?      // ID of the pinned status message to update/unpin
