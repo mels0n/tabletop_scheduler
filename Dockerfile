@@ -5,7 +5,8 @@
 # 1. Base:    Common Alpine node environment + telemetry config.
 # 2. Deps:    Clean install of dependencies (cached layer).
 # 3. Builder: Full source compilation with Privacy Hardening enabled.
-# 4. Runner:  Production runtime. Includes 'start.sh' wrapper that syncs the SQLite schema on boot.
+# 4. Runner:  Production runtime. Includes 'start.sh' wrapper that syncs the SQLite schema
+#             and runs pending data migrations on boot.
 #
 # PRIVACY GUARANTEES:
 # - NEXT_TELEMETRY_DISABLED=1 (Hardcoded)
@@ -108,6 +109,10 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 # Increases image size slightly, but removes the need for an external 'initContainer'.
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# The generated SQLite client (output of 'prisma generate' in the builder). The standalone
+# trace only carries the parts server.js touches; scripts/run-data-migrations.mjs imports
+# '@prisma/client' directly, which resolves to this folder, so ship all of it.
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Only the 'prisma' entry point is needed on PATH for 'npx prisma' (not the whole
 # .bin directory, which carries every dev tool's shim).
 RUN mkdir -p node_modules/.bin && \
@@ -117,6 +122,10 @@ RUN mkdir -p node_modules/.bin && \
 RUN chown -R node:node /app/node_modules
 
 COPY prisma ./prisma
+# Data migration runner and its migration list (run by start.sh after db push). They import
+# only node builtins and @prisma/client, so nothing else from scripts/ is needed.
+COPY scripts/run-data-migrations.mjs ./scripts/run-data-migrations.mjs
+COPY scripts/data-migrations ./scripts/data-migrations
 COPY start.sh ./
 RUN chmod +x start.sh && chown node:node start.sh
 
