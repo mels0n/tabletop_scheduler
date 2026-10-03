@@ -21,7 +21,6 @@ export {
     idParam,
 } from "./model/schemas";
 export type { CreateEventInput, VoteInput, SlotInput, ReminderSettingsInput } from "./model/schemas";
-export { isLegacyUnlinkedParticipant } from "./model/legacy";
 export { PARTICIPANT_NOT_OWNED, voteErrorMessage } from "./model/vote-errors";
 export {
     eventPageSelect,

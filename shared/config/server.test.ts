@@ -41,14 +41,7 @@ describe('getServerConfig: defaults', () => {
             logLevel: 'info',
             cleanupRetentionDays: { finalized: 1, draft: 1, cancelled: 1 },
             acceptDataLoss: false,
-            legacyParticipantCutoff: new Date('2026-10-04T00:00:00Z'),
         });
-    });
-
-    it('reads LEGACY_PARTICIPANT_CUTOFF as an ISO timestamp and rejects anything else', () => {
-        expect(load({ LEGACY_PARTICIPANT_CUTOFF: '2026-12-01T08:30:00Z' }).legacyParticipantCutoff)
-            .toEqual(new Date('2026-12-01T08:30:00Z'));
-        expect(loadError({ LEGACY_PARTICIPANT_CUTOFF: 'yesterday' }).message).toContain('LEGACY_PARTICIPANT_CUTOFF');
     });
 
     it('is cached until reset', () => {
