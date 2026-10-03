@@ -6,6 +6,9 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./features/**/*.{ts,tsx}",
+    "./entities/**/*.{ts,tsx}",
+    "./shared/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

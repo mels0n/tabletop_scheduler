@@ -53,12 +53,9 @@ jobs:
           NEXT_PUBLIC_BASE_URL: https://ci.example
           NEXT_TELEMETRY_DISABLED: '1'
 
-      # Task 12 adds .dependency-cruiser.cjs. Until it exists the step is skipped;
-      # once it lands, remove continue-on-error so a graph violation fails CI.
+      # Fails on an upward import, an import cycle or an unresolvable import.
       - name: Dependency direction
-        if: hashFiles('.dependency-cruiser.cjs') != ''
-        continue-on-error: true
-        run: npx depcruise --config .dependency-cruiser.cjs app features shared components lib hooks
+        run: npx depcruise --config .dependency-cruiser.cjs app components features entities shared
 
   migration-diff:
     # Fails when prisma/hosted/schema.prisma has changes that no migration under
