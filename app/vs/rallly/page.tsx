@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Check, X, ArrowRight, ThumbsUp } from 'lucide-react';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'Rallly Alternative for Gaming Groups',
@@ -66,7 +67,7 @@ const rows: { label: string; tt: boolean | string; rallly: boolean | string; not
 ];
 
 export default function VsRalllyPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
+    const isHosted = publicConfig.isHosted;
     if (!isHosted) notFound();
 
     return (

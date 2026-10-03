@@ -21,6 +21,7 @@ import { SyncBadge } from "@/components/SyncBadge";
 import { verifyEventAdmin } from "@/features/auth";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 import { toManageParticipant } from "@/features/event-management";
+import { getServerConfig } from "@/shared/config/server";
 
 /**
  * @interface PageProps
@@ -97,7 +98,7 @@ export default async function ManageEventPage(props: PageProps) {
         notFound();
     }
 
-    const botUsername = (await getBotUsername(process.env.TELEGRAM_BOT_TOKEN || '')) || 'TabletopSchedulerBot';
+    const botUsername = (await getBotUsername(getServerConfig().telegram.token || '')) || 'TabletopSchedulerBot';
 
     // Algorithm: Score and Sort Slots
     const slots = event.timeSlots.map(slot => {

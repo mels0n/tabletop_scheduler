@@ -2,6 +2,7 @@ import Logger from "@/shared/lib/logger";
 import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
 import { sendTelegramMessageResult } from "@/features/telegram/lib/telegram-client";
 import { sendDiscordMessage, sendDiscordDM } from "@/features/integrations/discord/model/discord";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("Notifications");
 
@@ -65,7 +66,7 @@ function describeError(error: unknown): string {
 
 async function viaTelegram(chatId: string | null | undefined, html: string): Promise<DeliveryOutcome> {
     if (!chatId) return { status: "skipped", reason: "not_linked" };
-    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const token = getServerConfig().telegram.token ?? undefined;
     if (!token) return { status: "skipped", reason: "not_configured" };
     try {
         // Telegram's own description ("Forbidden: bot was kicked...", "Bad Request: chat not
@@ -83,7 +84,7 @@ async function viaDiscord(
     send: (target: string, content: string, token: string) => Promise<{ id?: string; error?: unknown }>
 ): Promise<DeliveryOutcome> {
     if (!target) return { status: "skipped", reason: "not_linked" };
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = getServerConfig().discord.botToken ?? undefined;
     if (!token) return { status: "skipped", reason: "not_configured" };
     try {
         const res = await send(target, content, token);

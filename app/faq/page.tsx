@@ -15,6 +15,7 @@ import { SchemaGenerator } from "@/shared/lib/aeo";
  */
 import { FAQItem } from "@/components/FAQItem";
 import { DataTooltip } from "@/components/DataTooltip";
+import { publicConfig } from "@/shared/config/public";
 
 
 /**
@@ -27,7 +28,7 @@ import { DataTooltip } from "@/components/DataTooltip";
  * - Pure client component for simplicity, though could be RSC.
  */
 export default function FAQPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     const jsonLd = SchemaGenerator.faq([
         {

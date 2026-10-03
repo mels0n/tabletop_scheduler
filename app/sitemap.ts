@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next';
 import { getAllPosts } from '@/shared/lib/blog';
+import { publicConfig } from "@/shared/config/public";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tabletoptime.us';
 
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     // Get all blog posts
     const posts = isHosted ? getAllPosts() : [];

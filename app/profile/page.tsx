@@ -5,6 +5,7 @@ import { readIdentity } from "@/shared/lib/session";
 import { getBotUsername } from "@/features/telegram";
 import Logger from "@/shared/lib/logger";
 import { ProfileDashboard } from "./ProfileDashboard";
+import { getServerConfig } from "@/shared/config/server";
 
 export const dynamic = "force-dynamic";
 
@@ -230,7 +231,7 @@ export default async function ProfilePage() {
     // fetchEvents, and getBotUsername never throws (returns null on failure), so it's
     // safe to start eagerly without a try/catch here. Preserves the original condition
     // exactly: only actually called when `!telegramChatId` and the token is set.
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = getServerConfig().telegram.token ?? undefined;
     const botUsernamePromise: Promise<string | null> = (!telegramChatId && botToken)
         ? getBotUsername(botToken)
         : Promise.resolve(null);

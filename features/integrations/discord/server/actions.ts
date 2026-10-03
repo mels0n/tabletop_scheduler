@@ -20,6 +20,7 @@ import { readIdentity, verifyValue } from "@/shared/lib/session";
 import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
 import { guildCookieName, guildGrantPurpose, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("DiscordActions");
 
@@ -36,8 +37,9 @@ export async function recoverDiscordManagerLink(slug: string, username: string) 
     let storedName = event.managerDiscordUsername ? normalize(event.managerDiscordUsername) : null;
 
     if (!storedName || storedName !== inputName) {
-        if (process.env.DISCORD_BOT_TOKEN) {
-            const discordUser = await getDiscordUser(event.managerDiscordId, process.env.DISCORD_BOT_TOKEN);
+        const discordBotToken = getServerConfig().discord.botToken;
+        if (discordBotToken) {
+            const discordUser = await getDiscordUser(event.managerDiscordId, discordBotToken);
 
             if (discordUser) {
                 const realName = normalize(discordUser.username);
@@ -101,7 +103,7 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
     const event = await prisma.event.findUnique({ where: { slug } });
     if (!event) return { error: "Event not found" };
 
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = getServerConfig().discord.botToken ?? undefined;
     if (!token) return { error: "Server Configuration Error: Discord Token missing" };
 
     try {
@@ -167,7 +169,7 @@ export async function listDiscordChannels(slug: string, guildId: string): Promis
         return toActionError(e, "Failed to fetch channels");
     }
 
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = getServerConfig().discord.botToken ?? undefined;
     if (!token) return { error: "Server Configuration Error" };
 
     try {
@@ -199,7 +201,7 @@ export async function dmDiscordManagerLink(slug: string) {
  */
 export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
     username = username.replace('@', '').trim();
-    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const botToken = getServerConfig().discord.botToken ?? undefined;
 
     if (!botToken) return { success: false, error: "Server Configuration Error: Discord Token missing" };
     if (!username) return { success: false, error: "Please enter a username" };

@@ -4,19 +4,20 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'How to Setup a Telegram Bot | Visual Guide',
     description: 'A step-by-step guide to creating a Telegram Bot for your self-hosted Tabletop Time instance. Learn how to get an API token, configure webhooks, and enable pin permissions.',
     // Canonical only applies to self-hosted: this page explicitly returns notFound() in hosted mode.
-    ...(process.env.NEXT_PUBLIC_IS_HOSTED !== 'true' && {
+    ...(!publicConfig.isHosted && {
         alternates: { canonical: '/guide/telegram-setup' },
     }),
 };
 
 
 export default function TelegramSetupPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (isHosted) {
         notFound();

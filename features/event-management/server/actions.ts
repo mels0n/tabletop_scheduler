@@ -8,6 +8,7 @@ import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 // Allowed session reminder lead times (2 hours, 1 day, 2 days), shared with the manage page.
 import { isSessionReminderLead } from "@/features/notifications/model/leads";
 import { reminderSettingsSchema } from "../model/schemas";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("EventActions");
 
@@ -106,18 +107,19 @@ export async function deleteEvent(slug: string) {
     log.warn("Deleting event", { slug, title: event.title });
 
     // Unpin dashboards: each platform independently, failures never block deletion.
+    const { telegram: { token: telegramToken }, discord: { botToken: discordToken } } = getServerConfig();
     try {
-        if (event.telegramChatId && event.pinnedMessageId && process.env.TELEGRAM_BOT_TOKEN) {
+        if (event.telegramChatId && event.pinnedMessageId && telegramToken) {
             const { unpinChatMessage } = await import("@/features/telegram");
-            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
+            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, telegramToken);
         }
     } catch (e) {
         log.warn("Failed to unpin Telegram dashboard on delete", { slug, error: String(e) });
     }
     try {
-        if (event.discordChannelId && event.discordMessageId && process.env.DISCORD_BOT_TOKEN) {
+        if (event.discordChannelId && event.discordMessageId && discordToken) {
             const { unpinDiscordMessage } = await import("@/features/integrations/discord/model/discord");
-            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
+            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
         }
     } catch (e) {
         log.warn("Failed to unpin Discord dashboard on delete", { slug, error: String(e) });
@@ -176,10 +178,11 @@ export async function cancelEvent(slug: string) {
         // Post-commit: a missing base URL drops the link, it never fails the cancellation.
         const { getBaseUrlOrNull } = await import("@/shared/lib/url");
         const baseUrl = getBaseUrlOrNull();
+        const { telegram: { token: telegramToken }, discord: { botToken: discordToken } } = getServerConfig();
 
         // Edit the pinned dashboards: each platform independently.
         try {
-            if (event.telegramChatId && event.pinnedMessageId && process.env.TELEGRAM_BOT_TOKEN) {
+            if (event.telegramChatId && event.pinnedMessageId && telegramToken) {
                 const { editMessageText } = await import("@/features/telegram");
                 await editMessageText(
                     event.telegramChatId,
@@ -187,7 +190,7 @@ export async function cancelEvent(slug: string) {
                     `🚫 <b>Event Cancelled</b> (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\n` +
                     `The event "<b>${escapeHtml(event.title)}</b>" has been cancelled by the host.` +
                     (baseUrl ? `\n\n<a href="${baseUrl}/e/${slug}">View Event Details</a>` : ''),
-                    process.env.TELEGRAM_BOT_TOKEN
+                    telegramToken
                 );
             }
         } catch (e) {
@@ -195,13 +198,13 @@ export async function cancelEvent(slug: string) {
         }
 
         try {
-            if (event.discordChannelId && event.discordMessageId && process.env.DISCORD_BOT_TOKEN) {
+            if (event.discordChannelId && event.discordMessageId && discordToken) {
                 const { editDiscordMessage } = await import("@/features/integrations/discord/model/discord");
                 await editDiscordMessage(
                     event.discordChannelId,
                     event.discordMessageId,
                     `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${escapeDiscordMarkdown(event.title)}**" has been cancelled by the host.${baseUrl ? `\n\n[View Event Details](<${baseUrl}/e/${slug}>)` : ''}`,
-                    process.env.DISCORD_BOT_TOKEN
+                    discordToken
                 );
             }
         } catch (e) {

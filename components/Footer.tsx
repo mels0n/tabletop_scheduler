@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Github } from "lucide-react";
 import UntapBadge from "./UntapBadge";
+import { publicConfig } from "@/shared/config/public";
 
 /**
  * @component Footer
@@ -8,7 +9,7 @@ import UntapBadge from "./UntapBadge";
  * Conditionally renders specific links based on the hosted environment.
  */
 export function Footer() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     return (
         <footer className="border-t border-slate-800 bg-slate-950/50 mt-auto">

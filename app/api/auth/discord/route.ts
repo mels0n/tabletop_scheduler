@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const returnTo = safeReturnTo(searchParams.get("returnTo") ?? "/", baseUrl);
     const flow = searchParams.get("flow") === "connect" ? "connect" : "login";
 
-    const clientId = process.env.DISCORD_APP_ID;
+    const clientId = getServerConfig().discord.appId ?? undefined;
     if (!clientId) {
         return NextResponse.json({ error: "Missing DISCORD_APP_ID" }, { status: 500 });
     }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Bot, HelpCircle } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'AI & Agent FAQ',
@@ -75,7 +76,7 @@ export default function AiFaqPage() {
         { name: "AI FAQ", url: "/guide/ai-faq" }
     ]);
 
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">

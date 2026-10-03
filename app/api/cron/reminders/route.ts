@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import Logger from "@/shared/lib/logger";
 import { requireCronAuth } from "@/shared/lib/cron-auth";
 import { toResponse } from "@/shared/errors";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("CronReminders");
 
@@ -32,7 +33,8 @@ export async function GET(request: Request) {
 
     try {
         // Intent: Telegram and Discord are peers. Only skip when neither bot is configured.
-        if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.DISCORD_BOT_TOKEN) {
+        const { telegram, discord } = getServerConfig();
+        if (!telegram.token && !discord.botToken) {
             return NextResponse.json({ success: true, skipped: "no bot configured" });
         }
 

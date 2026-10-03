@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, Users, Code2, ArrowRight } from "lucide-react";
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: "About Tabletop Time",
@@ -63,7 +64,7 @@ const jsonLd = {
 };
 
 export default function AboutPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         notFound();

@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: "Pricing: Free Forever",
@@ -29,7 +30,7 @@ const jsonLd = {
 };
 
 export default function PricingPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     // Constraint Check
     if (!isHosted) {

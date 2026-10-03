@@ -2,6 +2,7 @@ import { Shield, EyeOff, Github, Server, Ban } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'No Ads, No Tracking: Schedule Board Games Privately',
@@ -139,7 +140,7 @@ export default function PrivacyPage() {
                             </p>
                         </div>
 
-                        {process.env.NEXT_PUBLIC_IS_HOSTED === "true" && (
+                        {publicConfig.isHosted && (
                             <div className="pt-8">
                                 <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: To comply with various global privacy laws, does TableTop Time have a Formal Privacy Policy?</h3>
                                 <p className="text-slate-300">
