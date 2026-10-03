@@ -1,7 +1,7 @@
 import "server-only";
 
 import { timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import prisma from "@/shared/lib/prisma";
 import { hashToken } from "@/shared/lib/token";
 import { readIdentity } from "@/shared/lib/session";
@@ -49,19 +49,39 @@ export async function upgradeLegacyAdminToken(slug: string, token: string, store
     }
 }
 
+const BEARER = /^Bearer\s+(\S+)\s*$/i;
+
 /**
- * Whether the current request may manage the event `slug`. Admin if either:
+ * The raw admin token an integration sent in a request header, if any:
+ * `Authorization: Bearer <token>` or, failing that, `x-admin-token: <token>`.
+ * Read through `next/headers` like the cookie, so every route handler and server action
+ * that calls `verifyEventAdmin` accepts it with no change of its own.
+ */
+async function readAdminTokenHeader(): Promise<string | undefined> {
+    const headerStore = await headers();
+    const bearer = headerStore.get("authorization")?.match(BEARER)?.[1];
+    if (bearer) return bearer;
+    return headerStore.get("x-admin-token")?.trim() || undefined;
+}
+
+/**
+ * Whether the current request may manage the event `slug`. Admin if any of:
  * - the `tabletop_admin_<slug>` cookie holds the raw token whose hash is `adminToken` (or, for a
- *   legacy plaintext row, the token itself, which is then upgraded to its hash), or
+ *   legacy plaintext row, the token itself, which is then upgraded to its hash),
+ * - an `Authorization: Bearer <token>` or `x-admin-token: <token>` header holds that raw token,
+ *   checked exactly like the cookie (same hash compare, same legacy upgrade; the stored hash
+ *   itself is never accepted), so integrations can call admin routes without a browser, or
  * - a signed identity cookie (see `shared/lib/session.ts`) matches the event's manager.
- * Unsigned identity cookies are ignored.
+ * Unsigned identity cookies are ignored. The token is scoped to its own event: another event's
+ * admin token never matches.
  */
 export async function verifyEventAdmin(slug: string): Promise<boolean> {
     const cookieStore = await cookies();
-    const token = cookieStore.get(`tabletop_admin_${slug}`)?.value;
+    const cookieToken = cookieStore.get(`tabletop_admin_${slug}`)?.value;
+    const headerToken = await readAdminTokenHeader();
     const { chatId, discordId } = readIdentity(cookieStore);
 
-    if (!token && !chatId && !discordId) return false;
+    if (!cookieToken && !headerToken && !chatId && !discordId) return false;
 
     const event = await prisma.event.findUnique({
         where: { slug },
@@ -69,9 +89,11 @@ export async function verifyEventAdmin(slug: string): Promise<boolean> {
     });
     if (!event) return false;
 
-    if (token && isAdminToken(token, event.adminToken)) {
-        await upgradeLegacyAdminToken(slug, token, event.adminToken);
-        return true;
+    for (const token of [cookieToken, headerToken]) {
+        if (token && isAdminToken(token, event.adminToken)) {
+            await upgradeLegacyAdminToken(slug, token, event.adminToken);
+            return true;
+        }
     }
     if (chatId && event.managerChatId === chatId) return true;
     if (discordId && event.managerDiscordId === discordId) return true;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import prisma from '@/shared/lib/prisma';
 import { hashToken } from '@/shared/lib/token';
 import { signValue } from '@/shared/lib/session';
@@ -20,9 +20,14 @@ function useCookies(values: Record<string, string>) {
     });
 }
 
+function useHeaders(values: Record<string, string> = {}) {
+    (headers as any).mockResolvedValue(new Headers(values));
+}
+
 describe('verifyEventAdmin', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        useHeaders();
         mockPrisma.event.findUnique.mockResolvedValue({
             adminToken: hashToken(RAW_TOKEN),
             managerChatId: MANAGER_CHAT,
@@ -108,11 +113,66 @@ describe('verifyEventAdmin', () => {
         useCookies({ 'tabletop_admin_other-slug': RAW_TOKEN });
         expect(await verifyEventAdmin('my-slug')).toBe(false);
     });
+
+    describe('admin token header (integrations)', () => {
+        beforeEach(() => useCookies({}));
+
+        it('accepts Authorization: Bearer <raw admin token> with no cookies', async () => {
+            useHeaders({ authorization: `Bearer ${RAW_TOKEN}` });
+            expect(await verifyEventAdmin('my-slug')).toBe(true);
+            expect(mockPrisma.event.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { slug: 'my-slug' } }));
+        });
+
+        it('accepts the scheme case-insensitively', async () => {
+            useHeaders({ authorization: `bearer ${RAW_TOKEN}` });
+            expect(await verifyEventAdmin('my-slug')).toBe(true);
+        });
+
+        it('accepts x-admin-token: <raw admin token>', async () => {
+            useHeaders({ 'x-admin-token': RAW_TOKEN });
+            expect(await verifyEventAdmin('my-slug')).toBe(true);
+        });
+
+        it('rejects a wrong bearer token', async () => {
+            useHeaders({ authorization: 'Bearer not-the-token' });
+            expect(await verifyEventAdmin('my-slug')).toBe(false);
+        });
+
+        it('rejects the stored hash presented as the token, in either header', async () => {
+            useHeaders({ authorization: `Bearer ${hashToken(RAW_TOKEN)}` });
+            expect(await verifyEventAdmin('my-slug')).toBe(false);
+            useHeaders({ 'x-admin-token': hashToken(RAW_TOKEN) });
+            expect(await verifyEventAdmin('my-slug')).toBe(false);
+        });
+
+        it('ignores a non-Bearer Authorization scheme', async () => {
+            useHeaders({ authorization: `Basic ${RAW_TOKEN}` });
+            expect(await verifyEventAdmin('my-slug')).toBe(false);
+            expect(mockPrisma.event.findUnique).not.toHaveBeenCalled();
+        });
+
+        it('upgrades a legacy plaintext row matched through the header', async () => {
+            mockPrisma.event.findUnique.mockResolvedValue({ adminToken: RAW_TOKEN, managerChatId: null, managerDiscordId: null });
+            useHeaders({ authorization: `Bearer ${RAW_TOKEN}` });
+            expect(await verifyEventAdmin('my-slug')).toBe(true);
+            expect(mockPrisma.event.update).toHaveBeenCalledWith({
+                where: { slug: 'my-slug' },
+                data: { adminToken: hashToken(RAW_TOKEN) },
+            });
+        });
+
+        it('admits a valid header even when the cookie holds a wrong token', async () => {
+            useCookies({ 'tabletop_admin_my-slug': 'stale-token' });
+            useHeaders({ authorization: `Bearer ${RAW_TOKEN}` });
+            expect(await verifyEventAdmin('my-slug')).toBe(true);
+        });
+    });
 });
 
 describe('requireEventAdmin', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        useHeaders();
         mockPrisma.event.findUnique.mockResolvedValue({
             adminToken: hashToken(RAW_TOKEN),
             managerChatId: null,

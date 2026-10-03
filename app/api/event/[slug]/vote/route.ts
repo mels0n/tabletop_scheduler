@@ -20,6 +20,7 @@ import { idParam, voteSchema } from "@/features/event-management/model/schemas";
 import { isLegacyParticipant } from "@/entities/participant";
 import { PARTICIPANT_NOT_OWNED } from "@/features/event-management/model/vote-errors";
 import { escapeDiscordMarkdown, escapeHtml } from "@/shared/lib/escape";
+import { verifyEventAdmin } from "@/features/auth";
 
 const log = Logger.get("API:Vote");
 
@@ -37,10 +38,16 @@ class ParticipantNotOwnedError extends AppError {
  * Responsibilities:
  * 1. Data Validation: `voteSchema` (bounded name, at most 100 unique slot IDs).
  * 2. Participant Upsert (Atomic):
- *    - Updates an existing participant only when the caller owns it: the signed
- *      `tabletop_participant_<slug>` cookie names that participant, or a verified identity
- *      cookie matches the row's chatId/discordId. Anyone else gets 403 with
- *      `code: 'participant_not_owned'`.
+ *    - Updates an existing participant (by `participantId`) through one of three paths:
+ *      a. Owner: the signed `tabletop_participant_<slug>` cookie names that participant, or a
+ *         verified identity cookie matches the row's chatId/discordId.
+ *      b. Event admin: `verifyEventAdmin` passes for this event (admin cookie, an
+ *         `Authorization: Bearer <adminToken>` / `x-admin-token` header, or the manager's
+ *         identity). An integration acting for one of its users may edit any participant of
+ *         the event. The row is not marked, no participant cookie is issued, and the caller's
+ *         own identity cookies are never linked onto the row.
+ *      c. Legacy: see below.
+ *      Anyone else gets 403 with `code: 'participant_not_owned'`.
  *    - Legacy rows: a row with no `ownerCookieIssuedAt` marker was created before participant
  *      cookies existed, so it is accepted by its stored id from any browser. The same
  *      transaction marks it with a conditional update (`ownerCookieIssuedAt: null` in the
@@ -120,6 +127,9 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             || (identity.discordId !== null && row.discordId === identity.discordId);
         // One instant for every ownership marker this request writes.
         const now = new Date();
+        // Admin path for edits by id: checked before the transaction (it may upgrade a legacy
+        // admin token row). Only needed when an existing row is named.
+        const callerIsEventAdmin = participantId ? await verifyEventAdmin(targetEvent.slug) : false;
 
         // Action: Atomic Transaction for Participant & Votes
 
@@ -134,13 +144,19 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                 throw new ValidationError("Vote references a slot that is not part of this event");
             }
 
-            // 2. Existing participant: must belong to this event and to the caller.
+            // 2. Existing participant: must belong to this event and to the caller, or the
+            //    caller must be this event's admin acting on the participant's behalf.
             let existing: any = null;
+            let actingAsEventAdmin = false;
             if (participantId) {
                 existing = await tx.participant.findFirst({
                     where: { id: participantId, eventId }
                 });
-                if (existing && isLegacyParticipant(existing)) {
+                if (existing && callerIsEventAdmin && !ownsParticipant(existing)) {
+                    // An integration (or the host) editing someone else's row: no ownership
+                    // marker, no cookie, no identity linking.
+                    actingAsEventAdmin = true;
+                } else if (existing && isLegacyParticipant(existing)) {
                     // Created before participant cookies existed: the stored id is all this voter
                     // has. Claim the row for this browser; the response issues the cookie. The
                     // conditional where makes exactly one concurrent claimant win.
@@ -187,9 +203,12 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             let existingVotes: any[] = [];
 
             if (existing) {
+                // The caller's identity cookies describe the caller; they are linked only onto
+                // a row the caller owns, never onto one an admin edits on someone's behalf.
+                const linkDiscordHere = shouldLinkDiscord && !actingAsEventAdmin;
                 // Self-heal a missing chatId from the verified Telegram cookie only; never
                 // overwrite one already set.
-                const resolvedChatId = !existing.chatId && shouldLinkTelegram ? identity.chatId : null;
+                const resolvedChatId = !existing.chatId && shouldLinkTelegram && !actingAsEventAdmin ? identity.chatId : null;
 
                 participant = await tx.participant.update({
                     where: { id: existing.id },
@@ -199,8 +218,8 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         status: nextStatus,
                         // Opt-out (or no Discord session): leave discordId/discordUsername untouched.
                         // The display name never replaces one the row already has.
-                        ...(shouldLinkDiscord && discordId ? { discordId } : {}),
-                        ...(shouldLinkDiscord && discordId && discordUsername && !existing.discordUsername
+                        ...(linkDiscordHere && discordId ? { discordId } : {}),
+                        ...(linkDiscordHere && discordId && discordUsername && !existing.discordUsername
                             ? { discordUsername }
                             : {}),
                         // Only include chatId when we actually resolved one; avoid churn.
@@ -273,7 +292,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                 }
             }
 
-            return { participant, event, quorum };
+            return { participant, event, quorum, actingAsEventAdmin };
         });
 
         const { event, quorum } = result;
@@ -313,7 +332,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         log.info(`Vote processed successfully`, { participantId: participantRow.id, eventId });
         const response = NextResponse.json({ success: true, participantId: participantRow.id });
         // Proof of ownership for later edits from this browser (refreshed on every authorized vote).
-        response.cookies.set(cookieName, signValue(cookiePurpose, String(participantRow.id)), identityCookieOptions());
+        // Not issued when an admin edited someone else's row: the caller does not own it.
+        if (!result.actingAsEventAdmin) {
+            response.cookies.set(cookieName, signValue(cookiePurpose, String(participantRow.id)), identityCookieOptions());
+        }
         return response;
     } catch (error) {
         return toResponse(error, log.forRequest(req));

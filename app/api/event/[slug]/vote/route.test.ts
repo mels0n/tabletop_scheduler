@@ -4,6 +4,7 @@ import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { checkEventQuorum } from '@/shared/lib/quorum';
 import { signValue } from '@/shared/lib/session';
+import { hashToken } from '@/shared/lib/token';
 import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
 import { broadcastToEvent } from '@/features/notifications';
 
@@ -35,12 +36,12 @@ async function flushAfter() {
 
 // Discord identity is sourced from the httpOnly session cookies, never the body.
 // cookieJar is the per-test cookie state; vi.hoisted so the hoisted mock factory can see it.
-const { cookieJar } = vi.hoisted(() => ({ cookieJar: new Map<string, string>() }));
+const { cookieJar, headerJar } = vi.hoisted(() => ({ cookieJar: new Map<string, string>(), headerJar: new Map<string, string>() }));
 vi.mock('next/headers', () => ({
     cookies: () => ({
         get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name)! } : undefined),
     }),
-    headers: () => new Headers(),
+    headers: () => new Headers(Object.fromEntries(headerJar)),
 }));
 
 const mockPrisma = prisma as unknown as {
@@ -76,6 +77,7 @@ describe('POST /api/event/[slug]/vote: linkIdentity opt-out', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        headerJar.clear();
         afterQueue.length = 0;
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
@@ -283,6 +285,7 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        headerJar.clear();
         afterQueue.length = 0;
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
@@ -426,6 +429,7 @@ describe('POST /api/event/[slug]/vote - user text in group messages', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        headerJar.clear();
         afterQueue.length = 0;
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
@@ -459,6 +463,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        headerJar.clear();
         afterQueue.length = 0;
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
@@ -524,6 +529,96 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '48'));
 
         expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+    });
+
+    describe('event admin token (integrations editing by id)', () => {
+        const ADMIN_TOKEN = 'raw-admin-token-for-test-event';
+        const OTHER_TOKEN = 'raw-admin-token-for-other-event';
+        const marked = { id: 47, eventId: 1, chatId: '555', discordId: 'victim', discordUsername: null, ownerCookieIssuedAt: MARKED };
+
+        beforeEach(() => {
+            headerJar.clear();
+            // The route reads the event by id; verifyEventAdmin reads it by slug.
+            mockPrisma.event.findUnique.mockImplementation(async ({ where }: any) => {
+                if (where.slug === 'test-event') return { adminToken: hashToken(ADMIN_TOKEN), managerChatId: null, managerDiscordId: null };
+                if (where.slug === 'other-event') return { adminToken: hashToken(OTHER_TOKEN), managerChatId: null, managerDiscordId: null };
+                return baseEvent;
+            });
+            mockPrisma.participant.findFirst.mockResolvedValue(marked);
+        });
+
+        it('edits a marked row by id with a valid bearer admin token, without marking it or issuing a cookie', async () => {
+            headerJar.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+
+            const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(await res.json()).toEqual({ success: true, participantId: 47 });
+            expect(mockPrisma.participant.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 47 } }));
+            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+            expect(mockPrisma.participant.create).not.toHaveBeenCalled();
+            expect((res as any).cookies.get('tabletop_participant_test-event')).toBeUndefined();
+        });
+
+        it('accepts the x-admin-token header the same way', async () => {
+            headerJar.set('x-admin-token', ADMIN_TOKEN);
+
+            const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+        });
+
+        it('edits an unmarked legacy row by id without claiming it', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...marked, ownerCookieIssuedAt: null });
+            headerJar.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+
+            const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+            expect((res as any).cookies.get('tabletop_participant_test-event')).toBeUndefined();
+        });
+
+        it("never stamps the caller's own identity onto the row it edits for someone else", async () => {
+            headerJar.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+            cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '777'));
+            cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'admin-discord'));
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...marked, chatId: null, discordId: null });
+
+            const res = await call({ name: 'Edited by host', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            const data = mockPrisma.participant.update.mock.calls[0][0].data;
+            expect(data).not.toHaveProperty('discordId');
+            expect(data).not.toHaveProperty('discordUsername');
+            expect(data).not.toHaveProperty('chatId');
+        });
+
+        it('refuses a wrong bearer token with 403 participant_not_owned', async () => {
+            headerJar.set('authorization', 'Bearer not-the-admin-token');
+
+            const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it("refuses another event's admin token with 403", async () => {
+            headerJar.set('authorization', `Bearer ${OTHER_TOKEN}`);
+
+            const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it('refuses the stored hash presented as the bearer token', async () => {
+            headerJar.set('authorization', `Bearer ${hashToken(ADMIN_TOKEN)}`);
+
+            expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+        });
     });
 
     describe('ownership marker (ownerCookieIssuedAt)', () => {
