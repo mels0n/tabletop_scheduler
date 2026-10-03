@@ -1,26 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
-import prisma from '@/shared/lib/prisma';
-import { sendTelegramMessage } from '@/features/telegram/lib/telegram-client';
+import { handleTelegramUpdate } from '@/features/telegram/server/update-handler';
 
-vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/telegram/lib/telegram-client', () => ({
-    sendTelegramMessage: vi.fn(),
     getWebhookSecret: () => 'test-secret',
 }));
+vi.mock('@/features/telegram/server/update-handler', () => ({
+    handleTelegramUpdate: vi.fn(),
+}));
 
-const mockPrisma = prisma as unknown as {
-    loginToken: { create: ReturnType<typeof vi.fn> },
-    participant: { updateMany: ReturnType<typeof vi.fn> },
-    event: { updateMany: ReturnType<typeof vi.fn> },
-};
-
-const sent = sendTelegramMessage as unknown as ReturnType<typeof vi.fn>;
+const handler = handleTelegramUpdate as unknown as ReturnType<typeof vi.fn>;
 
 /** Minimal stand-in for the Request the route receives from Telegram. */
-function webhookRequest(body: any, secret: string | null = 'test-secret') {
+function webhookRequest(body: unknown, secret: string | null = 'test-secret', badJson = false) {
     return {
-        json: async () => body,
+        json: async () => {
+            if (badJson) throw new SyntaxError('Unexpected token');
+            return body;
+        },
         headers: {
             get: (name: string) =>
                 name.toLowerCase() === 'x-telegram-bot-api-secret-token' ? secret : null,
@@ -28,81 +25,52 @@ function webhookRequest(body: any, secret: string | null = 'test-secret') {
     } as unknown as Request;
 }
 
-function message(text: string, chatType = 'private') {
-    return {
-        message: {
-            text,
-            chat: { id: 4242, type: chatType },
-            from: { id: 4242, username: 'chris' },
-        },
-    };
-}
+const update = { update_id: 1, message: { text: '/start login', chat: { id: 4242, type: 'private' } } };
 
 describe('POST /api/telegram/webhook', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         process.env.TELEGRAM_BOT_TOKEN = 'test-token';
-        mockPrisma.loginToken.create.mockResolvedValue({});
-        mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
-        mockPrisma.event.updateMany.mockResolvedValue({ count: 0 });
     });
 
     describe('authentication', () => {
         it('rejects an update with no secret header', async () => {
-            const res = await POST(webhookRequest(message('/start login'), null));
+            const res = await POST(webhookRequest(update, null));
 
             expect(res.status).toBe(401);
-            expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
-            expect(sent).not.toHaveBeenCalled();
+            expect(handler).not.toHaveBeenCalled();
         });
 
         it('rejects an update with the wrong secret', async () => {
-            const res = await POST(webhookRequest(message('/start login'), 'guessed'));
+            const res = await POST(webhookRequest(update, 'guessed'));
 
             expect(res.status).toBe(401);
-            expect(sent).not.toHaveBeenCalled();
+            expect(handler).not.toHaveBeenCalled();
         });
 
-        it('accepts an update carrying the registered secret', async () => {
-            const res = await POST(webhookRequest(message('/start login')));
+        it('passes an authenticated update to the shared handler', async () => {
+            const res = await POST(webhookRequest(update));
 
             expect(res.status).toBe(200);
+            expect(handler).toHaveBeenCalledWith(update);
         });
     });
 
-    describe('/start handling', () => {
-        it('issues a login link for /start login', async () => {
-            await POST(webhookRequest(message('/start login')));
+    // A non-2xx makes Telegram redeliver the update and re-run its side effects.
+    describe('always 200 after authentication', () => {
+        it('returns 200 when the handler throws', async () => {
+            handler.mockRejectedValue(new Error('db down'));
 
-            expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
-            expect(sent).toHaveBeenCalledWith(4242, expect.stringContaining('/auth/login?token='), 'test-token');
+            const res = await POST(webhookRequest(update));
+
+            expect(res.status).toBe(200);
         });
 
-        // Regression: the deep-link payload can be dropped by the client, and a user
-        // who finds the bot directly just presses START. Both arrive as a bare /start,
-        // which used to fall through to a silent no-op.
-        it('issues a login link for a bare /start in a private chat', async () => {
-            await POST(webhookRequest(message('/start')));
+        it('returns 200 for a body that is not JSON', async () => {
+            const res = await POST(webhookRequest(null, 'test-secret', true));
 
-            expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
-            expect(sent).toHaveBeenCalledWith(4242, expect.stringContaining('/auth/login?token='), 'test-token');
-        });
-
-        it('records the sender telegram handle on the login token', async () => {
-            await POST(webhookRequest(message('/start')));
-
-            expect(mockPrisma.loginToken.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({ chatId: '4242', telegramUsername: 'chris' }),
-                }),
-            );
-        });
-
-        it('stays silent for a bare /start in a group', async () => {
-            await POST(webhookRequest(message('/start', 'group')));
-
-            expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
-            expect(sent).not.toHaveBeenCalled();
+            expect(res.status).toBe(200);
+            expect(handler).not.toHaveBeenCalled();
         });
     });
 });
