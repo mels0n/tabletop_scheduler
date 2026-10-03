@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { checkEventQuorum } from '@/shared/lib/quorum';
 import { signValue } from '@/shared/lib/session';
 import { hashToken } from '@/shared/lib/token';
+import { resetServerConfigForTests } from '@/shared/config/server';
 import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
 import { broadcastToEvent } from '@/features/notifications';
 
@@ -680,7 +681,9 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
 
             expect(res.status).toBe(200);
             expect(mockPrisma.participant.update).toHaveBeenCalled();
-            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalledWith(
+                expect.objectContaining({ data: { ownerCookieIssuedAt: expect.any(Date) } })
+            );
         });
 
         it('marks a newly created participant in the same create', async () => {
@@ -752,5 +755,134 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('WAITLIST');
         expect(order.indexOf('count')).toBeGreaterThan(order.indexOf('tx-start'));
         expect(order.indexOf('count')).toBeLessThan(order.indexOf('tx-end'));
+    });
+});
+
+describe('POST /api/event/[slug]/vote - group announcement cooldown', () => {
+    const vote = { slotId: 1, preference: 'YES', canHost: false };
+    const MINUTE = 60_000;
+    const call = (body: any) => POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+    /** An existing, cookie-owned row whose last group announcement was `minutesAgo` ago (null = never). */
+    const ownedRow = (minutesAgo: number | null) => ({
+        id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: MARKED,
+        lastAnnouncedAt: minutesAgo === null ? null : new Date(Date.now() - minutesAgo * MINUTE),
+    });
+    const stampWrites = () => mockPrisma.participant.updateMany.mock.calls
+        .map((c: any[]) => c[0])
+        .filter((arg: any) => arg?.data && 'lastAnnouncedAt' in arg.data);
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        afterQueue.length = 0;
+        vi.stubEnv('VOTE_ANNOUNCE_COOLDOWN_MINUTES', '');
+        resetServerConfigForTests();
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', telegramChatId: 'tg1', discordChannelId: 'dc1' });
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 50 });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        resetServerConfigForTests();
+    });
+
+    it('announces a first vote and stamps lastAnnouncedAt on the new row', async () => {
+        await call({ name: 'New Voter', votes: [vote] });
+        await flushAfter();
+
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.lastAnnouncedAt).toBeInstanceOf(Date);
+        expect(stampWrites()).toEqual([]);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('skips the group post for a re-vote inside the window but still syncs the dashboard', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(10));
+
+        const res = await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(res.status).toBe(200);
+        expect(mockPrisma.vote.createMany).toHaveBeenCalled();
+        expect(stampWrites()).toEqual([]);
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('announces again once the window has passed, stamping with a conditional update', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(61));
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        const writes = stampWrites();
+        expect(writes).toHaveLength(1);
+        const { where, data } = writes[0];
+        expect(where).toEqual({
+            id: 47,
+            OR: [{ lastAnnouncedAt: null }, { lastAnnouncedAt: { lt: expect.any(Date) } }],
+        });
+        expect(data.lastAnnouncedAt).toBeInstanceOf(Date);
+        expect(data.lastAnnouncedAt.getTime() - where.OR[1].lastAnnouncedAt.lt.getTime()).toBe(60 * MINUTE);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('announces an existing row that was never announced (lastAnnouncedAt null)', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(null));
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(stampWrites()).toHaveLength(1);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not announce when a concurrent vote stamped the row first (count 0)', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(120));
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
+
+        const res = await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(res.status).toBe(200);
+        expect(stampWrites()).toHaveLength(1);
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('announces every vote when the cooldown is 0', async () => {
+        vi.stubEnv('VOTE_ANNOUNCE_COOLDOWN_MINUTES', '0');
+        resetServerConfigForTests();
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(1));
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(broadcastToEvent).toHaveBeenCalledTimes(2);
+        expect(syncDashboard).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves the quorum DM independent of the cooldown', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', telegramChatId: 'tg1', managerDiscordId: 'd-mgr' });
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(5));
+        mockPrisma.participant.count.mockResolvedValue(4);
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: true });
+        (sendDirectMessage as any).mockResolvedValue({ telegram: { status: 'skipped' }, discord: { status: 'sent', messageId: '1' } });
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(sendDirectMessage).toHaveBeenCalledTimes(1);
     });
 });
