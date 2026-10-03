@@ -115,6 +115,8 @@ export async function pushSlotUpdates(eventId: number, messageSnippet: string) {
         });
 
         if (!event) return;
+        // Nothing to post or refresh without a linked platform; skip the base URL lookup too.
+        if (!event.telegramChatId && !event.discordChannelId) return;
 
         const participantsCount = await prisma.participant.count({ where: { eventId } });
 
@@ -180,6 +182,8 @@ export async function syncDashboard(eventId: number) {
         });
 
         if (!event) return;
+        // Nothing to post or refresh without a linked platform; skip the base URL lookup too.
+        if (!event.telegramChatId && !event.discordChannelId) return;
 
         const participantsCount = await prisma.participant.count({ where: { eventId } });
 
