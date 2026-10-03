@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     recoverManagerLink,
     dmManagerLink,
     startTelegramRecovery,
     connectCommandForAdmin,
 } from './recovery';
-import { resetManagerLinkCooldownForTests } from './recovery-tokens';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
@@ -32,7 +31,7 @@ vi.mock('@/features/notifications', () => ({
 
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
-    loginToken: { create: ReturnType<typeof vi.fn> };
+    loginToken: { create: ReturnType<typeof vi.fn>; findFirst: ReturnType<typeof vi.fn> };
 };
 const mockSend = sendDirectMessage as unknown as ReturnType<typeof vi.fn>;
 const mockAdmin = verifyEventAdmin as unknown as ReturnType<typeof vi.fn>;
@@ -54,7 +53,7 @@ const discordOnlyEvent = {
 describe('manager recovery (platform-neutral, login-token based)', () => {
     beforeEach(() => {
         vi.resetAllMocks();
-        resetManagerLinkCooldownForTests();
+        mockPrisma.loginToken.findFirst.mockResolvedValue(null);
         mockPrisma.event.update.mockResolvedValue({});
         mockPrisma.loginToken.create.mockResolvedValue({});
         mockSend.mockResolvedValue({ telegram: skipped, discord: sent });
@@ -162,32 +161,36 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(mockSend).not.toHaveBeenCalled();
     });
 
-    describe('per-event cooldown', () => {
-        afterEach(() => {
-            vi.useRealTimers();
-        });
-
-        it('refuses a second request within 60 s with code rate_limited', async () => {
-            vi.useFakeTimers({ toFake: ['Date'] });
-            vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
+    describe('per-manager cooldown (database, shared by every instance)', () => {
+        it('refuses with code rate_limited when a LoginToken for this manager was created in the last 60 s', async () => {
             mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
+            mockPrisma.loginToken.findFirst.mockResolvedValue({ token: 'x'.repeat(64) });
 
-            expect(await dmManagerLink('abc')).toMatchObject({ success: true });
-            vi.setSystemTime(new Date('2026-10-02T12:00:30Z'));
+            expect(await dmManagerLink('abc')).toMatchObject({ code: 'rate_limited' });
             expect(await recoverManagerLink('abc', 'gmsteve')).toMatchObject({ code: 'rate_limited' });
-            expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
-            expect(mockSend).toHaveBeenCalledTimes(1);
-
-            vi.setSystemTime(new Date('2026-10-02T12:01:01Z'));
-            expect(await dmManagerLink('abc')).toMatchObject({ success: true });
+            expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+            expect(mockSend).not.toHaveBeenCalled();
         });
 
-        it('keys the cooldown by event', async () => {
+        it('queries by the manager identity (chat id or discord id) within the last 60 s', async () => {
+            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerChatId: '555', managerTelegram: 'steve_tg' });
+            const before = Date.now();
+
+            expect(await dmManagerLink('abc')).toMatchObject({ success: true });
+
+            const where = mockPrisma.loginToken.findFirst.mock.calls[0][0].where;
+            expect(where.OR).toEqual([{ chatId: '555' }, { discordId: '123456789012345678' }]);
+            const since = (where.createdAt.gt as Date).getTime();
+            expect(before - since).toBeGreaterThanOrEqual(59_000);
+            expect(before - since).toBeLessThanOrEqual(61_000);
+        });
+
+        it('only includes the platforms the manager linked', async () => {
             mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
+
             await dmManagerLink('abc');
 
-            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, slug: 'xyz' });
-            expect(await dmManagerLink('xyz')).toMatchObject({ success: true });
+            expect(mockPrisma.loginToken.findFirst.mock.calls[0][0].where.OR).toEqual([{ discordId: '123456789012345678' }]);
         });
     });
 });

@@ -21,7 +21,7 @@ import { connectCodeFor } from "@/features/telegram/model/connect-code";
 const LOGIN_TOKEN_TTL_MS = 15 * 60 * 1000;
 /** Telegram short recovery tokens (`/start rec_<token>`) stay valid this long. */
 const SHORT_TOKEN_TTL_MS = 15 * 60 * 1000;
-/** Minimum gap between manager link DMs for one event. */
+/** Minimum gap between login links for one manager identity. */
 export const MANAGER_LINK_COOLDOWN_MS = 60 * 1000;
 
 /**
@@ -73,36 +73,34 @@ export async function getConnectCommand(slug: string): Promise<string> {
     return `/connect ${slug} ${connectCodeFor(slug, event.adminToken, event.telegramChatId ?? null)}`;
 }
 
-// Per-event cooldown for manager link DMs. In-memory: on serverless each warm instance
-// keeps its own map, so the limit is per instance, not global. It still bounds the DM rate
-// a single caller can drive, and the link only ever goes to the stored manager identity.
-const lastManagerLinkAt = new Map<string, number>();
-
-/** Throws RateLimitError when a link for this event went out less than 60 s ago. */
-export function claimManagerLinkCooldown(slug: string): void {
-    const now = Date.now();
-    const last = lastManagerLinkAt.get(slug);
-    if (last !== undefined && now - last < MANAGER_LINK_COOLDOWN_MS) {
-        throw new RateLimitError("A link was just sent. Please wait a minute before requesting another.");
-    }
-    lastManagerLinkAt.set(slug, now);
-    if (lastManagerLinkAt.size > 10_000) {
-        for (const [key, at] of lastManagerLinkAt) {
-            if (now - at >= MANAGER_LINK_COOLDOWN_MS) lastManagerLinkAt.delete(key);
-        }
-    }
-}
-
-export function resetManagerLinkCooldownForTests(): void {
-    lastManagerLinkAt.clear();
-}
-
 export type ManagerIdentity = {
     managerChatId: string | null;
     managerTelegram: string | null;
     managerDiscordId: string | null;
     managerDiscordUsername: string | null;
 };
+
+/**
+ * Throws RateLimitError when a LoginToken for this manager identity (its Telegram chat id
+ * or Discord id) was created in the last 60 s. The check reads the database, so the limit
+ * holds across serverless instances, and it covers every link-minting path for that
+ * identity (manager recovery, `/start login`, the Discord magic login).
+ */
+export async function assertManagerLinkCooldown(manager: ManagerIdentity): Promise<void> {
+    const identities = [
+        ...(manager.managerChatId ? [{ chatId: manager.managerChatId }] : []),
+        ...(manager.managerDiscordId ? [{ discordId: manager.managerDiscordId }] : []),
+    ];
+    if (identities.length === 0) return;
+
+    const recent = await prisma.loginToken.findFirst({
+        where: { OR: identities, createdAt: { gt: new Date(Date.now() - MANAGER_LINK_COOLDOWN_MS) } },
+        select: { token: true },
+    });
+    if (recent) {
+        throw new RateLimitError("A link was just sent. Please wait a minute before requesting another.");
+    }
+}
 
 /**
  * Creates a 15-minute LoginToken bound to the event's stored manager identity and
