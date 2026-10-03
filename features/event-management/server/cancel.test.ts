@@ -4,6 +4,14 @@ vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 vi.mock('@/shared/lib/url', () => ({ getBaseUrl: vi.fn(() => 'https://example.test'), getBaseUrlOrNull: vi.fn(() => 'https://example.test') }));
 vi.mock('next/headers', () => ({ headers: vi.fn(() => new Headers()) }));
+// after() callbacks are queued here and run by flushAfter(), standing in for Next running
+// them once the response has been sent.
+const { afterQueue } = vi.hoisted(() => ({ afterQueue: [] as Array<() => unknown> }));
+vi.mock('next/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('next/server')>()),
+    after: (task: () => unknown) => { afterQueue.push(task); },
+}));
+vi.mock('@/features/integrations/webhooks', () => ({ processWebhookRow: vi.fn() }));
 vi.mock('@/features/telegram', () => ({
     editMessageText: vi.fn(),
     unpinChatMessage: vi.fn(),
@@ -19,6 +27,11 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
 }));
 
 import { cancelEvent, deleteEvent } from './actions';
+import { processWebhookRow } from '@/features/integrations/webhooks';
+
+async function flushAfter() {
+    while (afterQueue.length) await afterQueue.shift()!();
+}
 import prisma from '@/shared/lib/prisma';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { editMessageText, unpinChatMessage } from '@/features/telegram';
@@ -67,6 +80,30 @@ describe('cancel / delete notify both platforms independently', () => {
         expect(result).toEqual({ success: true });
         expect(editDiscordMessage).toHaveBeenCalledWith('dc1', 'dm1', expect.stringContaining('Event Cancelled'), 'dc-token');
         expect(sendDiscordMessage).toHaveBeenCalledWith('dc1', expect.stringContaining('Event Cancelled'), 'dc-token');
+    });
+
+    it('cancelEvent queues the CANCELLED webhook and attempts it right after the action', async () => {
+        afterQueue.length = 0;
+        (processWebhookRow as any).mockResolvedValue('delivered');
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, fromUrl: 'https://hooks.example/cancel', fromUrlId: 'ext-9' });
+        (prisma.webhookEvent.create as any).mockResolvedValue({ id: 'wh-cancel' });
+
+        const result = await cancelEvent('s');
+
+        expect(result).toEqual({ success: true });
+        expect(prisma.webhookEvent.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({ url: 'https://hooks.example/cancel', status: 'PENDING' }),
+        });
+        expect(afterQueue).toHaveLength(1);
+        expect(processWebhookRow).not.toHaveBeenCalled();
+        await flushAfter();
+        expect(processWebhookRow).toHaveBeenCalledWith('wh-cancel');
+    });
+
+    it('cancelEvent schedules no delivery attempt for an event without fromUrl', async () => {
+        afterQueue.length = 0;
+        await cancelEvent('s');
+        expect(afterQueue).toHaveLength(0);
     });
 
     it('cancelEvent works with only Discord linked and no Telegram token', async () => {

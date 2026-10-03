@@ -11,6 +11,14 @@ vi.mock('@/features/notifications', () => ({
     broadcastToEvent: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+// after() callbacks are queued here and run by flushAfter(), standing in for Next running
+// them once the response has been sent.
+const { afterQueue } = vi.hoisted(() => ({ afterQueue: [] as Array<() => unknown> }));
+vi.mock('next/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('next/server')>()),
+    after: (task: () => unknown) => { afterQueue.push(task); },
+}));
+vi.mock('@/features/integrations/webhooks', () => ({ processWebhookRow: vi.fn() }));
 vi.mock('@/shared/lib/url', () => ({ getBaseUrl: () => 'https://example.test', getBaseUrlOrNull: () => 'https://example.test' }));
 // Canned group messages by default; the escaping tests switch to the real builders.
 const { realMessages } = vi.hoisted(() => ({ realMessages: { on: false } }));
@@ -35,7 +43,12 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
     deleteDiscordMessage: vi.fn(),
 }));
 
+import { processWebhookRow } from '@/features/integrations/webhooks';
 import * as telegram from '@/features/telegram';
+
+async function flushAfter() {
+    while (afterQueue.length) await afterQueue.shift()!();
+}
 import * as discord from '@/features/integrations/discord/model/discord';
 
 const mockPrisma = prisma as any;
@@ -257,6 +270,31 @@ describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
         });
         expect(fetchMock).not.toHaveBeenCalled();
     });
+
+    it('attempts delivery of the new FINALIZED row right after the response', async () => {
+        afterQueue.length = 0;
+        (processWebhookRow as any).mockResolvedValue('delivered');
+        mockPrisma.event.findUnique.mockReset();
+        mockPrisma.event.findUnique
+            .mockResolvedValueOnce(eventMeta)
+            .mockResolvedValueOnce({ ...event, fromUrl: 'https://hooks.example/finalized' });
+        mockPrisma.webhookEvent.create.mockResolvedValue({ id: 'wh-final' });
+
+        await POST(oneShotRequest(), params);
+
+        expect(afterQueue).toHaveLength(1);
+        expect(processWebhookRow).not.toHaveBeenCalled();
+        await flushAfter();
+        expect(processWebhookRow).toHaveBeenCalledWith('wh-final');
+    });
+
+    it('schedules no delivery attempt for an event without fromUrl', async () => {
+        afterQueue.length = 0;
+
+        await POST(oneShotRequest(), params);
+
+        expect(afterQueue).toHaveLength(0);
+    });
 });
 
 describe('POST /api/event/[slug]/finalize (campaign)', () => {
@@ -299,6 +337,25 @@ describe('POST /api/event/[slug]/finalize (campaign)', () => {
         for (const call of mockPrisma.participant.updateMany.mock.calls) {
             expect(call[0].where.eventId).toBe(1);
         }
+    });
+
+    it('attempts delivery of the new campaign FINALIZED row right after the response', async () => {
+        afterQueue.length = 0;
+        (processWebhookRow as any).mockRejectedValue(new Error('db down'));
+        mockPrisma.event.findUnique.mockReset();
+        mockPrisma.event.findUnique
+            .mockResolvedValueOnce(campaignMeta)
+            .mockResolvedValueOnce({ ...finalizedEvent, finalizedSlotId: null, fromUrl: 'https://hooks.example/campaign' });
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt }]);
+        mockPrisma.webhookEvent.create.mockResolvedValue({ id: 'wh-camp' });
+
+        const res = await POST(campaignRequest({ slotIds: [3] }), params);
+
+        expect(res!.status).toBe(200);
+        expect(afterQueue).toHaveLength(1);
+        // A failed attempt is logged, never thrown: the cron retries the row.
+        await expect(flushAfter()).resolves.toBeUndefined();
+        expect(processWebhookRow).toHaveBeenCalledWith('wh-camp');
     });
 
     it('returns 409 when the campaign was already finalized', async () => {

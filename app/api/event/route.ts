@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
 import { randomBytes, randomUUID } from "crypto";
@@ -10,6 +10,7 @@ import { readIdentity } from "@/shared/lib/session";
 import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
 import { ConflictError, toResponse } from "@/shared/errors";
 import { createEventSchema, type CreateEventInput } from "@/features/event-management";
+import { processWebhookRow } from "@/features/integrations/webhooks";
 
 const log = Logger.get("API:EventCreate");
 
@@ -108,11 +109,12 @@ async function createEvent(input: CreateEventInput, slug: string, hashedAdminTok
             },
         });
 
-        // External callback: only ENQUEUE here. Delivery happens out of band (webhooks cron),
-        // so event creation never makes an outbound request on the caller's behalf.
+        // External callback: only ENQUEUE here. The first delivery attempt runs after the
+        // response (see POST); the webhooks cron retries whatever that leaves.
+        let webhookId: string | null = null;
         if (input.fromUrl) {
             const origin = getBaseUrlOrNull();
-            await tx.webhookEvent.create({
+            const row = await tx.webhookEvent.create({
                 data: {
                     eventId: newEvent.id,
                     url: input.fromUrl,
@@ -129,9 +131,10 @@ async function createEvent(input: CreateEventInput, slug: string, hashedAdminTok
                     })
                 }
             });
+            webhookId = row.id;
         }
 
-        return newEvent;
+        return { event: newEvent, webhookId };
     });
 }
 
@@ -145,6 +148,8 @@ async function createEvent(input: CreateEventInput, slug: string, hashedAdminTok
  * 2. When `fromUrl` is given, checks it is https and resolves only to public addresses (400 otherwise).
  * 3. Generates an unguessable `slug` (retried once on a collision).
  * 4. Creates the Event, its TimeSlots and any CREATED webhook row in one transaction.
+ *    After the response (`after()`), the row gets its first delivery attempt; the webhooks
+ *    cron retries it if that attempt fails.
  * 5. Returns the plaintext `adminToken` once so the frontend can set the management cookie.
  *
  * @param {Request} req - JSON Payload: { title, description, minPlayers, maxPlayers, eventType, minSessions, slots: [{startTime, endTime}], timezone, fromUrl, fromUrlId }
@@ -165,17 +170,31 @@ export async function POST(req: Request) {
         const hashedAdminToken = hashToken(rawAdminToken);
         const manager = await resolveManagerIdentity();
 
-        let event;
+        let created;
         try {
-            event = await createEvent(input, generateSlug(), hashedAdminToken, manager);
+            created = await createEvent(input, generateSlug(), hashedAdminToken, manager);
         } catch (err) {
             if (!isUniqueViolation(err)) throw err;
             log.warn("Slug collision; retrying once");
             try {
-                event = await createEvent(input, generateSlug(), hashedAdminToken, manager);
+                created = await createEvent(input, generateSlug(), hashedAdminToken, manager);
             } catch (retryErr) {
                 if (isUniqueViolation(retryErr)) throw new ConflictError("Could not allocate an event link; please retry");
                 throw retryErr;
+            }
+        }
+
+        const { event, webhookId } = created;
+        if (webhookId) {
+            // The event is committed: a scheduling failure must not cost the caller its admin
+            // token, and the cron delivers the row either way.
+            try {
+                after(() => processWebhookRow(webhookId).then(
+                    (outcome) => log.info("Immediate webhook attempt", { id: webhookId, outcome }),
+                    (e) => log.error("Immediate webhook attempt failed", e as Error),
+                ));
+            } catch (e) {
+                log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: webhookId, error: String(e) });
             }
         }
 

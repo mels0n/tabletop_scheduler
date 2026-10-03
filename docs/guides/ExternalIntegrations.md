@@ -40,7 +40,9 @@ If you provide `fromUrl` during creation, Tabletop Scheduler will send `POST` re
 
 ### Delivery
 
-Webhooks are queued when the event happens and delivered by a background job that runs every 5 minutes. A delivery usually arrives within a few minutes, not inside the request that caused it.
+Each webhook is queued in the same database transaction as the change it reports (event created, finalized or cancelled). The first delivery attempt is made immediately after the action completes, once its response has been sent, so a reachable endpoint normally hears about the change within seconds. If that attempt fails, the queue retries it: a background job runs every 5 minutes and redelivers with the backoff described under Retries, and only one delivery of a given webhook is ever in flight at a time.
+
+Besides `Content-Type: application/json`, every request carries `X-Tabletop-Event-Id` (the numeric event id), `X-Webhook-Id` (unique per queued webhook, and the same on every retry of it) and `X-Tabletop-Signature` (below).
 
 **Signature.** Every request carries this header:
 
@@ -79,13 +81,13 @@ function isValid(rawBody, header, secret) {
 
 On tabletoptime.us, ask the operator for the signing key. Until you have it, rely on the checks under Security Notes.
 
-**Retries.** A failed delivery is retried with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The job runs every 5 minutes, so actual times are rounded up to the next run.
+**Retries.** A failed delivery (the immediate attempt included) is retried by the queue with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The queue job runs every 5 minutes, so actual times are rounded up to the next run. A destination that is refused outright (see below) is marked `FAILED` on its first attempt.
 
 **Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected. Each delivery resolves the host once, checks every address, and connects only to the addresses it checked, so a DNS record that changes mid-delivery cannot redirect the request.
 
 ### Response Expectations
 
-Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or timeout) counts as a failed attempt and follows the retry schedule above. Deliveries can repeat, so treat `eventId` plus `type` as an idempotency key.
+Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or a timeout after 10 seconds) counts as a failed attempt and follows the retry schedule above. Deliveries can repeat, so treat `eventId` plus `type` (or `X-Webhook-Id`) as an idempotency key.
 
 ### Event Created (`CREATED`)
 Queued when the event is created.
