@@ -82,7 +82,7 @@ export default function FeaturesPage() {
                     <FeatureCard
                         icon={<Bot className="w-8 h-8 text-cyan-400" />}
                         title="Chat Integration"
-                        description="Don't leave the group chat. Our Telegram & Discord bots assist with voting, reminders, and managing the event directly from your DM."
+                        description="Don't leave the group chat. Our Telegram & Discord bots pin a live vote tally in your group, post reminders and the final result, and DM you login links and results."
                     />
                     <FeatureCard
                         icon={<CalendarDays className="w-8 h-8 text-violet-400" />}

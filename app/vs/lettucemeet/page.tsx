@@ -130,7 +130,7 @@ export default function VsLettuceMeetPage() {
                         />
                         <Problem
                             title="No Discord or Telegram integration"
-                            body="LettuceMeet lives on the web. Your group lives in Discord. Players forget to fill out the grid because the link gets buried. Tabletop Time's bots bring the poll into the server. Players respond without leaving Discord."
+                            body="LettuceMeet lives on the web. Your group lives in Discord. Players forget to fill out the grid because the link gets buried. Tabletop Time's bots pin a live vote tally in the server, so the poll stays in front of everyone."
                         />
                         <Problem
                             title="Binary availability only"
