@@ -52,7 +52,7 @@ export async function POST(
         // Intent: Keep the "pinned" message up-to-date with the latest location info.
         const slot = event.finalizedSlotId ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : undefined;
         if (slot) {
-            const msg = buildFinalizedMessage(event, slot, getBaseUrl(req.headers));
+            const msg = buildFinalizedMessage(event, slot, getBaseUrl());
 
             try {
                 await refreshTelegramDashboard(event, event.id, msg);

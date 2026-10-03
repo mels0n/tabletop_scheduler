@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
+
+// Reads the query string and must never be prerendered (it no longer touches request headers).
+export const dynamic = "force-dynamic";
 import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Auth:Discord");
@@ -21,7 +24,7 @@ import { normalizeHandle } from "@/shared/lib/handle";
  * @returns {NextResponse} Redirects the user to the return URL or error page.
  */
 export async function GET(req: Request) {
-    const baseUrl = getBaseUrl(req.headers);
+    const baseUrl = getBaseUrl();
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
     const stateStr = searchParams.get("state");

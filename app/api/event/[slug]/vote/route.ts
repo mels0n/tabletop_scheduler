@@ -258,8 +258,7 @@ export async function POST(
         if (event && !(event.quorumPerfectNotified && event.quorumViableNotified)) {
             const { sendDirectMessage, isDelivered } = await import("@/features/notifications");
             const { getBaseUrl } = await import("@/shared/lib/url");
-            const { headers } = await import("next/headers");
-            const baseUrl = getBaseUrl(headers());
+            const baseUrl = getBaseUrl();
             const link = `${baseUrl}/e/${event.slug}/manage`;
             const managerTarget = { telegramChatId: event.managerChatId, discordUserId: event.managerDiscordId };
             const hasManagerLink = Boolean(event.managerChatId || event.managerDiscordId);

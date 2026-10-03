@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure no caching prevents to
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const token = searchParams.get("token");
-    const baseUrl = getBaseUrl(request.headers);
+    const baseUrl = getBaseUrl();
 
     if (!token) {
         return NextResponse.redirect(`${baseUrl}/profile?error=missing_token`);

@@ -171,8 +171,7 @@ export async function cancelEvent(slug: string) {
         });
 
         const { getBaseUrl } = await import("@/shared/lib/url");
-        const { headers } = await import("next/headers");
-        const baseUrl = getBaseUrl(headers());
+        const baseUrl = getBaseUrl();
 
         // Edit the pinned dashboards: each platform independently.
         try {

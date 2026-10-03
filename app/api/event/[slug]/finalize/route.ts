@@ -127,7 +127,7 @@ export async function POST(
             let webhookId: string | null = null;
             if (updatedEvent.fromUrl) {
                 const { getBaseUrl } = await import("@/shared/lib/url");
-                const origin = getBaseUrl(req.headers);
+                const origin = getBaseUrl();
                 const wh = await tx.webhookEvent.create({
                     data: {
                         eventId: updatedEvent.id,
@@ -168,7 +168,7 @@ export async function POST(
         }
 
         const { getBaseUrl } = await import("@/shared/lib/url");
-        const origin = getBaseUrl(req.headers);
+        const origin = getBaseUrl();
         const eventLink = `${origin}/e/${params.slug}`;
 
         // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
@@ -330,7 +330,7 @@ async function handleCampaignFinalize(
         let webhookId: string | null = null;
         if (updatedEvent.fromUrl) {
             const { getBaseUrl } = await import("@/shared/lib/url");
-            const origin = getBaseUrl(req.headers as any);
+            const origin = getBaseUrl();
             const wh = await tx.webhookEvent.create({
                 data: {
                     eventId: updatedEvent.id,
@@ -371,7 +371,7 @@ async function handleCampaignFinalize(
     }
 
     const { getBaseUrl } = await import("@/shared/lib/url");
-    const origin = getBaseUrl(req.headers as any);
+    const origin = getBaseUrl();
     const eventLink = `${origin}/e/${slug}`;
 
     // ── GROUP CHANNEL NOTIFICATIONS ───────────────────────────────────────────────

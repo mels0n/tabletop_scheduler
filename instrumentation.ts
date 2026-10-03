@@ -12,6 +12,11 @@
 export async function register() {
     // Intent: Ensure code only runs in the Node.js runtime, not Edge or Browser.
     if (process.env.NEXT_RUNTIME === 'nodejs') {
+        // Validate configuration first. A ConfigError must fail boot, so it is not
+        // caught by the non-fatal handler below.
+        const { getServerConfig } = await import("@/shared/config/server");
+        getServerConfig();
+
         try {
             const token = process.env.TELEGRAM_BOT_TOKEN;
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
     const searchParams = request.nextUrl.searchParams;
     const token = searchParams.get("token");
     const slug = params.slug;
-    const baseUrl = getBaseUrl(request.headers);
+    const baseUrl = getBaseUrl();
 
     if (!token) {
         return NextResponse.redirect(`${baseUrl}/e/${slug}`);

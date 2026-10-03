@@ -35,7 +35,7 @@ export async function runVotingReminders(now: Date): Promise<ReminderRunSummary>
             );
             if (!due) continue;
 
-            const link = `${getBaseUrl(null)}/e/${event.slug}`;
+            const link = `${getBaseUrl()}/e/${event.slug}`;
             const html =
                 `🔔 <b>Voting reminder</b>\n\nPlease cast your votes for <b>${escapeHtml(event.title)}</b>!\n\n` +
                 `👉 <a href="${link}">Vote Here</a>`;

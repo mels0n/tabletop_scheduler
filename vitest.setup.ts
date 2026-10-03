@@ -1,9 +1,15 @@
 import { vi, beforeEach, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { resetServerConfigForTests } from '@/shared/config/server';
+
+// Tests run with a canonical base URL (bot links require one). Config is cached, so it is
+// reset before each test to pick up any env a test sets in its own beforeEach.
+process.env.NEXT_PUBLIC_BASE_URL ||= 'http://localhost:3000';
 
 // Automatically clear mock calls and instances between tests
 beforeEach(() => {
     vi.clearAllMocks();
+    resetServerConfigForTests();
 });
 
 // testing-library only auto-cleans when a global afterEach exists (vitest globals are off

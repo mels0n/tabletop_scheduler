@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getBaseUrl } from "@/shared/lib/url";
 
+// Reads the query string and must never be prerendered (it no longer touches request headers).
+export const dynamic = "force-dynamic";
+
 /**
  * @function GET
  * @description Handles the OAuth2 redirection flow for Discord.
@@ -19,7 +22,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Missing DISCORD_APP_ID" }, { status: 500 });
     }
 
-    const baseUrl = getBaseUrl(req.headers);
+    const baseUrl = getBaseUrl();
     const redirectUri = `${baseUrl}/api/auth/discord/callback`;
 
     // Define scopes based on flow

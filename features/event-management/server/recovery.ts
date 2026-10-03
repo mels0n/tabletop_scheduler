@@ -2,7 +2,6 @@
 
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { headers } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID, randomBytes } from "crypto";
@@ -29,7 +28,7 @@ export async function generateManagerMagicLink(slug: string): Promise<string> {
         data: { adminToken: tokenHash }
     });
 
-    const baseUrl = getBaseUrl(headers());
+    const baseUrl = getBaseUrl();
     return `${baseUrl}/api/event/${slug}/auth?token=${rawToken}`;
 }
 
