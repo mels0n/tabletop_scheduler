@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { getBaseUrl, getBaseUrlFromHeaders } from './url';
+import { getBaseUrl, getBaseUrlOrNull, getBaseUrlFromHeaders } from './url';
 import { ConfigError } from '@/shared/errors';
 import { resetServerConfigForTests } from '@/shared/config/server';
 import { stubConfigEnv } from '@/shared/config/test-env';
@@ -35,5 +35,19 @@ describe('getBaseUrlFromHeaders (display only)', () => {
         resetServerConfigForTests();
         expect(getBaseUrlFromHeaders(new Headers({ host: 'nas.local:3000' }))).toBe('http://nas.local:3000');
         expect(getBaseUrlFromHeaders(new Headers({ host: 'x.example', 'x-forwarded-proto': 'https, http' }))).toBe('https://x.example');
+    });
+});
+
+describe('getBaseUrlOrNull', () => {
+    it('returns null instead of throwing when no base URL is configured', () => {
+        stubConfigEnv({});
+        resetServerConfigForTests();
+        expect(getBaseUrlOrNull()).toBeNull();
+    });
+
+    it('returns the configured base URL', () => {
+        stubConfigEnv({ NEXT_PUBLIC_BASE_URL: 'https://tabletoptime.us/' });
+        resetServerConfigForTests();
+        expect(getBaseUrlOrNull()).toBe('https://tabletoptime.us');
     });
 });
