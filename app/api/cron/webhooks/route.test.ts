@@ -87,7 +87,7 @@ describe('GET /api/cron/webhooks', () => {
 
         const res = await GET(req());
 
-        expect(await res.json()).toEqual({ processed: 1, sent: 1, retried: 0, failed: 0 });
+        expect(await res.json()).toEqual({ processed: 1, sent: 1, retried: 0, failed: 0, deferred: 0 });
         expect(wh.update).toHaveBeenCalledWith({
             where: { id: 'w1' },
             data: { status: 'DELIVERED', attempts: { increment: 1 }, lockedAt: null },
@@ -102,7 +102,7 @@ describe('GET /api/cron/webhooks', () => {
         const before = Date.now();
         const res = await GET(req());
 
-        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 1, failed: 0 });
+        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 1, failed: 0, deferred: 0 });
         const data = wh.update.mock.calls[0][0].data;
         expect(data.status).toBe('RETRY');
         expect(data.attempts).toBe(1);
@@ -131,7 +131,7 @@ describe('GET /api/cron/webhooks', () => {
 
         const res = await GET(req());
 
-        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 0, failed: 1 });
+        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 0, failed: 1, deferred: 0 });
         expect(wh.update).toHaveBeenCalledWith({
             where: { id: 'w1' },
             data: { status: 'FAILED', attempts: 12, lockedAt: null },
@@ -145,11 +145,38 @@ describe('GET /api/cron/webhooks', () => {
 
         const res = await GET(req());
 
-        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 0, failed: 1 });
+        expect(await res.json()).toEqual({ processed: 1, sent: 0, retried: 0, failed: 1, deferred: 0 });
         expect(wh.update).toHaveBeenCalledWith({
             where: { id: 'w1' },
             data: { status: 'FAILED', attempts: 1, lockedAt: null },
         });
+    });
+
+    it('stops starting rows after 45 seconds and releases the rest of the claim', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            const start = new Date('2026-10-03T12:00:00Z');
+            vi.setSystemTime(start);
+            wh.findMany
+                .mockResolvedValueOnce([{ id: 'w1' }, { id: 'w2' }, { id: 'w3' }, { id: 'w4' }])
+                .mockResolvedValueOnce([row({ id: 'w1' }), row({ id: 'w2' }), row({ id: 'w3' }), row({ id: 'w4' })]);
+            wh.updateMany.mockResolvedValue({ count: 4 });
+            // Each delivery takes 30 seconds: w1 starts at 0 s, w2 at 30 s, w3 would start at 60 s.
+            (deliverWebhook as any).mockImplementation(async () => {
+                vi.setSystemTime(new Date(Date.now() + 30_000));
+            });
+
+            const res = await GET(req());
+
+            expect(deliverWebhook).toHaveBeenCalledTimes(2);
+            expect(await res.json()).toEqual({ processed: 2, sent: 2, retried: 0, failed: 0, deferred: 2 });
+            expect(wh.updateMany).toHaveBeenLastCalledWith({
+                where: { id: { in: ['w3', 'w4'] }, lockedAt: start },
+                data: { lockedAt: null },
+            });
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('returns 500 only when the run itself throws', async () => {
