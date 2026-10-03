@@ -42,6 +42,12 @@ function rankCandidates(candidates: Candidate[]): Candidate[] {
 /**
  * Fills open seats on a finalized event from its waitlist, best candidate first.
  *
+ * Who may take a seat: a candidate whose best vote on the finalized slot(s) is YES takes any open
+ * seat (below `maxPlayers`). A MAYBE ("If Needed") candidate is seated only while the event is
+ * below `minPlayers`, mirroring finalize, which adds If Needed players only to reach the minimum.
+ * No minimum (null or 0) means If Needed players are never auto-promoted. A candidate with no
+ * vote on the finalized slot(s) is never promoted.
+ *
  * Concurrency: every promotion happens in one transaction that first touches the event row
  * (a row lock on Postgres, a write lock on SQLite), counts ACCEPTED, flips the candidate with a
  * conditional `updateMany` (status still WAITLIST), and recounts; an overbooked recount reverts
@@ -63,6 +69,7 @@ export async function processWaitlistPromotion(eventId: number): Promise<void> {
             return;
         }
         const maxPlayers = event.maxPlayers;
+        const minPlayers = event.minPlayers || 0;
 
         const slotIds = event.finalizedSlotId !== null
             ? [event.finalizedSlotId]
@@ -96,6 +103,17 @@ export async function processWaitlistPromotion(eventId: number): Promise<void> {
 
             for (const candidate of ranked) {
                 if (accepted >= maxPlayers) break;
+
+                const preference = bestVote(candidate.votes)?.preference;
+                if (preference === 'YES') {
+                    // Yes voters take any open seat.
+                } else if (preference === 'MAYBE') {
+                    // Ranked after every Yes voter, so nobody later in the list qualifies either
+                    // once the minimum is met.
+                    if (accepted >= minPlayers) break;
+                } else {
+                    continue; // No vote on the finalized slot(s): never auto-promoted.
+                }
 
                 const claimed = await tx.participant.updateMany({
                     where: { id: candidate.id, eventId, status: 'WAITLIST' },
