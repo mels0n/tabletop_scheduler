@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  // Binary targets ensure compatibility with both local Windows dev and Docker (Linux musl)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- CORE MODELS ---
+
+// The central entity for the scheduler.
+// Managed via a secret 'adminToken' so users don't need accounts.
+model Event {
+  id          Int           @id @default(autoincrement())
+  slug        String        @unique // Publicly shareable identifier
+  title       String
+  description String?
+  
+  // Security & Management
+  adminToken  String?       @default(uuid()) // Saved in cookie to allow edits without login
+  
+  // Telegram Integration
+  telegramLink String?      // Invite link to the group chat
+  telegramChatId String?    // The numeric ID of the linked group (for bot notifications)
+  managerTelegram String?   // Creator's handle (e.g. @user) used for recovery
+  managerChatId   String?   // Creator's numeric ID (for private bot DMs)
+  pinnedMessageId Int?      // ID of the pinned status message to update/unpin
+  
+  // Reminders & Notifications
+  reminderEnabled      Boolean   @default(false)
+  reminderTime         String?   // "HH:mm" (24h) in Event Timezone
+  reminderDays         String?   // "0,1,2,3,4,5,6" (Comma separated, 0=Sun)
+  lastReminderSent     DateTime? // Track to avoid duplicates
+  quorumViableNotified Boolean   @default(false)
+  quorumPerfectNotified Boolean  @default(false)
+  
+  // Recovery
+  recoveryToken        String?   @unique // Short temporary token for deep linking
+  recoveryTokenExpires DateTime?
+  
+  // Game Configuration
+  minPlayers  Int           @default(3)
+  maxPlayers  Int?
+  status      String        @default("DRAFT") // DRAFT -> ACTIVE -> FINALIZED
+  
+  // Finalization State
+  finalizedSlotId Int?
+  finalizedHostId Int?
+  finalizedHost   Participant? @relation("FinalizedHost", fields: [finalizedHostId], references: [id])
+  location        String?
+  timezone        String        @default("UTC") // Captured from creator's browser
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  timeSlots   TimeSlot[]
+  participants Participant[]
+}
+
+// Represents a voteable window of time.
+model TimeSlot {
+  id        Int       @id @default(autoincrement())
+  event     Event     @relation(fields: [eventId], references: [id])
+  eventId   Int
+  startTime DateTime
+  endTime   DateTime
+  votes     Vote[]
+}
+
+// A user who has interacted with the event.
+// Identity is loosely tracked via localStorage or Telegram ID.
+model Participant {
+  id         Int      @id @default(autoincrement())
+  event      Event    @relation(fields: [eventId], references: [id])
+  eventId    Int
+  name       String
+  telegramId String? // The @handle (string)
+  chatId     String? // The numeric Chat ID (captured via webhook)
+  createdAt  DateTime @default(now())
+  
+  votes      Vote[]
+  hostedEvents Event[] @relation("FinalizedHost")
+}
+
+// Linking table for preferences.
+model Vote {
+  id            Int         @id @default(autoincrement())
+  participant   Participant @relation(fields: [participantId], references: [id])
+  participantId Int
+  timeSlot      TimeSlot    @relation(fields: [timeSlotId], references: [id])
+  timeSlotId    Int
+  
+  preference    String      // YES: Available, MAYBE: If needed, NO: Busy
+  canHost       Boolean     @default(false) // Specific willingness to host this slot
+}
+
+// Temporary tokens for global "My Events" login
+model LoginToken {
+  token     String   @id @default(uuid())
+  chatId    String   // The Telegram Chat ID being authenticated
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
