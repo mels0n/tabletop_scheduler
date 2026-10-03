@@ -130,7 +130,7 @@ async function handleStart(
     }
 }
 
-/** Issues a single-use, 15-minute magic login link. Only the hash is stored. */
+/** Issues a magic login link valid for 15 minutes (not single-use). Only the hash is stored. */
 async function handleGlobalLogin(chatId: number, user: TelegramUser | undefined, token: string): Promise<void> {
     const plaintextToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);

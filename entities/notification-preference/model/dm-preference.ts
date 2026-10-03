@@ -18,11 +18,18 @@ export async function isDmOptedOut(prisma: DmPreferenceStore, platform: DmPlatfo
     return row?.dmOptOut === true;
 }
 
-/** Records the user's choice, creating the preference row on first use. */
+/**
+ * Records the user's choice. Opting out stores a row; opting back in deletes it, because no
+ * row already means direct messages are on, and a user on the default keeps no record.
+ */
 export async function setDmOptOut(prisma: DmPreferenceStore, platform: DmPlatform, platformId: string, optOut: boolean): Promise<void> {
+    if (!optOut) {
+        await prisma.dmPreference.deleteMany({ where: { platform, platformId } });
+        return;
+    }
     await prisma.dmPreference.upsert({
         where: { platform_platformId: { platform, platformId } },
-        create: { platform, platformId, dmOptOut: optOut },
-        update: { dmOptOut: optOut },
+        create: { platform, platformId, dmOptOut: true },
+        update: { dmOptOut: true },
     });
 }

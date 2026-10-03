@@ -8,6 +8,7 @@ import { getDmPreferences } from './dm-preference-read';
 vi.mock('@/shared/lib/prisma');
 
 const mockUpsert = prisma.dmPreference.upsert as unknown as ReturnType<typeof vi.fn>;
+const mockDeleteMany = prisma.dmPreference.deleteMany as unknown as ReturnType<typeof vi.fn>;
 const mockFind = prisma.dmPreference.findUnique as unknown as ReturnType<typeof vi.fn>;
 
 function withCookies(values: Record<string, string>) {
@@ -66,11 +67,24 @@ describe('setDmPreference', () => {
         });
     });
 
+    it('deletes the row instead of storing false when DMs are turned back on', async () => {
+        withCookies(signedDiscord);
+        mockDeleteMany.mockResolvedValue({ count: 1 });
+
+        const result = await setDmPreference('discord', false);
+
+        expect(result).toEqual({ success: true, optOut: false });
+        expect(mockDeleteMany).toHaveBeenCalledWith({
+            where: { platform: 'discord', platformId: 'discord-42' },
+        });
+        expect(mockUpsert).not.toHaveBeenCalled();
+    });
+
     it('reports a storage failure without throwing', async () => {
         withCookies(signedDiscord);
         mockUpsert.mockRejectedValue(new Error('db down'));
 
-        expect(await setDmPreference('discord', false)).toEqual({ error: expect.any(String), status: 500 });
+        expect(await setDmPreference('discord', true)).toEqual({ error: expect.any(String), status: 500 });
     });
 });
 

@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  * @returns {NextResponse} JSON summary of the operation.
  */
 export async function GET(req: Request) {
-    // Security: Bearer CRON_SECRET (or loopback Host on a self-host box with no secret).
+    // Security: Bearer CRON_SECRET only. requireCronAuth fails closed: no secret configured rejects every request.
     try {
         requireCronAuth(req);
     } catch (e) {
