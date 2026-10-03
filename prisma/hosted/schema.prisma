@@ -125,6 +125,9 @@ model Participant {
   // Set when a signed participant cookie was first issued for this row. Null = created before
   // participant cookies existed: editable by stored id until a browser claims it.
   ownerCookieIssuedAt DateTime?
+  // Last time an "updated their availability" group post went out for this row. Null = never.
+  // Bounds those posts to one per VOTE_ANNOUNCE_COOLDOWN_MINUTES per participant.
+  lastAnnouncedAt DateTime?
   
   votes      Vote[]
   hostedEvents Event[] @relation("FinalizedHost")
