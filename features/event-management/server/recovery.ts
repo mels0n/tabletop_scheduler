@@ -88,7 +88,9 @@ async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResul
                         `After logging in, manage the event here:\n${manageUrl}\n\n` +
                         `(Valid for 15 minutes. If you did not ask for this, you can ignore it.)`,
                 },
-                { slug: event.slug, purpose: "manager-recovery", platform }
+                { slug: event.slug, purpose: "manager-recovery", platform },
+                // The manager asked for this link, so a DM opt-out never blocks it.
+                { respectOptOut: false }
             );
             return res[platform];
         };

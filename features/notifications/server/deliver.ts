@@ -3,6 +3,8 @@ import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
 import { sendTelegramMessageResult } from "@/features/telegram/lib/telegram-client";
 import { sendDiscordMessage, sendDiscordDM } from "@/features/integrations/discord/model/discord";
 import { getServerConfig } from "@/shared/config/server";
+import prisma from "@/shared/lib/prisma";
+import { isDmOptedOut, type DmPlatform } from "@/entities/notification-preference";
 
 const log = Logger.get("Notifications");
 
@@ -40,7 +42,8 @@ export interface UserTargets {
 export type DeliveryOutcome =
     | { status: "sent"; messageId: string }
     | { status: "failed"; error: string }
-    | { status: "skipped"; reason: "not_linked" | "not_configured" };
+    /** `opted_out`: the user turned off bot direct messages for this platform. Nothing to do, never a failure. */
+    | { status: "skipped"; reason: "not_linked" | "not_configured" | "opted_out" };
 
 export interface DeliveryResult {
     telegram: DeliveryOutcome;
@@ -118,15 +121,56 @@ export async function broadcastToEvent(
     return result;
 }
 
-/** Sends a direct message to a user on every platform they have linked. */
+export interface DirectMessageOptions {
+    /**
+     * Skip any platform where the user turned off bot direct messages. Defaults to true.
+     * Pass false only for a message the user explicitly asked for (a login link).
+     */
+    respectOptOut?: boolean;
+}
+
+const OPTED_OUT: DeliveryOutcome = { status: "skipped", reason: "opted_out" };
+
+/**
+ * True when this target opted out. A failed lookup reads as not opted out, so a database
+ * hiccup never silently drops a message; it is logged instead.
+ */
+async function optedOut(platform: DmPlatform, platformId: string, context?: Record<string, unknown>): Promise<boolean> {
+    try {
+        return await isDmOptedOut(prisma, platform, platformId);
+    } catch (e) {
+        log.warn(`DM preference lookup failed on ${platform}; sending anyway`, { ...context, error: describeError(e) });
+        return false;
+    }
+}
+
+async function unlessOptedOut(
+    platform: DmPlatform,
+    platformId: string | null | undefined,
+    respectOptOut: boolean,
+    send: () => Promise<DeliveryOutcome>,
+    context?: Record<string, unknown>
+): Promise<DeliveryOutcome> {
+    if (respectOptOut && platformId && (await optedOut(platform, platformId, context))) return OPTED_OUT;
+    return send();
+}
+
+/**
+ * Sends a direct message to a user on every platform they have linked, skipping any
+ * platform where they turned off bot direct messages (unless `respectOptOut` is false).
+ */
 export async function sendDirectMessage(
     target: UserTargets,
     message: NotificationMessage,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    options: DirectMessageOptions = {}
 ): Promise<DeliveryResult> {
+    const respectOptOut = options.respectOptOut ?? true;
     const [telegram, discord] = await Promise.all([
-        viaTelegram(target.telegramChatId, message.html),
-        viaDiscord(target.discordUserId, toDiscord(message), sendDiscordDM),
+        unlessOptedOut("telegram", target.telegramChatId, respectOptOut,
+            () => viaTelegram(target.telegramChatId, message.html), context),
+        unlessOptedOut("discord", target.discordUserId, respectOptOut,
+            () => viaDiscord(target.discordUserId, toDiscord(message), sendDiscordDM), context),
     ]);
     const result = { telegram, discord };
     logFailures("direct message", result, context);

@@ -77,7 +77,9 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(mockSend).toHaveBeenCalledWith(
             { telegramChatId: null, discordUserId: '123456789012345678' },
             expect.objectContaining({ html: expect.stringContaining('http://localhost:3000/auth/login?token=') }),
-            expect.anything()
+            expect.anything(),
+            // A requested login link is never suppressed by a DM opt-out.
+            { respectOptOut: false }
         );
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
@@ -170,8 +172,8 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
 
         const res = await recoverManagerLink('abc', 'steve_tg');
 
-        expect(mockSend).toHaveBeenNthCalledWith(1, { telegramChatId: '555', discordUserId: null }, expect.anything(), expect.anything());
-        expect(mockSend).toHaveBeenNthCalledWith(2, { telegramChatId: null, discordUserId: '123456789012345678' }, expect.anything(), expect.anything());
+        expect(mockSend).toHaveBeenNthCalledWith(1, { telegramChatId: '555', discordUserId: null }, expect.anything(), expect.anything(), { respectOptOut: false });
+        expect(mockSend).toHaveBeenNthCalledWith(2, { telegramChatId: null, discordUserId: '123456789012345678' }, expect.anything(), expect.anything(), { respectOptOut: false });
         expect(res).toMatchObject({ success: true, message: 'Login link sent to your Discord DMs!' });
     });
 
