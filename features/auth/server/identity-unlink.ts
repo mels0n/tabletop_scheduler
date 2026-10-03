@@ -39,6 +39,7 @@ const PLATFORM_NAME_COOKIE: Record<Platform, string> = {
  * - Manager identity on every event they manage (this removes that platform's magic-link
  *   recovery for those events — the UI must warn before calling).
  * - Their pending LoginToken rows.
+ * - Their DmPreference row for that platform.
  * - The session cookies themselves.
  *
  * This is the self-serve data-deletion path required by Discord's Developer ToS §5(b):
@@ -56,34 +57,41 @@ export async function unlinkPlatformEverywhere(platform: Platform): Promise<{ su
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };
         }
 
-        let participantCount = 0;
-        let eventCount = 0;
+        // One transaction so a partial failure cannot leave the identity half erased.
+        const { participantCount, eventCount } = await prisma.$transaction(async (tx) => {
+            let participantCount: number;
+            let eventCount: number;
 
-        if (platform === 'discord') {
-            participantCount = (await prisma.participant.updateMany({
-                where: { discordId: identityId },
-                data: { discordId: null, discordUsername: null }
-            })).count;
+            if (platform === 'discord') {
+                participantCount = (await tx.participant.updateMany({
+                    where: { discordId: identityId },
+                    data: { discordId: null, discordUsername: null }
+                })).count;
 
-            eventCount = (await prisma.event.updateMany({
-                where: { managerDiscordId: identityId },
-                data: { managerDiscordId: null, managerDiscordUsername: null }
-            })).count;
+                eventCount = (await tx.event.updateMany({
+                    where: { managerDiscordId: identityId },
+                    data: { managerDiscordId: null, managerDiscordUsername: null }
+                })).count;
 
-            await prisma.loginToken.deleteMany({ where: { discordId: identityId } });
-        } else {
-            participantCount = (await prisma.participant.updateMany({
-                where: { chatId: identityId },
-                data: { chatId: null }
-            })).count;
+                await tx.loginToken.deleteMany({ where: { discordId: identityId } });
+            } else {
+                participantCount = (await tx.participant.updateMany({
+                    where: { chatId: identityId },
+                    data: { chatId: null }
+                })).count;
 
-            eventCount = (await prisma.event.updateMany({
-                where: { managerChatId: identityId },
-                data: { managerChatId: null }
-            })).count;
+                eventCount = (await tx.event.updateMany({
+                    where: { managerChatId: identityId },
+                    data: { managerChatId: null }
+                })).count;
 
-            await prisma.loginToken.deleteMany({ where: { chatId: identityId } });
-        }
+                await tx.loginToken.deleteMany({ where: { chatId: identityId } });
+            }
+
+            await tx.dmPreference.deleteMany({ where: { platform, platformId: identityId } });
+
+            return { participantCount, eventCount };
+        });
 
         cookieStore.delete(PLATFORM_ID_COOKIE[platform]);
         cookieStore.delete(PLATFORM_NAME_COOKIE[platform]);
