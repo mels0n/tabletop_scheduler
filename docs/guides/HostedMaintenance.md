@@ -110,7 +110,23 @@ That script enables `pg_cron` and `pg_net`, reads both secrets from
 | `tabletop-reminders` | every 10 minutes | `<app_base_url>/api/cron/reminders` |
 | `tabletop-webhooks` | every 5 minutes | `<app_base_url>/api/cron/webhooks` |
 
-Each call sends `Authorization: Bearer <cron_secret>`.
+Each call is a `GET` (both routes accept only `GET`) with
+`Authorization: Bearer <cron_secret>`. The secrets are looked up on every run, so
+nothing needs rescheduling after a Vault update.
+
+The script is safe to run again: `cron.schedule` with an existing job name replaces
+that job in place rather than adding a second one. To remove the jobs:
+
+```sql
+select cron.unschedule('tabletop-reminders');
+select cron.unschedule('tabletop-webhooks');
+```
+
+Late runs still deliver. A voting reminder goes out on any run up to 18 hours after
+its target time (at most once per 18 hours), and a session reminder goes out on any
+run between the chosen lead time (2 hours, 1 day or 2 days) and the session start.
+The reminders endpoint returns 500 when a whole run failed (for example, the database
+was unreachable), which shows up as `status_code = 500` in `net._http_response`.
 
 To check that it is working:
 
@@ -122,8 +138,9 @@ select id, status_code, created from net._http_response order by created desc li
 
 If you rotate `CRON_SECRET`, update the Vault entry too (`vault.update_secret`),
 or the jobs will start receiving 401 responses. The GitHub Actions reminder
-workflow remains as a slower backstop; it is safe to leave running because a
-reminder is claimed in the database before it is sent.
+workflow (`.github/workflows/cron.yml`, every two hours at minute 7) remains as a
+backstop; it is safe to leave running because a reminder is claimed in the database
+before it is sent, so overlapping runs never post twice.
 
 ## Adopting the pre-existing database (one time)
 

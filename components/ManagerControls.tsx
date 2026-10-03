@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteEvent, cancelEvent, updateReminderSettings, updateSessionReminderSettings } from "@/features/event-management/server/actions";
 import { Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { SESSION_REMINDER_LEADS, type SessionReminderLead } from "@/features/notifications/model/leads";
 
 /**
  * @interface ManagerControlsProps
@@ -33,11 +34,13 @@ interface ManagerControlsProps {
     initialSessionReminderLeadMinutes: number | null;
 }
 
-const SESSION_LEAD_OPTIONS = [
-    { value: 120, label: "2 hours before" },
-    { value: 1440, label: "1 day before" },
-    { value: 2880, label: "2 days before" },
-];
+const SESSION_LEAD_LABELS: Record<SessionReminderLead, string> = {
+    120: "2 hours before",
+    1440: "1 day before",
+    2880: "2 days before",
+};
+
+const SESSION_LEAD_OPTIONS = SESSION_REMINDER_LEADS.map(value => ({ value, label: SESSION_LEAD_LABELS[value] }));
 
 /**
  * @component ManagerControls

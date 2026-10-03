@@ -5,11 +5,10 @@ import Logger from "@/shared/lib/logger";
 import { verifyEventAdmin } from "@/features/auth/server/actions";
 import { normalizeHandle, formatHandle } from "@/shared/lib/handle";
 import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
+// Allowed session reminder lead times (2 hours, 1 day, 2 days), shared with the manage page.
+import { isSessionReminderLead } from "@/features/notifications/model/leads";
 
 const log = Logger.get("EventActions");
-
-// Allowed session reminder lead times in minutes: 1 hour, 2 hours, 1 day, 2 days.
-const SESSION_REMINDER_LEADS = [120, 1440, 2880];
 
 /**
  * Checks the manager's connection status (Telegram linkage). Public callers get only the
@@ -296,7 +295,7 @@ export async function updateSessionReminderSettings(slug: string, enabled: boole
     try {
         if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
 
-        if (typeof enabled !== "boolean" || !SESSION_REMINDER_LEADS.includes(leadMinutes)) {
+        if (typeof enabled !== "boolean" || typeof leadMinutes !== "number" || !isSessionReminderLead(leadMinutes)) {
             return { success: false, error: "Invalid lead time" };
         }
 

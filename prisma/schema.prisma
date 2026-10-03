@@ -46,7 +46,7 @@ model Event {
   reminderDays         String?   // "0,1,2,3,4,5,6" (Comma separated, 0=Sun)
   lastReminderSent     DateTime? // Track to avoid duplicates
   sessionReminderEnabled     Boolean @default(false) // Post a heads-up in the group/channel before a scheduled session
-  sessionReminderLeadMinutes Int?    // Lead time before session start: 60 | 120 | 1440 | 2880
+  sessionReminderLeadMinutes Int?    // Minutes before session start: 120 | 1440 | 2880 (features/notifications/model/leads.ts)
   quorumViableNotified Boolean   @default(false)
   quorumPerfectNotified Boolean  @default(false)
   quorumReachedAt      DateTime? // Set when quorum is first met (voting reminders stop)

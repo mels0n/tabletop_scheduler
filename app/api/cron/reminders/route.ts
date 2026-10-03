@@ -18,7 +18,8 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure fresh execution; no ca
  * to spin up the reminder check logic on demand.
  *
  * @param {Request} request - The trigger request.
- * @returns {NextResponse} Success/Failure status.
+ * @returns {NextResponse} 200 with per-type counts; 500 when a whole run threw, so the
+ * scheduler (pg_cron, the GitHub backstop's `curl --fail`) records the failure.
  */
 export async function GET(request: Request) {
     try {
@@ -36,11 +37,13 @@ export async function GET(request: Request) {
         }
 
         const { runReminders } = await import("@/features/notifications");
-        const summary = await runReminders();
+        const { ok, voting, session } = await runReminders();
+        if (!ok) {
+            return toResponse(new Error("Reminder run failed"), log);
+        }
 
-        return NextResponse.json({ success: true, ...summary });
+        return NextResponse.json({ success: true, voting, session });
     } catch (e) {
-        log.error("Failed to run reminders", e as Error);
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+        return toResponse(e, log);
     }
 }

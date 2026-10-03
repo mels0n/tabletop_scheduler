@@ -1,5 +1,6 @@
 import Logger from "@/shared/lib/logger";
 import { reliableFetch } from "@/shared/lib/fetch";
+import type { EditResult } from "@/shared/lib/edit-result";
 
 const log = Logger.get("Discord");
 
@@ -62,8 +63,10 @@ export async function sendDiscordMessage(channelId: string, content: string | an
  * @param messageId The Message ID to edit.
  * @param content The new text content (or embed object).
  * @param token The Bot Token.
+ * @returns 'edited' on success; 'gone' on 404 or error code 10008 (Unknown Message);
+ * 'failed' for anything else (rate limit, 5xx, timeout), where the caller must not repost.
  */
-export async function editDiscordMessage(channelId: string, messageId: string, content: string | any, token: string): Promise<boolean> {
+export async function editDiscordMessage(channelId: string, messageId: string, content: string | any, token: string): Promise<EditResult> {
     const url = `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`;
     const body: any = withoutMentions(content);
 
@@ -79,14 +82,17 @@ export async function editDiscordMessage(channelId: string, messageId: string, c
 
         if (!res.ok) {
             const err = await res.text();
+            let code: unknown;
+            try { code = JSON.parse(err)?.code; } catch { code = undefined; }
+            if (res.status === 404 || code === 10008) return "gone";
             log.error("API Error (editMessage)", { error: err });
-            return false;
+            return "failed";
         }
 
-        return true;
+        return "edited";
     } catch (e) {
         log.error("Failed to edit message", e as Error);
-        return false;
+        return "failed";
     }
 }
 

@@ -1,15 +1,19 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { getBaseUrl } from "@/shared/lib/url";
-import { broadcastToEvent, isDelivered } from "../deliver";
-import { isVotingReminderDue } from "./schedule";
-import { escapeHtml, isNothingLinked, type ReminderRunSummary } from "./types";
+import { broadcastToEvent } from "../deliver";
+import { isVotingReminderDue, VOTING_DEDUPE_MS } from "./schedule";
+import { classifyDelivery, escapeHtml, liveChannels, type ReminderRunSummary } from "./types";
 
 const log = Logger.get("VotingReminders");
 
 /**
  * Posts "please vote" nudges for open events whose schedule is due. Works for
  * Telegram-only, Discord-only, and dual-linked events alike.
+ *
+ * Claim first: `lastReminderSent` is stamped with a conditional `updateMany` before
+ * anything is sent, so two overlapping runs (pg_cron plus the GitHub backstop) can never
+ * both post. If nothing was delivered the claim is released so the next run retries.
  */
 export async function runVotingReminders(now: Date): Promise<ReminderRunSummary> {
     const summary: ReminderRunSummary = { sent: 0, failed: 0 };
@@ -18,7 +22,19 @@ export async function runVotingReminders(now: Date): Promise<ReminderRunSummary>
         where: {
             status: { in: ["ACTIVE", "DRAFT"] },
             reminderEnabled: true,
-            quorumViableNotified: false,
+            // Reaching quorum stops the nudges, whether or not the manager DM landed.
+            quorumReachedAt: null,
+        },
+        select: {
+            id: true,
+            slug: true,
+            title: true,
+            timezone: true,
+            reminderTime: true,
+            reminderDays: true,
+            lastReminderSent: true,
+            telegramChatId: true,
+            discordChannelId: true,
         },
     });
 
@@ -35,22 +51,49 @@ export async function runVotingReminders(now: Date): Promise<ReminderRunSummary>
             );
             if (!due) continue;
 
+            const channels = liveChannels(event);
+            if (!channels) continue;
+
+            const claim = await prisma.event.updateMany({
+                where: {
+                    id: event.id,
+                    OR: [
+                        { lastReminderSent: null },
+                        { lastReminderSent: { lt: new Date(now.getTime() - VOTING_DEDUPE_MS) } },
+                    ],
+                },
+                data: { lastReminderSent: now },
+            });
+            if (claim.count !== 1) continue;
+
             const link = `${getBaseUrl()}/e/${event.slug}`;
             const html =
                 `🔔 <b>Voting reminder</b>\n\nPlease cast your votes for <b>${escapeHtml(event.title)}</b>!\n\n` +
                 `👉 <a href="${link}">Vote Here</a>`;
 
-            const result = await broadcastToEvent(event, { html }, { slug: event.slug, kind: "voting_reminder" });
+            const context = { slug: event.slug, kind: "voting_reminder" };
+            let outcome: ReturnType<typeof classifyDelivery>;
+            try {
+                outcome = classifyDelivery(channels, await broadcastToEvent(channels, { html }, context), context);
+            } catch (err) {
+                await releaseClaim(event.id, now, event.lastReminderSent);
+                throw err;
+            }
 
-            if (isDelivered(result)) {
-                await prisma.event.update({ where: { id: event.id }, data: { lastReminderSent: now } });
+            if (outcome.outcome === "delivered") {
                 summary.sent++;
                 log.info("Voting reminder sent", { slug: event.slug });
-            } else if (isNothingLinked(result)) {
-                log.debug("Voting reminder skipped, no group or channel linked", { slug: event.slug });
+                continue;
+            }
+
+            await releaseClaim(event.id, now, event.lastReminderSent);
+            if (outcome.outcome === "nothing_to_do") {
+                log.debug("Voting reminder skipped, no platform available", { slug: event.slug });
             } else {
                 summary.failed++;
-                log.warn("Voting reminder not delivered; will retry next run", { slug: event.slug, result });
+                if (!outcome.permanentOnly) {
+                    log.warn("Voting reminder not delivered; will retry next run", { slug: event.slug });
+                }
             }
         } catch (err) {
             summary.failed++;
@@ -59,4 +102,12 @@ export async function runVotingReminders(now: Date): Promise<ReminderRunSummary>
     }
 
     return summary;
+}
+
+/** Undoes this run's claim only (matched on the exact timestamp it wrote). */
+async function releaseClaim(eventId: number, now: Date, previous: Date | null): Promise<void> {
+    await prisma.event.updateMany({
+        where: { id: eventId, lastReminderSent: now },
+        data: { lastReminderSent: previous },
+    });
 }

@@ -35,8 +35,13 @@ describe("isVotingReminderDue", () => {
         expect(isVotingReminderDue(voting(), at("2026-10-07T11:30:00Z"))).toBe(true);
     });
 
-    it("is not due 91 minutes late", () => {
-        expect(isVotingReminderDue(voting(), at("2026-10-07T11:31:00Z"))).toBe(false);
+    it("catches up a run 3 hours late", () => {
+        expect(isVotingReminderDue(voting(), at("2026-10-07T13:00:00Z"))).toBe(true);
+    });
+
+    it("is due until 18 hours after the target, and not at 18 hours", () => {
+        expect(isVotingReminderDue(voting(), at("2026-10-08T03:59:00Z"))).toBe(true);
+        expect(isVotingReminderDue(voting(), at("2026-10-08T04:00:00Z"))).toBe(false);
     });
 
     it("is not due before the time", () => {
@@ -53,9 +58,10 @@ describe("isVotingReminderDue", () => {
         expect(isVotingReminderDue(wednesdayOnly, at("2026-10-07T00:15:00Z"))).toBe(false);
     });
 
-    it("does not fire for a wrapped target more than 90 minutes late", () => {
+    it("catches up a wrapped target within 18 hours but not after", () => {
         const s = voting({ reminderTime: "23:30" });
-        expect(isVotingReminderDue(s, at("2026-10-07T01:01:00Z"))).toBe(false);
+        expect(isVotingReminderDue(s, at("2026-10-07T01:01:00Z"))).toBe(true);
+        expect(isVotingReminderDue(s, at("2026-10-07T17:30:00Z"))).toBe(false);
     });
 
     it("respects the day-of-week list", () => {
@@ -74,7 +80,7 @@ describe("isVotingReminderDue", () => {
     it("handles AM/PM times", () => {
         const s = voting({ reminderTime: "7:00 PM" });
         expect(isVotingReminderDue(s, at("2026-10-07T19:10:00Z"))).toBe(true);
-        expect(isVotingReminderDue(s, at("2026-10-07T07:10:00Z"))).toBe(false);
+        expect(isVotingReminderDue(s, at("2026-10-07T18:50:00Z"))).toBe(false);
     });
 
     it("evaluates in the event timezone", () => {
@@ -93,27 +99,27 @@ describe("isVotingReminderDue", () => {
 
 describe("isSessionReminderDue", () => {
     const start = new Date("2026-10-10T18:00:00Z");
-    const base = { startTime: start, leadMinutes: 120, sentAt: null };
 
     it("is not due before the lead window opens", () => {
-        expect(isSessionReminderDue(base, new Date("2026-10-10T15:59:00Z"))).toBe(false);
+        expect(isSessionReminderDue(start, 120, new Date("2026-10-10T15:59:00Z"))).toBe(false);
     });
 
     it("is due at the start of the lead window and until the session starts", () => {
-        expect(isSessionReminderDue(base, new Date("2026-10-10T16:00:00Z"))).toBe(true);
-        expect(isSessionReminderDue(base, new Date("2026-10-10T17:59:00Z"))).toBe(true);
+        expect(isSessionReminderDue(start, 120, new Date("2026-10-10T16:00:00Z"))).toBe(true);
+        expect(isSessionReminderDue(start, 120, new Date("2026-10-10T17:59:00Z"))).toBe(true);
+    });
+
+    it("catches up a run hours after the window opened", () => {
+        expect(isSessionReminderDue(start, 2880, new Date("2026-10-08T23:00:00Z"))).toBe(true);
     });
 
     it("is not due once the session has started", () => {
-        expect(isSessionReminderDue(base, new Date("2026-10-10T18:00:00Z"))).toBe(false);
-        expect(isSessionReminderDue(base, new Date("2026-10-10T19:00:00Z"))).toBe(false);
+        expect(isSessionReminderDue(start, 120, new Date("2026-10-10T18:00:00Z"))).toBe(false);
+        expect(isSessionReminderDue(start, 120, new Date("2026-10-10T19:00:00Z"))).toBe(false);
     });
 
-    it("is not due when already sent", () => {
-        expect(isSessionReminderDue({ ...base, sentAt: new Date("2026-10-10T16:05:00Z") }, new Date("2026-10-10T17:00:00Z"))).toBe(false);
-    });
-
-    it("is not due without a lead time", () => {
-        expect(isSessionReminderDue({ ...base, leadMinutes: null }, new Date("2026-10-10T17:00:00Z"))).toBe(false);
+    it("is not due without a positive lead time", () => {
+        expect(isSessionReminderDue(start, null, new Date("2026-10-10T17:00:00Z"))).toBe(false);
+        expect(isSessionReminderDue(start, 0, new Date("2026-10-10T17:00:00Z"))).toBe(false);
     });
 });
