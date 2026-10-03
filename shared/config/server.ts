@@ -27,6 +27,8 @@ export interface ServerConfig {
     logLevel: LogLevel;
     cleanupRetentionDays: { finalized: number; draft: number; cancelled: number };
     acceptDataLoss: boolean;
+    /** Minimum minutes between two "updated their availability" group posts for one participant. 0 = no cooldown. */
+    voteAnnounceCooldownMinutes: number;
 }
 
 const DEV_SESSION_SECRET = "dev-session-secret";
@@ -46,6 +48,16 @@ const retentionDays = (fallback: number) =>
         z.string()
             .regex(/^\d+$/, "must be a whole number of days")
             .transform(Number)
+            .optional()
+            .default(fallback),
+    );
+
+const cooldownMinutes = (fallback: number) =>
+    optionalString.pipe(
+        z.string()
+            .regex(/^\d+$/, "must be a whole number of minutes")
+            .transform(Number)
+            .pipe(z.number().max(1440, "must be between 0 and 1440 minutes"))
             .optional()
             .default(fallback),
     );
@@ -85,6 +97,7 @@ const envSchema = z.object({
     CLEANUP_RETENTION_DAYS_DRAFT: retentionDays(1),
     CLEANUP_RETENTION_DAYS_CANCELLED: retentionDays(1),
     PRISMA_ACCEPT_DATA_LOSS: flag,
+    VOTE_ANNOUNCE_COOLDOWN_MINUTES: cooldownMinutes(60),
     NEXT_PHASE: optionalString,
 });
 
@@ -155,6 +168,7 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
             cancelled: e.CLEANUP_RETENTION_DAYS_CANCELLED,
         },
         acceptDataLoss: e.PRISMA_ACCEPT_DATA_LOSS,
+        voteAnnounceCooldownMinutes: e.VOTE_ANNOUNCE_COOLDOWN_MINUTES,
     };
 }
 
