@@ -29,6 +29,7 @@ const log = Logger.get("Telegram:Updates");
  * - `/start rec_<token>` completes a manager recovery minted from the manage page.
  * - `/start login` (or `recover_handle`, or a bare `/start` in a private chat, since
  *   clients sometimes drop the deep-link payload) DMs a 15-minute magic login link.
+ *   Only in a private chat: in a group it replies with an instruction to DM the bot.
  *   A bare `/start` in a group stays silent: it is usually meant for another bot.
  * - No passive capture: a typed handle is never proof of identity, so a message never
  *   writes a chat id onto a participant or manager row. Managers link through
@@ -63,6 +64,10 @@ export function resetProcessedUpdatesForTests(): void {
 }
 
 const EVENT_LINK = /\/e\/[a-zA-Z0-9]+/;
+
+/** Reply to `/start login` outside a private chat. No em dashes: users read this. */
+const LOGIN_DM_ONLY =
+    "🔐 Login links are only sent in a private chat. Open a direct message with me and send <code>/start login</code> there.";
 const SLUG = /^[a-zA-Z0-9]+$/;
 
 export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void> {
@@ -109,7 +114,12 @@ async function handleStart(
     if (payload.startsWith("rec_")) {
         await handleShortLinkRecovery(chatId, user, payload.slice("rec_".length), token);
     } else if (payload === "login" || payload === "recover_handle") {
-        await handleGlobalLogin(chatId, user, token);
+        // A login link is a credential: never post one where other members can read it.
+        if (chatType === "private") {
+            await handleGlobalLogin(chatId, user, token);
+        } else {
+            await sendTelegramMessage(chatId, LOGIN_DM_ONLY, token);
+        }
     } else if (payload && SLUG.test(payload)) {
         // ?startgroup=<slug> from "Add to Group": adding the bot binds nothing.
         await sendTelegramMessage(chatId, CONNECT_INSTRUCTIONS, token);

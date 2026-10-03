@@ -166,6 +166,18 @@ describe('handleTelegramUpdate: /start', () => {
         );
     });
 
+    it.each(['/start login', '/start recover_handle'])('never posts a login link into a group for %s', async (text) => {
+        await handleTelegramUpdate(update(text, 'supergroup', -1001, 'chris'));
+
+        expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+        expect(sent).toHaveBeenCalledTimes(1);
+        const reply = sent.mock.calls[0][1] as string;
+        expect(sent.mock.calls[0][0]).toBe(-1001);
+        expect(reply).not.toContain('/auth/login');
+        expect(reply).toMatch(/private chat|direct message/i);
+        expect(reply).not.toContain('—');
+    });
+
     it('stays silent for a bare /start in a group', async () => {
         await handleTelegramUpdate(update('/start', 'group'));
 
