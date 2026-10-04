@@ -168,11 +168,26 @@ describe("sendDirectMessage DM opt-out", () => {
         expect(findPreference).toHaveBeenCalledTimes(1);
     });
 
-    it("still sends when the preference lookup fails", async () => {
+    it("fails closed when the preference lookup fails: nothing is sent and an error is logged", async () => {
+        findPreference.mockRejectedValue(new Error("db down"));
+        sendDiscordDM.mockResolvedValue({ id: "d1" });
+        const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        const result = await sendDirectMessage({ discordUserId: "222" }, { html: "hi" });
+
+        expect(result.discord).toEqual({ status: "failed", error: "preference_unavailable" });
+        expect(sendDiscordDM).not.toHaveBeenCalled();
+        expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("DM preference lookup failed"));
+        // Transient: a reminder retries it later rather than marking the user unreachable.
+        expect(isPermanentFailure("discord", result.discord)).toBe(false);
+        errorLog.mockRestore();
+    });
+
+    it("a requested message (respectOptOut: false) never depends on the preference lookup", async () => {
         findPreference.mockRejectedValue(new Error("db down"));
         sendDiscordDM.mockResolvedValue({ id: "d1" });
 
-        const result = await sendDirectMessage({ discordUserId: "222" }, { html: "hi" });
+        const result = await sendDirectMessage({ discordUserId: "222" }, { html: "login" }, undefined, { respectOptOut: false });
 
         expect(result.discord).toEqual({ status: "sent", messageId: "d1" });
     });
