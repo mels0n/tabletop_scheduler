@@ -1,6 +1,6 @@
 # API Reference
 
-TabletopTime is primarily a user-facing Next.js application, but every interaction goes through an HTTP route you can call yourself. This page documents every route handler in `app/api/**/route.ts` plus the magic-link login route at `app/auth/login/route.ts`: 23 route files, 24 handlers. Every request body, query and path parameter is validated with a schema before use. A few manage-page actions (cancel, delete, reminder settings, connecting a Discord channel) are Next.js server actions rather than HTTP routes; they apply the same **event admin** check, including the admin token header.
+TabletopTime is primarily a user-facing Next.js application, but every interaction goes through an HTTP route you can call yourself. This page documents every route handler in `app/api/**/route.ts` plus the magic-link login route at `app/auth/login/route.ts`: 24 route files, 25 handlers. Every request body, query and path parameter is validated with a schema before use. A few manage-page actions (cancel, delete, reminder settings, connecting a Discord channel) are Next.js server actions rather than HTTP routes; they apply the same **event admin** check, including the admin token header.
 
 ## Conventions
 
@@ -358,6 +358,14 @@ Tells the client which of its remembered event slugs still exist.
 **Auth:** none
 
 Returns `{ "status": "ok" }` when the process is up, without touching any dependency. With `?deep=1` it also runs `SELECT 1` against the database and returns `{ "status": "ok", "db": "ok" }`, or `503 { "status": "degraded", "db": "error" }` if the query fails. The Docker healthcheck uses the shallow form.
+
+### Community Stats
+**Endpoint:** `GET /api/stats`
+**Auth:** none
+
+Public community counts, the same ones the homepage badges show. The README badges read this endpoint, so the key names are stable.
+
+**Response (200):** `{ "eventsActive": 207, "votingOpen": 152, "playersActive": 787, "gamesLockedIn": 153 }`. `eventsActive` counts every retained event, `votingOpen` the events still in `DRAFT`, `playersActive` the participants, and `gamesLockedIn` the finalized one-shots plus locked campaign sessions. Expired events are deleted, so these are current counts, not all-time totals. Sent with `Cache-Control: public, s-maxage=3600, stale-while-revalidate=3600` and `Access-Control-Allow-Origin: *`. A database failure returns `500 { "error": "Internal error" }` with `Cache-Control: no-store`, so a bad reading is never cached. Self-hosted instances return `404 { "error": "Not found", "code": "not_found" }`.
 
 ---
 
