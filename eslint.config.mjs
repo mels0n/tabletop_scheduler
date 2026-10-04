@@ -13,6 +13,7 @@ export default defineConfig([
         "app/generated/**",
         "scratch/**",
         "tmp/**",
+        "shared/data/published-posts.generated.ts",
     ]),
     js.configs.recommended,
     ...nextCoreWebVitals,
@@ -42,6 +43,50 @@ export default defineConfig([
                 },
             ],
         },
+    },
+    {
+        // Raw blog posts are read only by scripts/generate-published-posts.mjs (and the queue
+        // inspector); the site reads the generated module through shared/lib/blog.ts.
+        ignores: ["scripts/generate-published-posts.mjs", "scripts/blog-queue.mjs", "eslint.config.mjs", ".dependency-cruiser.cjs"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    paths: [
+                        {
+                            name: "gray-matter",
+                            message: "Raw blog posts are read only by scripts/generate-published-posts.mjs. Use shared/lib/blog.",
+                        },
+                    ],
+                    patterns: [
+                        {
+                            regex: "(^|/)content/blog",
+                            message: "Raw blog posts are read only by scripts/generate-published-posts.mjs. Use shared/lib/blog.",
+                        },
+                        {
+                            regex: "published-posts\\.generated$",
+                            message: "Import posts through shared/lib/blog, not the generated module.",
+                        },
+                    ],
+                },
+            ],
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector: "Literal[value=/content[\\/]blog/]",
+                    message: "Raw blog posts are read only by scripts/generate-published-posts.mjs. Use shared/lib/blog.",
+                },
+                {
+                    selector: "CallExpression[arguments.0.value='content'][arguments.1.value='blog']",
+                    message: "Raw blog posts are read only by scripts/generate-published-posts.mjs. Use shared/lib/blog.",
+                },
+            ],
+        },
+    },
+    {
+        // The one reader of the generated module is shared/lib/blog.ts.
+        files: ["shared/lib/blog.ts", "shared/lib/blog.test.ts"],
+        rules: { "no-restricted-imports": "off" },
     },
     {
         // Node CommonJS scripts.

@@ -122,6 +122,18 @@ npx prisma db push          # creates prisma/dev.db from prisma/schema.prisma
 npm run dev
 ```
 
+### Blog posts
+
+Posts live in `content/blog/*.md`. A build publishes only the posts that are live on the build date: `draft: true` never publishes, and a post dated after the build date waits for a later build. `npm run dev`, `npm run build`, `npm run typecheck`, `npm run lint`, `npm test` and `npm run depcruise` first run `scripts/generate-published-posts.mjs`, which writes `shared/data/published-posts.generated.ts` (gitignored). The site reads posts only from that module, through `shared/lib/blog.ts`.
+
+```bash
+SHOW_SCHEDULED=1 npm run dev                  # also show future-dated posts
+SHOW_DRAFTS=1 SHOW_SCHEDULED=1 npm run dev    # also show drafts
+BUILD_DATE=2026-12-01 npm run build           # build as if it were that date (UTC, YYYY-MM-DD)
+```
+
+The preview flags apply only to `npm run dev`; production builds, CI and any run with `NODE_ENV=production` ignore them. Restart the dev server after editing a post or changing a flag, because the module is generated once at startup. `npm run blog:queue` lists live, scheduled and draft posts.
+
 Checks to run before opening a pull request:
 
 ```bash
