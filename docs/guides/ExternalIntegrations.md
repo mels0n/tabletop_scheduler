@@ -25,7 +25,7 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 | `minPlayers` | number | Minimum players required (default: 3). |
 | `maxPlayers` | number | Maximum players allowed. |
 | `slots` | JSON | Optional candidate times, as a JSON array of `{ "startTime": ISO, "endTime": ISO }`. |
-| `fromUrl` | url | **Required for Webhooks**. The `https` endpoint we will POST JSON updates to (not Discord-specific). Plain `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected when the event is created. |
+| `fromUrl` | url | **Required for Webhooks**. The `https` endpoint we will POST JSON updates to (not Discord-specific). Plain `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected when the event is created (a self-hosted instance can allow `http` and private addresses, see below). |
 | `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID), up to 200 characters. |
 
 ### Example Link
@@ -84,7 +84,9 @@ On tabletoptime.us, ask the operator for the signing key. Until you have it, rel
 
 **Retries.** A failed delivery (the immediate attempt included) is retried by the queue with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The queue job runs every 5 minutes, so actual times are rounded up to the next run. A destination that is refused outright (see below) is marked `FAILED` on its first attempt.
 
-**Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected. Each delivery resolves the host once, checks every address, and connects only to the addresses it checked, so a DNS record that changes mid-delivery cannot redirect the request.
+**Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected. Each delivery resolves the host once, checks every address, and connects only to the addresses it checked, so a DNS record that changes mid-delivery cannot redirect the request. A host that does not resolve (a DNS timeout or temporary resolver failure) counts as a failed attempt and is retried.
+
+**Private destinations on a self-hosted instance.** An operator whose integration runs on the same machine or LAN can set `WEBHOOK_ALLOW_PRIVATE=true` (default off). The instance then accepts a `fromUrl` that uses plain `http` or resolves to a private, loopback or link-local address, such as `http://192.168.1.10/hook`. Credentials in the URL are still refused, redirects are still not followed, and every delivery is still signed. The setting is self-host only: it is ignored when hosted or on Vercel, so tabletoptime.us always requires a public `https` destination. Turn it on only if you trust everyone who can create events on the instance. See [Environment Variables](../reference/EnvVariables.md).
 
 ### Response Expectations
 
@@ -170,5 +172,5 @@ Generate links dynamically in your system:
 ## Security Notes
 
 1.  **Signatures**: Every delivery is signed with `X-Tabletop-Signature`, keyed with the signing key derived from `SESSION_SECRET` (see Delivery above). Verify it whenever you hold the key. On any instance, also verify the `fromUrlId` against your own database to ensure the update relates to a known request.
-2.  **HTTPS and public addresses**: `fromUrl` must be an `https` URL on a public address. It is checked when the event is created (400 otherwise) and again before every delivery, so a destination that later resolves to a private address is refused and marked `FAILED`.
+2.  **HTTPS and public addresses**: `fromUrl` must be an `https` URL on a public address (unless a self-hosted operator set `WEBHOOK_ALLOW_PRIVATE`, above). It is checked when the event is created (400 otherwise) and again before every delivery, so a destination that later resolves to a private address is refused and marked `FAILED`.
 3.  **Managing events from your server**: the `adminToken` returned by `POST /api/event` can be sent as `Authorization: Bearer <adminToken>` to every admin route (see the [API Reference](../reference/ApiReference.md)). Keep it server side.

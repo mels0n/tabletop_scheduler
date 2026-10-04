@@ -1,4 +1,5 @@
-import { request } from "node:https";
+import { request as httpsRequest } from "node:https";
+import { request as httpRequest } from "node:http";
 import type { LookupFunction } from "node:net";
 import { resolveSafeWebhookTarget, WebhookHostUnresolvedError, type VettedAddress } from "@/shared/lib/webhook-sender";
 import { signWebhookBody } from "./signature";
@@ -40,8 +41,13 @@ function pinnedLookup(addresses: VettedAddress[]): LookupFunction {
     };
 }
 
-/** One POST over a fresh socket to a vetted address. Resolves with the status code; never follows redirects. */
+/**
+ * One POST over a fresh socket to a vetted address. Resolves with the status code; never follows
+ * redirects. Plain http only reaches here when `resolveSafeWebhookTarget` allowed it
+ * (`WEBHOOK_ALLOW_PRIVATE` on a self-hosted install).
+ */
 function postPinned(target: URL, addresses: VettedAddress[], headers: Record<string, string>, body: string): Promise<number> {
+    const request = target.protocol === "http:" ? httpRequest : httpsRequest;
     return new Promise((resolve, reject) => {
         const req = request(
             target,

@@ -29,6 +29,11 @@ export interface ServerConfig {
     acceptDataLoss: boolean;
     /** Minimum minutes between two "updated their availability" group posts for one participant. 0 = no cooldown. */
     voteAnnounceCooldownMinutes: number;
+    /**
+     * Self-host only: outbound webhooks may use plain http and private, loopback or link-local
+     * addresses. Always false when hosted or on Vercel, whatever the environment says.
+     */
+    webhookAllowPrivate: boolean;
 }
 
 const DEV_SESSION_SECRET = "dev-session-secret";
@@ -98,6 +103,7 @@ const envSchema = z.object({
     CLEANUP_RETENTION_DAYS_CANCELLED: retentionDays(1),
     PRISMA_ACCEPT_DATA_LOSS: flag,
     VOTE_ANNOUNCE_COOLDOWN_MINUTES: cooldownMinutes(60),
+    WEBHOOK_ALLOW_PRIVATE: flag,
     NEXT_PHASE: optionalString,
 });
 
@@ -172,6 +178,7 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
         },
         acceptDataLoss: e.PRISMA_ACCEPT_DATA_LOSS,
         voteAnnounceCooldownMinutes: e.VOTE_ANNOUNCE_COOLDOWN_MINUTES,
+        webhookAllowPrivate: e.WEBHOOK_ALLOW_PRIVATE && !hostedOrVercel,
     };
 }
 

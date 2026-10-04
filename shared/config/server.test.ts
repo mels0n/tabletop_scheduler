@@ -42,6 +42,7 @@ describe('getServerConfig: defaults', () => {
             cleanupRetentionDays: { finalized: 1, draft: 1, cancelled: 1 },
             acceptDataLoss: false,
             voteAnnounceCooldownMinutes: 60,
+            webhookAllowPrivate: false,
         });
     });
 
@@ -217,6 +218,19 @@ describe('getServerConfig: telegram edge cases', () => {
     it('refuses explicit polling on Vercel', () => {
         const err = loadError({ VERCEL: '1', CRON_SECRET: 'c', NEXT_PUBLIC_BASE_URL: 'https://x.example', TELEGRAM_BOT_TOKEN: 't', TELEGRAM_MODE: 'polling' });
         expect(err.message).toContain('TELEGRAM_MODE');
+    });
+});
+
+describe('getServerConfig: private webhook destinations', () => {
+    it('enables WEBHOOK_ALLOW_PRIVATE on a self-host box', () => {
+        expect(load({ WEBHOOK_ALLOW_PRIVATE: 'true' }).webhookAllowPrivate).toBe(true);
+        expect(load({ WEBHOOK_ALLOW_PRIVATE: '1' }).webhookAllowPrivate).toBe(true);
+        expect(load({ WEBHOOK_ALLOW_PRIVATE: 'false' }).webhookAllowPrivate).toBe(false);
+    });
+
+    it('ignores WEBHOOK_ALLOW_PRIVATE when hosted or on Vercel', () => {
+        expect(load({ WEBHOOK_ALLOW_PRIVATE: 'true', NEXT_PUBLIC_IS_HOSTED: 'true', CRON_SECRET: 'c' }).webhookAllowPrivate).toBe(false);
+        expect(load({ WEBHOOK_ALLOW_PRIVATE: 'true', VERCEL: '1' }).webhookAllowPrivate).toBe(false);
     });
 });
 

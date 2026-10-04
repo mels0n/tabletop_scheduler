@@ -1,6 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { ValidationError } from "@/shared/errors";
+import { getServerConfig } from "@/shared/config/server";
 
 /*
  * Destination checks for outbound webhooks. Delivery itself lives in
@@ -127,7 +128,9 @@ export interface VettedAddress {
 
 /**
  * Validates `url` and resolves its host once: https only, no credentials, and every address
- * the host resolves to must be public. Returns the parsed URL and those vetted addresses so
+ * the host resolves to must be public. A self-hosted install with `WEBHOOK_ALLOW_PRIVATE`
+ * set (`webhookAllowPrivate`, never true when hosted or on Vercel) also accepts plain http
+ * and private addresses; credentials are refused either way. Returns the parsed URL and those vetted addresses so
  * the caller can connect to exactly them (closing the DNS-rebinding window between check and
  * connect). Throws `ValidationError`, or its subclass `WebhookHostUnresolvedError` when the
  * host does not resolve.
@@ -139,8 +142,9 @@ export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL;
     } catch {
         throw new ValidationError("Webhook URL is not a valid URL");
     }
-    if (parsed.protocol !== "https:") {
-        throw new ValidationError("Webhook URL must use https");
+    const allowPrivate = getServerConfig().webhookAllowPrivate;
+    if (parsed.protocol !== "https:" && !(allowPrivate && parsed.protocol === "http:")) {
+        throw new ValidationError(allowPrivate ? "Webhook URL must use http or https" : "Webhook URL must use https");
     }
     if (parsed.username || parsed.password) {
         throw new ValidationError("Webhook URL must not contain credentials");
@@ -160,7 +164,10 @@ export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL;
     } finally {
         if (timer) clearTimeout(timer);
     }
-    if (resolved.length === 0 || resolved.some((a) => isPrivateAddress(a.address))) {
+    if (resolved.length === 0) {
+        throw new WebhookHostUnresolvedError();
+    }
+    if (!allowPrivate && resolved.some((a) => isPrivateAddress(a.address))) {
         throw new ValidationError("Webhook URL must resolve to a public address");
     }
     return {
@@ -171,7 +178,7 @@ export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL;
 
 /**
  * Throws `ValidationError` unless `url` is https and every address its host resolves to is
- * public. Used when an event is created with a callback URL; delivery uses
+ * public (relaxed by `WEBHOOK_ALLOW_PRIVATE` on self-host, see `resolveSafeWebhookTarget`). Used when an event is created with a callback URL; delivery uses
  * `resolveSafeWebhookTarget` so it can pin the vetted addresses.
  */
 export async function assertSafeWebhookUrl(url: string): Promise<void> {

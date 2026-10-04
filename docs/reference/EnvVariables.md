@@ -64,6 +64,12 @@ All three are optional. Discord sign-in and the server-connect flow need `DISCOR
 |----------|:--------:|:-------:|-------------|
 | `VOTE_ANNOUNCE_COOLDOWN_MINUTES` | No | `60` | Minimum minutes between two "updated their availability" posts to the group or channel for the same participant. A participant who changes their vote again inside the window does not trigger another post; the pinned dashboard is still updated on every vote. Whole number from `0` to `1440`; `0` announces every vote. |
 
+## Outbound Webhooks
+
+| Variable | Required | Default | Description |
+|----------|:--------:|:-------:|-------------|
+| `WEBHOOK_ALLOW_PRIVATE` | No | `false` | Self-host only. `true` (or `1`) lets an event's `fromUrl` use plain `http` and point at private, loopback or link-local addresses, for an integration running on the same machine or LAN (for example `http://192.168.1.10/hook`). Credentials in the URL are still refused, and every delivery is still signed. Ignored, and always off, when hosted (`NEXT_PUBLIC_IS_HOSTED=true`) or on Vercel. Leave it off unless you trust everyone who can create events on your instance: with it on, anyone who can create an event can make the server send requests to your local network. |
+
 ## Event Retention (Cleanup)
 
 *Control how long events stay in the database after they pass. Each value is a whole number of days.*

@@ -73,9 +73,13 @@ describe('createEventSchema', () => {
         expect(createEventSchema.safeParse({ ...validEvent, maxPlayers: -1 }).success).toBe(false);
     });
 
-    it('requires https for fromUrl', () => {
-        expect(createEventSchema.safeParse({ ...validEvent, fromUrl: 'http://example.com/hook' }).success).toBe(false);
+    // The route's assertSafeWebhookUrl decides https vs http (http only with WEBHOOK_ALLOW_PRIVATE on self-host).
+    it('accepts only http(s) URLs for fromUrl', () => {
         expect(createEventSchema.safeParse({ ...validEvent, fromUrl: 'https://example.com/hook' }).success).toBe(true);
+        expect(createEventSchema.safeParse({ ...validEvent, fromUrl: 'http://192.168.1.10/hook' }).success).toBe(true);
+        for (const bad of ['javascript:alert(1)', 'ftp://example.com/hook', 'file:///etc/passwd', 'not a url']) {
+            expect(createEventSchema.safeParse({ ...validEvent, fromUrl: bad }).success).toBe(false);
+        }
     });
 
     it('requires minSessions for campaigns', () => {
