@@ -11,7 +11,7 @@ import { publicConfig } from "@/shared/config/public";
  */
 export default function robots(): MetadataRoute.Robots {
     const isHosted = publicConfig.isHosted;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const baseUrl = publicConfig.baseUrl;
 
     if (!isHosted || !baseUrl) {
         return {

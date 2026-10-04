@@ -3,7 +3,7 @@ import { getAllPosts } from '@/shared/lib/blog';
 import { publicConfig } from "@/shared/config/public";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tabletoptime.us';
+    const baseUrl = publicConfig.baseUrl || 'https://tabletoptime.us';
 
     const isHosted = publicConfig.isHosted;
 
