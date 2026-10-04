@@ -7,6 +7,7 @@ import { getBaseUrl } from "@/shared/lib/url";
 import { escapeDiscordMarkdown } from "@/shared/lib/escape";
 import { hashToken } from "@/shared/lib/token";
 import { randomUUID } from "crypto";
+import { z } from "zod";
 
 import {
     getDiscordUser,
@@ -22,10 +23,16 @@ import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
 import { guildCookieName, guildGrantPurpose, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
 import { getServerConfig } from "@/shared/config/server";
+import { handleParam, slugParam } from "@/shared/lib/action-params";
 
 const log = Logger.get("DiscordActions");
 
+const recoverArgs = z.object({ slug: slugParam, username: handleParam });
+
 export async function recoverDiscordManagerLink(slug: string, username: string) {
+    if (!recoverArgs.safeParse({ slug, username }).success) {
+        return toActionError(new ValidationError(), "Could not send the link. Please try again.");
+    }
     username = username.replace('@', '').trim();
     const event = await prisma.event.findUnique({ where: { slug } });
 
@@ -90,12 +97,19 @@ async function requireGuildGrant(slug: string, guildId: string): Promise<void> {
     }
 }
 
+/** Throws `ValidationError` unless `slug` is well formed, before it reaches a cookie name or query. */
+function requireSlug(slug: unknown): void {
+    if (!slugParam.safeParse(slug).success) throw new ValidationError();
+}
+
+/** `isDiscordSnowflake` rejects anything that is not a string of digits, so a bad type fails here too. */
 function requireSnowflakes(...ids: string[]): void {
     if (!ids.every(isDiscordSnowflake)) throw new ValidationError("Invalid Discord ID");
 }
 
 export async function connectDiscordChannel(slug: string, guildId: string, channelId: string): Promise<ConnectChannelResult> {
     try {
+        requireSlug(slug);
         await requireEventAdmin(slug);
         requireSnowflakes(guildId, channelId);
         await requireGuildGrant(slug, guildId);
@@ -165,6 +179,7 @@ export async function connectDiscordChannel(slug: string, guildId: string, chann
 
 export async function listDiscordChannels(slug: string, guildId: string): Promise<ListChannelsResult> {
     try {
+        requireSlug(slug);
         await requireEventAdmin(slug);
         requireSnowflakes(guildId);
         await requireGuildGrant(slug, guildId);
@@ -203,6 +218,8 @@ export async function dmDiscordManagerLink(slug: string) {
  * @param username The Discord username (or handle) to link.
  */
 export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
+    // Validate first: a non-string or oversized value must not reach the string handling below.
+    if (!handleParam.safeParse(username).success) return { success: false, error: "Invalid username" };
     username = username.replace('@', '').trim();
     const botToken = getServerConfig().discord.botToken ?? undefined;
 
