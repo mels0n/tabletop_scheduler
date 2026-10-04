@@ -23,7 +23,7 @@ const inter = Inter({
     variable: "--font-inter",
 });
 
-const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+const isHosted = publicConfig.isHosted;
 
 /**
  * @constant metadata
@@ -33,7 +33,7 @@ const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 export const metadata: Metadata = {
     authors: [{ name: "Christopher Melson", url: "https://chris.melson.us/" }],
     creator: "Christopher Melson",
-    metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'),
+    metadataBase: new URL(publicConfig.baseUrl || 'http://localhost:3000'),
     title: {
         template: '%s | Tabletop Time',
         default: isHosted
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
         ? "The privacy-first D&D session scheduler. Plan RPG campaigns, Magic: The Gathering nights, and board game events without logins. Free, open-source, and integrated with Discord."
         : "Coordinate D&D and board game sessions without the chaos.",
     alternates: {
-        canonical: process.env.NEXT_PUBLIC_BASE_URL,
+        canonical: publicConfig.baseUrl ?? undefined,
     },
     robots: isHosted ? "index, follow" : "noindex, nofollow",
     applicationName: "Tabletop Scheduler",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     openGraph: isHosted ? {
         type: "website",
         locale: "en_US",
-        url: process.env.NEXT_PUBLIC_BASE_URL,
+        url: publicConfig.baseUrl ?? undefined,
         title: "Tabletop Time - Free RPG & MTG Game Night Planner",
         description: "The free D&D session scheduler and RPG game night planner. Coordinate Magic: The Gathering events, Commander nights, and tabletop game calendars without the headache.",
         siteName: "Tabletop Time",
@@ -76,6 +76,7 @@ export const metadata: Metadata = {
 
 import { Navbar } from "@/components/Navbar";
 import Script from "next/script";
+import { publicConfig } from "@/shared/config/public";
 
 
 

@@ -1,34 +1,41 @@
+import { getServerConfig } from "@/shared/config/server";
+import { ConfigError } from "@/shared/errors";
+
 /**
- * @function getBaseUrl
- * @description Determines the fully qualified base URL of the application.
+ * The canonical public origin (no trailing slash), from `NEXT_PUBLIC_BASE_URL`.
+ * Never derived from request headers: links built from `Host`/`X-Forwarded-Host`
+ * can be poisoned, and magic links carry admin tokens.
  *
- * logic Priority:
- * 1. Environment Variable (`NEXT_PUBLIC_BASE_URL`): Essential for scenarios where the
- *    request header might be missing or incorrect (e.g., serverless warm-up, build time, or certain proxies).
- * 2. Request Headers (`x-forwarded-host`): Standard proxy headers used to determine the original
- *    host requested by the client, even if the node process is running on localhost internal to a cluster.
- * 3. Fallback (`localhost:3000`): Safe default for local development.
- *
- * @param {Headers} [headers] - The HTTP request headers (optional).
- * @returns {string} The normalized base URL without trailing slash.
+ * @throws {ConfigError} when no base URL is configured.
  */
-export function getBaseUrl(headers?: Headers | null) {
-    // Priority 0: Environment Variable (Critical for Webhook Setup & Serverless)
-    if (process.env.NEXT_PUBLIC_BASE_URL) {
-        // Intent: Normalize by removing trailing slash to prevent double-slashes in generated links.
-        return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
+export function getBaseUrl(): string {
+    const { baseUrl } = getServerConfig();
+    if (!baseUrl) {
+        throw new ConfigError("NEXT_PUBLIC_BASE_URL is not set; cannot build absolute links");
     }
+    return baseUrl;
+}
 
-    // Priority 1: Dynamic Headers (Standard X-Forwarded-For pattern)
-    // This allows the app to adapt to whatever domain it's currently accessed from.
-    if (headers) {
-        const host = headers.get("x-forwarded-host") || headers.get("host");
-        const protocol = headers.get("x-forwarded-proto") || "http";
-        // Intent: Handle comma-separated protocols (e.g., "https, http" from some Load Balancers)
-        const proto = (typeof protocol === 'string' ? protocol.split(',')[0].trim() : "http");
-        if (host) return `${proto}://${host}`;
-    }
+/**
+ * Like `getBaseUrl()` but returns null instead of throwing. Use it on paths that run after
+ * a database commit (finalize, cancel, creation webhooks, reminders): a self-hosted install
+ * with no bots may leave `NEXT_PUBLIC_BASE_URL` unset, and the committed change must still
+ * succeed. Callers omit the link when this is null.
+ */
+export function getBaseUrlOrNull(): string | null {
+    return getServerConfig().baseUrl || null;
+}
 
-    // Priority 2: Localhost Fallback
-    return "http://localhost:3000";
+/**
+ * Display-only origin for links shown back to the same requester (for example the event
+ * link inside a downloaded .ics). Prefers the configured base URL, else the request's own
+ * host. NEVER use for links delivered to anyone else (magic links, bot messages, redirects
+ * carrying tokens): a forged `Host` header would poison them. Use `getBaseUrl()` for those.
+ */
+export function getBaseUrlFromHeaders(headers: Headers): string {
+    const { baseUrl } = getServerConfig();
+    if (baseUrl) return baseUrl;
+    const host = headers.get("host");
+    const proto = (headers.get("x-forwarded-proto") ?? "http").split(",")[0].trim();
+    return host ? `${proto === "https" ? "https" : "http"}://${host}` : "http://localhost:3000";
 }

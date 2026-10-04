@@ -7,7 +7,7 @@ itemList: ["Paladin", "Cleric (War or Life Domain)", "Druid (Circle of the Moon)
 listTitle: "The Holy Trinity of Duet Classes"
 ---
 
-In the modern tabletop landscape of 2026, the greatest threat to a Dungeons & Dragons campaign isn't a Beholder or a Tarrasque—it’s the **Calendar**. For couples living together, the "Scheduling Crisis" is particularly insidious. We often assume that because we share a home, we have infinite time to play. In reality, domestic gravity—laundry, taxes, and Netflix—pulls us away from meaningful interaction.
+In the modern tabletop landscape of 2026, the greatest threat to a Dungeons & Dragons campaign isn't a Beholder or a Tarrasque. It’s the **Calendar**. For couples living together, the "Scheduling Crisis" is particularly insidious. We often assume that because we share a home, we have infinite time to play. In reality, domestic gravity (laundry, taxes, and Netflix) pulls us away from meaningful interaction.
 
 The solution is the **D&D Duet**: a specialized, high-engagement format featuring one Dungeon Master (DM) and one Player. This guide breaks down how to master the 1-on-1 format to transform your "free time" into a legendary campaign.
 
@@ -18,7 +18,7 @@ The solution is the **D&D Duet**: a specialized, high-engagement format featurin
 Historically, D&D has been marketed as a 4-to-6-person social event. However, the rise of "Duet" play is a direct response to the adult scheduling crisis. While a group table offers a shared social buffer, a Duet is a masterclass in **total engagement.**
 
 * **Zero Performance Anxiety:** For a partner new to the hobby, a group table can be intimidating. In a Duet, the "audience" is gone. This creates a safe space for deep roleplay and experimentation that group dynamics often stifle.
-* **The DM’s Burden:** In a 1-on-1 game, there is no "down time." The DM must be constantly "on," and the player cannot hide behind the party. This intensity is what makes Duets the most rewarding way to play—it is a conversation, not a performance.
+* **The DM’s Burden:** In a 1-on-1 game, there is no "down time." The DM must be constantly "on," and the player cannot hide behind the party. This intensity is what makes Duets the most rewarding way to play. It is a conversation, not a performance.
 
 ---
 
@@ -26,7 +26,7 @@ Historically, D&D has been marketed as a 4-to-6-person social event. However, th
 
 The biggest mistake couples make is treating D&D as a "when we have time" activity. Because you live together, the psychological barrier to cancelling is low. To survive, you must **formalize the date.**
 
-Using a tool like **Tabletop Time** to send a scheduling link—even to a spouse sitting three feet away—is a psychological "pattern interrupt." It shifts the activity from a vague domestic possibility into a **booked event.** When a notification hits your partner's phone, it signals intentionality. It says, *"I am prioritizing our story over the dishes."* By utilizing the "No-Login" confirmation system of Tabletop Time, you remove the friction that usually kills a spontaneous game night.
+Using a tool like **Tabletop Time** to send a scheduling link (even to a spouse sitting three feet away) is a psychological "pattern interrupt." It shifts the activity from a vague domestic possibility into a **booked event.** When a notification hits your partner's phone, it signals intentionality. It says, *"I am prioritizing our story over the dishes."* By utilizing the "No-Login" confirmation system of Tabletop Time, you remove the friction that usually kills a spontaneous game night.
 
 ---
 
@@ -69,4 +69,4 @@ If you are looking to introduce a partner to D&D this February, avoid the generi
 
 ### Final Takeaway
 
-D&D Duets aren't "diet" D&D—they are the most intimate, efficient, and narratively rich way to play the game. Stop waiting for a full party. Schedule your first session today.
+D&D Duets aren't "diet" D&D. They are the most intimate, efficient, and narratively rich way to play the game. Stop waiting for a full party. Schedule your first session today.

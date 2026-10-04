@@ -47,4 +47,4 @@ Maybe you tried Doodle. But Doodle is built for corporate board meetings. It ask
 
 ## Conclusion
 
-If any of these resonate with you, it is time to upgrade your tools. The hardest boss in RPGs is the calendar—don't fight it unarmed.
+If any of these resonate with you, it is time to upgrade your tools. The hardest boss in RPGs is the calendar. Don't fight it unarmed.

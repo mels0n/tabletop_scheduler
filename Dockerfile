@@ -5,13 +5,14 @@
 # 1. Base:    Common Alpine node environment + telemetry config.
 # 2. Deps:    Clean install of dependencies (cached layer).
 # 3. Builder: Full source compilation with Privacy Hardening enabled.
-# 4. Runner:  Production runtime. Includes 'start.sh' wrapper for auto-migrations.
+# 4. Runner:  Production runtime. Includes 'start.sh' wrapper that syncs the SQLite schema
+#             and runs pending data migrations on boot.
 #
 # PRIVACY GUARANTEES:
 # - NEXT_TELEMETRY_DISABLED=1 (Hardcoded)
-# - NEXT_PUBLIC_IS_HOSTED=false (Hardcoded alias in Webpack)
+# - NEXT_PUBLIC_IS_HOSTED=false (Hardcoded)
 # ==============================================================================
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ------------------------------------------------------------------------------
@@ -43,7 +44,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # SECURITY & PRIVACY HARDENING
 # ASSERTION: The Docker image MUST act as a "Self-Hosted" instance.
-# ACTION: Force 'IS_HOSTED' to false to trigger Webpack aliasing of Ad components to NoOp.
+# ACTION: Force IS_HOSTED to false so hosted-only code paths are compiled out.
 ARG IS_DOCKER_BUILD=true
 ENV IS_DOCKER_BUILD=true
 ENV NEXT_PUBLIC_IS_HOSTED=false
@@ -92,7 +93,7 @@ RUN chown node:node .next
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
-# ARCHITECTURAL DECISION: Self-Contained Migrations
+# ARCHITECTURAL DECISION: Self-Contained Schema Sync
 #
 # RATIONALE:
 # To simplify the self-hosted user experience ("One-Click Start"), this container
@@ -100,18 +101,31 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 #
 # IMPLEMENTATION:
 # We explicitly copy the Prisma CLI and engines from the 'builder' stage.
-# This allows 'start.sh' to execute 'npx prisma migrate deploy' on startup.
+# This allows 'start.sh' to run 'npx prisma db push' against the SQLite file on
+# startup (self-host has no migration history; 'db push' is the contract).
+# Self-hosting is SQLite only; start.sh refuses any other DATABASE_URL.
 #
 # TRADEOFF:
 # Increases image size slightly, but removes the need for an external 'initContainer'.
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
+# The generated SQLite client (output of 'prisma generate' in the builder). The standalone
+# trace only carries the parts server.js touches; scripts/run-data-migrations.mjs imports
+# '@prisma/client' directly, which resolves to this folder, so ship all of it.
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Only the 'prisma' entry point is needed on PATH for 'npx prisma' (not the whole
+# .bin directory, which carries every dev tool's shim).
+RUN mkdir -p node_modules/.bin && \
+    ln -s ../prisma/build/index.js node_modules/.bin/prisma
 
 # Fix permissions so node user can run prisma (which might download engines or write logs)
 RUN chown -R node:node /app/node_modules
 
 COPY prisma ./prisma
+# Data migration runner and its migration list (run by start.sh after db push). They import
+# only node builtins and @prisma/client, so nothing else from scripts/ is needed.
+COPY scripts/run-data-migrations.mjs ./scripts/run-data-migrations.mjs
+COPY scripts/data-migrations ./scripts/data-migrations
 COPY start.sh ./
 RUN chmod +x start.sh && chown node:node start.sh
 
@@ -120,6 +134,10 @@ USER node
 
 EXPOSE 3000
 
+# Liveness probe (shallow: no database round trip; use /api/health?deep=1 for that).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+
 ENV PORT=3000
 # NETWORK BINDING:
 # Bind to 0.0.0.0 to ensure the app is accessible outside the container.
@@ -127,5 +145,5 @@ ENV HOSTNAME="0.0.0.0"
 
 # ENTRYPOINT STRATEGY
 # We use a wrapper script 'start.sh' instead of direct 'node server.js'
-# to orchestrate the migration-before-startup sequence.
+# to orchestrate the schema-sync-before-startup sequence.
 CMD ["./start.sh"]

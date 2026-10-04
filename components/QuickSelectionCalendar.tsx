@@ -202,7 +202,7 @@ export function QuickSelectionCalendar({
         const parts: string[] = [];
         if (yesCount > 0) parts.push(`${yesCount} Available`);
         if (maybeCount > 0) parts.push(`${maybeCount} If Needed`);
-        return `Save Selections — ${parts.join(" · ")}`;
+        return `Save Selections (${parts.join(" · ")})`;
     })();
 
     return (
@@ -210,7 +210,7 @@ export function QuickSelectionCalendar({
             {/* Brush selector */}
             <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-800 space-y-2">
                 <div className="flex items-center gap-1 text-xs text-slate-400">
-                    <span className="font-medium">Painting mode — tap or drag days to mark:</span>
+                    <span className="font-medium">Painting mode: tap or drag days to mark</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {BRUSH_CONFIG.map(({ pref, label, sub, icon, active, inactive }) => (
@@ -229,7 +229,7 @@ export function QuickSelectionCalendar({
                             {icon}
                             <span>{label}</span>
                             <span className={clsx("font-normal hidden sm:inline", brush === pref ? "opacity-70" : "text-slate-500")}>
-                                — {sub}
+                                ({sub})
                             </span>
                         </button>
                     ))}
@@ -252,7 +252,7 @@ export function QuickSelectionCalendar({
                     </button>
                     <span className="text-xs text-slate-500">
                         {hostBrush && brush !== "NO"
-                            ? "Painted slots include hosting — tap an already-painted day to toggle just the house"
+                            ? "Painted slots include hosting. Tap an already-painted day to toggle just the house"
                             : "Enable to mark you can host as you paint"}
                     </span>
                 </div>
@@ -330,7 +330,7 @@ export function QuickSelectionCalendar({
                     ))}
                 </div>
 
-                {/* Day grid — touch-action:none prevents scroll from fighting drag painting */}
+                {/* Day grid: touch-action:none prevents scroll from fighting drag painting */}
                 <div
                     className="grid grid-cols-7 gap-0.5"
                     style={{ touchAction: "none" }}
@@ -362,7 +362,7 @@ export function QuickSelectionCalendar({
                                     {format(day, "d")}
                                 </span>
 
-                                {/* Slot strips — flex-col fills remaining height */}
+                                {/* Slot strips: flex-col fills remaining height */}
                                 {hasSlots && (
                                     <div className="flex flex-col flex-1 gap-px px-0.5 pb-0.5 mt-0.5">
                                         {daySlots.map((slot) => (

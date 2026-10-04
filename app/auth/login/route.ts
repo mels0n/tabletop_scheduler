@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { getBaseUrl } from "@/shared/lib/url";
 import { cookies } from "next/headers";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
+import { identityCookieOptions, IDENTITY_COOKIES, signIdentity } from "@/shared/lib/session";
 
 const log = Logger.get("Auth:Global");
 
@@ -16,12 +16,16 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure no caching prevents to
  * Flow:
  * 1. User clicks link from Telegram (`/auth/login?token=abc`).
  * 2. System validates the ephemeral token (expires in 15 min).
- * 3. On Success: Sets a global `tabletop_user_chat_id` cookie (persistent for 30 days).
+ * 3. On Success: Sets the signed global identity cookie (`tabletop_user_chat_id` or
+ *    `tabletop_user_discord_id`, 400 days) plus its display-name cookie.
  * 4. Redirects to the User Profile page.
  *
  * Security Note:
  * Tokens are NOT deleted immediately upon use to prevent "Link Preview" race conditions
  * where a crawler consumes the token before the user's browser loads.
+ *
+ * Redirects are built from the request's own origin, so a self-host without
+ * NEXT_PUBLIC_BASE_URL keeps working.
  *
  * @param {NextRequest} request - Incoming request with `token` query param.
  * @returns {NextResponse} Redirect to profile or error page.
@@ -29,10 +33,10 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure no caching prevents to
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const token = searchParams.get("token");
-    const baseUrl = getBaseUrl(request.headers);
+    const redirectTo = (path: string) => NextResponse.redirect(new URL(path, request.nextUrl.origin));
 
     if (!token) {
-        return NextResponse.redirect(`${baseUrl}/profile?error=missing_token`);
+        return redirectTo("/profile?error=missing_token");
     }
 
     try {
@@ -47,26 +51,22 @@ export async function GET(request: NextRequest) {
         // 2. Validate
         if (!validToken) {
             log.warn("Invalid Magic Link attempt");
-            return NextResponse.redirect(`${baseUrl}/profile?error=invalid_token`);
+            return redirectTo("/profile?error=invalid_token");
         }
 
         if (new Date() > validToken.expiresAt) {
             log.warn("Expired Global Magic Link attempt");
-            return NextResponse.redirect(`${baseUrl}/profile?error=expired_token`);
+            return redirectTo("/profile?error=expired_token");
         }
 
-        // 3. Set Cookie (HTTP Only, Secure)
-        // 3. Set Cookie (HTTP Only, Secure)
+        // 3. Set Cookie (HTTP Only, Secure, HMAC-signed so it cannot be forged from a known ID)
         // Intent: Authenticate the user globally across the app based on their Telegram Chat ID OR Discord ID.
         if (validToken.chatId) {
-            cookies().set("tabletop_user_chat_id", validToken.chatId, {
-                ...COOKIE_BASE_OPTIONS,
-                maxAge: COOKIE_MAX_AGE
-            });
+            (await cookies()).set(IDENTITY_COOKIES.telegram, signIdentity("telegram", validToken.chatId), identityCookieOptions());
             // Also set username for display (mirrors Discord below), so the vote
             // form can show a Telegram identity badge instead of an empty field.
             if (validToken.telegramUsername) {
-                cookies().set("tabletop_user_telegram_name", validToken.telegramUsername, {
+                (await cookies()).set("tabletop_user_telegram_name", validToken.telegramUsername, {
                     ...COOKIE_BASE_OPTIONS,
                     httpOnly: false, // Readable by client
                     maxAge: COOKIE_MAX_AGE
@@ -75,13 +75,10 @@ export async function GET(request: NextRequest) {
         }
 
         if (validToken.discordId) {
-            cookies().set("tabletop_user_discord_id", validToken.discordId, {
-                ...COOKIE_BASE_OPTIONS,
-                maxAge: COOKIE_MAX_AGE
-            });
+            (await cookies()).set(IDENTITY_COOKIES.discord, signIdentity("discord", validToken.discordId), identityCookieOptions());
             // Also set username for display
             if (validToken.discordUsername) {
-                cookies().set("tabletop_user_discord_name", validToken.discordUsername, {
+                (await cookies()).set("tabletop_user_discord_name", validToken.discordUsername, {
                     ...COOKIE_BASE_OPTIONS,
                     httpOnly: false, // Readable by client
                     maxAge: COOKIE_MAX_AGE
@@ -94,10 +91,10 @@ export async function GET(request: NextRequest) {
         // Automated previews consume the token immediately otherwise.
 
         log.info("Magic Link login successful", { scope: "global", identifier: validToken.chatId || validToken.discordId });
-        return NextResponse.redirect(`${baseUrl}/profile?success=logged_in`);
+        return redirectTo("/profile?success=logged_in");
 
     } catch (e) {
         log.error("Global Magic Link error", e as Error);
-        return NextResponse.redirect(`${baseUrl}/profile?error=server_error`);
+        return redirectTo("/profile?error=server_error");
     }
 }

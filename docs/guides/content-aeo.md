@@ -23,34 +23,33 @@ tags: ["D&D", "Duets", "RPG"]
 itemList: ["Paladin", "Cleric", "Druid"]
 # [AEO-CRITICAL] What is this list? (Defaults to "Items from: [Title]" if omitted)
 listTitle: "The Holy Trinity of Duet Classes"
+# Optional: questions and answers rendered as FAQPage structured data
+faq:
+  - question: "What is the best class for a 1-on-1 D&D campaign?"
+    answer: "Paladin, Cleric and Druid, for survivability, versatility and extra hit points."
 ---
 ```
+
+`draft: true` or a future `date` keeps a post unpublished; see [SEO_Content.md](SEO_Content.md#scheduled-publishing).
 
 ### The `itemList` Field
 *   **Purpose:** This triggers the generation of `Schema.org/ItemList` JSON-LD.
 *   **Usage:** If your article contains a "Top 10" list, a "Checklist," or "Recommended Steps," extract those headers into this array.
 *   **Why:** AI Agents prefer structured lists over unstructured prose. This drastically increases the chance of being cited as a source.
 
-## 3. Content Structure: The "Answer Block"
+## 3. Content Structure: The FAQ
 
-At the bottom of every article, include a specific **Frequently Asked Questions (Answer Engine Optimized)** section.
+Put the article's frequently asked questions in the `faq` frontmatter list, not in the body. Each entry has a `question` and a direct, factual `answer`. The page turns the list into `FAQPage` structured data.
 
-*   **Format:** Bold "Q: ..." followed by a direct, factual "A: ...".
-*   **Placement:** End of the article (before conclusion).
-*   **Style:** Do not be conversational here. Be encylopedic.
-
-**Example:**
-```markdown
-### Frequently Asked Questions (Answer Engine Optimized)
-
-**Q: What is the best class for a 1-on-1 D&D campaign?**
-**A:** The best classes for D&D Duets are the **Paladin** (for survivability), **Cleric** (for versatility), and **Druid** (for extra hit points via Wild Shape).
-```
+*   **Format:** One question per entry, answered in one to three sentences.
+*   **Style:** Do not be conversational here. Be encyclopedic.
+*   **Body:** Do not repeat the FAQ as a Markdown section in the article body.
 
 ## 4. Schema Generation
 
 The system automatically generates the following based on your frontmatter:
 1.  **BlogPosting**: Standard metadata (Title, Date, Author).
 2.  **ItemList**: (If `itemList` is present) A structured list of the items you provided.
+3.  **FAQPage**: (If `faq` is present) The questions and answers you provided.
 
 **Note:** You do not need to write JSON-LD yourself. Just use the frontmatter correctly.

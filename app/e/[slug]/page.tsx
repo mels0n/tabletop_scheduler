@@ -1,30 +1,34 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata, ResolvingMetadata } from "next";
-import prisma from "@/shared/lib/prisma";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { Calendar, Users } from "lucide-react";
-import { ManagerRecovery } from "@/features/auth/ui/ManagerRecovery";
+import { ManagerRecovery } from "@/features/auth";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
 import { CampaignStatusBanner } from "@/components/CampaignStatusBanner";
 import Link from "next/link";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
+import { readIdentity } from "@/shared/lib/session";
+import {
+    getEventForPage,
+    toPublicEvent,
+    toPublicParticipant,
+    toPublicSlot,
+} from "@/features/event-management";
 
 interface PageProps {
-    params: { slug: string };
-    searchParams: { action?: string };
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<{ action?: string }>;
 }
 
 /**
  * @function generateMetadata
  * @description Generates dynamic metadata for the event page.
  */
-export async function generateMetadata(
-    { params }: PageProps,
-    parent: ResolvingMetadata
-): Promise<Metadata> {
-    const event = await getEvent(params.slug);
+export async function generateMetadata(props: PageProps, _parent: ResolvingMetadata): Promise<Metadata> {
+    const params = await props.params;
+    const event = await getEventForPage(params.slug);
 
     if (!event) {
         return {
@@ -50,45 +54,6 @@ export async function generateMetadata(
 }
 
 /**
- * @function getEvent
- * @description Fetches the event and relations for the Public Player View.
- *
- * Data Requirements:
- * - TimeSlots & Votes: To display current options and who has voted.
- * - Participants: To identify if the current user (via cookie) has already voted.
- * - FinalizedHost: For the confirmed event display.
- *
- * @param {string} slug - The event identifier.
- */
-async function getEvent(slug: string) {
-    const event = await prisma.event.findUnique({
-        where: { slug },
-        include: {
-            timeSlots: {
-                include: {
-                    votes: {
-                        include: {
-                            participant: true
-                        }
-                    }
-                },
-                orderBy: { startTime: 'asc' }
-            },
-            participants: true,
-            finalizedHost: true,
-            finalizedSessions: {
-                include: {
-                    timeSlot: true
-                },
-                orderBy: { createdAt: 'asc' }
-            },
-        },
-    });
-
-    return event;
-}
-
-/**
  * @component EventPage
  * @description The main public-facing page for an event.
  *
@@ -103,17 +68,22 @@ async function getEvent(slug: string) {
  *    - Provides a link to `/manage` for the organizer.
  *    - Includes `ManagerRecovery` tool for lost access.
  */
-export default async function EventPage({ params, searchParams }: PageProps) {
-    const event = await getEvent(params.slug);
+export default async function EventPage(props: PageProps) {
+    const searchParams = await props.searchParams;
+    const params = await props.params;
+    const event = await getEventForPage(params.slug);
 
     // Intent: Identify user from server-side cookie (Fail-safe for cross-browser sync).
     // This allows the voting interface to pre-fill "You are interacting as X".
-    const cookieStore = cookies();
-    const userChatId = cookieStore.get("tabletop_user_chat_id")?.value;
+    // Only signed identity cookies count; the numeric IDs stay on the server.
+    const cookieStore = await cookies();
+    const { chatId: userChatId, discordId: userDiscordId } = readIdentity(cookieStore);
     const userTelegramName = cookieStore.get("tabletop_user_telegram_name")?.value;
-    const userDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
     const isTelegramSynced = !!userChatId;
     const isDiscordSynced = !!userDiscordId;
+    const discordIdentity = userDiscordId
+        ? { username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User" }
+        : undefined;
 
     let serverParticipantId: number | undefined;
     if (event?.participants) {
@@ -133,11 +103,17 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         notFound();
     }
 
+    // Everything below this line that reaches a client component goes through the DTOs.
+    const publicEvent = toPublicEvent(event);
+    const publicParticipants = event.participants.map(p => toPublicParticipant(p, event.finalizedHostId));
+    const publicSlots = event.timeSlots.map(toPublicSlot);
+    const myTelegramHandle = event.participants.find(p => p.id === serverParticipantId)?.telegramId ?? null;
+
     // Optimization: Pre-calculate counts server-side to reduce client processing.
-    const slotsWithCounts = event.timeSlots.map(slot => {
-        const yes = slot.votes.filter(v => v.preference === 'YES').length;
-        const maybe = slot.votes.filter(v => v.preference === 'MAYBE').length;
-        const no = slot.votes.filter(v => v.preference === 'NO').length;
+    const slotsWithCounts = publicSlots.map(slot => {
+        const yes = slot.votes.filter(v => v.value === 'YES').length;
+        const maybe = slot.votes.filter(v => v.value === 'MAYBE').length;
+        const no = slot.votes.filter(v => v.value === 'NO').length;
         return { ...slot, counts: { yes, maybe, no } };
     });
 
@@ -145,7 +121,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     const isFinalized = event.status === 'FINALIZED';
     const isCampaignFinalized = isFinalized && event.eventType === 'CAMPAIGN' && event.finalizedSessions.length > 0;
     const isOneShotFinalized = isFinalized && event.finalizedSlotId;
-    const finalizedSlot = isOneShotFinalized ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
+    const finalizedSlot = isOneShotFinalized ? publicSlots.find(s => s.id === event.finalizedSlotId) : null;
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
@@ -225,8 +201,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                                 {/* Personal status banner — reads localStorage so works for all browser-identified voters */}
                                 <CampaignStatusBanner
                                     eventId={event.id}
-                                    acceptedIds={event.participants.filter((p: any) => p.status === 'ACCEPTED').map((p: any) => p.id)}
-                                    waitlistIds={event.participants.filter((p: any) => p.status === 'WAITLIST').map((p: any) => p.id)}
+                                    acceptedIds={event.participants.filter(p => p.status === 'ACCEPTED').map(p => p.id)}
+                                    waitlistIds={event.participants.filter(p => p.status === 'WAITLIST').map(p => p.id)}
                                     serverParticipantId={serverParticipantId}
                                 />
 
@@ -236,7 +212,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                                         <p className="text-indigo-300 text-sm">{event.finalizedSessions.length} session{event.finalizedSessions.length !== 1 ? 's' : ''} scheduled</p>
                                     </div>
                                     <div className="space-y-2">
-                                        {event.finalizedSessions.map((session: any, index: number) => {
+                                        {event.finalizedSessions.map((session, index) => {
                                             return (
                                                 <div key={session.id} className="bg-slate-950/50 rounded-xl p-3 flex items-center gap-3 border border-slate-800">
                                                     <div className="w-7 h-7 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
@@ -321,28 +297,24 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                     })()
                 ) : isOneShotFinalized && finalizedSlot ? (
                     <FinalizedEventView
-                        event={event}
+                        event={publicEvent}
                         finalizedSlot={finalizedSlot}
+                        participants={publicParticipants}
                         serverParticipantId={serverParticipantId}
-                        discordIdentity={cookieStore.get("tabletop_user_discord_id")?.value ? {
-                            id: cookieStore.get("tabletop_user_discord_id")!.value,
-                            username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"
-                        } : undefined}
+                        discordIdentity={discordIdentity}
                     />
                 ) : (
                     <VotingInterface
                         eventId={event.id}
                         initialSlots={slotsWithCounts}
-                        participants={event.participants}
+                        participants={publicParticipants}
                         minPlayers={event.minPlayers}
                         slug={event.slug}
                         serverParticipantId={serverParticipantId}
                         eventType={event.eventType as "ONE_SHOT" | "CAMPAIGN"}
-                        discordIdentity={cookieStore.get("tabletop_user_discord_id")?.value ? {
-                            id: cookieStore.get("tabletop_user_discord_id")!.value,
-                            username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User"
-                        } : undefined}
+                        discordIdentity={discordIdentity}
                         telegramIdentity={userTelegramName ? { handle: userTelegramName } : undefined}
+                        myTelegramHandle={myTelegramHandle}
                         isTelegramSynced={isTelegramSynced}
                         isDiscordSynced={isDiscordSynced}
                     />

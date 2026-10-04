@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, AlertCircle, Clock, ShieldCheck, UserCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle, AlertCircle, Clock, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -111,7 +111,7 @@ export default function VotingLogicPage() {
                                 <ShieldCheck className="w-4 h-4" /> The &quot;Lock&quot;
                             </h4>
                             <p className="text-sm">
-                                Once finalized, the list is <strong>frozen</strong>. A new player signing up (even with &quot;Yes&quot;) will go to the waitlist and will NOT displace a confirmed player.
+                                Once finalized, the list is <strong>frozen</strong>. A new player signing up (even with &quot;Yes&quot;) takes an open seat only if the table is not full; otherwise they go to the waitlist. They will NOT displace a confirmed player.
                             </p>
                         </div>
                     </div>

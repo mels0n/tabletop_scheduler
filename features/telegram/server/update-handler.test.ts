@@ -1,0 +1,410 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { handleTelegramUpdate, resetProcessedUpdatesForTests } from './update-handler';
+import prisma from '@/shared/lib/prisma';
+import { sendTelegramMessage, pinChatMessage } from '@/features/telegram/lib/telegram-client';
+import { connectCodeFor } from '@/features/telegram/model/connect-code';
+import { hashToken } from '@/shared/lib/token';
+import type { TelegramUpdate } from '@/features/telegram/model/types';
+
+vi.mock('@/shared/lib/prisma');
+vi.mock('@/features/telegram/lib/telegram-client', () => ({
+    sendTelegramMessage: vi.fn(),
+    pinChatMessage: vi.fn(),
+}));
+
+const mockPrisma = prisma as unknown as {
+    event: {
+        findUnique: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+        updateMany: ReturnType<typeof vi.fn>;
+    };
+    participant: { updateMany: ReturnType<typeof vi.fn>; count: ReturnType<typeof vi.fn> };
+    loginToken: { create: ReturnType<typeof vi.fn> };
+};
+const sent = sendTelegramMessage as unknown as ReturnType<typeof vi.fn>;
+const pinned = pinChatMessage as unknown as ReturnType<typeof vi.fn>;
+
+const ADMIN_HASH = hashToken('real-admin-token');
+const event = {
+    id: 7,
+    slug: 'abc123',
+    title: 'Game Night',
+    adminToken: ADMIN_HASH,
+    managerTelegram: null,
+    managerChatId: null,
+    minPlayers: 2,
+    timezone: 'UTC',
+    timeSlots: [],
+};
+
+let nextUpdateId = 1;
+
+function update(text: string, chatType = 'group', chatId = -1001, username = 'mallory'): TelegramUpdate {
+    return {
+        update_id: nextUpdateId++,
+        message: { text, chat: { id: chatId, type: chatType }, from: { id: 4242, username } },
+    };
+}
+
+/** Every event.update / event.updateMany payload the handler wrote. */
+function writes() {
+    return [...mockPrisma.event.updateMany.mock.calls, ...mockPrisma.event.update.mock.calls].map((c) => c[0].data);
+}
+
+beforeEach(() => {
+    vi.resetAllMocks();
+    resetProcessedUpdatesForTests();
+    process.env.TELEGRAM_BOT_TOKEN = 'test-token';
+    mockPrisma.event.findUnique.mockResolvedValue(event);
+    mockPrisma.event.update.mockResolvedValue({});
+    mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
+    mockPrisma.participant.count.mockResolvedValue(0);
+    mockPrisma.loginToken.create.mockResolvedValue({});
+    sent.mockResolvedValue(555);
+});
+
+describe('handleTelegramUpdate: idempotency', () => {
+    it('processes a repeated update_id only once', async () => {
+        const u = update('/start login', 'private', 4242, 'chris');
+
+        await handleTelegramUpdate(u);
+        await handleTelegramUpdate(u);
+
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
+        expect(sent).toHaveBeenCalledTimes(1);
+    });
+
+    it('still processes distinct update_ids', async () => {
+        await handleTelegramUpdate(update('/start login', 'private', 4242, 'chris'));
+        await handleTelegramUpdate(update('/start login', 'private', 4242, 'chris'));
+
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('ignores updates without a text message', async () => {
+        await handleTelegramUpdate({ update_id: nextUpdateId++ });
+
+        expect(sent).not.toHaveBeenCalled();
+    });
+});
+
+describe('handleTelegramUpdate: /connect', () => {
+    it('binds the chat for /connect <slug> <valid code>, pins the dashboard, and never touches manager identity', async () => {
+        const code = connectCodeFor('abc123', ADMIN_HASH, null, null);
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`));
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 7, telegramChatId: null, telegramConnectNonce: null },
+            data: { telegramChatId: '-1001', telegramConnectNonce: expect.stringMatching(/^[0-9a-f]{32}$/) },
+        });
+        expect(writes()).toContainEqual({ pinnedMessageId: 555 });
+        expect(pinned).toHaveBeenCalledWith(-1001, 555, 'test-token');
+        for (const data of writes()) {
+            expect(data).not.toHaveProperty('managerTelegram');
+            expect(data).not.toHaveProperty('managerChatId');
+        }
+    });
+
+    it('refuses a replay of a used code once the chat is bound', async () => {
+        const code = connectCodeFor('abc123', ADMIN_HASH, null, null);
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, telegramChatId: '-1001' });
+
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+
+        expect(writes()).toEqual([]);
+        expect(sent).toHaveBeenCalledWith(-3003, expect.stringMatching(/not valid/i), 'test-token');
+    });
+
+    it('refuses when the binding changed between check and write (concurrent replay)', async () => {
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 0 });
+        const code = connectCodeFor('abc123', ADMIN_HASH, null, null);
+
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+        expect(pinned).not.toHaveBeenCalled();
+        expect(sent).toHaveBeenCalledWith(-3003, expect.stringMatching(/not valid/i), 'test-token');
+    });
+
+    it('accepts a rebind code derived from the current binding', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, telegramChatId: '-1001' });
+        const code = connectCodeFor('abc123', ADMIN_HASH, '-1001', null);
+
+        await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 7, telegramChatId: '-1001', telegramConnectNonce: null },
+            data: { telegramChatId: '-3003', telegramConnectNonce: expect.stringMatching(/^[0-9a-f]{32}$/) },
+        });
+    });
+
+    describe('single use even when the binding does not change', () => {
+        type Binding = { telegramChatId: string | null; telegramConnectNonce: string | null };
+        /** A tiny stateful event row: findUnique reads it, a matching updateMany writes it. */
+        function statefulEvent(initial: Binding) {
+            const row: Record<string, unknown> & Binding = { ...event, ...initial };
+            mockPrisma.event.findUnique.mockImplementation(async () => ({ ...row }));
+            mockPrisma.event.updateMany.mockImplementation(async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+                const matches = Object.entries(where).every(([k, v]) => k === 'id' || row[k] === v);
+                if (!matches) return { count: 0 };
+                Object.assign(row, data);
+                return { count: 1 };
+            });
+            return row;
+        }
+        const codeFor = (row: Binding) =>
+            connectCodeFor('abc123', ADMIN_HASH, row.telegramChatId, row.telegramConnectNonce);
+
+        it('a same-chat reconnect rotates the nonce, so replaying that code from another chat is refused', async () => {
+            const row = statefulEvent({ telegramChatId: '-1001', telegramConnectNonce: 'n0' });
+            const code = codeFor(row);
+
+            await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -1001));
+            expect(row.telegramChatId).toBe('-1001');
+            expect(row.telegramConnectNonce).not.toBe('n0');
+
+            sent.mockClear();
+            await handleTelegramUpdate(update(`/connect abc123 ${code}`, 'group', -3003));
+            expect(row.telegramChatId).toBe('-1001');
+            expect(sent).toHaveBeenCalledWith(-3003, expect.stringMatching(/not valid/i), 'test-token');
+        });
+
+        it('A to B to A does not revive the code that was valid while bound to B', async () => {
+            const row = statefulEvent({ telegramChatId: '-1001', telegramConnectNonce: 'n0' });
+
+            await handleTelegramUpdate(update(`/connect abc123 ${codeFor(row)}`, 'group', -2002));
+            expect(row.telegramChatId).toBe('-2002');
+            const codeWhileB = codeFor(row);
+
+            await handleTelegramUpdate(update(`/connect abc123 ${codeWhileB}`, 'group', -1001));
+            expect(row.telegramChatId).toBe('-1001');
+
+            await handleTelegramUpdate(update(`/connect abc123 ${codeFor(row)}`, 'group', -2002));
+            expect(row.telegramChatId).toBe('-2002');
+
+            // Back on B: the code first shown for B is dead because the nonce moved on.
+            sent.mockClear();
+            await handleTelegramUpdate(update(`/connect abc123 ${codeWhileB}`, 'group', -3003));
+            expect(row.telegramChatId).toBe('-2002');
+            expect(sent).toHaveBeenCalledWith(-3003, expect.stringMatching(/not valid/i), 'test-token');
+        });
+    });
+
+    it('rejects a wrong code and binds nothing', async () => {
+        await handleTelegramUpdate(update('/connect abc123 deadbeef'));
+
+        expect(writes()).toEqual([]);
+        expect(sent).toHaveBeenCalledWith(-1001, expect.stringMatching(/not valid/i), 'test-token');
+    });
+
+    it.each([
+        ['bare /connect <slug>', '/connect abc123'],
+        ['/start <slug> (startgroup payload)', '/start abc123'],
+        ['a pasted event URL', 'join us at https://example.test/e/abc123 tonight'],
+    ])('replies with instructions and binds nothing for %s', async (_label, text) => {
+        await handleTelegramUpdate(update(text));
+
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+        expect(sent).toHaveBeenCalledWith(-1001, expect.stringMatching(/manage page/i), 'test-token');
+    });
+
+    it('sends instructions in HTML, never markdown backticks', async () => {
+        await handleTelegramUpdate(update('/connect abc123'));
+
+        const text = sent.mock.calls[0][1] as string;
+        expect(text).toContain('<code>');
+        expect(text).not.toContain('`');
+    });
+
+    it('treats /start <slug> in a DM the same way (no claim, no bind)', async () => {
+        await handleTelegramUpdate(update('/start abc123', 'private'));
+
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+    });
+
+    it('does not recognise the removed setup_recovery payload', async () => {
+        await handleTelegramUpdate(update('/start setup_recovery_abc123_9999999999-a', 'group'));
+
+        expect(mockPrisma.event.update).not.toHaveBeenCalled();
+    });
+});
+
+describe('handleTelegramUpdate: /start', () => {
+    it('issues a login link for /start login', async () => {
+        await handleTelegramUpdate(update('/start login', 'private', 4242, 'chris'));
+
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
+        expect(sent).toHaveBeenCalledWith(4242, expect.stringContaining('/auth/login?token='), 'test-token');
+    });
+
+    // The deep-link payload can be dropped by the client, and a user who finds the bot
+    // directly just presses START. Both arrive as a bare /start.
+    it('issues a login link for a bare /start in a private chat', async () => {
+        await handleTelegramUpdate(update('/start', 'private', 4242, 'chris'));
+
+        expect(sent).toHaveBeenCalledWith(4242, expect.stringContaining('/auth/login?token='), 'test-token');
+    });
+
+    it('records the sender telegram handle on the login token', async () => {
+        await handleTelegramUpdate(update('/start', 'private', 4242, 'chris'));
+
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledWith(
+            expect.objectContaining({ data: expect.objectContaining({ chatId: '4242', telegramUsername: 'chris' }) }),
+        );
+    });
+
+    it.each(['/start login', '/start recover_handle'])('never posts a login link into a group for %s', async (text) => {
+        await handleTelegramUpdate(update(text, 'supergroup', -1001, 'chris'));
+
+        expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+        expect(sent).toHaveBeenCalledTimes(1);
+        const reply = sent.mock.calls[0][1] as string;
+        expect(sent.mock.calls[0][0]).toBe(-1001);
+        expect(reply).not.toContain('/auth/login');
+        expect(reply).toMatch(/private chat|direct message/i);
+        expect(reply).not.toContain('—');
+    });
+
+    it('stays silent for a bare /start in a group', async () => {
+        await handleTelegramUpdate(update('/start', 'group'));
+
+        expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+        expect(sent).not.toHaveBeenCalled();
+    });
+
+    it('lets a valid short recovery token claim an event with no Telegram manager', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({
+            ...event,
+            recoveryToken: hashToken('cafef00d'),
+            recoveryTokenExpires: new Date(Date.now() + 60_000),
+        });
+
+        await handleTelegramUpdate(update('/start rec_cafef00d', 'private'));
+
+        expect(writes()).toContainEqual({ managerChatId: '4242', managerTelegram: 'mallory' });
+    });
+
+    it('escapes the event title in the recovery confirmation', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({
+            ...event,
+            title: '<a href="https://evil">x</a>',
+            recoveryToken: hashToken('cafef00d'),
+            recoveryTokenExpires: new Date(Date.now() + 60_000),
+        });
+
+        await handleTelegramUpdate(update('/start rec_cafef00d', 'private'));
+
+        const text = sent.mock.calls.at(-1)?.[1] as string;
+        expect(text).toContain('&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;');
+        expect(text).not.toContain('<a href="https://evil">');
+    });
+});
+
+describe('handleTelegramUpdate: no passive identity capture', () => {
+    it('does not set managerChatId or participant chatId for a user whose handle matches', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, managerTelegram: 'victim', managerChatId: null });
+
+        await handleTelegramUpdate(update('hello everyone', 'group', -1001, 'victim'));
+        await handleTelegramUpdate(update('/start login', 'private', 4242, 'victim'));
+
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalled();
+        expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
+        for (const data of writes()) expect(data).not.toHaveProperty('managerChatId');
+    });
+});
+
+describe('handleTelegramUpdate: /start rec_<token> manager recovery', () => {
+    const RAW = 'cafef00d';
+    const recoverable = (overrides: Record<string, unknown> = {}) => ({
+        ...event,
+        recoveryToken: hashToken(RAW),
+        recoveryTokenExpires: new Date(Date.now() + 60_000),
+        ...overrides,
+    });
+    const recover = (username: string | null = 'mallory') => {
+        const u = update(`/start rec_${RAW}`, 'private', 4242, username as string);
+        if (username === undefined) delete (u.message!.from as { username?: string }).username;
+        return handleTelegramUpdate(u);
+    };
+    const managerChatIdWrites = () => writes().filter((d) => 'managerChatId' in d);
+    const clearedToken = () => writes().some((d) => d.recoveryToken === null && d.recoveryTokenExpires === null);
+    const lastReply = () => sent.mock.calls.at(-1)?.[1] as string;
+
+    // Catches: removing the sender-vs-manager handle comparison, which would let anyone holding
+    // a recovery link bind their own chat as the manager of an event managed by someone else.
+    it('refuses a sender whose username differs from the manager handle, and still burns the token', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'victim' }));
+
+        await recover('mallory');
+
+        expect(managerChatIdWrites()).toEqual([]);
+        expect(lastReply()).toContain('Identity Mismatch');
+        expect(lastReply()).toContain('@victim');
+        expect(clearedToken()).toBe(true);
+    });
+
+    // Catches: making the comparison case- or @-sensitive (locks real managers out), or loosening it.
+    it.each([
+        ['same case', 'victim', 'victim'],
+        ['different case', '@Victim', 'VICTIM'],
+        ['leading @ stored', '@victim', 'victim'],
+    ])('links the chat for a matching username (%s)', async (_label, stored, sender) => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: stored }));
+
+        await recover(sender);
+
+        expect(managerChatIdWrites()).toEqual([{ managerChatId: '4242' }]);
+        expect(lastReply()).toContain('Recovery Setup Complete');
+        expect(clearedToken()).toBe(true);
+    });
+
+    // Catches: removing the lookup-miss guard (would proceed with an undefined event).
+    it('replies invalid for an unknown token and writes nothing', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(null);
+
+        await recover();
+
+        expect(mockPrisma.event.findUnique).toHaveBeenCalledWith({ where: { recoveryToken: hashToken(RAW) } });
+        expect(lastReply()).toContain('Invalid Recovery Link');
+        expect(writes()).toEqual([]);
+    });
+
+    // Catches: dropping the expiry check, which would let a stale link complete recovery.
+    it.each([
+        ['an elapsed expiry', new Date(Date.now() - 1000)],
+        ['a missing expiry', null],
+    ])('replies expired for %s and links nothing', async (_label, expires) => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'mallory', recoveryTokenExpires: expires }));
+
+        await recover('mallory');
+
+        expect(lastReply()).toContain('Expired Link');
+        expect(managerChatIdWrites()).toEqual([]);
+    });
+
+    // Catches: falling back to the numeric id when there is no username (nothing to verify against).
+    it('writes no manager link for a sender without a username, but still burns the token', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'victim' }));
+
+        await recover(null);
+
+        expect(managerChatIdWrites()).toEqual([]);
+        expect(lastReply()).toContain('Could not verify identity');
+        expect(clearedToken()).toBe(true);
+    });
+
+    // Catches: moving the token clear after the identity checks, so a failed attempt leaves a
+    // replayable token.
+    it('clears the recovery token before any manager write', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'victim' }));
+
+        await recover('victim');
+
+        const all = writes();
+        const clearIdx = all.findIndex((d) => d.recoveryToken === null);
+        const linkIdx = all.findIndex((d) => 'managerChatId' in d);
+        expect(clearIdx).toBeGreaterThanOrEqual(0);
+        expect(clearIdx).toBeLessThan(linkIdx);
+    });
+});

@@ -9,7 +9,7 @@ listTitle: "Steps to Organize Variable Groups"
 
 # West Marches & Draft Nights: Managing Rotating Casts of Players
 
-Most RPG advice assumes a "Fixed Party"—the same 4-6 people playing every week. But some of the best gaming experiences come from **Variable Parties**.
+Most RPG advice assumes a "Fixed Party": the same 4-6 people playing every week. But some of the best gaming experiences come from **Variable Parties**.
 
 Whether you are running a **West Marches** style D&D campaign or hosting a weekly **Magic: The Gathering Draft**, you face a unique challenge: You have a pool of 10+ interested players, but only 4-8 seats per night.
 

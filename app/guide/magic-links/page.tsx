@@ -1,7 +1,7 @@
 
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, Key, Smartphone, Lock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Lock, RefreshCw } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
@@ -70,11 +70,11 @@ export default function MagicLinksPage() {
                     </p>
                     <ol>
                         <li>Navigate to the <Link href="/profile">My Events</Link> page.</li>
-                        <li>Click <strong>&quot;Connect Telegram&quot;</strong> (opens the bot, which DMs you a login link) or <strong>&quot;Connect Discord&quot;</strong> (starts the OAuth flow).</li>
-                        <li>For Telegram, the bot will DM you a <strong>Global Magic Link</strong>. Click it to log in. Discord logs you in directly once you authorize.</li>
+                        <li>Click <strong>&quot;Connect Telegram&quot;</strong> (opens a private chat with the bot and sends <code>/start login</code>, so the bot DMs you a login link) or <strong>&quot;Connect Discord&quot;</strong> (starts the Discord sign-in).</li>
+                        <li>For Telegram, the bot will DM you a <strong>Global Magic Link</strong>, valid for 15 minutes. Click it to log in. You can also send <code>/start login</code> to the bot yourself, in a private chat only. Discord logs you in directly once you authorize.</li>
                     </ol>
                     <p>
-                        This will restore your <strong>Event List</strong> and your <strong>Voting Identity</strong> (allowing you to edit previous votes).
+                        This will restore your <strong>Event List</strong> and your <strong>Voting Identity</strong> (allowing you to edit votes you linked to that Telegram or Discord account).
                     </p>
 
                     <hr className="my-8 border-slate-800" />
@@ -89,7 +89,7 @@ export default function MagicLinksPage() {
                         Events you manage also show a separate indigo <strong>&quot;Manager&quot;</strong> badge alongside any sync badges, marking your role there. It doesn&apos;t by itself mean your identity is linked, a managed event with no linked participant still just shows &quot;Manager&quot; (never &quot;This Device Only&quot;, since it&apos;s already tied to the event on the server).
                     </p>
                     <p>
-                        Click a badge to act on it: a gray badge opens a menu to <strong>link</strong> the event to whichever platform(s) you&apos;re synced with, and a colored badge opens a menu to <strong>unlink</strong> it. Linking requires you to have already voted on that event (so there&apos;s a participant row to stamp), and you can only unlink your own identity, never someone else&apos;s.
+                        Click a badge to act on it: a gray badge opens a menu to <strong>link</strong> the event to whichever platform(s) you&apos;re synced with, and a colored badge opens a menu to <strong>unlink</strong> it. Linking requires you to have already voted on that event from this browser (so there&apos;s a participant row to stamp, and this browser can prove the vote is yours), and you can only unlink your own identity, never someone else&apos;s.
                     </p>
 
                     <hr className="my-8 border-slate-800" />
@@ -113,10 +113,10 @@ export default function MagicLinksPage() {
                         Viewing your event&apos;s Manage Page and want to switch to your phone?
                     </p>
                     <ol>
-                        <li>On the Manage Page, look for the <strong>Manager Recovery</strong> box.</li>
+                        <li>On the Manage Page, look for the <strong>Manager Recovery</strong> box. If you have not linked an account there yet, click <strong>&quot;Register for Magic Links&quot;</strong> (Telegram) or <strong>&quot;Recover with Discord&quot;</strong> first.</li>
                         <li>Click <strong>&quot;Send Magic Link&quot;</strong>.</li>
-                        <li>The bot will send a specific <strong>Event Admin Link</strong> to your DMs.</li>
-                        <li>Clicking this grants admin access <em>only</em> for that specific event.</li>
+                        <li>The bot DMs a <strong>login link</strong>, valid for 15 minutes, to each account linked as this event&apos;s manager, along with a link to the Manage Page.</li>
+                        <li>Opening the login link signs that browser in with your Telegram or Discord identity, which unlocks the Manage Page of the events that identity manages. Nothing is reset: your existing manager access keeps working.</li>
                     </ol>
 
                     <hr className="my-8 border-slate-800" />
@@ -128,11 +128,10 @@ export default function MagicLinksPage() {
                         If you are viewing an event you created but appear as a <em>Participant</em> (no admin controls):
                     </p>
                     <ol>
-                        <li>Scroll to the bottom of the Vote Page.</li>
-                        <li>Click: <strong>&quot;Are you the organizer? Manage this event&quot;</strong>.</li>
+                        <li>Scroll to the bottom of the Vote Page, under <strong>&quot;Are you the organizer?&quot;</strong>.</li>
                         <li>Click the small link: <strong>&quot;Lost Manager Link?&quot;</strong>.</li>
-                        <li>Enter your Telegram Handle.</li>
-                        <li>If it matches our records, we send a secure link to your DMs.</li>
+                        <li>Choose Telegram or Discord and enter your Telegram handle or Discord username.</li>
+                        <li>If it matches the manager account linked to this event, the bot sends a login link to that account&apos;s DMs. Typing a handle never links anything by itself: this works only if you linked your Telegram or Discord account as the manager beforehand.</li>
                     </ol>
 
                     <div className="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg mt-8 not-prose">
@@ -140,7 +139,7 @@ export default function MagicLinksPage() {
                             <RefreshCw className="w-4 h-4" /> Technical Insight
                         </h4>
                         <p className="text-sm text-slate-300">
-                            We use two layers of storage: <strong>Cookies</strong> (for secure, 30-day server auth) and <strong>LocalStorage</strong> (to auto-fill your name and remember your specific votes on a device). Magic Links restore <em>both</em>.
+                            We use two layers of storage: <strong>Cookies</strong> (signed, HTTP-only server auth that stays valid for 400 days and refreshes each time you visit) and <strong>LocalStorage</strong> (to auto-fill your name and remember your specific votes on a device). Magic Links restore your signed identity cookie, which brings back your linked events and votes.
                         </p>
                     </div>
 

@@ -2,6 +2,16 @@ import Logger from "@/shared/lib/logger";
 
 const log = Logger.get("Fetch");
 
+const BOT_TOKEN_SEGMENT = /\/bot[^/]+/g;
+
+/**
+ * Strips Telegram bot tokens (`/bot<TOKEN>/...`) from a URL or text before it is logged.
+ * The token grants full bot control and derives the webhook secret.
+ */
+export function redactUrl(url: string | URL): string {
+    return url.toString().replace(BOT_TOKEN_SEGMENT, "/bot***");
+}
+
 export interface ReliableFetchOptions extends RequestInit {
     /** Time in milliseconds before the request is aborted. Default: 8000 (8 seconds) */
     timeoutMs?: number;
@@ -57,6 +67,7 @@ export async function reliableFetch(url: string | URL, options: ReliableFetchOpt
         ...fetchOptions 
     } = options;
 
+    const safeUrl = redactUrl(url);
     let attempt = 0;
 
     while (attempt <= retries) {
@@ -79,12 +90,12 @@ export async function reliableFetch(url: string | URL, options: ReliableFetchOpt
                 const retryAfterMs = await getRetryAfterMs(res);
 
                 if (retryAfterMs !== null && retryAfterMs > MAX_RETRY_AFTER_MS) {
-                    log.warn(`Rate limited with Retry-After ${retryAfterMs}ms > cap; giving up`, { url: url.toString() });
+                    log.warn(`Rate limited with Retry-After ${retryAfterMs}ms > cap; giving up`, { url: safeUrl });
                     return res;
                 }
 
                 const waitMs = retryAfterMs ?? retryDelayMs * Math.pow(2, attempt);
-                log.warn(`Rate limited (Attempt ${attempt + 1}/${retries + 1}); retrying in ${waitMs}ms`, { url: url.toString() });
+                log.warn(`Rate limited (Attempt ${attempt + 1}/${retries + 1}); retrying in ${waitMs}ms`, { url: safeUrl });
                 await new Promise(resolve => setTimeout(resolve, waitMs));
                 attempt++;
                 continue;
@@ -93,7 +104,7 @@ export async function reliableFetch(url: string | URL, options: ReliableFetchOpt
             // Retry on 5xx Server Errors
             if (!res.ok && res.status >= 500) {
                 if (attempt < retries) {
-                    log.warn(`API 5xx Error (Attempt ${attempt + 1}/${retries + 1}): ${res.status}`, { url: url.toString() });
+                    log.warn(`API 5xx Error (Attempt ${attempt + 1}/${retries + 1}): ${res.status}`, { url: safeUrl });
                     throw new Error(`HTTP ${res.status}`);
                 }
             }
@@ -102,14 +113,15 @@ export async function reliableFetch(url: string | URL, options: ReliableFetchOpt
 
         } catch (error) {
             const isTimeout = (error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError';
-            const msg = isTimeout ? 'Request timed out' : (error as Error).message;
+            // Some fetch errors (e.g. invalid URL) echo the URL in their message.
+            const msg = isTimeout ? 'Request timed out' : redactUrl(String((error as Error)?.message ?? error));
 
             if (attempt >= retries) {
-                log.error(`API Fetch Failed permanently after ${attempt} retries: ${msg}`, { url: url.toString() });
+                log.error(`API Fetch Failed permanently after ${attempt} retries: ${msg}`, { url: safeUrl });
                 throw error;
             }
 
-            log.warn(`API Fetch Failed (Attempt ${attempt + 1}/${retries + 1}): ${msg}`, { url: url.toString() });
+            log.warn(`API Fetch Failed (Attempt ${attempt + 1}/${retries + 1}): ${msg}`, { url: safeUrl });
             
             // Wait before next attempt with exponential backoff
             await new Promise(resolve => setTimeout(resolve, retryDelayMs * Math.pow(2, attempt)));

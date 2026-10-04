@@ -1,40 +1,25 @@
 # Understanding Magic Links
 
-TabletopTime uses a **passwordless** authentication system. Instead of usernames and passwords, we use secure "Magic Links" sent to your Telegram to verify your identity.
+TabletopTime has no accounts and no passwords. When it needs to know who you are, a bot proves it: the Telegram or Discord bot sends a short-lived **magic link** to your direct messages, and opening it signs this browser in as that account. Discord users can also sign in directly with Discord's own login screen.
 
-There are three main ways to use these links within the application, plus two related features (per-event sync badges and vote-time linking) that keep your identity attached to events without needing a fresh link every time.
+A typed name or handle is never proof of identity. Nothing on this page links an account because someone typed a handle into a form.
 
-## 1. Sync & Recover (My Events)
-*Best for: Logging in to view all your events at once.*
+## 1. Sync this browser (My Events)
+*Best for: seeing all your events on a new device, and having your votes follow you.*
 
-If you are on a new device or your cookies have been cleared, you can recover access to your entire event history via the **My Events** (Profile) page.
+Open **My Events** (the user icon in the top right, `/profile`). The header shows one pill per platform:
 
-The header of that page always shows two status pills, one per platform:
-*   **Already synced**: a solid green **"Telegram Synced"** or blurple **"Discord Synced"** pill.
-*   **Not synced yet**: a dashed **"Connect Telegram"** pill (deep-links straight to the bot, which DMs you a magic login link) or **"Connect Discord"** pill (starts the OAuth flow). Click either as a shortcut instead of the handle form below.
+*   **Not synced yet**: a dashed **"Connect Telegram"** pill opens the bot with `/start login`, and the bot DMs you a magic login link. A dashed **"Connect Discord"** pill starts Discord sign-in.
+*   **Synced**: a solid green **"Telegram Synced"** or blurple **"Discord Synced"** pill. Click it to **disconnect this browser** from that platform; your events and votes are kept and you can reconnect any time.
 
-1.  Navigate to the **My Events** page (click the User icon in the top right).
-2.  Scroll down to the **"Sync & Recover"** section.
-3.  Enter your **Telegram Handle** (e.g., `@YourHandle`).
-4.  Click **Sync My Events**.
-5.  The bot will send a **Global Magic Link** to your Telegram DMs. Click it to log in.
-6.  This will:
-    *   **Restore your Event List**: All events you manage or voted on will appear on your dashboard.
-    *   **Restore your Voting Identity**: You will instantly regain "Voted" status on all events, allowing you to edit your previous votes.
+Once this browser is synced, My Events lists every event you manage or voted on with that account, and restores your voting identity on them so you can edit your votes from this device.
 
-    *   **Safe Merge**: This adds to your existing local history without deleting any anonymous events you may have visited on this device.
-
-#### Discord Users
-1.  Navigate to the **My Events** page.
-2.  In the "Sync & Recover" section, look for the **Discord** panel.
-3.  Enter your Discord Username.
-4.  *Note: This only works if you have previously clicked "Log in with Discord" on a voting page.*
-5.  The bot will DM you a link. Click it to hydrates your browser with your Discord identity.
+You can also request a login link at any time by sending `/start login` to the Telegram bot in a private chat. The bot never sends a login link in a group.
 
 ### Per-Event Sync Badges
 *Best for: seeing at a glance which events will follow you across devices, and fixing the ones that won't.*
 
-Every card on the **My Events** page carries its own badge, independent of the header pills:
+Every card on **My Events** carries its own badge, independent of the header pills:
 
 *   **"Telegram Synced" / "Discord Synced"** (colored, same style as the header pills): this event's participant row is stamped with your verified identity, so it will always show up here, on any device.
 *   **"This Device Only"** (gray): this event only exists in this browser's local history. It hasn't been linked to a synced identity yet.
@@ -45,40 +30,44 @@ The badges are clickable:
 *   Click a colored badge to open a menu offering to **unlink** it.
 
 Two guardrails apply to both actions:
-*   **You must have voted on the event.** Linking stamps your identity onto your own participant row for that event, so if there's no row yet (or your browser doesn't remember one), the menu item is disabled with a "Vote on this event first to link it" hint.
+*   **You must have voted on the event.** Linking stamps your identity onto your own participant row for that event, so if there's no row yet (or your browser doesn't remember one), the menu item is disabled with a hint to vote first.
 *   **You can only unlink yourself.** A row already claimed by someone else's verified identity can't be relinked to you, and unlinking only clears *your own* identity from a row, never someone else's.
 
 ### Linking While You Vote
 *Best for: getting a new vote linked automatically instead of fixing it afterward.*
 
-If your browser is already synced when you vote, the vote form shows a small **"Will link to Telegram/Discord"** indicator next to a checkbox. It's checked by default, meaning your new (or updated) vote will automatically be stamped with your synced identity, no extra steps required. Uncheck it if you'd rather this particular vote stay anonymous/device-only; opting out skips all identity attachment for that submission.
+If your browser is already synced when you vote, the vote form shows a small **"Will link to Telegram/Discord"** indicator next to a checkbox. It's checked by default, meaning your new (or updated) vote is stamped with your synced identity, no extra steps required. Uncheck it if you'd rather this particular vote stay anonymous and device-only; opting out skips all identity attachment for that submission.
 
-If you vote *before* syncing, or you opted out and change your mind later, the event page itself shows a dismissible banner ("This browser is synced with Telegram/Discord, link this event so it shows on all your devices?") whenever your browser is synced but your participant row on that event isn't linked yet. Click the platform button in the banner to link it on the spot, same as the profile-page badges.
+If you vote *before* syncing, or you opted out and change your mind later, the event page shows a dismissible banner whenever your browser is synced but your participant row on that event isn't linked yet. Click the platform button in the banner to link it on the spot, same as the profile-page badges.
 
-## 2. Manager Recovery (Manage Page)
-*Best for: Quickly switching devices for a specific event.*
+### Direct messages and unlinking
+*   **Direct messages from the bot.** While a platform is synced, My Events shows an On/Off switch for bot direct messages on that platform. It follows your account, not the browser. Login links you ask for are always sent.
+*   **Unlink everywhere.** The privacy page under My Events can remove a platform identity from every event you voted on or manage. This also ends magic-link recovery through that platform for events you manage.
 
-If you are viewing your event's **Manage Page** and want to switch to your phone (or share admin access with a co-host):
+## 2. Manager Login Link (Manage Page)
+*Best for: switching devices, or getting back in on a phone, for an event you run.*
 
-1.  On the Manage Page, look for the **Manager Recovery** box.
-2.  Click **"Send Magic Link"** (Telegram or Discord).
-3.  The bot will send a specific **Event Admin Link** to your DMs.
-4.  Clicking this link grants admin access *only* for that specific event.
+The manage page has a **Manager Recovery** box for each platform.
 
-## 3. Lost Manager Link? (Vote Page)
-*Best for: Recovering access when you are locked out.*
+1.  **Register first.** Click **"Register for Magic Links"** (Telegram) or **"Recover with Discord (Magic Link)"** (Discord). This saves your Telegram or Discord account as the event's manager. Only the event's admin can do this: Telegram registration uses a one-time code that is valid for 15 minutes, and Discord registration only happens while your browser holds the event's admin link.
+2.  **Send a link.** Click **"Send Magic Link (Telegram DM)"** or **"Send Magic Link (Discord DM)"**. The bot DMs a login link to every platform the manager has linked, one link per platform, each sent only on its own platform.
+3.  Opening the link signs that browser in as the manager's account, which gives it admin access to every event that account manages.
 
-If you are viewing an event you created but are seeing it as a *Participant* (no admin controls):
+The admin token itself is never changed or re-sent, so asking for a link can never lock the organizer out. Links can be requested once a minute per manager account.
 
-1.  Scroll to the bottom of the Vote Page.
-2.  Click the link: **"Are you the organizer? Manage this event"**.
-3.  If you are locked out, you will see a small link: **"Lost Manager Link?"**.
-4.  Click it and enter the **Telegram Handle** you used when creating the event (Discord recovery coming soon for this specific flow).
-5.  If the handle matches our records, the bot will send a recovery link to your DMs.
+## 3. Lost Manager Link? (Event Page)
+*Best for: recovering access when you have no browser with the manage link.*
+
+1.  Scroll to the bottom of the event page and find **"Are you the organizer?"**.
+2.  Click **"Lost Manager Link?"**.
+3.  Choose **Telegram** or **Discord**, and enter the Telegram handle or Discord username linked to the event.
+4.  If it matches the event's stored manager, the bot sends a login link to **that stored account's** DMs. Typing someone else's handle cannot send a link anywhere else.
+
+This only works if a Telegram or Discord account was registered as the manager (step 1 of the previous section, or creating the event while your browser was already synced). Without one there is nowhere to send a link, and the event can only be managed through its original manage link.
 
 ---
 
-**Security Note**: All Magic Links are valid for **15 minutes**. If you accidentally close the window, you can click the same link again within that time. Do not share them.
+**Security Note**: Login links are valid for **15 minutes**. Opening the same link again within that window still works, which keeps chat-app link previews from using it up before you click. Do not share them.
 
 ---
 
@@ -86,26 +75,18 @@ If you are viewing an event you created but are seeing it as a *Participant* (no
 
 ### Browser Cache & Storage
 
-Our authentication system relies on two layers of browser storage to keep you logged in and remember your preferences:
-
 1.  **Cookies (Server Auth)**:
-    *   **User Identity**: `tabletop_user_chat_id` (Telegram) and `tabletop_user_discord_id` (Discord). These HTTPOnly, Secure cookies persist for **400 days** (browser maximum) to ensure you are rarely logged out.
-    *   **Event Admin**: `tabletop_admin_[slug]` (HTTPOnly, Secure, 400 days). This grants administrative rights to a specific event.
+    *   **User Identity**: `tabletop_user_chat_id` (Telegram) and `tabletop_user_discord_id` (Discord). They hold your numeric platform ID with an HMAC signature, are HttpOnly, `SameSite=Lax`, `Secure` in production, and last **400 days** (the browser maximum). An unsigned or tampered value is ignored and deleted. `tabletop_user_telegram_name` and `tabletop_user_discord_name` carry a display name next to them and are readable by page scripts.
+    *   **Event Admin**: `tabletop_admin_<slug>` (HttpOnly, 400 days) holds the event's admin token, which is checked against the stored hash on every use.
+    *   **Participant**: `tabletop_participant_<slug>` (signed, HttpOnly) proves this browser created a participant row on that event. Editing that row later needs this cookie, a matching linked identity, or the organizer.
 
-    > **Sliding Session:** Every time you visit a management page or your profile, the system automatically refreshes your cookie's expiration date to a full 400 days from that moment. As long as you visit the site at least once a year, your session will effectively last forever.
+    > **Sliding Session:** Every time you open an event page, a manage page or My Events, the identity and admin cookies are re-issued with a fresh 400-day expiry. As long as you visit at least once a year, your session effectively never ends.
 
 2.  **LocalStorage (Client Cache)**:
-    *   **User Preference Cache**: `tabletop_username` & `tabletop_telegram` are stored in your browser after you vote. The next time you visit *any* event on Tabletop Scheduler, these fields are auto-filled so you don't have to type them again.
-    *   **Session Cache**: `tabletop_participant_[eventId]` remembers your specific Voter ID for a particular event. This allows you to return to an event and edit your votes immediately, even if your global login cookie has expired.
+    *   **User Preference Cache**: `tabletop_username` and `tabletop_telegram` are stored after you vote and pre-fill the vote form on other events.
+    *   **Event history**: `tabletop_history` lists the events this browser has visited, for My Events.
+    *   **Voter ID**: `tabletop_participant_<eventId>` remembers your participant id for an event, so the page shows your votes when you come back. It is not proof of ownership on its own: an edit also needs the participant cookie, a linked identity, or the organizer.
 
-### Telegram Identity Linking
+### No linking by typed handle
 
-When you enter a Telegram handle (e.g., `@YourName`) and request a Magic Link:
-
-1.  **Normalization**: The system converts your input to lowercase and removes the `@` (e.g., `@YourName` -> `yourname`).
-2.  **Lookup**: It searches the database for any Participant or Manager record that matches this handle.
-3.  **Verification**:
-    *   **If you have used the bot before**: We have your numeric `Chat ID`. The system generates a token and sends the link directly to your Telegram DMs.
-    *   **If you are new**: We only know your text handle, not your numeric ID. The system cannot DM you yet. You will be prompted to "Start" the bot to establish this connection.
-
-**Passive linking on vote:** you don't have to run the recovery flow above just to keep a numeric Chat ID attached to your handle. Every time you vote with a Telegram handle, the system also checks (a) other Participant rows with that same handle that already have a verified Chat ID, and (b) whether you manage a *different* event under that handle (its `managerChatId` counts too). Handles are matched with or without a leading `@`, so `pyaniz` and `@pyaniz` resolve to the same person. If either check finds a match, your new (or existing) participant row self-heals its Chat ID automatically, no DM required.
+A Telegram handle typed into the voting form is shown in group posts in place of your name, and that is all. It never attaches a Chat ID to your participant row and never matches you to other events under the same handle. Your identity is linked only when you sign in through the bot (a magic link it DMed you) or with Discord. That sign-in sets a signed cookie in your browser, and votes cast from that browser are tied to your verified account unless you untick the option to link it.

@@ -7,24 +7,24 @@ import { clsx } from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SuggestTime } from "./SuggestTime";
 import { QuickSelectionCalendar } from "./QuickSelectionCalendar";
+import type { PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
+import { PARTICIPANT_NOT_OWNED, voteErrorMessage } from "@/features/event-management/model/vote-errors";
 
-interface Slot {
-    id: number;
-    startTime: Date;
-    endTime: Date;
+type Slot = PublicSlot & {
     counts: { yes: number; maybe: number; no: number };
-    votes: any[];
-}
+};
 
 interface VotingInterfaceProps {
     eventId: number;
     initialSlots: Slot[];
-    participants: any[];
+    participants: PublicParticipant[];
     minPlayers: number;
     slug: string;
     serverParticipantId?: number;
-    discordIdentity?: { id: string, username: string };
+    discordIdentity?: { username: string };
     telegramIdentity?: { handle: string };
+    /** The viewer's own handle, resolved on the server from their verified identity. */
+    myTelegramHandle?: string | null;
     eventType?: "ONE_SHOT" | "CAMPAIGN";
     isTelegramSynced?: boolean;
     isDiscordSynced?: boolean;
@@ -32,11 +32,11 @@ interface VotingInterfaceProps {
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, minPlayers, slug, serverParticipantId, discordIdentity, telegramIdentity, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, slug, serverParticipantId, discordIdentity, telegramIdentity, myTelegramHandle, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    const [slots, setSlots] = useState(initialSlots);
+    const [slots] = useState(initialSlots);
     const [userName, setUserName] = useState("");
     const [userTelegram, setUserTelegram] = useState("");
     const [votes, setVotes] = useState<Record<number, string | undefined>>({});
@@ -50,6 +50,9 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
     // when that platform is synced in this browser; both default to on.
     const [linkTelegram, setLinkTelegram] = useState(true);
     const [linkDiscord, setLinkDiscord] = useState(true);
+    // Set when the server refused to edit the stored participant (403 participant_not_owned):
+    // holds the votes so they can be resubmitted as a brand new participant.
+    const [notOwned, setNotOwned] = useState<{ message: string; votes: Record<number, string | undefined> } | null>(null);
 
     useEffect(() => {
         let pid = serverParticipantId;
@@ -68,15 +71,15 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             const existing = participants.find(p => p.id === pid);
             if (existing) {
                 setUserName(existing.name);
-                setUserTelegram(existing.telegramId || "");
+                setUserTelegram((serverParticipantId ? myTelegramHandle : null) || localStorage.getItem('tabletop_telegram') || "");
 
                 const myVotes: Record<number, string> = {};
                 const myHosting: Record<number, boolean> = {};
 
                 initialSlots.forEach(slot => {
-                    const userVote = slot.votes.find((v: any) => v.participantId === pid);
+                    const userVote = slot.votes.find(v => v.participantId === pid);
                     if (userVote) {
-                        myVotes[slot.id] = userVote.preference;
+                        myVotes[slot.id] = userVote.value;
                         if (userVote.canHost) myHosting[slot.id] = true;
                     }
                 });
@@ -89,7 +92,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             setUserName(prev => prev || urlUserId || localStorage.getItem('tabletop_username') || "");
             setUserTelegram(prev => prev || localStorage.getItem('tabletop_telegram') || "");
         }
-    }, [serverParticipantId, eventId, participants, initialSlots, searchParams]);
+    }, [serverParticipantId, myTelegramHandle, eventId, participants, initialSlots, searchParams]);
 
     const handleVote = (slotId: number, preference: string) => {
         setVotes(prev => ({
@@ -104,8 +107,12 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
 
     // Accepts an optional override so quick view can pass in NOs-filled map
     // without hitting React's async state update timing issue.
-    const submitVotes = async (votesOverride?: Record<number, string | undefined>) => {
+    const submitVotes = async (
+        votesOverride?: Record<number, string | undefined>,
+        participantIdOverride?: number | null
+    ) => {
         const effectiveVotes = votesOverride ?? votes;
+        const effectiveParticipantId = participantIdOverride !== undefined ? participantIdOverride : participantId;
 
         if (!userName) return alert("Please enter your name");
         if (Object.values(effectiveVotes).filter(v => v !== undefined).length === 0)
@@ -123,9 +130,10 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
             const payload = {
                 name: userName,
                 telegramId: linkTelegram ? effectiveTelegram : "",
-                discordId: linkDiscord ? discordIdentity?.id : undefined,
                 discordUsername: linkDiscord ? discordIdentity?.username : undefined,
-                participantId,
+                participantId: effectiveParticipantId,
+                // Proves this browser holds the event link; the API needs it to claim a legacy row.
+                slug,
                 linkTelegram,
                 linkDiscord,
                 votes: Object.entries(effectiveVotes)
@@ -151,17 +159,39 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                 setHasVoted(true);
                 window.location.reload();
             } else {
-                alert("Failed to save votes");
+                // A 403 participant_not_owned gets its own message (sign in to edit) and an
+                // offer to vote as a new participant instead.
+                const body = await res.json().catch(() => null);
+                const code = typeof body === "object" && body !== null ? (body as { code?: unknown }).code : undefined;
+                if (res.status === 403 && code === PARTICIPANT_NOT_OWNED) {
+                    setNotOwned({ message: voteErrorMessage(body), votes: effectiveVotes });
+                } else {
+                    alert(voteErrorMessage(body));
+                }
             }
         } catch (e) {
-            console.error(e);
+            console.error("Failed to submit votes", e);
             alert("Error submitting votes");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Called by QuickSelectionCalendar — fills NOs then submits
+    // Forget the participant this browser remembered for the event and submit the same votes fresh.
+    const voteAsNewParticipant = () => {
+        if (!notOwned) return;
+        const pending = notOwned.votes;
+        try {
+            localStorage.removeItem(`tabletop_participant_${eventId}`);
+        } catch {
+            // Storage can be unavailable; the resubmit below still sends no participant id.
+        }
+        setParticipantId(null);
+        setNotOwned(null);
+        submitVotes(pending, null);
+    };
+
+    // Called by QuickSelectionCalendar: fills NOs then submits
     const handleQuickSave = (completeVotes: Record<number, string | undefined>) => {
         setVotes(completeVotes); // sync so detailed view reflects them if user switches back
         submitVotes(completeVotes);
@@ -234,7 +264,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                         )}
                     </div>
 
-                    {/* Per-platform link toggles — each shown only when that platform
+                    {/* Per-platform link toggles: each shown only when that platform
                         is synced in this browser. */}
                     {(isTelegramSynced || isDiscordSynced) && (
                         <div className="flex flex-col gap-2 mt-4">
@@ -285,7 +315,7 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                     <div className="bg-indigo-950/50 border border-indigo-800/50 rounded-lg p-3 flex items-start gap-3">
                         <CalendarRange className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
                         <div className="flex-1 text-sm text-indigo-200">
-                            This is a multi-session campaign. Vote on every date you&apos;re available — the organizer will lock in multiple sessions.
+                            This is a multi-session campaign. Vote on every date you&apos;re available, and the organizer will lock in multiple sessions.
                         </div>
                         <div className="relative shrink-0">
                             <button
@@ -338,6 +368,29 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
                 </div>
 
                 {/* ── Detailed view ── */}
+                {notOwned && (
+                    <div role="alert" className="p-4 rounded-xl border border-amber-700/60 bg-amber-900/20 text-amber-200 space-y-3">
+                        <p className="text-sm">{notOwned.message}</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={voteAsNewParticipant}
+                                disabled={isSubmitting}
+                                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-semibold"
+                            >
+                                Vote as a new participant
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNotOwned(null)}
+                                className="px-4 py-2 rounded-lg border border-amber-700/60 text-amber-200 hover:bg-amber-900/30 text-sm"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {viewMode === "detailed" && (
                     <div className="space-y-4">
                         {/* Legend */}
@@ -359,10 +412,8 @@ export function VotingInterface({ eventId, initialSlots, participants, minPlayer
 
                         {slots.map(slot => {
                             const myVote = votes[slot.id];
-                            const totalYes = slot.counts.yes;
-                            const isViable = totalYes >= minPlayers;
                             const hasHostOffer = slot.votes.some(
-                                (v: any) => (v.preference === "YES" || v.preference === "MAYBE") && v.canHost
+                                v => (v.value === "YES" || v.value === "MAYBE") && v.canHost
                             );
 
                             return (

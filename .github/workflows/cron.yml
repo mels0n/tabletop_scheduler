@@ -2,8 +2,11 @@ name: Trigger Reminders
 
 on:
   schedule:
-    # Run every hour (at minute 0)
-    - cron: '0 * * * *'
+    # Backstop only. Hosted reminders and webhook retries run from Supabase pg_cron
+    # (scripts/sql/pg-cron-reminders.sql); this catches a stalled pg_cron. GitHub delays scheduled runs by
+    # hours, so it stays infrequent and off the top of the hour. Overlap with pg_cron is
+    # safe: each reminder and each webhook row is claimed in the database before sending.
+    - cron: '7 */2 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -12,8 +15,9 @@ jobs:
     steps:
       - name: Call Reminder API
         run: |
-          # Replace with your actual deployed URL
-          # We use a secret for the URL to keep it flexible
+          # DEPLOYMENT_URL (the site origin) and CRON_SECRET are repository secrets.
+          # Without DEPLOYMENT_URL the job does nothing. The route fails closed, so
+          # a missing or wrong CRON_SECRET gets a 401 and turns the job red.
           if [ -n "${{ secrets.DEPLOYMENT_URL }}" ]; then
              # --location-trusted: keep the Authorization header across redirects
              #   (plain -L drops it when a redirect crosses host/scheme, e.g. www -> apex).
@@ -25,6 +29,21 @@ jobs:
                curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders"
              fi
              echo "Pinged ${{ secrets.DEPLOYMENT_URL }}"
+          else
+             echo "No DEPLOYMENT_URL secret set. Skipping."
+          fi
+
+      - name: Call Webhook Retry API
+        # Runs even when the reminder call failed, so one bad route does not stall the other.
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -n "${{ secrets.DEPLOYMENT_URL }}" ]; then
+             if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+               curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/webhooks" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+             else
+               curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/webhooks"
+             fi
+             echo "Pinged ${{ secrets.DEPLOYMENT_URL }}/api/cron/webhooks"
           else
              echo "No DEPLOYMENT_URL secret set. Skipping."
           fi

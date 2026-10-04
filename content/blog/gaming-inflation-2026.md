@@ -21,12 +21,12 @@ Research into the current market reveals a new normal for pricing:
 
 ## The Real Cost: The "Shelf of Shame" Tax
 
-However, the most expensive game isn't the one with the highest price tag—it's the one you bought and **never played**.
+However, the most expensive game isn't the one with the highest price tag. It's the one you bought and **never played**.
 
 We call it the "Shelf of Shame." You backed that massive campaign two years ago. It arrived with 400 miniatures and a rulebook the size of a novel. You paid $200 for it. And now? It collects dust because coordinating 4 adults to sit down for 3 hours is harder than fighting the actual boss monster.
 
 If you buy a $100 game and play it once, that's **$100 per session**.
-If you play it 10 times, that's **$10 per session**—cheaper than a movie ticket.
+If you play it 10 times, that's **$10 per session**, cheaper than a movie ticket.
 
 ## Maximizing Value with Free Tools
 

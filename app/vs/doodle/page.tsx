@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Check, X, ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'Doodle Alternative for Game Night',
@@ -20,8 +21,8 @@ const schema = [
         alternateName: 'Tabletop Scheduler',
         featureList: [
             'No sign-up required for organizers or participants',
-            'No ads — ever',
-            'Quorum logic — minimum player threshold before a date is considered viable',
+            'No ads, ever',
+            'Quorum logic: minimum player threshold before a date is considered viable',
             'Waitlists with automatic promotion when spots open',
             'Discord and Telegram bot integration',
             'Campaign mode for multi-session scheduling',
@@ -31,7 +32,7 @@ const schema = [
     SchemaGenerator.faq([
         {
             question: 'Is Tabletop Time a free Doodle alternative?',
-            answer: 'Yes. Tabletop Time is completely free with no ads and no subscriptions. Unlike Doodle\'s free tier, which shows ads and limits features, Tabletop Time is free for everything — unlimited events, unlimited players, Discord and Telegram bots included.',
+            answer: 'Yes. Tabletop Time is completely free with no ads and no subscriptions. Unlike Doodle\'s free tier, which shows ads and limits features, Tabletop Time is free for everything: unlimited events, unlimited players, Discord and Telegram bots included.',
         },
         {
             question: 'Does Tabletop Time require a sign-up like Doodle?',
@@ -43,7 +44,7 @@ const schema = [
         },
         {
             question: 'How do I switch from Doodle to Tabletop Time?',
-            answer: 'Create a new event at tabletoptime.us/new — no account required. Add your candidate dates, set a quorum if you want one, and share the link. Takes about two minutes.',
+            answer: 'Create a new event at tabletoptime.us/new with no account required. Add your candidate dates, set a quorum if you want one, and share the link. Takes about two minutes.',
         },
     ]),
 ];
@@ -63,7 +64,7 @@ const rows: { label: string; tt: boolean; doodle: boolean | string; note?: strin
 ];
 
 export default function VsDoodlePage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
+    const isHosted = publicConfig.isHosted;
     if (!isHosted) notFound();
 
     return (
@@ -85,7 +86,7 @@ export default function VsDoodlePage() {
                         The scheduling tool that actually gets game night.
                     </p>
                     <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
-                        Doodle is designed for scheduling business meetings — calendar polling, corporate SSO, and 20-participant polls with ad banners in between. It works. But for a six-person D&D group trying to nail down a Saturday night, it misses everything that actually matters.
+                        Doodle is designed for scheduling business meetings: calendar polling, corporate SSO, and 20-participant polls with ad banners in between. It works. But for a six-person D&D group trying to nail down a Saturday night, it misses everything that actually matters.
                     </p>
                     <Link
                         href="/new"
@@ -167,7 +168,7 @@ export default function VsDoodlePage() {
                 <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
                     <h2 className="text-2xl font-bold text-white">The Feature Doodle Will Never Build</h2>
                     <p className="text-slate-400 leading-relaxed">
-                        Quorum logic is the single most game-night-specific feature a scheduler can have. It answers the question Doodle can&apos;t: <em>&ldquo;Is this date viable?&rdquo;</em> — not just &ldquo;who&apos;s free,&rdquo; but &ldquo;do we have enough players to actually play?&rdquo;
+                        Quorum logic is the single most game-night-specific feature a scheduler can have. It answers the question Doodle can&apos;t: <em>&ldquo;Is this date viable?&rdquo;</em> Not just &ldquo;who&apos;s free,&rdquo; but &ldquo;do we have enough players to actually play?&rdquo;
                     </p>
                     <p className="text-slate-400 leading-relaxed">
                         Set a minimum player count (e.g., need at least 4 for a Commander pod). Tabletop Time highlights in green the dates that hit that threshold. Dates below it are shown in amber. You see the viable windows at a glance without counting cells in a spreadsheet.
@@ -206,9 +207,9 @@ export default function VsDoodlePage() {
                 <section className="space-y-6">
                     <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
                     <div className="space-y-4">
-                        <Faq q="Is Tabletop Time really free?" a="Yes — no ads, no paywalls, no subscriptions. It's an open-source passion project. You can also self-host it if you want full control." />
-                        <Faq q="Does it work for non-D&D game nights?" a="Absolutely. Quorum logic, waitlists, and calendar export work for any group activity: MTG Commander pods, board game nights, sports leagues, movie clubs — anything where you need a minimum number of people to make it worth doing." />
-                        <Faq q="What if a player doesn't have Discord or Telegram?" a="The Discord and Telegram bots are optional. The voting link works in any app — just paste it in a group chat, text, or email. Players click, vote, done." />
+                        <Faq q="Is Tabletop Time really free?" a="Yes. No ads, no paywalls, no subscriptions. It's an open-source passion project. You can also self-host it if you want full control." />
+                        <Faq q="Does it work for non-D&D game nights?" a="Absolutely. Quorum logic, waitlists, and calendar export work for any group activity: MTG Commander pods, board game nights, sports leagues, movie clubs, anything where you need a minimum number of people to make it worth doing." />
+                        <Faq q="What if a player doesn't have Discord or Telegram?" a="The Discord and Telegram bots are optional. The voting link works in any app. Just paste it in a group chat, text, or email. Players click, vote, done." />
                         <Faq q="Can I edit the event after sharing the link?" a="Yes. The event creator gets a manager token stored locally that lets them edit dates, change the quorum, add slots, or finalize at any time." />
                     </div>
                 </section>

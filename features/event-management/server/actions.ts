@@ -1,31 +1,49 @@
 "use server";
 
+import { after } from "next/server";
+import { z } from "zod";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth/server/verify";
 import { normalizeHandle, formatHandle } from "@/shared/lib/handle";
+import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
+// Allowed session reminder lead times (2 hours, 1 day, 2 days), shared with the manage page.
+import { isSessionReminderLead } from "@/features/notifications/model/leads";
+import { reminderSettingsSchema } from "../model/schemas";
+import { handleParam, slugParam } from "@/shared/lib/action-params";
+import { getServerConfig } from "@/shared/config/server";
+import { processWebhookRow } from "@/features/integrations/webhooks";
 
 const log = Logger.get("EventActions");
 
+/** Bounded like the create-event schema's invite link; the `https://t.me/` check stays in the action. */
+const inviteLinkParam = z.string().max(200);
+
+const INVALID_REQUEST = "Invalid request";
+
+const isSlug = (slug: unknown): boolean => slugParam.safeParse(slug).success;
+
 /**
- * Checks the manager's connection status (Telegram linkage).
+ * Checks the manager's connection status (Telegram linkage). Public callers get only the
+ * boolean; the manager's handle is returned to the event admin alone.
  */
-export async function checkManagerStatus(slug: string) {
+export async function checkManagerStatus(slug: string): Promise<{ hasManagerChatId: boolean; handle?: string | null }> {
+    if (!isSlug(slug)) return { hasManagerChatId: false };
     const event = await prisma.event.findUnique({
         where: { slug },
         select: { managerChatId: true, managerTelegram: true }
     });
 
-    return {
-        hasManagerChatId: !!event?.managerChatId,
-        handle: event?.managerTelegram
-    };
+    const status = { hasManagerChatId: !!event?.managerChatId };
+    if (!event || !(await verifyEventAdmin(slug))) return status;
+    return { ...status, handle: event.managerTelegram };
 }
 
 /**
  * Checks if the event is connected to a Telegram group chat.
  */
 export async function checkEventStatus(slug: string) {
+    if (!isSlug(slug)) return { hasTelegramChatId: false };
     const event = await prisma.event.findUnique({
         where: { slug },
         select: { telegramChatId: true }
@@ -40,7 +58,8 @@ export async function checkEventStatus(slug: string) {
  * Updates the manager's Telegram handle.
  */
 export async function updateManagerHandle(slug: string, handle: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!isSlug(slug) || !handleParam.safeParse(handle).success) return { error: INVALID_REQUEST };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     // Canonicalize: accept the handle with or without '@' and store it '@'-less
     // (lowercased), matching every other write path. Display code re-adds one '@'.
@@ -66,7 +85,8 @@ export async function updateManagerHandle(slug: string, handle: string) {
  * Updates the Telegram invite link associated with the event.
  */
 export async function updateTelegramInviteLink(slug: string, link: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!isSlug(slug) || !inviteLinkParam.safeParse(link).success) return { error: INVALID_REQUEST };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     if (!link || !link.startsWith("https://t.me/")) {
         return { error: "Invalid Telegram link. It should start with https://t.me/" };
@@ -89,7 +109,8 @@ export async function updateTelegramInviteLink(slug: string, link: string) {
  * Permanently deletes an event and all associated data.
  */
 export async function deleteEvent(slug: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!isSlug(slug)) return { error: INVALID_REQUEST };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     const event = await prisma.event.findUnique({
         where: { slug }
@@ -101,56 +122,57 @@ export async function deleteEvent(slug: string) {
 
     log.warn("Deleting event", { slug, title: event.title });
 
-    if (process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage, unpinChatMessage } = await import("@/features/telegram");
-
-        if (event.telegramChatId) {
-            if (event.pinnedMessageId) {
-                await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
-            }
-            await sendTelegramMessage(
-                event.telegramChatId,
-                `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been removed by the organizer.`,
-                process.env.TELEGRAM_BOT_TOKEN
-            );
-        }
-    }
-
-    if (process.env.DISCORD_BOT_TOKEN && event.discordChannelId) {
-        const { sendDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
-
-        if (event.discordMessageId) {
-            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, process.env.DISCORD_BOT_TOKEN);
-        }
-
-        await sendDiscordMessage(
-            event.discordChannelId,
-            `🚫 **Event Deleted**\n\nThe event "**${event.title}**" has been removed by the organizer.`,
-            process.env.DISCORD_BOT_TOKEN
-        );
-    }
-
+    // Unpin dashboards: each platform independently, failures never block deletion.
+    const { telegram: { token: telegramToken }, discord: { botToken: discordToken } } = getServerConfig();
     try {
-        await prisma.$transaction(async (tx) => {
-            await tx.vote.deleteMany({ where: { timeSlot: { eventId: event.id } } });
-            await tx.timeSlot.deleteMany({ where: { eventId: event.id } });
-            await tx.participant.deleteMany({ where: { eventId: event.id } });
-            await tx.event.delete({ where: { id: event.id } });
-        });
+        if (event.telegramChatId && event.pinnedMessageId && telegramToken) {
+            const { unpinChatMessage } = await import("@/features/telegram");
+            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, telegramToken);
+        }
+    } catch (e) {
+        log.warn("Failed to unpin Telegram dashboard on delete", { slug, error: String(e) });
+    }
+    try {
+        if (event.discordChannelId && event.discordMessageId && discordToken) {
+            const { unpinDiscordMessage } = await import("@/features/integrations/discord/model/discord");
+            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+        }
+    } catch (e) {
+        log.warn("Failed to unpin Discord dashboard on delete", { slug, error: String(e) });
+    }
 
+    // One delete: the schema cascades to slots, participants, votes, finalized sessions
+    // and queued webhooks. Announce only after it has committed.
+    try {
+        await prisma.event.delete({ where: { id: event.id } });
         log.info("Event deleted successfully", { slug });
-        return { success: true };
     } catch (e) {
         log.error("Failed to delete event", e as Error);
         return { error: "Failed to delete event" };
     }
+
+    const { broadcastToEvent } = await import("@/features/notifications");
+    await broadcastToEvent(
+        event,
+        {
+            html: `🚫 <b>Event Cancelled</b>\n\nThe event "${escapeHtml(event.title)}" has been removed by the organizer.`,
+            discord: `🚫 **Event Deleted**\n\nThe event "**${escapeDiscordMarkdown(event.title)}**" has been removed by the organizer.`,
+        },
+        { slug, kind: "event-deleted" }
+    );
+
+    return { success: true };
 }
 
 /**
- * Marks an event as CANCELLED without deleting it.
+ * Marks an event as CANCELLED without deleting it. When the event came from an integration
+ * (`fromUrl`), a CANCELLED webhook row is queued in the same transaction as the status flip;
+ * dashboards and announcements follow the commit, and the first delivery attempt runs after the
+ * action returns (`after()`). The webhooks cron retries it if that attempt fails.
  */
 export async function cancelEvent(slug: string) {
-    if (!await verifyEventAdmin(slug)) return { error: "Unauthorized" };
+    if (!isSlug(slug)) return { error: INVALID_REQUEST };
+    if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     const event = await prisma.event.findUnique({
         where: { slug }
@@ -163,58 +185,17 @@ export async function cancelEvent(slug: string) {
     log.warn("Cancelling event", { slug, title: event.title });
 
     try {
-        await prisma.event.update({
-            where: { id: event.id },
-            data: { status: 'CANCELLED' }
-        });
+        // The status flip and the CANCELLED webhook row commit together: an integration is
+        // never left believing the event is live because the enqueue failed after the flip.
+        // Idempotent: only the call that flips the status queues, edits dashboards or announces.
+        const { flipped, webhookRowId } = await prisma.$transaction(async (tx) => {
+            const { count } = await tx.event.updateMany({
+                where: { id: event.id, status: { not: 'CANCELLED' } },
+                data: { status: 'CANCELLED' }
+            });
+            if (count !== 1) return { flipped: false, webhookRowId: null };
+            if (!event.fromUrl) return { flipped: true, webhookRowId: null };
 
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const { headers } = await import("next/headers");
-        const baseUrl = getBaseUrl(headers());
-
-        if (event.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { editMessageText, sendTelegramMessage } = await import("@/features/telegram");
-            const token = process.env.TELEGRAM_BOT_TOKEN;
-
-            if (event.pinnedMessageId) {
-                await editMessageText(
-                    event.telegramChatId,
-                    event.pinnedMessageId,
-                    `🚫 <b>Event Cancelled</b> (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\n` +
-                    `The event "<b>${event.title}</b>" has been cancelled by the host.\n\n` +
-                    `<a href="${baseUrl}/e/${slug}">View Event Details</a>`,
-                    token
-                );
-            }
-
-            await sendTelegramMessage(
-                event.telegramChatId,
-                `🚫 <b>Event Cancelled</b>\n\nThe event "${event.title}" has been cancelled by the organizer.`,
-                token
-            );
-        }
-
-        if (event.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { editDiscordMessage, sendDiscordMessage } = await import("@/features/discord/model/discord");
-            const token = process.env.DISCORD_BOT_TOKEN!;
-
-            if (event.discordMessageId) {
-                await editDiscordMessage(
-                    event.discordChannelId,
-                    event.discordMessageId,
-                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${event.title}**" has been cancelled by the host.\n\n[View Event Details](<${baseUrl}/e/${slug}>)`,
-                    token
-                );
-            }
-
-            await sendDiscordMessage(
-                event.discordChannelId,
-                `🚫 **Event Cancelled**\n\nThe event "**${event.title}**" has been cancelled by the organizer.`,
-                token
-            );
-        }
-
-        if (event.fromUrl) {
             log.info("Queueing cancellation webhook", { slug, fromUrl: event.fromUrl });
             const payload = {
                 type: "CANCELLED",
@@ -224,7 +205,7 @@ export async function cancelEvent(slug: string) {
                 title: event.title,
                 timestamp: new Date().toISOString()
             };
-            await prisma.webhookEvent.create({
+            const row = await tx.webhookEvent.create({
                 data: {
                     eventId: event.id,
                     url: event.fromUrl,
@@ -233,6 +214,69 @@ export async function cancelEvent(slug: string) {
                     nextAttempt: new Date()
                 }
             });
+            return { flipped: true, webhookRowId: row.id };
+        });
+        if (!flipped) {
+            log.info("Event already cancelled", { slug });
+            return { success: true };
+        }
+
+        // Post-commit: a missing base URL drops the link, it never fails the cancellation.
+        const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+        const baseUrl = getBaseUrlOrNull();
+        const { telegram: { token: telegramToken }, discord: { botToken: discordToken } } = getServerConfig();
+
+        // Edit the pinned dashboards: each platform independently.
+        try {
+            if (event.telegramChatId && event.pinnedMessageId && telegramToken) {
+                const { editMessageText } = await import("@/features/telegram");
+                await editMessageText(
+                    event.telegramChatId,
+                    event.pinnedMessageId,
+                    `🚫 <b>Event Cancelled</b> (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\n` +
+                    `The event "<b>${escapeHtml(event.title)}</b>" has been cancelled by the host.` +
+                    (baseUrl ? `\n\n<a href="${baseUrl}/e/${slug}">View Event Details</a>` : ''),
+                    telegramToken
+                );
+            }
+        } catch (e) {
+            log.warn("Failed to edit Telegram dashboard on cancel", { slug, error: String(e) });
+        }
+
+        try {
+            if (event.discordChannelId && event.discordMessageId && discordToken) {
+                const { editDiscordMessage } = await import("@/features/integrations/discord/model/discord");
+                await editDiscordMessage(
+                    event.discordChannelId,
+                    event.discordMessageId,
+                    `🚫 **Event Cancelled** (was: ${event.finalizedSlotId ? 'Finalized' : 'Planned'})\n\nThe event "**${escapeDiscordMarkdown(event.title)}**" has been cancelled by the host.${baseUrl ? `\n\n[View Event Details](<${baseUrl}/e/${slug}>)` : ''}`,
+                    discordToken
+                );
+            }
+        } catch (e) {
+            log.warn("Failed to edit Discord dashboard on cancel", { slug, error: String(e) });
+        }
+
+        const { broadcastToEvent } = await import("@/features/notifications");
+        await broadcastToEvent(
+            event,
+            {
+                html: `🚫 <b>Event Cancelled</b>\n\nThe event "${escapeHtml(event.title)}" has been cancelled by the organizer.`,
+                discord: `🚫 **Event Cancelled**\n\nThe event "**${escapeDiscordMarkdown(event.title)}**" has been cancelled by the organizer.`,
+            },
+            { slug, kind: "event-cancelled" }
+        );
+
+        if (webhookRowId) {
+            // First delivery attempt once the action has returned; the webhooks cron retries it.
+            try {
+                after(() => processWebhookRow(webhookRowId).then(
+                    (outcome) => log.info("Immediate webhook attempt", { id: webhookRowId, outcome }),
+                    (e) => log.error("Immediate webhook attempt failed", e as Error),
+                ));
+            } catch (e) {
+                log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: webhookRowId, error: String(e) });
+            }
         }
 
         log.info("Event cancelled successfully", { slug });
@@ -254,21 +298,36 @@ export async function cancelEvent(slug: string) {
  */
 export async function updateReminderSettings(slug: string, enabled: boolean, time: string, days: number[]) {
     try {
-        if (!await verifyEventAdmin(slug)) return { success: false, error: "Unauthorized" };
+        if (!isSlug(slug)) return { success: false, error: INVALID_REQUEST };
+        if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
+
+        // Server actions are public endpoints: validate every argument (weekdays 0..6,
+        // unique, at most 7; HH:MM when enabled so the cron can parse it).
+        const parsed = reminderSettingsSchema.safeParse({ enabled, time, days });
+        if (!parsed.success) {
+            const timeIssue = parsed.error.issues.some((i) => i.path[0] === "time");
+            return { success: false, error: timeIssue ? "Invalid time format" : "Invalid reminder settings" };
+        }
 
         const event = await prisma.event.findUnique({ where: { slug } });
         if (!event) return { success: false, error: "Event not found" };
 
-        // Intent: Validate time format to ensure cron compatibility
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        if (enabled && !timeRegex.test(time)) return { success: false, error: "Invalid time format" };
+        const reminderDays = parsed.data.days.join(',');
+        const changed =
+            event.reminderEnabled !== parsed.data.enabled ||
+            event.reminderTime !== parsed.data.time ||
+            event.reminderDays !== reminderDays;
 
         await prisma.event.update({
             where: { id: event.id },
             data: {
-                reminderEnabled: enabled,
-                reminderTime: time,
-                reminderDays: days.join(','),
+                reminderEnabled: parsed.data.enabled,
+                reminderTime: parsed.data.time,
+                reminderDays,
+                // Reminders dedupe on the target instant, so stamping "now" means a target that
+                // already passed today (turned on late, or time moved earlier) waits for its next
+                // occurrence instead of firing at once.
+                ...(changed ? { lastReminderSent: new Date() } : {}),
                 // Intent: Do NOT reset notification flags here. Changing schedule shouldn't spam users if quorum was already reached.
             }
         });
@@ -277,6 +336,41 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
         return { success: true };
     } catch (e) {
         log.error("Failed to update reminder settings", e as Error);
+        return { success: false, error: "Internal Error" };
+    }
+}
+
+/**
+ * Updates the session reminder settings (a one-time post before each scheduled session).
+ *
+ * @param {string} slug - The event slug.
+ * @param {boolean} enabled - Whether session reminders are active.
+ * @param {number} leadMinutes - Minutes before session start (120, 1440 or 2880).
+ * @returns {Promise<Object>} Success status or error.
+ */
+export async function updateSessionReminderSettings(slug: string, enabled: boolean, leadMinutes: number) {
+    try {
+        if (!isSlug(slug)) return { success: false, error: INVALID_REQUEST };
+        if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
+
+        if (typeof enabled !== "boolean" || typeof leadMinutes !== "number" || !isSessionReminderLead(leadMinutes)) {
+            return { success: false, error: "Invalid lead time" };
+        }
+
+        const event = await prisma.event.findUnique({ where: { slug } });
+        if (!event) return { success: false, error: "Event not found" };
+
+        await prisma.event.update({
+            where: { id: event.id },
+            data: {
+                sessionReminderEnabled: enabled,
+                sessionReminderLeadMinutes: leadMinutes,
+            }
+        });
+
+        return { success: true };
+    } catch (e) {
+        log.error("Failed to update session reminder settings", e as Error);
         return { success: false, error: "Internal Error" };
     }
 }

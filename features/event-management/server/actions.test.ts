@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { deleteEvent, updateManagerHandle } from '@/features/event-management/server/actions';
 import prisma from '@/shared/lib/prisma';
-import { verifyEventAdmin } from '@/features/auth/server/actions';
+import { verifyEventAdmin } from '@/features/auth/server/verify';
 
 // Mock Dependencies
 vi.mock('@/shared/lib/prisma');
-vi.mock('@/features/auth/server/actions', () => ({
+vi.mock('@/features/auth/server/verify', () => ({
     verifyEventAdmin: vi.fn(),
 }));
 vi.mock('@/features/telegram', () => ({
@@ -37,16 +37,14 @@ describe('Event Management Actions', () => {
             expect(result).toEqual({ error: "Event not found" });
         });
 
-        it('should delete event via transaction if found', async () => {
+        it('should delete the event with a single cascading delete if found', async () => {
             mockVerifyAdmin.mockResolvedValue(true);
             mockPrisma.event.findUnique.mockResolvedValue({ id: 1, title: 'Test Event', slug: 'slug' });
-
-            // Mock transaction execution
-            mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(prisma));
+            mockPrisma.event.delete.mockResolvedValue({ id: 1 });
 
             const result = await deleteEvent('slug');
             expect(result).toEqual({ success: true });
-            expect(mockPrisma.$transaction).toHaveBeenCalled();
+            expect(mockPrisma.event.delete).toHaveBeenCalledWith({ where: { id: 1 } });
         });
     });
 

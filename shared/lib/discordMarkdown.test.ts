@@ -52,4 +52,32 @@ describe('htmlToDiscordMarkdown', () => {
         expect(out).not.toContain('<a href');
         expect(out).not.toContain('<b>');
     });
+
+    it('decodes HTML entities so escaped titles read naturally', () => {
+        expect(htmlToDiscordMarkdown('<b>D&amp;D Night &lt;3</b>')).toBe('**D&D Night <3**');
+        expect(htmlToDiscordMarkdown('&amp;lt;')).toBe('&lt;');
+    });
+
+    it('escapes Discord markdown in text so user names cannot format or link', () => {
+        expect(htmlToDiscordMarkdown('<b>*bold* [Claim seat](https://evil)</b>')).toBe(
+            '**\\*bold\\* \\[Claim seat\\]\\(https://evil\\)**'
+        );
+    });
+
+    it('never turns an escaped anchor back into a masked link', () => {
+        const escaped = '<b>&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;</b>';
+        const out = htmlToDiscordMarkdown(escaped);
+        expect(out).toBe('**<a href="https://evil"\\>x</a\\>**');
+        expect(out).not.toContain('[x]');
+    });
+
+    it('converts code spans to inline code without escaping their content', () => {
+        expect(htmlToDiscordMarkdown('Send <code>/connect abc_1 1a2b3c4d</code>')).toBe('Send `/connect abc_1 1a2b3c4d`');
+    });
+
+    it('escapes markdown inside link labels', () => {
+        expect(htmlToDiscordMarkdown('<a href="https://a.example/x?a=1&amp;b=2">D_D [night]</a>')).toBe(
+            '[D\\_D \\[night\\]](<https://a.example/x?a=1&b=2>)'
+        );
+    });
 });

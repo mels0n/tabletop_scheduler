@@ -1,68 +1,34 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { COOKIE_MAX_AGE, COOKIE_BASE_OPTIONS } from "@/shared/lib/auth-cookie";
-import { hashToken } from "@/shared/lib/token";
-import prisma from "@/shared/lib/prisma";
 
 /**
- * Sets a secure, HTTP-only cookie for admin authentication.
+ * Client-callable server actions of the auth slice. Everything exported here is a public
+ * endpoint: admin verification (`verifyEventAdmin`, `requireEventAdmin`) lives in the
+ * `server-only` module `./verify` and must never be exported from this file.
+ */
+
+const adminCookieInput = z.object({
+    slug: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    token: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+});
+
+/**
+ * Sets a secure, HTTP-only cookie for admin authentication. Called by the create page
+ * right after the event is created. Grants nothing by itself: the token is checked
+ * against the stored hash on every use.
  *
  * @param {string} slug - The event slug identifier.
- * @param {string} token - The administrative token.
+ * @param {string} token - The raw administrative token (only its hash is stored).
  */
 export async function setAdminCookie(slug: string, token: string) {
-    const cookieStore = cookies();
+    const input = adminCookieInput.parse({ slug, token });
+    const cookieStore = await cookies();
     const opts = {
         ...COOKIE_BASE_OPTIONS,
         maxAge: COOKIE_MAX_AGE
     };
-    cookieStore.set(`tabletop_admin_${slug}`, token, opts);
-}
-
-/**
- * Verifies if the current user is an admin for the given event.
- * Uses the HTTP-Only cookie and Hashing logic.
- */
-export async function verifyEventAdmin(slug: string): Promise<boolean> {
-    const cookieStore = cookies();
-    const token = cookieStore.get(`tabletop_admin_${slug}`)?.value;
-
-    let hasAdminTokenAccess = false;
-
-    if (token) {
-        const tokenHash = hashToken(token);
-        const event = await prisma.event.findUnique({
-            where: { slug },
-            select: { adminToken: true }
-        });
-
-        if (event && (event.adminToken === tokenHash || event.adminToken === token)) {
-            hasAdminTokenAccess = true;
-        }
-    }
-
-    if (hasAdminTokenAccess) {
-        return true;
-    }
-
-    // 2. Global Identity Fallback (Recovery/Magic Link)
-    // If the user has logged in via a Magic Link (setting a global user cookie),
-    // we verify if that global user is the declared manager of this event.
-    const globalChatId = cookieStore.get("tabletop_user_chat_id")?.value;
-    const globalDiscordId = cookieStore.get("tabletop_user_discord_id")?.value;
-
-    if (globalChatId || globalDiscordId) {
-        const eventManager = await prisma.event.findUnique({
-            where: { slug },
-            select: { managerChatId: true, managerDiscordId: true }
-        });
-
-        if (eventManager) {
-            if (globalChatId && eventManager.managerChatId === globalChatId) return true;
-            if (globalDiscordId && eventManager.managerDiscordId === globalDiscordId) return true;
-        }
-    }
-
-    return false;
+    cookieStore.set(`tabletop_admin_${input.slug}`, input.token, opts);
 }

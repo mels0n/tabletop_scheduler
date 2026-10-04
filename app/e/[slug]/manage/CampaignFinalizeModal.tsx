@@ -97,14 +97,14 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
     const toggleSlot = (id: number) =>
         setSelectedSlotIds(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
 
     const toggleGroup = (count: number) =>
         setExpandedGroups(prev => {
             const next = new Set(prev);
-            next.has(count) ? next.delete(count) : next.add(count);
+            if (next.has(count)) next.delete(count); else next.add(count);
             return next;
         });
 
@@ -193,7 +193,7 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
                         {belowTarget && (
                             <div className="flex items-start gap-2 p-3 bg-yellow-900/20 border border-yellow-800/50 rounded-lg text-yellow-400 text-xs">
                                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                                <span>You set a target of {minSessions} sessions. You can still finalize with fewer — this is just a reminder.</span>
+                                <span>You set a target of {minSessions} sessions. This is just a reminder, and you can still finalize with fewer.</span>
                             </div>
                         )}
 
@@ -269,7 +269,7 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
                                 </button>
                                 {showPlayerTooltip && (
                                     <div className="absolute left-0 bottom-6 w-64 bg-slate-800 border border-slate-600 rounded-lg p-3 text-xs text-slate-300 shadow-xl z-10">
-                                        Shows how many sessions each player can attend (YES or If Needed). Check sessions above to see how your group changes — use this to find your core group.
+                                        Shows how many sessions each player can attend (YES or If Needed). Check sessions above to see how your group changes and find your core group.
                                     </div>
                                 )}
                             </div>
@@ -282,7 +282,7 @@ export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFina
                         </div>
 
                         {playerGroupings.groups.length === 0 ? (
-                            <p className="text-sm text-slate-500 italic pl-1">No votes yet — share the voting link with your players.</p>
+                            <p className="text-sm text-slate-500 italic pl-1">No votes yet. Share the voting link with your players.</p>
                         ) : (
                             <div className="bg-slate-950/50 rounded-lg border border-slate-800 divide-y divide-slate-800/50">
                                 {playerGroupings.groups.map(({ count, total, names }) => (

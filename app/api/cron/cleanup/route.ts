@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
+import { getServerConfig } from "@/shared/config/server";
+import type { Prisma } from "@prisma/client";
+import { requireCronAuth } from "@/shared/lib/cron-auth";
+import { toResponse } from "@/shared/errors";
 
 const log = Logger.get("API:CronCleanup");
 
@@ -11,136 +15,94 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  * @description Cron Job Handler for Automatic Data Retention / Cleanup.
  *
  * Responsibilities:
- * 1. Security: Validates requester source (Localhost Loopback OR Vercel Cron Secret).
+ * 1. Security: `requireCronAuth` (Bearer CRON_SECRET; rejected outright when no secret is set).
  * 2. Retention Logic: Defines different expiration periods based on event status:
- *    - FINALIZED: Kept for X days after the *event start time* (e.g., to view details post-event).
- *    - CANCELLED: Kept for Y days (e.g., for reference).
- *    - DRAFT: Kept for Z days after *creation* or *last proposed slot* (to clear abandoned polls).
- * 3. Execution: Deletes expired events and their relational data (participants, votes, slots) transactionally.
+ *    - FINALIZED one-shot: X days after the finalized slot ends.
+ *    - FINALIZED campaign: X days after its last finalized session ends.
+ *    - CANCELLED: Y days after cancellation (last update).
+ *    - DRAFT: Z days after its last proposed slot ends; a draft with no slots, Z days after creation.
+ * 3. Execution: Deletes expired events in batches; the schema cascades to participants, votes, slots,
+ *    finalized sessions and queued webhooks. An event with a webhook still PENDING or RETRY that was
+ *    queued in the last 3 days is kept until that row is delivered, fails or ages out.
  * 4. Cleanup: Unpins associated Telegram messages to keep chat history clean.
  *
  * @param {Request} req - The incoming request.
  * @returns {NextResponse} JSON summary of the operation.
  */
 export async function GET(req: Request) {
+    // Security: Bearer CRON_SECRET only. requireCronAuth fails closed: no secret configured rejects every request.
+    try {
+        requireCronAuth(req);
+    } catch (e) {
+        return toResponse(e, log.forRequest(req));
+    }
+
     try {
         log.info("Cleanup job started");
 
-        // Security: Restrict to Localhost (Docker internal cron) OR Authorized Vercel Cron
-        // Requests from 127.0.0.1 or ::1 allowed.
-        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
-        const isLocal = ip.includes("127.0.0.1") || ip.includes("::1");
+        const { cleanupRetentionDays, telegram, discord } = getServerConfig();
+        const now = Date.now();
+        const cutoffFinalized = new Date(now - cleanupRetentionDays.finalized * DAY_MS);
+        const cutoffDraft = new Date(now - cleanupRetentionDays.draft * DAY_MS);
+        const cutoffCancelled = new Date(now - cleanupRetentionDays.cancelled * DAY_MS);
 
-        // Check for CRON_SECRET authorization
-        const authHeader = req.headers.get("authorization");
-        // Bearer token check
-        const isAuthorized = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
-
-        // STRICT SECURITY: We ONLY allow local requests (from loopback) OR verified secret.
-        if (!isLocal && !isAuthorized) {
-            log.warn("Blocked external cron attempt", { ip, hasAuth: !!authHeader });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Configurable Retention (Default: 1 Day)
-        const daysFinalized = parseInt(process.env.CLEANUP_RETENTION_DAYS_FINALIZED || "1");
-        const daysDraft = parseInt(process.env.CLEANUP_RETENTION_DAYS_DRAFT || "1");
-        const daysCancelled = parseInt(process.env.CLEANUP_RETENTION_DAYS_CANCELLED || "1");
-
-        const now = new Date();
-
-        const cutoffFinalized = new Date(now);
-        cutoffFinalized.setDate(now.getDate() - daysFinalized);
-
-        const cutoffDraft = new Date(now);
-        cutoffDraft.setDate(now.getDate() - daysDraft);
-
-        const cutoffCancelled = new Date(now);
-        cutoffCancelled.setDate(now.getDate() - daysCancelled);
-
-        // Fetch candidate events that might be expired.
-        const candidateEvents = await prisma.event.findMany({
-            where: {
-                OR: [
-                    { status: 'FINALIZED' },
-                    { status: 'CANCELLED' },
-                    { status: 'DRAFT' }
-                ]
-            },
-            include: {
-                timeSlots: true
-            }
-        });
-
-        // Intent: Filter in memory to handle complex logic involving relation (timeSlots) dates.
-        const eventsToDelete = candidateEvents.filter(event => {
-            if (event.status === 'CANCELLED') {
-                if (event.finalizedSlotId) {
-                    const slot = event.timeSlots.find(s => s.id === event.finalizedSlotId);
-                    if (slot && new Date(slot.startTime) < cutoffCancelled) return true;
-                }
-                return new Date(event.updatedAt) < cutoffCancelled;
-            }
-            else if (event.status === 'FINALIZED') {
-                if (!event.finalizedSlotId) return false;
-                const slot = event.timeSlots.find(s => s.id === event.finalizedSlotId);
-                if (!slot) return false;
-                // Delete finalized events after their start date + retention
-                return new Date(slot.startTime) < cutoffFinalized;
-            }
-            else {
-                // Drafts Logic
-                if (event.timeSlots.length === 0) {
-                    return new Date(event.createdAt) < cutoffDraft;
-                }
-                const lastEndTime = event.timeSlots.reduce((max, slot) => {
-                    return slot.endTime > max ? slot.endTime : max;
-                }, new Date(0));
-
-                return lastEndTime < cutoffDraft;
-            }
-        });
+        const webhookGrace = new Date(now - WEBHOOK_GRACE_DAYS * DAY_MS);
+        const expired = expiredEventsWhere(cutoffFinalized, cutoffDraft, cutoffCancelled, webhookGrace);
 
         let deletedCount = 0;
         let errors = 0;
-
+        let scanned = 0;
         let deletedLoginTokens = 0;
+        let cursor = 0;
 
-        if (eventsToDelete.length > 0) {
-            const { unpinChatMessage } = await import("@/features/telegram");
-            const { unpinDiscordMessage } = await import("@/features/discord/model/discord");
-            const tgToken = process.env.TELEGRAM_BOT_TOKEN;
-            const discordToken = process.env.DISCORD_BOT_TOKEN;
+        // Keyset pagination by id: rows that fail to delete are not re-read in the same run.
+        for (;;) {
+            const batch = await prisma.event.findMany({
+                where: { AND: [expired, { id: { gt: cursor } }] },
+                orderBy: { id: "asc" },
+                take: BATCH_SIZE,
+                select: CANDIDATE_FIELDS,
+            });
+            if (batch.length === 0) break;
+            cursor = batch[batch.length - 1].id;
+            scanned += batch.length;
 
-            for (const event of eventsToDelete) {
-                try {
-                    // Cleanup Telegram pins
-                    if (event.telegramChatId && event.pinnedMessageId && tgToken) {
-                        await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, tgToken);
+            const toDelete = await dropLiveOneShots(batch, cutoffFinalized);
+            if (toDelete.length > 0) {
+                const { unpinChatMessage } = await import("@/features/telegram");
+                const { unpinDiscordMessage } = await import("@/features/integrations/discord");
+
+                for (const event of toDelete) {
+                    // Cleanup pins: each platform independently; a failure never blocks deletion.
+                    try {
+                        if (event.telegramChatId && event.pinnedMessageId && telegram.token) {
+                            await unpinChatMessage(event.telegramChatId, event.pinnedMessageId, telegram.token);
+                        }
+                    } catch (e) {
+                        log.warn(`Failed to unpin Telegram message for ${event.slug}`, e as Error);
                     }
 
-                    // Cleanup Discord Dashboard pins
-                    if (event.discordChannelId && event.discordMessageId && discordToken) {
-                        await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+                    try {
+                        if (event.discordChannelId && event.discordMessageId && discord.botToken) {
+                            await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discord.botToken);
+                        }
+                    } catch (e) {
+                        log.warn(`Failed to unpin Discord message for ${event.slug}`, e as Error);
                     }
 
-                    // Database Deletion
-                    await prisma.$transaction(async (tx) => {
-                        // Fix: Must delete WebhookEvents first (FK Constraint: WebhookEvent_eventId_fkey)
-                        await tx.webhookEvent.deleteMany({ where: { eventId: event.id } });
-                        await tx.vote.deleteMany({ where: { timeSlot: { eventId: event.id } } });
-                        await tx.timeSlot.deleteMany({ where: { eventId: event.id } });
-                        await tx.participant.deleteMany({ where: { eventId: event.id } });
-                        await tx.event.delete({ where: { id: event.id } });
-                    });
-
-                    log.info(`Deleted expired event: ${event.slug} (${event.title})`);
-                    deletedCount++;
-                } catch (e) {
-                    log.error(`Failed to delete event ${event.slug}`, e as Error);
-                    errors++;
+                    try {
+                        // Cascades to slots, participants, votes, finalized sessions and webhook rows.
+                        await prisma.event.delete({ where: { id: event.id } });
+                        log.info(`Deleted expired event: ${event.slug}`);
+                        deletedCount++;
+                    } catch (e) {
+                        log.error(`Failed to delete event ${event.slug}`, e as Error);
+                        errors++;
+                    }
                 }
             }
+
+            if (batch.length < BATCH_SIZE) break;
         }
 
         try {
@@ -157,11 +119,109 @@ export async function GET(req: Request) {
             deleted: deletedCount,
             deletedLoginTokens,
             errors,
-            scanned: candidateEvents.length
+            scanned
         });
 
     } catch (error) {
         log.error("Cron Error", error as Error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const BATCH_SIZE = 200;
+/** An undelivered webhook younger than this keeps its event (and so the row) out of cleanup. */
+const WEBHOOK_GRACE_DAYS = 3;
+
+/** Only what deletion and pin cleanup need; no user text is loaded. */
+const CANDIDATE_FIELDS = {
+    id: true,
+    slug: true,
+    status: true,
+    eventType: true,
+    finalizedSlotId: true,
+    telegramChatId: true,
+    pinnedMessageId: true,
+    discordChannelId: true,
+    discordMessageId: true,
+} satisfies Prisma.EventSelect;
+
+type Candidate = Prisma.EventGetPayload<{ select: typeof CANDIDATE_FIELDS }>;
+
+/**
+ * Events past retention. Everything except the one-shot rule is decided in the database;
+ * one-shots are pre-filtered here and confirmed against their finalized slot in
+ * `dropLiveOneShots`, because `finalizedSlotId` is not a relation Prisma can filter through.
+ */
+function expiredEventsWhere(
+    cutoffFinalized: Date,
+    cutoffDraft: Date,
+    cutoffCancelled: Date,
+    webhookGrace: Date,
+): Prisma.EventWhereInput {
+    // Deleting the event cascades to its webhook rows, so one still in flight would be lost.
+    const noPendingWebhook: Prisma.EventWhereInput = {
+        webhooks: { none: { status: { in: ["PENDING", "RETRY"] }, createdAt: { gte: webhookGrace } } },
+    };
+    return {
+        AND: [
+            noPendingWebhook,
+            {
+                OR: [
+                    // Campaign: its last finalized session ended before the cutoff.
+                    {
+                        status: "FINALIZED",
+                        eventType: "CAMPAIGN",
+                        finalizedSessions: { some: {}, none: { timeSlot: { endTime: { gte: cutoffFinalized } } } },
+                    },
+                    // Campaign finalized without any session rows: fall back to the last edit.
+                    {
+                        status: "FINALIZED",
+                        eventType: "CAMPAIGN",
+                        finalizedSessions: { none: {} },
+                        updatedAt: { lt: cutoffFinalized },
+                    },
+                    // One-shot: some slot ended before the cutoff (confirmed against the finalized slot below).
+                    {
+                        status: "FINALIZED",
+                        eventType: { not: "CAMPAIGN" },
+                        finalizedSlotId: { not: null },
+                        timeSlots: { some: { endTime: { lt: cutoffFinalized } } },
+                    },
+                    { status: "CANCELLED", updatedAt: { lt: cutoffCancelled } },
+                    // Draft: its last proposed slot ended before the cutoff. Edits do not extend it.
+                    {
+                        status: "DRAFT",
+                        timeSlots: { some: {}, none: { endTime: { gte: cutoffDraft } } },
+                    },
+                    // Draft with no proposed slots at all: counted from creation.
+                    {
+                        status: "DRAFT",
+                        timeSlots: { none: {} },
+                        createdAt: { lt: cutoffDraft },
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+/** Keeps a finalized one-shot only if its own finalized slot ended before the cutoff. */
+async function dropLiveOneShots(batch: Candidate[], cutoffFinalized: Date): Promise<Candidate[]> {
+    const oneShots = batch.filter((e) => e.status === "FINALIZED" && e.eventType !== "CAMPAIGN");
+    if (oneShots.length === 0) return batch;
+
+    const expiredSlots = await prisma.timeSlot.findMany({
+        where: {
+            id: { in: oneShots.map((e) => e.finalizedSlotId).filter((id): id is number => id !== null) },
+            endTime: { lt: cutoffFinalized },
+        },
+        select: { id: true, eventId: true },
+    });
+    const expiredSlotOwner = new Map(expiredSlots.map((s) => [s.id, s.eventId]));
+
+    return batch.filter((e) => {
+        if (e.status !== "FINALIZED" || e.eventType === "CAMPAIGN") return true;
+        return e.finalizedSlotId !== null && expiredSlotOwner.get(e.finalizedSlotId) === e.id;
+    });
 }

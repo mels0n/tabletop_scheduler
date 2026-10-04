@@ -1,4 +1,5 @@
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
+import { escapeHtml } from "@/shared/lib/escape";
 
 /**
  * @interface EventData
@@ -22,6 +23,11 @@ interface SlotData {
     endTime: Date;
 }
 
+/** One "- name" line per participant, each name HTML-escaped. */
+function nameList(names: string[]): string {
+    return names.map((n) => `- ${escapeHtml(n)}`).join('\n');
+}
+
 /**
  * @function buildFinalizedMessage
  * @description Constructs a rich HTML formatted message for Telegram.
@@ -29,6 +35,9 @@ interface SlotData {
  * 1. Bold header and details.
  * 2. Deep links to "Add to Calendar" providers (Google, Outlook, ICS).
  * 3. Formatted dates localized to the event's timezone (defaulting to UTC).
+ *
+ * Every user-supplied value (title, host, location, names) is HTML-escaped once, here,
+ * at interpolation. Callers pass raw values.
  *
  * @param {EventData} event - The event details.
  * @param {SlotData} slot - The selected time slot.
@@ -39,19 +48,17 @@ interface SlotData {
 export function buildFinalizedMessage(
     event: EventData,
     slot: SlotData,
-    origin: string,
+    origin: string | null,
     attendees: string[] = [],
     waitlist: string[] = []
 ): string {
     const slotTime = new Date(slot.startTime);
     const slotEndTime = new Date(slot.endTime);
 
-    const icsLink = `${origin}/api/event/${event.slug}/ics`;
-
     // Intent: Structure metadata for external calendar services.
     const calendarEvent = {
         title: event.title,
-        description: `${event.description ? event.description + '\n\n' : ''}Hosted by ${event.finalizedHost?.name || 'TBD'}.\nView Event: ${origin}/e/${event.slug}`,
+        description: `${event.description ? event.description + '\n\n' : ''}Hosted by ${event.finalizedHost?.name || 'TBD'}.${origin ? `\nView Event: ${origin}/e/${event.slug}` : ''}`,
         location: event.location,
         slug: event.slug
     };
@@ -59,8 +66,8 @@ export function buildFinalizedMessage(
     const googleLink = googleCalendarUrl(calendarEvent, slotTime, slotEndTime);
     const outlookLink = outlookCalendarUrl(calendarEvent, slotTime, slotEndTime);
 
-    let locString = event.location ? `\n📍 ${event.location}` : "";
-    let hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
+    const locString = event.location ? `\n📍 ${escapeHtml(event.location)}` : "";
+    const hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${escapeHtml(event.finalizedHost.name)}</b>` : "";
 
     // Intent: Format time in the Event's specific timezone for clarity.
     const timeString = slotTime.toLocaleTimeString('en-US', {
@@ -81,13 +88,17 @@ export function buildFinalizedMessage(
     let listString = "";
     if (waitlist.length > 0) {
         // If there's a waitlist, we definitely want to show who made it.
-        listString += `\n\n👥 <b>Attendees:</b>\n${attendees.map(a => `- ${a}`).join('\n')}`;
-        listString += `\n\n⚠️ <b>Waitlist (Next Up):</b>\n${waitlist.map(w => `- ${w}`).join('\n')}`;
+        listString += `\n\n👥 <b>Attendees:</b>\n${nameList(attendees)}`;
+        listString += `\n\n⚠️ <b>Waitlist (Next Up):</b>\n${nameList(waitlist)}`;
     }
 
-    const eventUrl = `${origin}/e/${event.slug}`;
+    // Without a configured origin there is no absolute link to give, so those links are dropped.
+    const calendarLinks = `<a href="${escapeHtml(googleLink)}">📅 Google Calendar</a> | <a href="${escapeHtml(outlookLink)}">📧 Outlook</a>`;
+    const linkBlock = origin
+        ? `<a href="${escapeHtml(`${origin}/e/${event.slug}`)}">🔗 View Event Details</a>\n${calendarLinks} | <a href="${escapeHtml(`${origin}/api/event/${event.slug}/ics`)}">📎 ICS</a>`
+        : calendarLinks;
 
-    return `🎉 <b>Event Finalized!</b>\n\n<b>${event.title}</b> is happening on:\n📅 ${dateString}\n⏰ ${timeString}${hostString}${locString}${listString}\n\n<a href="${eventUrl}">🔗 View Event Details</a>\n<a href="${googleLink}">📅 Google Calendar</a> | <a href="${outlookLink}">📧 Outlook</a> | <a href="${icsLink}">📎 ICS</a>\n\nSee you there!`;
+    return `🎉 <b>Event Finalized!</b>\n\n<b>${escapeHtml(event.title)}</b> is happening on:\n📅 ${dateString}\n⏰ ${timeString}${hostString}${locString}${listString}\n\n${linkBlock}\n\nSee you there!`;
 }
 
 /**
@@ -98,7 +109,7 @@ export function buildFinalizedMessage(
  *
  * @param {EventData} event - The event details.
  * @param {SlotData[]} slots - All finalized session slots, sorted by startTime.
- * @param {string} origin - The base URL origin.
+ * @param {string | null} origin - The base URL origin; null drops the absolute links.
  * @param {string[]} [attendees] - List of accepted participant names.
  * @param {string[]} [waitlist] - List of waitlisted participant names.
  * @returns {string} HTML string compatible with Telegram's parse_mode='HTML'.
@@ -106,12 +117,10 @@ export function buildFinalizedMessage(
 export function buildCampaignFinalizedMessage(
     event: EventData,
     slots: SlotData[],
-    origin: string,
+    origin: string | null,
     attendees: string[] = [],
     waitlist: string[] = []
 ): string {
-    const icsLink = `${origin}/api/event/${event.slug}/ics`;
-    const eventUrl = `${origin}/e/${event.slug}`;
 
     const tz = event.timezone || 'UTC';
 
@@ -136,15 +145,15 @@ export function buildCampaignFinalizedMessage(
         return `  ${i + 1}. 📅 ${dateString} ⏰ ${timeString}`;
     }).join('\n');
 
-    let hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${event.finalizedHost.name}</b>` : "";
-    let locString = event.location ? `\n📍 ${event.location}` : "";
+    const hostString = event.finalizedHost ? `\n🏠 Hosted by <b>${escapeHtml(event.finalizedHost.name)}</b>` : "";
+    const locString = event.location ? `\n📍 ${escapeHtml(event.location)}` : "";
 
     // Intent: Add Attendee Lists if applicable (Max Players logic)
     let listString = "";
     if (waitlist.length > 0) {
-        listString += `\n\n👥 <b>Attendees:</b>\n${attendees.map(a => `- ${a}`).join('\n')}`;
-        listString += `\n\n⚠️ <b>Waitlist (Next Up):</b>\n${waitlist.map(w => `- ${w}`).join('\n')}`;
+        listString += `\n\n👥 <b>Attendees:</b>\n${nameList(attendees)}`;
+        listString += `\n\n⚠️ <b>Waitlist (Next Up):</b>\n${nameList(waitlist)}`;
     }
 
-    return `🎉 <b>Campaign Finalized!</b>\n\n<b>${event.title}</b>\n\n${sessionLines}${hostString}${locString}${listString}\n\n<a href="${eventUrl}">🔗 View Event Details</a> | <a href="${icsLink}">📎 Download ICS</a>\n\nSee you there!`;
+    return `🎉 <b>Campaign Finalized!</b>\n\n<b>${escapeHtml(event.title)}</b>\n\n${sessionLines}${hostString}${locString}${listString}${origin ? `\n\n<a href="${escapeHtml(`${origin}/e/${event.slug}`)}">🔗 View Event Details</a> | <a href="${escapeHtml(`${origin}/api/event/${event.slug}/ics`)}">📎 Download ICS</a>` : ''}\n\nSee you there!`;
 }

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { LinkedAccountsPanel } from "@/features/auth/ui/LinkedAccountsPanel";
+import { LinkedAccountsPanel } from "@/features/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,8 @@ export const metadata: Metadata = {
  * Reads the same httpOnly platform cookies as the profile page to decide which platforms
  * are currently linked on this browser.
  */
-export default function ProfilePrivacyPage() {
-    const cookieStore = cookies();
+export default async function ProfilePrivacyPage() {
+    const cookieStore = await cookies();
     const isTelegramSynced = !!cookieStore.get("tabletop_user_chat_id")?.value;
     const isDiscordSynced = !!cookieStore.get("tabletop_user_discord_id")?.value;
 
@@ -43,7 +43,8 @@ export default function ProfilePrivacyPage() {
                     <p className="text-slate-400 mt-2 max-w-xl">
                         Account-level controls for the data Tabletop Time stores about your linked
                         platforms. Looking to just sign this browser out of Telegram or Discord sync,
-                        or to link and unlink individual events? Both of those live on your{" "}
+                        to link and unlink individual events, or to turn off direct messages from the bot? Those
+                        live on your{" "}
                         <Link href="/profile" className="text-indigo-400 hover:text-indigo-300 underline">
                             My Events
                         </Link>{" "}
@@ -54,7 +55,7 @@ export default function ProfilePrivacyPage() {
                 <LinkedAccountsPanel isTelegramSynced={isTelegramSynced} isDiscordSynced={isDiscordSynced} />
 
                 <p className="text-xs text-slate-600">
-                    Event data itself is purged automatically after events end. See our{" "}
+                    Event data itself is deleted automatically one day after each event ends. See our{" "}
                     <Link href="/privacy" className="text-slate-500 hover:text-slate-300 underline">
                         privacy overview
                     </Link>{" "}

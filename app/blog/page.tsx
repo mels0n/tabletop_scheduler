@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { notFound } from "next/navigation";
 import { getAllPosts } from '@/shared/lib/blog';
 import { Metadata } from 'next';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
-    title: 'Blog — D&D Scheduling Tips & MTG Logistics',
+    title: 'Blog: D&D Scheduling Tips & MTG Logistics',
     description: 'Articles, guides, and tips for scheduling D&D sessions, organizing Magic: The Gathering nights, and managing tabletop groups.',
     alternates: {
         canonical: '/blog',
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default function BlogIndex() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         notFound();

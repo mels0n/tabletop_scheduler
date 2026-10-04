@@ -1,6 +1,9 @@
 
 import { NextResponse } from "next/server";
 import Logger from "@/shared/lib/logger";
+import { requireCronAuth } from "@/shared/lib/cron-auth";
+import { toResponse } from "@/shared/errors";
+import { getServerConfig } from "@/shared/config/server";
 
 const log = Logger.get("CronReminders");
 
@@ -8,42 +11,41 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure fresh execution; no ca
 
 /**
  * @function GET
- * @description Cron endpoint to invoke the Telegram Reminder logic.
+ * @description Cron endpoint to run voting and session reminders for Telegram and Discord events.
  *
  * Pattern: Trigger-Action.
  * Why? Next.js Server Actions or long-running processes (like poller loops) are hard to keep alive in Serverless.
- * This endpoint provides a "hook" that can be hit externally (Vercel Cron) or internally (Docker Loop)
- * to spin up the reminder check logic on demand.
+ * This endpoint provides a "hook" that is hit by pg_cron on hosted, the start.sh loop on self-host,
+ * GitHub Actions as backstop, to spin up the reminder check logic on demand.
  *
  * @param {Request} request - The trigger request.
- * @returns {NextResponse} Success/Failure status.
+ * @returns {NextResponse} 200 with per-type counts; 500 when a whole run threw, so the
+ * scheduler (pg_cron, the GitHub backstop's `curl --fail`) records the failure.
  */
 export async function GET(request: Request) {
-    const authHeader = request.headers.get('authorization');
-
-    // basic security check for CRON_SECRET if desired, but Vercel protects cron routes usually
-    // or we can rely on obfuscating the URL if strictly necessary, but for now open
-    // Ideally, check for process.env.CRON_SECRET
-    if (process.env.CRON_SECRET && `Bearer ${process.env.CRON_SECRET}` !== authHeader) {
-        return new NextResponse('Unauthorized', { status: 401 });
+    try {
+        requireCronAuth(request);
+    } catch (e) {
+        return toResponse(e, log.forRequest(request));
     }
 
     log.info("triggering reminder check via API");
 
     try {
-        const { checkReminders } = await import("@/features/telegram");
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-
-        if (!token) {
-            return NextResponse.json({ error: "No Bot Token" }, { status: 500 });
+        // Intent: Telegram and Discord are peers. Only skip when neither bot is configured.
+        const { telegram, discord } = getServerConfig();
+        if (!telegram.token && !discord.botToken) {
+            return NextResponse.json({ success: true, skipped: "no bot configured" });
         }
 
-        // Intent: Execute the core business logic defined in the library.
-        await checkReminders(token);
+        const { runReminders } = await import("@/features/notifications");
+        const { ok, voting, session } = await runReminders();
+        if (!ok) {
+            return toResponse(new Error("Reminder run failed"), log.forRequest(request));
+        }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, voting, session });
     } catch (e) {
-        log.error("Failed to run reminders", e as Error);
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+        return toResponse(e, log.forRequest(request));
     }
 }

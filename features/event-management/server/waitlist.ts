@@ -1,10 +1,72 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { syncDashboard } from "@/app/api/event/[slug]/slot/notify";
+import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
+import { syncDashboard } from "@/features/event-management/server/dashboard-sync";
+import { canTakeOpenSeat } from "@/features/event-management/model/seating";
 
 const log = Logger.get("WaitlistService");
 
-export async function processWaitlistPromotion(eventId: number) {
+interface CandidateVote {
+    preference: string;
+    createdAt: Date;
+}
+
+interface Candidate {
+    id: number;
+    chatId: string | null;
+    discordId: string | null;
+    votes: CandidateVote[];
+}
+
+/** Ranking of a preference: YES, then MAYBE, then NO (and anything unknown). */
+function preferenceScore(p: string): number {
+    if (p === 'YES') return 0;
+    if (p === 'MAYBE') return 1;
+    return 2;
+}
+
+/** Best vote across the finalized slot(s): YES beats MAYBE beats NO, then the earliest. */
+function bestVote(votes: CandidateVote[]): CandidateVote | undefined {
+    return [...votes].sort((a, b) =>
+        preferenceScore(a.preference) - preferenceScore(b.preference) || a.createdAt.getTime() - b.createdAt.getTime()
+    )[0];
+}
+
+/** YES, then MAYBE, then NO, then oldest vote first; candidates without a vote go last. */
+function rankCandidates(candidates: Candidate[]): Candidate[] {
+    const getScore = preferenceScore;
+    return [...candidates].sort((a, b) => {
+        const voteA = bestVote(a.votes);
+        const voteB = bestVote(b.votes);
+        if (!voteA) return 1;
+        if (!voteB) return -1;
+        const byPreference = getScore(voteA.preference) - getScore(voteB.preference);
+        if (byPreference !== 0) return byPreference;
+        return voteA.createdAt.getTime() - voteB.createdAt.getTime();
+    });
+}
+
+/**
+ * Fills open seats on a finalized event from its waitlist, best candidate first.
+ *
+ * Who may take a seat: a candidate whose best vote on the finalized slot(s) is YES takes any open
+ * seat (below `maxPlayers`). A MAYBE ("If Needed") candidate is seated only while the event is
+ * below `minPlayers`, mirroring finalize, which adds If Needed players only to reach the minimum.
+ * No minimum (null or 0) means If Needed players are never auto-promoted. A candidate with no
+ * vote on the finalized slot(s) is never promoted.
+ *
+ * Concurrency: every promotion happens in one transaction that first touches the event row
+ * (a row lock on Postgres, a write lock on SQLite), counts ACCEPTED, flips the candidate with a
+ * conditional `updateMany` (status still WAITLIST), and recounts; an overbooked recount reverts
+ * that promotion. Two concurrent runs therefore cannot both take the last seat, and a
+ * candidate promoted by another run is skipped. Notifications go out after the commit.
+ *
+ * Campaigns have no `finalizedSlotId`; their candidates are ranked by votes on the
+ * `FinalizedSession` slots instead.
+ *
+ * Never throws: failures are logged and the caller carries on.
+ */
+export async function processWaitlistPromotion(eventId: number): Promise<void> {
     try {
         const event = await prisma.event.findUnique({
             where: { id: eventId }
@@ -13,24 +75,22 @@ export async function processWaitlistPromotion(eventId: number) {
         if (!event || event.status !== 'FINALIZED' || !event.maxPlayers) {
             return;
         }
+        const maxPlayers = event.maxPlayers;
+        const minPlayers = event.minPlayers || 0;
 
-        // Re-fetch counts to see if a spot opened up
-        const count = await prisma.participant.count({
-            where: { eventId, status: 'ACCEPTED' }
-        });
+        const slotIds = event.finalizedSlotId !== null
+            ? [event.finalizedSlotId]
+            : (await prisma.finalizedSession.findMany({
+                where: { eventId },
+                select: { timeSlotId: true }
+            })).map(s => s.timeSlotId);
 
-        if (count >= event.maxPlayers) {
-            return; // No spots available
-        }
-
-        const spotsAvailable = event.maxPlayers - count;
-
-        // Fetch WAITLIST candidates with their votes for the finalized slot
-        const candidates = await prisma.participant.findMany({
+        // Fetch WAITLIST candidates with their votes for the finalized slot(s)
+        const candidates: Candidate[] = await prisma.participant.findMany({
             where: { eventId, status: 'WAITLIST' },
             include: {
                 votes: {
-                    where: { timeSlotId: event.finalizedSlotId! }
+                    where: slotIds.length === 1 ? { timeSlotId: slotIds[0] } : { timeSlotId: { in: slotIds } }
                 }
             }
         });
@@ -39,62 +99,63 @@ export async function processWaitlistPromotion(eventId: number) {
             return; // No one to promote
         }
 
-        // Sort candidates in memory
-        candidates.sort((a, b) => {
-            const voteA = a.votes[0];
-            const voteB = b.votes[0];
+        const ranked = rankCandidates(candidates);
 
-            // Safety Check: Users should have a vote for this slot if on waitlist
-            if (!voteA) return 1;
-            if (!voteB) return -1;
+        const promoted = await prisma.$transaction(async (tx) => {
+            // Serialize promotions for this event (see function comment).
+            await tx.event.updateMany({ where: { id: eventId }, data: { updatedAt: new Date() } });
 
-            // 1. Preference: YES (0) < MAYBE (1)
-            const getScore = (p: string) => (p === 'YES' ? 0 : 1);
-            const scoreA = getScore(voteA.preference);
-            const scoreB = getScore(voteB.preference);
+            let accepted = await tx.participant.count({ where: { eventId, status: 'ACCEPTED' } });
+            const out: Candidate[] = [];
 
-            if (scoreA !== scoreB) {
-                return scoreA - scoreB;
+            for (const candidate of ranked) {
+                if (accepted >= maxPlayers) break;
+
+                const preference = bestVote(candidate.votes)?.preference;
+                // No vote on the finalized slot(s), or a NO: never auto-promoted.
+                if (preference === undefined || preference === 'NO') continue;
+                if (!canTakeOpenSeat(preference, accepted, minPlayers, maxPlayers)) {
+                    // Ranked YES before MAYBE, so once one candidate cannot be seated nobody
+                    // later in the list can be either.
+                    break;
+                }
+
+                const claimed = await tx.participant.updateMany({
+                    where: { id: candidate.id, eventId, status: 'WAITLIST' },
+                    data: { status: 'ACCEPTED' }
+                });
+                if (claimed.count !== 1) continue; // Already moved by someone else.
+
+                accepted = await tx.participant.count({ where: { eventId, status: 'ACCEPTED' } });
+                if (accepted > maxPlayers) {
+                    await tx.participant.updateMany({
+                        where: { id: candidate.id, eventId, status: 'ACCEPTED' },
+                        data: { status: 'WAITLIST' }
+                    });
+                    break;
+                }
+                out.push(candidate);
             }
 
-            // 2. Time: Oldest First
-            return voteA.createdAt.getTime() - voteB.createdAt.getTime();
+            return out;
         });
 
-        const waitlist = candidates.slice(0, spotsAvailable);
-        let userPromoted = false;
-
-        for (const candidate of waitlist) {
-            // Promote
-            await prisma.participant.update({
-                where: { id: candidate.id },
-                data: { status: 'ACCEPTED' }
-            });
-            userPromoted = true;
-
-            // Notify Candidate via Telegram
-            if (candidate.chatId && process.env.TELEGRAM_BOT_TOKEN) {
-                const { sendTelegramMessage } = await import("@/features/telegram");
-                await sendTelegramMessage(
-                    candidate.chatId,
-                    `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${event.title}</b> and you've been moved off the waitlist!`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-
-            // Notify Candidate via Discord (if mapped)
-            if (candidate.discordId && process.env.DISCORD_BOT_TOKEN) {
-                const { createDMChannel, sendDiscordMessage } = await import("@/features/discord/model/discord");
-                const dm = await createDMChannel(candidate.discordId, process.env.DISCORD_BOT_TOKEN);
-                if (dm?.id) {
-                    await sendDiscordMessage(dm.id, `🎟️ **You're In!**\n\nA spot opened up for **${event.title}** and you've been moved off the waitlist!`, process.env.DISCORD_BOT_TOKEN);
-                }
-            }
+        for (const candidate of promoted) {
+            // Notify candidate on every linked platform (independent)
+            const { sendDirectMessage } = await import("@/features/notifications");
+            await sendDirectMessage(
+                { telegramChatId: candidate.chatId, discordUserId: candidate.discordId },
+                {
+                    html: `🎟️ <b>You're In!</b>\n\nA spot opened up for <b>${escapeHtml(event.title)}</b> and you've been moved off the waitlist!`,
+                    discord: `🎟️ **You're In!**\n\nA spot opened up for **${escapeDiscordMarkdown(event.title)}** and you've been moved off the waitlist!`,
+                },
+                { eventId, participantId: candidate.id, kind: "waitlist-promotion" }
+            );
 
             log.info("Auto-promoted user from waitlist", { eventId, participantId: candidate.id });
         }
 
-        if (userPromoted) {
+        if (promoted.length > 0) {
             await syncDashboard(eventId);
         }
 

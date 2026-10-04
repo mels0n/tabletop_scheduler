@@ -9,7 +9,7 @@ faq:
   - question: "How does Tabletop Time protect my privacy?"
     answer: "Unlike traditional scheduling platforms that harvest user data to show ads or require lengthy account creations, Tabletop Time is completely zero-login. We don't ask for your email, we don't sell your data to third parties, and participants only need a link and a name to vote on a time."
   - question: "Is Tabletop Time free to use?"
-    answer: "Yes, creating casual polls and event scheduling links is free. We also offer a premium tier for organizers who need advanced features like automated Discord and Telegram webhook reminders."
+    answer: "Yes. Everything is free, including the Discord and Telegram bots and their automated reminders. There is no premium tier; the project is supported by optional Ko-fi donations."
 ---
 
 # Beyond the Tabletop: Alternative Uses for Tabletop Time
@@ -18,7 +18,7 @@ Tabletop Time was born out of a very specific frustration: trying to get four ad
 
 But once you solve the problem of coordinating four busy schedules for a niche hobby, you quickly realize you've solved the problem for *everything else*. 
 
-While we love targeting the tabletop gaming community, the core philosophy of Tabletop Time—**speed, consensus, and zero friction**—makes it the ideal tool for almost any group gathering.
+While we love targeting the tabletop gaming community, the core philosophy of Tabletop Time (**speed, consensus, and zero friction**) makes it the ideal tool for almost any group gathering.
 
 ## 1. The Fantasy Football Draft
 

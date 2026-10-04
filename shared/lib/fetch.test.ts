@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { reliableFetch } from './fetch';
+import { reliableFetch, redactUrl } from './fetch';
 
 /**
  * Minimal Response stand-in: jsdom doesn't reliably expose the fetch Response class,
@@ -85,5 +85,79 @@ describe('reliableFetch — 429 rate limit handling', () => {
 
         expect(res.status).toBe(200);
         expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('redactUrl', () => {
+    it('redacts a Telegram bot token from a string URL', () => {
+        expect(redactUrl('https://api.telegram.org/bot123456:ABC-def_GHI/sendMessage'))
+            .toBe('https://api.telegram.org/bot***/sendMessage');
+    });
+
+    it('redacts a URL object', () => {
+        expect(redactUrl(new URL('https://api.telegram.org/bot123456:ABC/getUpdates?offset=1')))
+            .toBe('https://api.telegram.org/bot***/getUpdates?offset=1');
+    });
+
+    it('redacts a file download URL', () => {
+        expect(redactUrl('https://api.telegram.org/file/bot123456:ABC/photos/1.jpg'))
+            .toBe('https://api.telegram.org/file/bot***/photos/1.jpg');
+    });
+
+    it('leaves other URLs alone', () => {
+        expect(redactUrl('https://discord.com/api/v10/channels/1/messages'))
+            .toBe('https://discord.com/api/v10/channels/1/messages');
+    });
+});
+
+describe('reliableFetch never logs the bot token', () => {
+    const TOKEN = '123456:SECRET-token_value';
+    const URL_WITH_TOKEN = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        vi.stubGlobal('fetch', mockFetch);
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
+
+    function captureConsole() {
+        const lines: string[] = [];
+        for (const m of ['debug', 'info', 'warn', 'error', 'log'] as const) {
+            vi.spyOn(console, m).mockImplementation((...args: unknown[]) => {
+                lines.push(args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '));
+            });
+        }
+        return lines;
+    }
+
+    it('on 5xx, 429 and network failure', async () => {
+        const lines = captureConsole();
+        mockFetch
+            .mockResolvedValueOnce(mockRes(500))
+            .mockResolvedValueOnce(mockRes(429, { retryAfterHeader: '0' }))
+            .mockRejectedValueOnce(new Error('ECONNRESET'))
+            .mockRejectedValueOnce(new Error('ECONNRESET'));
+
+        await expect(reliableFetch(URL_WITH_TOKEN, { retries: 3, retryDelayMs: 1 })).rejects.toThrow('ECONNRESET');
+
+        expect(lines.length).toBeGreaterThanOrEqual(4);
+        for (const line of lines) {
+            expect(line).not.toContain('SECRET');
+        }
+        expect(lines.some(l => l.includes('bot***'))).toBe(true);
+    });
+
+    it('when Retry-After exceeds the cap', async () => {
+        const lines = captureConsole();
+        mockFetch.mockResolvedValueOnce(mockRes(429, { retryAfterHeader: '3600' }));
+
+        await reliableFetch(URL_WITH_TOKEN, { retries: 2 });
+
+        expect(lines.length).toBe(1);
+        expect(lines[0]).not.toContain('SECRET');
     });
 });

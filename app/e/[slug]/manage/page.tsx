@@ -8,26 +8,27 @@ import { ManagerControls } from "@/components/ManagerControls";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
-import { CampaignFinalizeModal } from "./CampaignFinalizeModal";
 import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
-import { getBotUsername } from "@/features/telegram/lib/telegram-client";
+import { getBotUsername } from "@/features/telegram";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
-import { DiscordConnect } from "@/features/discord/ui/DiscordConnect";
+import { DiscordConnect } from "@/features/integrations/discord";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
 import { SyncBadge } from "@/components/SyncBadge";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
+import { toManageParticipant } from "@/features/event-management";
+import { getServerConfig } from "@/shared/config/server";
 
 /**
  * @interface PageProps
  * @description Standard Next.js page props interface with dynamic route parameters.
  */
 interface PageProps {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }
 
 /**
@@ -82,7 +83,8 @@ async function getEventWithVotes(slug: string) {
  * - Pre-sorts TimeSlots based on a heuristic: Perfect > Total Votes > Yes Votes > Has Host.
  * - Conditional Rendering: Switches between "Voting Mode" (list of slots) and "Finalized Mode" (Big Green Success Card).
  */
-export default async function ManageEventPage({ params }: PageProps) {
+export default async function ManageEventPage(props: PageProps) {
+    const params = await props.params;
     // Security: Verify Admin Access Server-Side
     // Middleware only checks for cookie presence, not validity.
     const isAdmin = await verifyEventAdmin(params.slug);
@@ -96,7 +98,7 @@ export default async function ManageEventPage({ params }: PageProps) {
         notFound();
     }
 
-    const botUsername = await getBotUsername(process.env.TELEGRAM_BOT_TOKEN || '') || 'TabletopSchedulerBot';
+    const botUsername = (await getBotUsername(getServerConfig().telegram.token || '')) || 'TabletopSchedulerBot';
 
     // Algorithm: Score and Sort Slots
     const slots = event.timeSlots.map(slot => {
@@ -113,7 +115,7 @@ export default async function ManageEventPage({ params }: PageProps) {
 
         const potentialHosts = slot.votes
             .filter(v => (v.preference === 'YES' || v.preference === 'MAYBE') && v.canHost)
-            .map(v => v.participant);
+            .map(v => ({ id: v.participant.id, name: v.participant.name }));
 
         return {
             ...slot,
@@ -129,9 +131,9 @@ export default async function ManageEventPage({ params }: PageProps) {
 
     // Custom Sort Strategy:
     // 1. "Perfect" (Everyone + Host) is top priority.
-    // 2. "Total Turnout" (Yes + Maybe) is second — availability is the scarce resource.
+    // 2. "Total Turnout" (Yes + Maybe) is second, because availability is the scarce resource.
     // 3. "Strong Preference" (Yes count) is third.
-    // 4. "Has Host" breaks ties — a location is easier to find than a person.
+    // 4. "Has Host" breaks ties, since a location is easier to find than a person.
     slots.sort((a, b) => {
         // 1. Status Category (Perfect > Viable > Low)
         // We rely on 'perfect' flag for top tier.
@@ -153,12 +155,18 @@ export default async function ManageEventPage({ params }: PageProps) {
         return 0;
     });
 
+    // Client components get DTOs and narrow props only, never Prisma rows: rows carry platform
+    // IDs and, on the event, the admin token hash.
+    const manageParticipants = event.participants.map(p => toManageParticipant(p, event.finalizedHostId));
+    const manageSlotRows = event.timeSlots.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime }));
+    const participantIds = event.participants.map(p => ({ id: p.id }));
+
     const isFinalized = event.status === 'FINALIZED';
     const isCampaign = event.eventType === 'CAMPAIGN';
     const finalizedSlot = isFinalized && !isCampaign ? event.timeSlots.find(s => s.id === event.finalizedSlotId) : null;
     const finalizedSessions = event.finalizedSessions ?? [];
 
-    // Campaign session grouping — order-independent algorithm:
+    // Campaign session grouping (order-independent algorithm):
     // 1. Compute pairwise intersections across all voted sessions to find candidate group keys
     // 2. Rank candidate keys by size DESC then coverage DESC
     // 3. Greedily assign each session to the largest key it qualifies for
@@ -193,7 +201,7 @@ export default async function ManageEventPage({ params }: PageProps) {
             }
         }
 
-        // Step 2: for each candidate key, collect ALL sessions that qualify —
+        // Step 2: for each candidate key, collect ALL sessions that qualify:
         //         sessions can and should appear in multiple groups (a date with 5 players
         //         is valid for both the 4-player group and any 2-player subset groups).
         //         Keep groups with ≥ 2 qualifying sessions; sort largest key first.
@@ -339,6 +347,8 @@ export default async function ManageEventPage({ params }: PageProps) {
                                 initialReminderEnabled={event.reminderEnabled}
                                 initialReminderTime={event.reminderTime}
                                 initialReminderDays={event.reminderDays}
+                                initialSessionReminderEnabled={event.sessionReminderEnabled}
+                                initialSessionReminderLeadMinutes={event.sessionReminderLeadMinutes}
                             />
                         </div>
 
@@ -346,7 +356,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                         <div className="space-y-3">
                             <SidebarLabel>Players</SidebarLabel>
                             {event.participants.length > 0 ? (
-                                <ManageParticipants slug={event.slug} participants={event.participants} />
+                                <ManageParticipants slug={event.slug} participants={manageParticipants} />
                             ) : (
                                 <p className="text-xs text-slate-500 py-1">No players have voted yet.</p>
                             )}
@@ -366,7 +376,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                                     <div className="space-y-2">
                                         {finalizedSessions.map((fs, i) => {
                                             const calEvent = {
-                                                title: `${event.title} — Session ${i + 1}`,
+                                                title: `${event.title}: Session ${i + 1}`,
                                                 description: event.description ?? undefined,
                                                 location: event.location ?? undefined,
                                                 slug: event.slug,
@@ -526,8 +536,10 @@ export default async function ManageEventPage({ params }: PageProps) {
                                     <div className="border-t border-slate-700/50 pt-6">
                                         <AddToCalendar
                                             event={{
-                                                ...event,
-                                                description: event.description || undefined
+                                                title: event.title,
+                                                description: event.description || undefined,
+                                                location: event.location,
+                                                slug: event.slug,
                                             }}
                                             slot={finalizedSlot}
                                             className="justify-center"
@@ -651,7 +663,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                                         }))}
                                     />
 
-                                    <ManageSlots slug={event.slug} slots={event.timeSlots} />
+                                    <ManageSlots slug={event.slug} slots={manageSlotRows} />
                                 </div>
                             ) : (
                                 /* ONE-SHOT VOTING: sorted slot cards */
@@ -663,7 +675,7 @@ export default async function ManageEventPage({ params }: PageProps) {
 
                                     <ManagerVoteWarning
                                         eventId={event.id}
-                                        participants={event.participants}
+                                        participants={participantIds}
                                         slug={event.slug}
                                     />
 
@@ -735,7 +747,7 @@ export default async function ManageEventPage({ params }: PageProps) {
                                         })}
                                     </div>
 
-                                    <ManageSlots slug={event.slug} slots={event.timeSlots} />
+                                    <ManageSlots slug={event.slug} slots={manageSlotRows} />
                                 </div>
                             )
                         )}

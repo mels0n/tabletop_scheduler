@@ -6,7 +6,7 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 
 1.  **Event Pre-filling**: Create "One-Click" event creation links from your community Discord, Wiki, or Website.
 2.  **Identity Hand-off**: Send users to the voting page with their name pre-filled, removing friction.
-3.  **Webhook Callbacks**: Receive real-time JSON notifications when an event is created or finalized.
+3.  **Webhook Callbacks**: Receive JSON notifications when an event is created, finalized, or cancelled.
 
 ---
 
@@ -24,8 +24,9 @@ Tabletop Scheduler (Hosted & Self-Hosted) supports bi-directional integration wi
 | `description` | string | Optional description text. |
 | `minPlayers` | number | Minimum players required (default: 3). |
 | `maxPlayers` | number | Maximum players allowed. |
-| `fromUrl` | url | **Required for Webhooks**. The generic HTTP endpoint we will POST JSON updates to (not Discord-specific). |
-| `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID). |
+| `slots` | JSON | Optional candidate times, as a JSON array of `{ "startTime": ISO, "endTime": ISO }`. |
+| `fromUrl` | url | **Required for Webhooks**. The `https` endpoint we will POST JSON updates to (not Discord-specific). Plain `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected when the event is created (a self-hosted instance can allow `http` and private addresses, see below). |
+| `fromUrlId` | string | Your system's unique ID for this context (e.g., a Database Row ID, Discord Message ID, or UUID), up to 200 characters. |
 
 ### Example Link
 ```text
@@ -38,14 +39,61 @@ https://tabletoptime.us/new?title=Raid+Night&minPlayers=8&fromUrl=https://api.my
 
 If you provide `fromUrl` during creation, Tabletop Scheduler will send `POST` requests to that URL with a JSON payload.
 
-> **Reliability**: We attempt delivery every 5 minutes for up to **1 hour**. If your server is down for more than an hour, the webhook will fail permanently.
+### Delivery
+
+`CREATED` and `FINALIZED` webhooks are queued in the same database transaction as the change they report. A `CANCELLED` webhook is queued right after the cancellation is saved. The first delivery attempt is made immediately after the action completes, once its response has been sent, so a reachable endpoint normally hears about the change within seconds. If that attempt fails, the queue retries it: a background job runs every 5 minutes and redelivers with the backoff described under Retries, and only one delivery of a given webhook is ever in flight at a time.
+
+Besides `Content-Type: application/json`, every request carries `X-Tabletop-Event-Id` (the numeric event id), `X-Webhook-Id` (unique per queued webhook, and the same on every retry of it) and `X-Tabletop-Signature` (below).
+
+**Signature.** Every request carries this header:
+
+```text
+X-Tabletop-Signature: sha256=<hex>
+```
+
+`<hex>` is the HMAC-SHA256 of the **raw request body**, keyed with the signing key for that destination. Every delivery is signed; there is no unsigned mode.
+
+Each destination's key is derived from its origin (scheme, host and port of the `fromUrl`, for example `https://hooks.example.com`) and the instance's `SESSION_SECRET`, so there is no separate variable to set:
+
+```text
+signing_key = hex( HMAC-SHA256( key = SESSION_SECRET, message = "webhook-signing" + "\0" + origin ) )
+```
+
+`"\0"` is a single NUL byte. Every `fromUrl` on the same origin shares one key, and a different origin gets a different key, so one integrator's key cannot sign deliveries another destination would accept.
+
+The 64 lowercase hex characters of `signing_key` are themselves the HMAC key for the body signature (use the string as is, do not hex-decode it). `CRON_SECRET` is not involved, so holding a signing key does not let anyone call the instance's cron routes, and the key reveals nothing about `SESSION_SECRET`. An operator prints the key for one destination origin with:
+
+```sh
+ORIGIN=https://hooks.example.com node -e "console.log(require('crypto').createHmac('sha256', process.env.SESSION_SECRET).update('webhook-signing\0' + process.env.ORIGIN).digest('hex'))"
+```
+
+The operator shares each destination's value with that integrator out of band (it is never shown in the app). Changing `SESSION_SECRET` changes the key, so integrators need the new value after a rotation. Verify the header before trusting a payload:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function isValid(rawBody, header, secret) {
+  const expected = "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(header ?? "");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+```
+
+On tabletoptime.us, ask the operator for the signing key. Until you have it, rely on the checks under Security Notes.
+
+**Retries.** A failed delivery (the immediate attempt included) is retried by the queue with a growing delay. After attempt *n* fails, the next attempt waits *n* squared times 5 minutes (so 5, 20, 45, 80 minutes, and so on). After 12 failed attempts, roughly 42 hours in total, the webhook is marked `FAILED` and is not tried again. The queue job runs every 5 minutes, so actual times are rounded up to the next run. A destination that is refused outright (see below) is marked `FAILED` on its first attempt.
+
+**Redirects and addresses.** We do not follow redirects, and we only connect to public addresses. A `fromUrl` that resolves to a private or loopback address is rejected. Each delivery resolves the host once, checks every address, and connects only to the addresses it checked, so a DNS record that changes mid-delivery cannot redirect the request. A host that does not resolve (a DNS timeout or temporary resolver failure) counts as a failed attempt and is retried.
+
+**Private destinations on a self-hosted instance.** An operator whose integration runs on the same machine or LAN can set `WEBHOOK_ALLOW_PRIVATE=true` (default off). The instance then accepts a `fromUrl` that uses plain `http` or resolves to a private, loopback or link-local address, such as `http://192.168.1.10/hook`. Credentials in the URL are still refused, redirects are still not followed, and every delivery is still signed. The setting is self-host only: it is ignored when hosted or on Vercel, so tabletoptime.us always requires a public `https` destination. Turn it on only if you trust everyone who can create events on the instance. See [Environment Variables](../reference/EnvVariables.md).
 
 ### Response Expectations
 
-Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or timeout) triggers the retry policy.
+Your server must return a **HTTP 2xx** status code (e.g., 200 OK) to acknowledge receipt. The response body is ignored. Any non-2xx status (or a timeout after 10 seconds) counts as a failed attempt and follows the retry schedule above. Deliveries can repeat, so treat `eventId` plus `type` (or `X-Webhook-Id`) as an idempotency key.
 
 ### Event Created (`CREATED`)
-Sent immediately after the user effectively creates the event.
+Queued when the event is created.
 
 **Payload:**
 ```json
@@ -61,12 +109,13 @@ Sent immediately after the user effectively creates the event.
 ```
 
 ### Event Finalized (`FINALIZED`)
-Sent when the host locks in a time slot and location.
+Queued when the host locks in a time slot and location.
 
-**Payload:**
+**Payload (one-shot event):**
 ```json
 {
   "type": "FINALIZED",
+  "eventType": "ONE_SHOT",
   "eventId": 123,
   "fromUrlId": "raid-101",
   "slug": "8f8f8f8f",
@@ -74,7 +123,7 @@ Sent when the host locks in a time slot and location.
   "title": "Raid Night",
   "finalizedSlot": {
     "id": 456,
-    "startTime": "2023-12-01T18:00:00.000Z", // ISO 8601
+    "startTime": "2023-12-01T18:00:00.000Z",
     "endTime": "2023-12-01T22:00:00.000Z"
   },
   "attendees": ["Leeroy", "Jaina"],
@@ -84,8 +133,12 @@ Sent when the host locks in a time slot and location.
 }
 ```
 
+For a campaign, `eventType` is `"CAMPAIGN"` and `finalizedSlot` is replaced by `finalizedSessions`, an array of `{ "id", "startTime", "endTime" }` objects, one per locked-in session.
+
+`link` is present in `CREATED` and `FINALIZED` payloads whenever the instance has `NEXT_PUBLIC_BASE_URL` set, and omitted when it does not. `fromUrlId` is `null` when none was given.
+
 ### Event Cancelled (`CANCELLED`)
-Sent if the organizer cancels the event.
+Queued if the organizer cancels the event. It is delivered like the other types, with the same signature and retry policy.
 
 **Payload:**
 ```json
@@ -106,8 +159,9 @@ Sent if the organizer cancels the event.
 To make it easier for your community members to vote, you can append `?userID=...` to the shared event link.
 
 **Logic**: 
-- If the user has visited before, their local browser storage takes precedence.
-- If they are **new**, the `userID` value is used to pre-fill the "Your Name" field.
+- If this browser has already voted on the event, the existing vote (and its name) is loaded instead.
+- Otherwise the `userID` value pre-fills the "Your Name" field, ahead of any name the browser remembers from other events.
+- It is only a pre-filled name. It does not identify or sign in the user.
 
 **Usage**:
 Generate links dynamically in your system:
@@ -117,5 +171,6 @@ Generate links dynamically in your system:
 
 ## Security Notes
 
-1.  **Validation**: We do not currently sign webhook payloads with a shared secret. It is recommended to verify the `fromUrlId` against your own database to ensure the update relates to a known request.
-2.  **HTTPS**: We strongly recommend using `https` URLs for `fromUrl` to ensure payload privacy.
+1.  **Signatures**: Every delivery is signed with `X-Tabletop-Signature`, keyed with the signing key derived from `SESSION_SECRET` (see Delivery above). Verify it whenever you hold the key. On any instance, also verify the `fromUrlId` against your own database to ensure the update relates to a known request.
+2.  **HTTPS and public addresses**: `fromUrl` must be an `https` URL on a public address (unless a self-hosted operator set `WEBHOOK_ALLOW_PRIVATE`, above). It is checked when the event is created (400 otherwise) and again before every delivery, so a destination that later resolves to a private address is refused and marked `FAILED`.
+3.  **Managing events from your server**: the `adminToken` returned by `POST /api/event` can be sent as `Authorization: Bearer <adminToken>` to every admin route (see the [API Reference](../reference/ApiReference.md)). Keep it server side.

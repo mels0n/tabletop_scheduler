@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ManageParticipant } from "@/features/event-management/model/dto";
 
 interface ManageParticipantsProps {
     slug: string;
-    participants: {
-        id: number;
-        name: string;
-        telegramId?: string | null;
-    }[];
+    participants: ManageParticipant[];
 }
 
 export function ManageParticipants({ slug, participants }: ManageParticipantsProps) {
@@ -41,7 +38,7 @@ export function ManageParticipants({ slug, participants }: ManageParticipantsPro
             // Clear success message after 3 seconds
             setTimeout(() => setMessage(null), 3000);
         } catch (error: any) {
-            console.error(error);
+            console.error("Failed to remove participant", error);
             setMessage({ type: "error", text: error.message || "Failed to remove participant." });
         } finally {
             setIsDeleting(null);
@@ -77,7 +74,7 @@ export function ManageParticipants({ slug, participants }: ManageParticipantsPro
                             <div>
                                 <div className="font-medium text-slate-200">
                                     {p.name}
-                                    {p.telegramId && <span className="ml-2 text-xs text-indigo-400 font-normal">{p.telegramId}</span>}
+                                    {p.telegramHandle && <span className="ml-2 text-xs text-indigo-400 font-normal">{p.telegramHandle}</span>}
                                 </div>
                             </div>
                         </div>
