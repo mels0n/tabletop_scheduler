@@ -326,7 +326,7 @@ The redirect target registered in the Discord Developer Portal. The `state` nonc
 **Endpoint:** `POST /api/auth/clear-session`
 **Auth:** none
 
-Deletes the identity cookies (`tabletop_user_chat_id`, `tabletop_user_telegram_name`, `tabletop_user_discord_id`, `tabletop_user_discord_name`) and every `tabletop_admin_*` cookie on the request. Called by the error boundary when a stale cookie crashes the page.
+Deletes the identity cookies (`tabletop_user_chat_id`, `tabletop_user_discord_id`) and their display-name cookies (`tabletop_user_telegram_name`, `tabletop_user_discord_name`). Event admin cookies (`tabletop_admin_*`) are kept, because for a manager who never linked an account they are the only admin access on that browser. Called by the error boundary when a stale cookie crashes the page.
 
 **Response (200):** `{ "cleared": true }`
 
