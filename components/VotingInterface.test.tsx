@@ -51,6 +51,8 @@ describe('VotingInterface: vote refused for a participant this browser does not 
 
         expect(await screen.findByText(/sign in with that account to edit this vote/)).toBeTruthy();
         expect(JSON.parse(fetchMock.mock.calls[0][1].body).participantId).toBe(5);
+        // The event link's slug rides along so the API can let a legacy row be claimed.
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body).slug).toBe('evt');
 
         fireEvent.click(screen.getByRole('button', { name: 'Vote as a new participant' }));
 

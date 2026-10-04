@@ -627,7 +627,7 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
             mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: null });
             mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
 
-            const res = await call({ name: 'Old Voter', participantId: 47, votes: [vote] });
+            const res = await call({ name: 'Old Voter', participantId: 47, slug: 'test-event', votes: [vote] });
 
             expect(res.status).toBe(200);
             expect(mockPrisma.participant.updateMany).toHaveBeenCalledWith({
@@ -644,17 +644,33 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
             mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '555', discordId: null, ownerCookieIssuedAt: null });
             mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
 
-            const res = await call({ name: 'Old Voter', participantId: 47, votes: [vote] });
+            const res = await call({ name: 'Old Voter', participantId: 47, slug: 'test-event', votes: [vote] });
 
             expect(res.status).toBe(200);
             expect(mockPrisma.participant.updateMany).toHaveBeenCalled();
+        });
+
+        it('refuses a legacy claim that does not carry the event link slug, without claiming the row', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: null });
+            mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+            for (const body of [
+                { name: 'Guesser', participantId: 47, votes: [vote] },
+                { name: 'Guesser', participantId: 47, slug: 'other-event', votes: [vote] },
+            ]) {
+                const res = await call(body);
+                expect(res.status).toBe(403);
+                expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            }
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
         });
 
         it('refuses with 403 when another browser marked the legacy row first (claim count 0)', async () => {
             mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: null });
             mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
 
-            const res = await call({ name: 'Second Browser', participantId: 47, votes: [vote] });
+            const res = await call({ name: 'Second Browser', participantId: 47, slug: 'test-event', votes: [vote] });
 
             expect(res.status).toBe(403);
             expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });

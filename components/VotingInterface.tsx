@@ -132,6 +132,8 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 telegramId: linkTelegram ? effectiveTelegram : "",
                 discordUsername: linkDiscord ? discordIdentity?.username : undefined,
                 participantId: effectiveParticipantId,
+                // Proves this browser holds the event link; the API needs it to claim a legacy row.
+                slug,
                 linkTelegram,
                 linkDiscord,
                 votes: Object.entries(effectiveVotes)
