@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { resetServerConfigForTests } from '@/shared/config/server';
+import { stubConfigEnv } from '@/shared/config/test-env';
 
 const { lookupMock } = vi.hoisted(() => ({ lookupMock: vi.fn() }));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
@@ -124,5 +126,51 @@ describe('DNS lookup timeout', () => {
         } finally {
             vi.useRealTimers();
         }
+    });
+});
+
+describe('WEBHOOK_ALLOW_PRIVATE (self-host opt-in)', () => {
+    beforeEach(() => { lookupMock.mockReset(); });
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        resetServerConfigForTests();
+    });
+
+    function withEnv(env: Record<string, string>) {
+        stubConfigEnv(env);
+        resetServerConfigForTests();
+    }
+
+    it('accepts http and a private address when enabled on a self-host box', async () => {
+        withEnv({ WEBHOOK_ALLOW_PRIVATE: 'true' });
+        resolvesTo('192.168.1.10');
+        const target = await resolveSafeWebhookTarget('http://192.168.1.10/hook');
+        expect(target.url.protocol).toBe('http:');
+        expect(target.addresses).toEqual([{ address: '192.168.1.10', family: 4 }]);
+    });
+
+    it('still refuses credentials in the URL when enabled', async () => {
+        withEnv({ WEBHOOK_ALLOW_PRIVATE: 'true' });
+        resolvesTo('192.168.1.10');
+        await expect(assertSafeWebhookUrl('http://user:password@192.168.1.10/hook')).rejects.toThrow('credentials');
+    });
+
+    it('refuses other schemes when enabled', async () => {
+        withEnv({ WEBHOOK_ALLOW_PRIVATE: 'true' });
+        await expect(assertSafeWebhookUrl('ftp://192.168.1.10/hook')).rejects.toThrow();
+    });
+
+    it('is ignored when hosted', async () => {
+        withEnv({ WEBHOOK_ALLOW_PRIVATE: 'true', NEXT_PUBLIC_IS_HOSTED: 'true', CRON_SECRET: 'c' });
+        resolvesTo('192.168.1.10');
+        await expect(assertSafeWebhookUrl('http://192.168.1.10/hook')).rejects.toThrow('https');
+        await expect(assertSafeWebhookUrl('https://inside.example/hook')).rejects.toThrow('public address');
+    });
+
+    it('refuses http and private addresses by default', async () => {
+        withEnv({});
+        resolvesTo('192.168.1.10');
+        await expect(assertSafeWebhookUrl('http://192.168.1.10/hook')).rejects.toThrow('https');
+        await expect(assertSafeWebhookUrl('https://inside.example/hook')).rejects.toThrow('public address');
     });
 });

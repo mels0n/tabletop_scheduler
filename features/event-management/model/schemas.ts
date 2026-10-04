@@ -35,8 +35,12 @@ const slotTimes = z
         path: ["endTime"],
     });
 
-const httpsUrl = z
-    .url({ protocol: /^https$/ })
+/**
+ * Webhook callback URL. The scheme is only narrowed to http(s) here: the route's
+ * `assertSafeWebhookUrl` requires https unless a self-hosted install set WEBHOOK_ALLOW_PRIVATE.
+ */
+const webhookUrl = z
+    .url({ protocol: /^https?$/ })
     .max(2048);
 
 const positiveInt = z.number().int().positive();
@@ -73,7 +77,7 @@ export const createEventSchema = z
         eventType: z.enum(["ONE_SHOT", "CAMPAIGN"]).nullish().transform((v) => v ?? "ONE_SHOT"),
         minSessions: z.number().int().min(1).max(100).nullish().transform((v) => v ?? null),
         telegramLink: z.preprocess((v) => (v === "" ? null : v), telegramInviteLink.nullish()).transform((v) => v || null),
-        fromUrl: httpsUrl.nullish().transform((v) => v || null),
+        fromUrl: webhookUrl.nullish().transform((v) => v || null),
         fromUrlId: z.string().max(200).nullish().transform((v) => v || null),
     })
     .refine((e) => e.maxPlayers === null || e.maxPlayers >= e.minPlayers, {

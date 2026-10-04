@@ -4,9 +4,14 @@ import { createHmac } from 'node:crypto';
 import { resetServerConfigForTests } from '@/shared/config/server';
 import { stubConfigEnv } from '@/shared/config/test-env';
 
-const { lookupMock, requestMock } = vi.hoisted(() => ({ lookupMock: vi.fn(), requestMock: vi.fn() }));
+const { lookupMock, requestMock, httpRequestMock } = vi.hoisted(() => ({
+    lookupMock: vi.fn(),
+    requestMock: vi.fn(),
+    httpRequestMock: vi.fn(),
+}));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
 vi.mock('node:https', () => ({ default: { request: requestMock }, request: requestMock }));
+vi.mock('node:http', () => ({ default: { request: httpRequestMock }, request: httpRequestMock }));
 
 import { deliverWebhook, WebhookRefusedError } from './deliver';
 
@@ -50,6 +55,7 @@ function callLookup(lookup: Lookup, opts: { all?: boolean; family?: number }) {
 describe('deliverWebhook', () => {
     beforeEach(() => {
         requestMock.mockReset();
+        httpRequestMock.mockReset();
         lookupMock.mockReset();
         stubConfigEnv({ SESSION_SECRET: 'session-secret-for-tests', CRON_SECRET: 'cron-secret-for-tests' });
         resetServerConfigForTests();
@@ -142,5 +148,31 @@ describe('deliverWebhook', () => {
         failWith(new Error('ECONNRESET'));
 
         await expect(deliverWebhook(row)).rejects.toThrow('ECONNRESET');
+    });
+
+    it('delivers to a private http destination over plain http when WEBHOOK_ALLOW_PRIVATE is on', async () => {
+        stubConfigEnv({ SESSION_SECRET: 'session-secret-for-tests', WEBHOOK_ALLOW_PRIVATE: 'true' });
+        resetServerConfigForTests();
+        resolvesTo('192.168.1.10');
+        httpRequestMock.mockImplementation((_url: URL, _opts: unknown, onResponse: (res: unknown) => void) =>
+            Object.assign(new EventEmitter(), {
+                end: vi.fn(() => queueMicrotask(() => onResponse({ statusCode: 204, resume: vi.fn() }))),
+            }),
+        );
+
+        await expect(deliverWebhook({ ...row, url: 'http://192.168.1.10/hook' })).resolves.toBeUndefined();
+
+        expect(httpRequestMock).toHaveBeenCalledTimes(1);
+        expect(requestMock).not.toHaveBeenCalled();
+        expect(httpRequestMock.mock.calls[0][1].headers['X-Tabletop-Signature']).toMatch(/^sha256=/);
+    });
+
+    it('still refuses a private http destination when the deployment is hosted', async () => {
+        stubConfigEnv({ SESSION_SECRET: 's', CRON_SECRET: 'c', NEXT_PUBLIC_IS_HOSTED: 'true', WEBHOOK_ALLOW_PRIVATE: 'true' });
+        resetServerConfigForTests();
+        resolvesTo('192.168.1.10');
+
+        await expect(deliverWebhook({ ...row, url: 'http://192.168.1.10/hook' })).rejects.toBeInstanceOf(WebhookRefusedError);
+        expect(httpRequestMock).not.toHaveBeenCalled();
     });
 });
