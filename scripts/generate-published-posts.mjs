@@ -70,7 +70,7 @@ function isLive(data, cutoff, mode) {
 }
 
 /**
- * Reads every post file and returns the live posts, newest first (ties by slug),
+ * Reads every post file and returns the live posts, newest first,
  * plus the number held back. `files` is a map of file name to raw file contents.
  */
 export function selectPosts(files, { cutoff, mode, now = Date.now() }) {
@@ -97,7 +97,9 @@ export function selectPosts(files, { cutoff, mode, now = Date.now() }) {
             faq: data.faq || undefined,
         });
     }
-    posts.sort((a, b) => (a.date === b.date ? (a.slug < b.slug ? -1 : 1) : a.date < b.date ? 1 : -1));
+    // Same-date posts keep the order this comparator has always given them from the
+    // name-sorted input, so the index order does not change.
+    posts.sort((a, b) => (a.date < b.date ? 1 : -1));
     return { posts, heldBack };
 }
 
