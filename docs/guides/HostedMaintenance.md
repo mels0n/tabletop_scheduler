@@ -26,6 +26,7 @@ differs. `tests/schema-parity.test.ts` enforces that.
 Production deploys apply migrations themselves. `vercel.json` points the Build
 Command at `scripts/vercel-build.sh`, which runs `prisma generate`, then
 `prisma migrate deploy` and pending data migrations (production only), then
+`node scripts/generate-published-posts.mjs` (the blog module of posts live on the build date), then
 `next build`. A failed migration fails the deploy. Preview builds skip the migration step: Preview has no
 database configured, so there is nothing for it to migrate.
 

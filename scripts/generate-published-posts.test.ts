@@ -34,6 +34,18 @@ describe('selectPosts', () => {
         expect(slugs(after)).not.toContain('draft');
     });
 
+    it.each(['garbage', '2026-12-1', '2026-13-45', '20261201', ' 2026-12-01'])('rejects BUILD_DATE=%s', (value) => {
+        expect(() => resolveCutoff({ BUILD_DATE: value })).toThrow(/BUILD_DATE/);
+    });
+
+    it.each([['CI', 'true'], ['WORKERS_CI', '1'], ['NODE_ENV', 'production'], ['VERCEL_ENV', 'production']])(
+        'ignores BUILD_DATE when %s=%s',
+        (key, value) => {
+            expect(resolveCutoff({ BUILD_DATE: '2999-01-06', [key]: value }, 123)).toBe(123);
+            expect(resolveCutoff({ BUILD_DATE: 'garbage', [key]: value }, 123)).toBe(123);
+        },
+    );
+
     it('includes scheduled posts only when showScheduled is on', () => {
         const result = selectPosts(files, { cutoff, mode: { showScheduled: true, showDrafts: false } });
         expect(slugs(result)).toContain('future');
@@ -54,7 +66,6 @@ describe('resolveMode', () => {
             showDrafts: true,
             ignoredFlags: false,
         });
-        expect(resolveMode({ BLOG_SHOW_SCHEDULED: '1' }, ['--dev']).showScheduled).toBe(true);
     });
 
     it('ignores the flags without --dev', () => {
@@ -75,12 +86,7 @@ describe('readPostFiles', () => {
     const missing = path.join(os.tmpdir(), 'tabletop-no-such-blog-dir');
 
     it('throws when the directory is missing', () => {
-        expect(() => readPostFiles(missing, {})).toThrow(/not found/);
-        expect(() => readPostFiles(missing, { IS_DOCKER_BUILD: 'false' })).toThrow(/not found/);
-    });
-
-    it('allows a missing directory for the Docker build', () => {
-        expect(readPostFiles(missing, { IS_DOCKER_BUILD: 'true' })).toEqual({});
+        expect(() => readPostFiles(missing)).toThrow(/not found/);
     });
 });
 

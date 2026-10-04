@@ -16,7 +16,7 @@ Node 22 (see `.nvmrc`). Every command runs from the repository root.
 - Tests: `npm test` (unit and integration; `npm run test:integration` runs only the SQLite integration tests)
 - Layer rules: `npm run depcruise`
 - Self-host upgrade check: `npm run db:upgrade-check` (needed when `prisma/schema.prisma` changes)
-- Production build: `npx next build`
+- Production build: `npm run build` (regenerates the blog module first)
 
 CI runs all of these on every pull request, plus a check that
 `prisma/hosted/migrations` produces exactly `prisma/hosted/schema.prisma`.

@@ -2,7 +2,7 @@
 
 TabletopTime reads its configuration from environment variables. Set them in a `.env` file for local development, pass them to the Docker container, or define them in your Vercel project.
 
-All application variables are parsed and validated once, at server boot, by `shared/config/server.ts` (browser-visible `NEXT_PUBLIC_*` values are read by `shared/config/public.ts` and inlined at build time). If anything required is missing or malformed, the server refuses to start and the error lists every problem at once, so you fix them in one pass instead of one restart per variable. `DATABASE_URL` and `DIRECT_URL` are read by Prisma, and `IS_DOCKER_BUILD` by `next.config.mjs`.
+All application variables are parsed and validated once, at server boot, by `shared/config/server.ts` (browser-visible `NEXT_PUBLIC_*` values are read by `shared/config/public.ts` and inlined at build time). If anything required is missing or malformed, the server refuses to start and the error lists every problem at once, so you fix them in one pass instead of one restart per variable. `DATABASE_URL` and `DIRECT_URL` are read by Prisma, and `IS_DOCKER_BUILD` by `next.config.mjs`. `BUILD_DATE`, `SHOW_SCHEDULED` and `SHOW_DRAFTS` are read from the shell environment by `scripts/generate-published-posts.mjs`, not from `.env`.
 
 Empty values count as unset. `NODE_ENV`, `VERCEL` and `VERCEL_ENV` are set by Node, Next.js or Vercel; you do not set them yourself, but the rules below refer to them.
 
@@ -85,6 +85,9 @@ All three are optional. Discord sign-in and the server-connect flow need `DISCOR
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `IS_DOCKER_BUILD` | No | `false` | Build-time only. The Dockerfile sets it to `true`, which switches Next.js to `standalone` output. |
+| `BUILD_DATE` | No | now | Build-time only, local builds only. `YYYY-MM-DD` (UTC midnight): publish blog posts as if the build ran on that date. Read by `scripts/generate-published-posts.mjs` from the shell environment, not `.env`. Ignored, with a notice, when `NODE_ENV` or `VERCEL_ENV` is `production` or `CI` or `WORKERS_CI` is set. |
+| `SHOW_SCHEDULED` | No | unset | Preview flag, `npm run dev` only. `1` also shows future-dated blog posts. Read from the shell environment, not `.env`. Ignored in CI and production. |
+| `SHOW_DRAFTS` | No | unset | Preview flag, `npm run dev` only. `1` also shows `draft: true` blog posts. Read from the shell environment, not `.env`. Ignored in CI and production. |
 
 ## Example `.env` File
 

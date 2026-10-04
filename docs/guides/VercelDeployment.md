@@ -36,7 +36,8 @@ Migrations are applied automatically. `vercel.json` sets the Build Command to
 1. `prisma generate --schema=prisma/hosted/schema.prisma`
 2. `prisma migrate deploy --schema=prisma/hosted/schema.prisma` (production deployments only)
 3. `node scripts/run-data-migrations.mjs`, which applies pending data migrations once each (production deployments only)
-4. `next build`
+4. `node scripts/generate-published-posts.mjs`, which writes the module of blog posts that are live on the build date
+5. `next build`
 
 A failed migration fails the deploy, so the app can never ship expecting a column
 the database does not have. Preview deployments skip steps 2 and 3: Preview has no
