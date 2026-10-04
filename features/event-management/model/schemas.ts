@@ -53,11 +53,20 @@ const formInt = z.preprocess(
 const optionalText = (max: number) =>
     z.preprocess((v) => (v === "" || v === undefined ? null : v), z.string().max(max).nullable());
 
+/**
+ * Most time options one event may hold, across creation, creator-added slots and visitor
+ * suggestions. Production has events with a couple of hundred slots, so this is generous.
+ */
+export const MAX_EVENT_SLOTS = 500;
+
+/** Most votes one request may carry: room for every slot of an event at the cap, and then some. */
+const MAX_VOTES_PER_REQUEST = 1000;
+
 export const createEventSchema = z
     .object({
         title: z.string().trim().min(1).max(120),
         description: z.string().max(2000).nullish().transform((v) => v || null),
-        slots: z.array(slotTimes).min(1).max(100),
+        slots: z.array(slotTimes).min(1).max(MAX_EVENT_SLOTS),
         minPlayers: z.number().int().min(1).max(100).nullish().transform((v) => v ?? 3),
         maxPlayers: z.number().int().min(1).max(1000).nullish().transform((v) => v ?? null),
         timezone: timezone.nullish().transform((v) => v || "UTC"),
@@ -91,7 +100,7 @@ export const voteSchema = z.object({
             preference: z.enum(["YES", "NO", "MAYBE"]),
             canHost: z.boolean().optional().default(false),
         }))
-        .max(100)
+        .max(MAX_VOTES_PER_REQUEST)
         .refine((votes) => new Set(votes.map((v) => v.slotId)).size === votes.length, {
             message: "Each slot may be voted on once",
         }),
@@ -132,7 +141,7 @@ export const campaignFinalizeSchema = z.object({
     slotIds: z
         .array(positiveInt)
         .min(1)
-        .max(100)
+        .max(MAX_EVENT_SLOTS)
         .refine((ids) => new Set(ids).size === ids.length, { message: "Duplicate slot IDs" }),
     houseId: formInt.transform((v) => v ?? null),
     location: optionalText(200),

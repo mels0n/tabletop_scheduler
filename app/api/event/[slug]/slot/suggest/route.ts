@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { NotFoundError, ValidationError, toResponse } from "@/shared/errors";
-import { pushSlotUpdates, slotSuggestionSchema } from "@/features/event-management";
+import { MAX_EVENT_SLOTS, pushSlotUpdates, slotSuggestionSchema } from "@/features/event-management";
 import { escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Slot:Suggest");
@@ -25,6 +25,10 @@ export async function POST(request: Request, props: { params: Promise<{ slug: st
 
         if (event.status === 'FINALIZED' || event.status === 'CANCELLED') {
             throw new ValidationError("Event is no longer accepting suggestions.");
+        }
+
+        if ((await prisma.timeSlot.count({ where: { eventId: event.id } })) >= MAX_EVENT_SLOTS) {
+            throw new ValidationError("This event already has the maximum number of time options.");
         }
 
         // Create the slot

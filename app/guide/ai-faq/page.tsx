@@ -71,7 +71,7 @@ export default function AiFaqPage() {
         },
         {
             question: "Is there an API?",
-            answer: "Yes. POST /api/event creates an event and returns its admin token. Event admin routes accept that token as 'Authorization: Bearer <adminToken>' (or an 'x-admin-token' header). Pass a public https 'fromUrl' to receive signed CREATED, FINALIZED and CANCELLED webhooks (header X-Tabletop-Signature). Limits: title up to 120 characters, description up to 2000, 1 to 100 slots, minPlayers 1 to 100. Non-commercial community use with attribution; see the Developer API page."
+            answer: "Yes. POST /api/event creates an event and returns its admin token. Event admin routes accept that token as 'Authorization: Bearer <adminToken>' (or an 'x-admin-token' header). Pass a public https 'fromUrl' to receive signed CREATED, FINALIZED and CANCELLED webhooks (header X-Tabletop-Signature). Limits: title up to 120 characters, description up to 2000, 1 to 500 slots, minPlayers 1 to 100. Non-commercial community use with attribution; see the Developer API page."
         },
         {
             question: "How is Tabletop Time funded?",

@@ -87,6 +87,34 @@ describe('slot routes', () => {
         expect((await DELETE(jsonRequest({}).req, slotParams('5'))).status).toBe(400);
     });
 
+    it('POST: refuses a new slot once the event has the maximum number of time options', async () => {
+        mockPrisma.timeSlot.count.mockResolvedValue(500);
+
+        const res = await POST(jsonRequest(slot).req, slugParams);
+
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toBe('This event already has the maximum number of time options.');
+        expect(mockPrisma.timeSlot.count).toHaveBeenCalledWith({ where: { eventId: 1 } });
+        expect(mockPrisma.timeSlot.create).not.toHaveBeenCalled();
+    });
+
+    it('POST: still adds a slot below the maximum', async () => {
+        mockPrisma.timeSlot.count.mockResolvedValue(499);
+        expect((await POST(jsonRequest(slot).req, slugParams)).status).toBe(200);
+        expect(mockPrisma.timeSlot.create).toHaveBeenCalled();
+    });
+
+    it('SUGGEST: refuses a suggestion once the event has the maximum number of time options', async () => {
+        mockPrisma.timeSlot.count.mockResolvedValue(500);
+
+        const res = await SUGGEST(jsonRequest({ ...slot, suggesterName: 'Dee' }).req, slugParams);
+
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toBe('This event already has the maximum number of time options.');
+        expect(mockPrisma.timeSlot.count).toHaveBeenCalledWith({ where: { eventId: 1 } });
+        expect(mockPrisma.timeSlot.create).not.toHaveBeenCalled();
+    });
+
     it('SUGGEST: validates the body', async () => {
         expect((await SUGGEST(jsonRequest({ ...slot, suggesterName: '' }).req, slugParams)).status).toBe(400);
         expect((await SUGGEST(jsonRequest({ ...slot, suggesterName: 'Dee' }).req, slugParams)).status).toBe(200);

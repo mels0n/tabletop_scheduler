@@ -10,7 +10,7 @@ Use this form to set up a new session.
 - **Description**: Optional details about what you're playing or what players need to bring.
 - **Minimum Players**: The logic engine uses this to highlight "Valid" slots where enough people are available.
 - **Maximum Players (Optional)**: A cap. Once the event is finalized, players beyond the cap go on the waitlist.
-- **Propose Time Slots**: Pick the dates and times to vote on (up to 100). The event uses your browser's timezone, which reminders follow.
+- **Propose Time Slots**: Pick the dates and times to vote on (up to 500). The event uses your browser's timezone, which reminders follow.
 
 **Action**: Click "Create Event & Get Link" to generate your unique event dashboard.
 
