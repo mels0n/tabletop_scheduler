@@ -117,12 +117,14 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
     const discordToken = e.DISCORD_BOT_TOKEN ?? null;
     const resolvedBaseUrl = e.NEXT_PUBLIC_BASE_URL ?? null;
 
+    // Hosted and Vercel deployments always have a public URL, so they default to webhook.
+    // Anywhere else defaults to polling, which needs no inbound route; a self-host install
+    // with a public URL opts in to webhook with TELEGRAM_MODE=webhook.
+    const hostedOrVercel = e.NEXT_PUBLIC_IS_HOSTED || e.VERCEL;
     let telegramMode: TelegramMode;
     if (!telegramToken) telegramMode = "off";
     else if (e.TELEGRAM_MODE) telegramMode = e.TELEGRAM_MODE;
-    else if (telegramToken && resolvedBaseUrl) telegramMode = "webhook";
-    else if (telegramToken && !e.VERCEL) telegramMode = "polling";
-    else telegramMode = "off";
+    else telegramMode = hostedOrVercel ? "webhook" : "polling";
 
     if (!isBuild) {
         if (sessionSecretRequired(e) && !e.SESSION_SECRET) {
@@ -134,9 +136,10 @@ function loadServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
         if (telegramMode === "polling" && e.VERCEL) {
             problems.push("TELEGRAM_MODE: polling is not supported on Vercel; use webhook");
         }
-        // Every bot sends absolute links (logins, events, reminders, recovery), so the base URL
-        // is required in every Telegram mode, polling included.
-        if ((telegramToken || discordToken) && !resolvedBaseUrl) {
+        // Every bot sends absolute links (logins, events, reminders, recovery). Hosted and Vercel
+        // fail boot without the base URL; a self-host install stays up and instrumentation logs
+        // an error, so an upgrade that predates this variable does not crash-loop.
+        if (hostedOrVercel && (telegramToken || discordToken) && !resolvedBaseUrl) {
             problems.push(BASE_URL_REQUIRED);
         }
     }

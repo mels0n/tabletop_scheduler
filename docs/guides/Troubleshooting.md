@@ -27,7 +27,7 @@ After the schema step, the container runs any pending data migrations, each once
 
 Configuration is validated at boot, and the error lists every missing or invalid variable at once. Common ones:
 
-*   `NEXT_PUBLIC_BASE_URL is required when a bot token is configured`: set it to the URL your players use to reach the app. It is required with any Telegram or Discord bot token, in every Telegram mode, polling included.
+*   `NEXT_PUBLIC_BASE_URL is required when a bot token is configured`: set it to the URL your players use to reach the app. Hosted and Vercel deployments refuse to start without it when any Telegram or Discord bot token is set. A self-hosted install starts anyway and logs `bot links will fail until NEXT_PUBLIC_BASE_URL is set` instead; set it to fix the links.
 *   `SESSION_SECRET` missing in production: set 32 or more random bytes. (The Docker image generates one into `/app/data` if you do not.)
 *   `CRON_SECRET` missing on a hosted deployment: set it, and use the same value in the Supabase Vault (see [HostedMaintenance.md](HostedMaintenance.md)).
 *   `TELEGRAM_MODE: polling is not supported on Vercel`: use `webhook` on Vercel.

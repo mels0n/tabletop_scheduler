@@ -39,9 +39,9 @@ Migrations are applied automatically. `vercel.json` sets the Build Command to
 4. `next build`
 
 A failed migration fails the deploy, so the app can never ship expecting a column
-the database does not have. Preview deployments skip steps 2 and 3: they share the
-production `DATABASE_URL`, so letting a feature branch apply DDL would mutate the
-live schema.
+the database does not have. Preview deployments skip steps 2 and 3: Preview has no
+database configured (no `DATABASE_URL` on that target), so there is nothing to migrate,
+and a feature branch can never apply DDL to the production schema.
 
 **Leave the dashboard Build Command empty.** `vercel.json` takes precedence over
 project settings, so a value there is ignored, but leaving one set invites someone

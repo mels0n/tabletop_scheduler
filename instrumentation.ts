@@ -19,6 +19,12 @@ export async function register() {
         const { default: Logger } = await import("@/shared/lib/logger");
         const log = Logger.get("Instrumentation");
 
+        // Self-host boots without a base URL (hosted and Vercel refuse to); the bots still run
+        // but every link they send needs it, so say so loudly instead of failing boot.
+        if ((config.telegram.token || config.discord.botToken) && !config.baseUrl) {
+            log.error("A bot token is set but NEXT_PUBLIC_BASE_URL is not; bot links will fail until NEXT_PUBLIC_BASE_URL is set");
+        }
+
         try {
             const { token, mode } = config.telegram;
             // Reminder scheduling is handled by an external cron (start.sh loop, pg_cron, or

@@ -70,9 +70,24 @@ describe('getServerConfig: defaults', () => {
 });
 
 describe('getServerConfig: telegram mode', () => {
-    it('is webhook when a token and base URL are set', () => {
-        const cfg = load({ TELEGRAM_BOT_TOKEN: 't', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
+    it('defaults to webhook on Vercel', () => {
+        const cfg = load({ VERCEL: '1', TELEGRAM_BOT_TOKEN: 't', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
         expect(cfg.telegram).toEqual({ token: 't', mode: 'webhook' });
+    });
+
+    it('defaults to webhook when hosted', () => {
+        const cfg = load({ NEXT_PUBLIC_IS_HOSTED: 'true', CRON_SECRET: 'c', TELEGRAM_BOT_TOKEN: 't', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
+        expect(cfg.telegram.mode).toBe('webhook');
+    });
+
+    it('defaults to polling off Vercel, even with a public base URL', () => {
+        const cfg = load({ TELEGRAM_BOT_TOKEN: 't', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
+        expect(cfg.telegram).toEqual({ token: 't', mode: 'polling' });
+    });
+
+    it('uses webhook off Vercel only when TELEGRAM_MODE=webhook', () => {
+        const cfg = load({ TELEGRAM_BOT_TOKEN: 't', TELEGRAM_MODE: 'webhook', NEXT_PUBLIC_BASE_URL: 'https://x.example' });
+        expect(cfg.telegram.mode).toBe('webhook');
     });
 
     it('selects polling on a self-host box with TELEGRAM_MODE=polling and a base URL', () => {
@@ -145,24 +160,28 @@ describe('getServerConfig: validation', () => {
         expect(err.message).toContain('NEXT_PUBLIC_BASE_URL is required when a bot token is configured');
     });
 
-    it('rejects a Discord bot token without a base URL even when self-hosted', () => {
-        const err = loadError({ DISCORD_BOT_TOKEN: 'd' });
+    it('rejects a bot token without a base URL when hosted', () => {
+        const err = loadError({ NEXT_PUBLIC_IS_HOSTED: 'true', CRON_SECRET: 'c', DISCORD_BOT_TOKEN: 'd' });
         expect(err.message).toContain('NEXT_PUBLIC_BASE_URL is required when a bot token is configured');
     });
 
-    it('rejects a Telegram token without a base URL on a self-host box (implicit polling)', () => {
-        const err = loadError({ TELEGRAM_BOT_TOKEN: 't' });
-        expect(err.message).toContain('NEXT_PUBLIC_BASE_URL');
+    // Self-host stays up without a base URL: instrumentation logs an error and bot links fail until it is set.
+    it('boots a self-host box with a Discord bot token and no base URL', () => {
+        const cfg = load({ DISCORD_BOT_TOKEN: 'd' });
+        expect(cfg.baseUrl).toBeNull();
+        expect(cfg.discord.botToken).toBe('d');
     });
 
-    it('rejects explicit polling without a base URL on a self-host box', () => {
-        const err = loadError({ TELEGRAM_BOT_TOKEN: 't', TELEGRAM_MODE: 'polling' });
-        expect(err.message).toContain('NEXT_PUBLIC_BASE_URL is required when a bot token is configured');
+    it('boots a self-host box with a Telegram token and no base URL, polling by default', () => {
+        const cfg = load({ TELEGRAM_BOT_TOKEN: 't' });
+        expect(cfg.baseUrl).toBeNull();
+        expect(cfg.telegram).toEqual({ token: 't', mode: 'polling' });
     });
 
-    it('rejects a Telegram token without a base URL even when TELEGRAM_MODE=off', () => {
-        const err = loadError({ TELEGRAM_BOT_TOKEN: 't', TELEGRAM_MODE: 'off' });
-        expect(err.message).toContain('NEXT_PUBLIC_BASE_URL');
+    it('boots a production self-host box with a bot token and no base URL', () => {
+        const cfg = load({ NODE_ENV: 'production', SESSION_SECRET: 's', TELEGRAM_BOT_TOKEN: 't', TELEGRAM_MODE: 'off' });
+        expect(cfg.baseUrl).toBeNull();
+        expect(cfg.telegram.mode).toBe('off');
     });
 
     it('rejects polling without a base URL when hosted', () => {

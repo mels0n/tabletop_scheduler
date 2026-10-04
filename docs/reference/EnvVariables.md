@@ -19,7 +19,7 @@ Empty values count as unset. `NODE_ENV`, `VERCEL` and `VERCEL_ENV` are set by No
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `NEXT_PUBLIC_IS_HOSTED` | No | `false` | `true` enables hosted behavior: indexing, the sitemap, `includeSubDomains` on the HSTS header, and the `CRON_SECRET` requirement. Leave unset for self-hosted privacy defaults. Inlined at build time; the Docker image is always built with `false`. |
-| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | - | Public URL of the app, for example `https://scheduler.example.com`. Every link the bots send (magic logins, event links, reminders) is built from it. **Required whenever any bot token is set**, in every Telegram mode including polling. Omitting it stops the server at boot. For a self-hosted instance behind NAT, use an address your players can reach (a LAN URL is fine) together with `TELEGRAM_MODE=polling`. |
+| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | - | Public URL of the app, for example `https://scheduler.example.com`. Every link the bots send (magic logins, event links, reminders) is built from it. **Needed whenever any bot token is set**, in every Telegram mode including polling. When hosted (`NEXT_PUBLIC_IS_HOSTED=true`) or on Vercel, omitting it stops the server at boot. A self-hosted instance still starts without it, logs an error, and every bot link fails until it is set. For a self-hosted instance behind NAT, use an address your players can reach (a LAN URL is fine); polling is the self-host default. |
 | `NEXT_PUBLIC_BOT_NAME` | No | `the Bot` | Display name of your Discord bot, shown in the "Action Required: Permissions" steps on the manage page when the bot cannot post in the chosen channel. Telegram links (the "Add @bot to Group" button, the "Connect Telegram" pill) use the username Telegram reports for the bot token, not this value. Inlined at build time. |
 
 ## Secrets
@@ -34,11 +34,11 @@ Empty values count as unset. `NODE_ENV`, `VERCEL` and `VERCEL_ENV` are set by No
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
 | `TELEGRAM_BOT_TOKEN` | No | - | HTTP API token from @BotFather. Leave unset to disable Telegram. |
-| `TELEGRAM_MODE` | No | derived | `webhook`, `polling`, or `off`. When unset: `webhook` if a token is set, otherwise `off`. Polling is never chosen automatically: set `polling` explicitly for a self-hosted instance that Telegram cannot reach. `polling` on Vercel stops the server at boot. `NEXT_PUBLIC_BASE_URL` is required in every mode. In webhook mode the server registers its webhook at startup only when Telegram's current registration differs. |
+| `TELEGRAM_MODE` | No | derived | `webhook`, `polling`, or `off`. When unset with a token: `polling` on a self-hosted install, `webhook` when hosted or on Vercel. Without a token: `off`. Set `webhook` on a self-hosted install only when `NEXT_PUBLIC_BASE_URL` is a public HTTPS address Telegram can reach. `polling` on Vercel stops the server at boot. `NEXT_PUBLIC_BASE_URL` is needed in every mode for the links the bot sends. In webhook mode the server registers its webhook at startup only when Telegram's current registration differs. |
 
 ## Discord
 
-All three are optional. Discord sign-in and the server-connect flow need `DISCORD_APP_ID` and `DISCORD_CLIENT_SECRET`; channel posts, dashboards and direct messages need `DISCORD_BOT_TOKEN`. Set all three for the full integration. A Discord bot token also makes `NEXT_PUBLIC_BASE_URL` required.
+All three are optional. Discord sign-in and the server-connect flow need `DISCORD_APP_ID` and `DISCORD_CLIENT_SECRET`; channel posts, dashboards and direct messages need `DISCORD_BOT_TOKEN`. Set all three for the full integration. A Discord bot token also needs `NEXT_PUBLIC_BASE_URL` (required at boot when hosted or on Vercel; logged as an error on a self-hosted install).
 
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|

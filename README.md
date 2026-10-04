@@ -46,6 +46,14 @@ Open `http://localhost:3000` to start creating events.
 
 **Upgrading is automatic.** Run `docker pull ghcr.io/mels0n/tabletop_scheduler:latest` and restart the container; on start it brings your database up to date from whatever release you were on, keeping your data.
 
+### Upgrading
+
+Check these settings when you move to a new release with a bot connected:
+
+- **Set `NEXT_PUBLIC_BASE_URL`.** Every link a Telegram or Discord bot sends (logins, events, reminders) is built from it. Without it the app still starts, but it logs an error and bot links fail until you set it. Use an address your players can open; a LAN address works behind NAT.
+- **Polling is the self-host default.** With a Telegram token and no `TELEGRAM_MODE`, a self-hosted install polls Telegram, which needs no public URL.
+- **Set `TELEGRAM_MODE=webhook` only with a public URL.** If your install used webhook mode before, keep it by setting `TELEGRAM_MODE=webhook`; `NEXT_PUBLIC_BASE_URL` must then be a public HTTPS address Telegram can reach. If the log says another consumer owns the bot, a webhook is still registered: set `TELEGRAM_MODE=webhook` or delete the webhook.
+
 **Bind mounts and UID 1000.** The container runs as the `node` user (UID 1000). A bind-mounted `./data` directory must be writable by UID 1000, or the database cannot be created and the container exits at startup. A named Docker volume needs no extra step.
 
 **Secrets.** If `SESSION_SECRET` or `CRON_SECRET` is unset, the container generates a random value on first start and keeps it in `/app/data` (`.session-secret`, `.cron-secret`), so they survive restarts as long as the data volume does. Set them explicitly if you run more than one instance against the same data.
@@ -61,12 +69,12 @@ All configuration is through environment variables, validated once at boot. A mi
 | `DATABASE_URL` | **Yes** | SQLite path (Docker) or pooled Postgres URL (hosted). | `file:/app/data/scheduler.db` |
 | `DIRECT_URL` | Hosted only | Direct (non-pooled) Postgres URL used for migrations. | `postgresql://...:5432/postgres` |
 | `NEXT_PUBLIC_IS_HOSTED` | No | `true` enables hosted behavior (indexing, sitemap). | `false` |
-| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | URL of the app, used for every link the bots send. Required with any bot token in every Telegram mode, polling included (a LAN address works behind NAT). | `https://scheduler.example.com` |
+| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | URL of the app, used for every link the bots send. Hosted and Vercel refuse to start without it when a bot token is set; a self-hosted install starts, logs an error and sends broken bot links until it is set (a LAN address works behind NAT). | `https://scheduler.example.com` |
 | `NEXT_PUBLIC_BOT_NAME` | No | Display name of your Discord bot, shown in the channel-permission instructions on the manage page. Telegram links use the bot username reported by Telegram. | `TabletopTime` |
 | `SESSION_SECRET` | Production (Vercel production, or `NODE_ENV=production` off Vercel) | Signs identity and participant cookies and Telegram connect codes, and derives the outbound webhook signing keys. Docker generates one if unset. | 32+ random bytes, base64 |
 | `CRON_SECRET` | Hosted, or Vercel production | Bearer token for `/api/cron/*`. Docker generates one if unset. Outbound webhooks are signed with a key derived from `SESSION_SECRET`, not this value. | 32+ random bytes, base64 |
 | `TELEGRAM_BOT_TOKEN` | No | Token from @BotFather. | `123456:ABC...` |
-| `TELEGRAM_MODE` | No | `webhook`, `polling`, or `off`. When unset: `webhook` if a token is set, otherwise `off`. Polling must be set explicitly. | derived |
+| `TELEGRAM_MODE` | No | `webhook`, `polling`, or `off`. When unset with a token: `polling` on a self-hosted install, `webhook` when hosted or on Vercel. Without a token: `off`. | derived |
 | `DISCORD_BOT_TOKEN` | No | Discord bot token. | |
 | `DISCORD_APP_ID` | No | Discord application ID. | |
 | `DISCORD_CLIENT_SECRET` | No | Discord OAuth client secret. | |
