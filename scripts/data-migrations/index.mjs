@@ -39,6 +39,20 @@
  */
 
 /** @type {DataMigration[]} */
-export const dataMigrations = [];
+export const dataMigrations = [
+    {
+        id: '2026-10-03-backfill-quorum-reached-at',
+        description: 'Set Event.quorumReachedAt where a quorum flag was already set',
+        up: async (prisma) => {
+            await prisma.event.updateMany({
+                where: {
+                    quorumReachedAt: null,
+                    OR: [{ quorumViableNotified: true }, { quorumPerfectNotified: true }],
+                },
+                data: { quorumReachedAt: new Date() },
+            });
+        },
+    },
+];
 
 export default dataMigrations;
