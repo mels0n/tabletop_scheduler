@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { ClientDate, ClientTimezone } from "./ClientDate";
 import { AddToCalendar } from "./AddToCalendar";
 import type { PublicEvent, PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
+import { voteErrorMessage } from "@/features/event-management/model/vote-errors";
 
 /**
  * @interface FinalizedEventViewProps
@@ -162,7 +163,8 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                 setHasJoined(true);
                 window.location.reload(); // Intent: Refresh to ensure server-side lists update accurately.
             } else {
-                alert("Failed to join event");
+                // A 403 participant_not_owned (or any other refusal) gets the specific message.
+                alert(voteErrorMessage(await res.json().catch(() => null)));
             }
         } catch (e) {
             console.error("Failed to join event", e);
@@ -377,7 +379,11 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                                                     headers: { 'Content-Type': 'application/json' }
                                                 });
 
-                                                if (res.ok) window.location.reload();
+                                                if (res.ok) {
+                                                    window.location.reload();
+                                                } else {
+                                                    alert(voteErrorMessage(await res.json().catch(() => null)));
+                                                }
                                             } catch (e) {
                                                 console.error("Failed to update attendance status", e);
                                                 alert("Error updating status");
