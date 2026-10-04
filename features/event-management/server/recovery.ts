@@ -19,7 +19,8 @@ import {
 /**
  * Server actions for manager recovery. Every export here is a public endpoint, so none of
  * them hands a credential to the caller unless the caller is already the event admin:
- * recovery links only ever go to the manager identity stored on the event, by DM.
+ * recovery links only ever go to the manager identity stored on the event, by DM. The
+ * one-click sender is admin only; the public path must name the stored handle.
  */
 
 const log = Logger.get("RecoveryActions");
@@ -146,10 +147,17 @@ export async function recoverManagerLink(slug: string, handle: string): Promise<
 }
 
 /**
- * One-click "send me a login link" from the manage page. No handle check is needed: the
- * link can only reach the manager identity already stored on the event.
+ * Admin only: one-click "send me a login link" from the manage page. No handle check is
+ * needed: the caller already proved admin, and the link can only reach the manager
+ * identity stored on the event. Anyone without admin uses `recoverManagerLink`, which
+ * makes them name the stored handle first.
  */
 export async function dmManagerLink(slug: string): Promise<ManagerLinkResult> {
+    try {
+        await requireEventAdmin(slug);
+    } catch (e) {
+        return toActionError(e, "Could not send the link. Please try again.");
+    }
     const event = await prisma.event.findUnique({ where: { slug }, select: managerSelect });
     if (!event) return { error: NO_MANAGER };
     return deliverManagerLink(event);

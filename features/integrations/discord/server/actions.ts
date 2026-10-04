@@ -15,7 +15,7 @@ import {
     getGuildChannels,
     createDMChannel
 } from "@/features/integrations/discord/model/discord";
-import { dmManagerLink } from "@/features/event-management/server/recovery";
+import { dmManagerLink, recoverManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
 import { readIdentity, verifyValue } from "@/shared/lib/session";
 import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
@@ -56,7 +56,9 @@ export async function recoverDiscordManagerLink(slug: string, username: string) 
     }
 
     if (storedName === inputName) {
-        return await dmDiscordManagerLink(slug);
+        // The public path: re-matches the typed handle against the stored manager and DMs
+        // only that identity. dmManagerLink is admin only and would refuse this caller.
+        return await recoverManagerLink(slug, username);
     }
 
     log.warn("Manager Discord recovery failed: Username mismatch", { slug, input: username, stored: storedName });
@@ -182,7 +184,7 @@ export async function listDiscordChannels(slug: string, guildId: string): Promis
 }
 
 /**
- * Sends a Magic Link to the manager via Discord DM.
+ * Admin only: sends a Magic Link to the manager via Discord DM.
  *
  * Thin alias of the platform-neutral `dmManagerLink` (recovery.ts), kept for the
  * Discord UI. The link goes to every platform the manager has linked.

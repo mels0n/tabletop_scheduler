@@ -66,6 +66,30 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         mockPrisma.loginToken.count.mockResolvedValue(1);
         mockPrisma.loginToken.deleteMany.mockResolvedValue({ count: 0 });
         mockSend.mockResolvedValue({ telegram: skipped, discord: sent });
+        // dmManagerLink is a manage-page button: these cases run as the event admin.
+        mockAdmin.mockResolvedValue(true);
+    });
+
+    it('dmManagerLink refuses a caller who is not the event admin, without minting or sending', async () => {
+        mockAdmin.mockResolvedValue(false);
+        mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
+
+        expect(await dmManagerLink('abc')).toMatchObject({ code: 'forbidden', error: expect.any(String) });
+        expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+        expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('recoverManagerLink needs no admin: a matching handle still gets the link', async () => {
+        mockAdmin.mockResolvedValue(false);
+        mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
+
+        expect(await recoverManagerLink('abc', 'gmsteve')).toMatchObject({ success: true });
+        expect(mockSend).toHaveBeenCalledWith(
+            { telegramChatId: null, discordUserId: '123456789012345678' },
+            expect.anything(),
+            expect.anything(),
+            { respectOptOut: false }
+        );
     });
 
     it('DMs a Discord-only manager a /auth/login link and never rotates the admin token', async () => {
@@ -186,8 +210,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(res).toHaveProperty('error');
     });
 
-    it('with no admin and no linked manager: errors without touching the DB', async () => {
-        mockAdmin.mockResolvedValue(false);
+    it('with no linked manager: errors without touching the DB', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({
             ...discordOnlyEvent, managerDiscordId: null, managerDiscordUsername: null,
         });
