@@ -5,10 +5,10 @@ name: Fortnightly deploy
 # protected by a ruleset that requires CI, and the rebuild only needs Vercel
 # to build the current main again.
 #
-# This is what publishes scheduled blog posts: getAllPosts()/getPostBySlug()
-# filter by `date` (and `draft`) at build time, so a post dated in the future
-# stays invisible (index, slug page, sitemap, schema) until a build runs on
-# or after its date. See shared/lib/blog.ts.
+# This is what publishes scheduled blog posts: scripts/generate-published-posts.mjs
+# filters by `date` (and `draft`) at build time, so a post dated in the future
+# never enters the built site (index, slug page, sitemap, schema) until a build
+# runs on or after its date. The site reads posts only from the generated module.
 #
 # GitHub Actions cron has no native "every 2 weeks" schedule, so this runs
 # every Thursday and skips itself on the off week by checking ISO week parity

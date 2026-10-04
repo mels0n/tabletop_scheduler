@@ -8,6 +8,9 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { publicConfig } from "@/shared/config/public";
 
+// Slugs outside generateStaticParams (unbuilt or unpublished posts) 404 instead of rendering on demand.
+export const dynamicParams = false;
+
 interface Props {
     params: Promise<{ slug: string }>;
 }

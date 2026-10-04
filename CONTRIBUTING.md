@@ -98,7 +98,7 @@ Command handling lives in one place, `features/telegram/server/update-handler.ts
 
 ## Pull Requests
 - `main` is protected: every change lands through a pull request, and the CI checks must pass before it can merge.
-- Run `npm run typecheck`, `npm run lint`, `npm test` and `npm run depcruise` before submitting, and make sure `npx next build` passes. If you changed `prisma/schema.prisma`, also run `npm run db:upgrade-check`.
+- Run `npm run typecheck`, `npm run lint`, `npm test` and `npm run depcruise` before submitting, and make sure `npm run build` passes. If you changed `prisma/schema.prisma`, also run `npm run db:upgrade-check`.
 - Keep PRs focused on a single feature or fix.
 - Add "Why" comments for complex business logic.
 

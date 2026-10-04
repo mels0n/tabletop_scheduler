@@ -1,80 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import fs from 'fs';
-import { getAllPosts, getPostBySlug } from './blog';
+import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('fs', () => ({
-    default: {
-        existsSync: vi.fn(),
-        readdirSync: vi.fn(),
-        readFileSync: vi.fn(),
-    },
+vi.mock('@/shared/data/published-posts.generated', () => ({
+    publishedPosts: [
+        {
+            slug: 'newer-post',
+            title: 'Newer Post',
+            description: '',
+            date: '2020-02-06',
+            tags: [],
+            content: 'Newer body',
+        },
+        {
+            slug: 'past-post',
+            title: 'Past Post',
+            description: '',
+            date: '2020-01-06',
+            tags: ['Tabletop'],
+            content: 'Published body',
+        },
+    ],
 }));
 
-const files: Record<string, string> = {
-    'past-post.md': [
-        '---',
-        'title: "Past Post"',
-        'date: "2020-01-06"',
-        'tags: ["Tabletop"]',
-        '---',
-        'Published body',
-    ].join('\n'),
-    'future-post.md': [
-        '---',
-        'title: "Future Post"',
-        'date: "2999-01-06"',
-        '---',
-        'Queued body',
-    ].join('\n'),
-    'draft-post.md': [
-        '---',
-        'title: "Draft Post"',
-        'date: "2020-01-06"',
-        'draft: true',
-        '---',
-        'Draft body',
-    ].join('\n'),
-    'undated-post.md': [
-        '---',
-        'title: "Undated Post"',
-        '---',
-        'Undated body',
-    ].join('\n'),
-};
-
-beforeEach(() => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readdirSync).mockReturnValue(Object.keys(files) as never[]);
-    vi.mocked(fs.readFileSync).mockImplementation((filePath) => {
-        const name = String(filePath).split(/[\\/]/).pop() ?? '';
-        if (!(name in files)) {
-            throw new Error(`ENOENT: ${name}`);
-        }
-        return files[name];
-    });
-});
+import { getAllPosts, getPostBySlug } from './blog';
 
 describe('getAllPosts', () => {
-    it('excludes future-dated and draft posts', () => {
-        const slugs = getAllPosts().map((post) => post.slug);
-        expect(slugs).toContain('past-post');
-        expect(slugs).toContain('undated-post');
-        expect(slugs).not.toContain('future-post');
-        expect(slugs).not.toContain('draft-post');
+    it('returns the generated posts in order', () => {
+        expect(getAllPosts().map((post) => post.slug)).toEqual(['newer-post', 'past-post']);
     });
 });
 
 describe('getPostBySlug', () => {
-    it('returns a published post', () => {
-        const post = getPostBySlug('past-post');
-        expect(post?.title).toBe('Past Post');
+    it('returns a post that is in the generated module', () => {
+        expect(getPostBySlug('past-post')?.title).toBe('Past Post');
     });
 
-    it('returns null for a future-dated post', () => {
+    it('returns null for a slug that is not in the generated module', () => {
         expect(getPostBySlug('future-post')).toBeNull();
-    });
-
-    it('returns null for a draft post', () => {
-        expect(getPostBySlug('draft-post')).toBeNull();
     });
 });

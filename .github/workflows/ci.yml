@@ -36,6 +36,10 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      # The site reads blog posts from a module generated from content/blog.
+      - name: Generate published blog posts
+        run: npm run blog:generate
+
       - name: Typecheck
         run: npm run typecheck
 
