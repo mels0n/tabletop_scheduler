@@ -211,8 +211,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
             if (existing) {
                 // The caller's identity cookies describe the caller; they are linked only onto
-                // a row the caller owns, never onto one an admin edits on someone's behalf.
-                const linkDiscordHere = shouldLinkDiscord && !actingAsEventAdmin;
+                // a row the caller owns, never onto one an admin edits on someone's behalf, and
+                // never over a different Discord account already linked to the row.
+                const linkDiscordHere = shouldLinkDiscord && !actingAsEventAdmin
+                    && (!existing.discordId || existing.discordId === discordId);
                 // Self-heal a missing chatId from the verified Telegram cookie only; never
                 // overwrite one already set.
                 const resolvedChatId = !existing.chatId && shouldLinkTelegram && !actingAsEventAdmin ? identity.chatId : null;
@@ -221,7 +223,8 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                     where: { id: existing.id },
                     data: {
                         name,
-                        telegramId,
+                        // A body without telegramId leaves the stored handle alone; null clears it.
+                        ...(body.telegramId !== undefined ? { telegramId } : {}),
                         status: nextStatus,
                         // Opt-out (or no Discord session): leave discordId/discordUsername untouched.
                         // The display name never replaces one the row already has.

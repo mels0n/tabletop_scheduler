@@ -707,6 +707,46 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         expect(data).not.toHaveProperty('discordUsername');
     });
 
+    it('never replaces a Discord link already on the row with a different signed-in account', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'discord-A', discordUsername: null, ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'discord-B'));
+        cookieJar.set('tabletop_user_discord_name', 'UserB');
+
+        const res = await call({ name: 'Dee', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(200);
+        const data = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(data).not.toHaveProperty('discordId');
+        expect(data).not.toHaveProperty('discordUsername');
+    });
+
+    it('links Discord onto an owned row that has no Discord link yet', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, discordUsername: null, ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'discord-B'));
+        cookieJar.set('tabletop_user_discord_name', 'UserB');
+
+        await call({ name: 'Dee', participantId: 47, votes: [vote] });
+
+        const data = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(data).toMatchObject({ discordId: 'discord-B', discordUsername: 'UserB' });
+    });
+
+    it('leaves the stored Telegram handle alone when an update omits telegramId', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, telegramId: 'kept', ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+
+        await call({ name: 'Dee', participantId: 47, votes: [vote] });
+        expect(mockPrisma.participant.update.mock.calls[0][0].data).not.toHaveProperty('telegramId');
+
+        await call({ name: 'Dee', participantId: 47, telegramId: null, votes: [vote] });
+        expect(mockPrisma.participant.update.mock.calls[1][0].data.telegramId).toBeNull();
+
+        await call({ name: 'Dee', participantId: 47, telegramId: '@New', votes: [vote] });
+        expect(mockPrisma.participant.update.mock.calls[2][0].data.telegramId).toBe('new');
+    });
+
     it('ignores the display-name cookie when the discord id does not verify', async () => {
         cookieJar.set('tabletop_user_discord_id', 'd-47');
         cookieJar.set('tabletop_user_discord_name', 'Spoofed');
