@@ -47,7 +47,7 @@ vi.mock('next/headers', () => ({
 
 const mockPrisma = prisma as unknown as {
     event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, updateMany: ReturnType<typeof vi.fn> },
-    participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>, updateMany: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },
+    participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>, updateMany: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },
     vote: { findMany: ReturnType<typeof vi.fn>, deleteMany: ReturnType<typeof vi.fn>, createMany: ReturnType<typeof vi.fn> },
     timeSlot: { findMany: ReturnType<typeof vi.fn> },
     $transaction: ReturnType<typeof vi.fn>,
