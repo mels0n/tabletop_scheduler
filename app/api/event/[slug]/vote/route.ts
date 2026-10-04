@@ -20,6 +20,7 @@ import { AppError, NotFoundError, ValidationError, toResponse } from "@/shared/e
 import { idParam, voteSchema } from "@/features/event-management/model/schemas";
 import { isLegacyParticipant } from "@/entities/participant";
 import { PARTICIPANT_NOT_OWNED } from "@/features/event-management/model/vote-errors";
+import { canTakeOpenSeat } from "@/features/event-management/model/seating";
 import { escapeDiscordMarkdown, escapeHtml } from "@/shared/lib/escape";
 import { verifyEventAdmin } from "@/features/auth";
 
@@ -114,7 +115,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
         const targetEvent = await prisma.event.findUnique({
             where: { id: eventId },
-            select: { status: true, maxPlayers: true, slug: true, finalizedSlotId: true }
+            select: { status: true, maxPlayers: true, minPlayers: true, slug: true, finalizedSlotId: true }
         });
         if (!targetEvent) {
             throw new NotFoundError("Event not found");
@@ -197,7 +198,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                     if (existing?.status === 'ACCEPTED') {
                         nextStatus = 'ACCEPTED';
                     } else {
-                        nextStatus = acceptedCount >= targetEvent.maxPlayers ? 'WAITLIST' : 'ACCEPTED';
+                        // Same rule as waitlist promotion: If Needed (MAYBE) seats only below the minimum.
+                        nextStatus = canTakeOpenSeat(
+                            finalizedVote?.preference, acceptedCount, targetEvent.minPlayers || 0, targetEvent.maxPlayers
+                        ) ? 'ACCEPTED' : 'WAITLIST';
                     }
                 }
             }

@@ -2,6 +2,7 @@ import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 import { syncDashboard } from "@/features/event-management/server/dashboard-sync";
+import { canTakeOpenSeat } from "@/features/event-management/model/seating";
 
 const log = Logger.get("WaitlistService");
 
@@ -105,14 +106,12 @@ export async function processWaitlistPromotion(eventId: number): Promise<void> {
                 if (accepted >= maxPlayers) break;
 
                 const preference = bestVote(candidate.votes)?.preference;
-                if (preference === 'YES') {
-                    // Yes voters take any open seat.
-                } else if (preference === 'MAYBE') {
-                    // Ranked after every Yes voter, so nobody later in the list qualifies either
-                    // once the minimum is met.
-                    if (accepted >= minPlayers) break;
-                } else {
-                    continue; // No vote on the finalized slot(s): never auto-promoted.
+                // No vote on the finalized slot(s), or a NO: never auto-promoted.
+                if (preference === undefined || preference === 'NO') continue;
+                if (!canTakeOpenSeat(preference, accepted, minPlayers, maxPlayers)) {
+                    // Ranked YES before MAYBE, so once one candidate cannot be seated nobody
+                    // later in the list can be either.
+                    break;
                 }
 
                 const claimed = await tx.participant.updateMany({

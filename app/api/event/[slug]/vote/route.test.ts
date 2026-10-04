@@ -756,6 +756,60 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
         expect(order.indexOf('count')).toBeGreaterThan(order.indexOf('tx-start'));
         expect(order.indexOf('count')).toBeLessThan(order.indexOf('tx-end'));
     });
+
+    describe('If Needed seating on a finalized event (canTakeOpenSeat)', () => {
+        const finalized = { ...baseEvent, status: 'FINALIZED', maxPlayers: 5, minPlayers: 3, finalizedSlotId: 1 };
+        const waitlisted = { id: 47, eventId: 1, chatId: null, discordId: null, status: 'WAITLIST', ownerCookieIssuedAt: MARKED };
+
+        beforeEach(() => {
+            mockPrisma.event.findUnique.mockResolvedValue(finalized);
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        });
+
+        it('selects minPlayers for the status decision', async () => {
+            mockPrisma.participant.count.mockResolvedValue(0);
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+            expect(mockPrisma.event.findUnique.mock.calls[0][0].select).toMatchObject({ minPlayers: true });
+        });
+
+        it('keeps a waitlisted MAYBE voter on the waitlist when re-saving at or above the minimum', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue(waitlisted);
+            mockPrisma.participant.count.mockResolvedValue(3);
+
+            const res = await call({ name: 'Maybe', participantId: 47, votes: [{ ...vote, preference: 'MAYBE' }] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('WAITLIST');
+        });
+
+        it('seats a MAYBE voter while the event is below the minimum', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue(waitlisted);
+            mockPrisma.participant.count.mockResolvedValue(2);
+
+            await call({ name: 'Maybe', participantId: 47, votes: [{ ...vote, preference: 'MAYBE' }] });
+
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('ACCEPTED');
+        });
+
+        it('seats a YES voter up to the maximum, then waitlists', async () => {
+            mockPrisma.participant.count.mockResolvedValue(4);
+            await call({ name: 'Yes', linkIdentity: false, votes: [vote] });
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('ACCEPTED');
+
+            mockPrisma.participant.count.mockResolvedValue(5);
+            await call({ name: 'Yes2', linkIdentity: false, votes: [vote] });
+            expect(mockPrisma.participant.create.mock.calls[1][0].data.status).toBe('WAITLIST');
+        });
+
+        it('keeps an ACCEPTED player ACCEPTED when they switch to MAYBE above the minimum', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...waitlisted, status: 'ACCEPTED' });
+            mockPrisma.participant.count.mockResolvedValue(4);
+
+            await call({ name: 'Seated', participantId: 47, votes: [{ ...vote, preference: 'MAYBE' }] });
+
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('ACCEPTED');
+        });
+    });
 });
 
 describe('POST /api/event/[slug]/vote - group announcement cooldown', () => {
