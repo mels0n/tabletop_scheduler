@@ -18,17 +18,23 @@ interface Candidate {
     votes: CandidateVote[];
 }
 
-/** Best vote across the finalized slot(s): YES beats MAYBE, then the earliest. */
+/** Ranking of a preference: YES, then MAYBE, then NO (and anything unknown). */
+function preferenceScore(p: string): number {
+    if (p === 'YES') return 0;
+    if (p === 'MAYBE') return 1;
+    return 2;
+}
+
+/** Best vote across the finalized slot(s): YES beats MAYBE beats NO, then the earliest. */
 function bestVote(votes: CandidateVote[]): CandidateVote | undefined {
-    const score = (p: string) => (p === 'YES' ? 0 : 1);
     return [...votes].sort((a, b) =>
-        score(a.preference) - score(b.preference) || a.createdAt.getTime() - b.createdAt.getTime()
+        preferenceScore(a.preference) - preferenceScore(b.preference) || a.createdAt.getTime() - b.createdAt.getTime()
     )[0];
 }
 
-/** YES before MAYBE, then oldest vote first; candidates without a vote go last. */
+/** YES, then MAYBE, then NO, then oldest vote first; candidates without a vote go last. */
 function rankCandidates(candidates: Candidate[]): Candidate[] {
-    const getScore = (p: string) => (p === 'YES' ? 0 : 1);
+    const getScore = preferenceScore;
     return [...candidates].sort((a, b) => {
         const voteA = bestVote(a.votes);
         const voteB = bestVote(b.votes);
