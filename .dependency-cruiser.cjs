@@ -55,6 +55,23 @@ module.exports = {
       },
     },
     {
+      name: 'blog-source-is-generator-only',
+      comment:
+        'Raw blog posts (content/blog) and gray-matter belong to scripts/generate-published-posts.mjs only. ' +
+        'Read posts through shared/lib/blog.ts, which serves the generated module of published posts.',
+      severity: GATE,
+      from: {},
+      to: { path: ['^content/', '(^|/)node_modules/gray-matter/'] },
+    },
+    {
+      name: 'generated-posts-via-blog-lib-only',
+      comment:
+        'The generated module of published posts is read through shared/lib/blog.ts and nowhere else.',
+      severity: GATE,
+      from: { pathNot: '^shared/lib/blog\\.ts$' },
+      to: { path: '^shared/data/published-posts\\.generated\\.ts$' },
+    },
+    {
       name: 'no-circular',
       comment: 'A cycle means a layer or slice boundary has already been crossed somewhere.',
       severity: GATE,

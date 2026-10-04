@@ -10,7 +10,9 @@
 #   2. migrate deploy - apply any pending migrations to the production DB.
 #   3. data migrations - run pending backfills (scripts/data-migrations), each
 #                        once, in a transaction, recorded in AppMigration.
-#   4. next build     - compile the app.
+#   4. blog posts     - write the generated module of live posts (next build
+#                        is called directly, so npm's prebuild hook does not run).
+#   5. next build     - compile the app.
 #
 # `set -e` means a failed migration fails the deploy. That is deliberate: the
 # alternative is shipping code that expects columns the database does not have,
@@ -35,6 +37,9 @@ if [ "$VERCEL_ENV" = "production" ]; then
 else
     echo "▶ skipping migrate deploy and data migrations (VERCEL_ENV=${VERCEL_ENV:-unset}, not production)"
 fi
+
+echo "▶ generate published blog posts"
+node scripts/generate-published-posts.mjs
 
 echo "▶ next build"
 npx next build

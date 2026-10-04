@@ -64,7 +64,7 @@ npm run lint               # eslint, zero warnings allowed
 npm test                   # vitest, unit and integration tests
 npm run depcruise          # import direction between layers
 npm run db:upgrade-check   # only needed when prisma/schema.prisma changed
-npx next build             # production build
+npm run build              # production build (regenerates the blog module first)
 ```
 
 ## 5. Discord Integration
