@@ -13,7 +13,7 @@ describe('POST /api/auth/clear-session', () => {
         (cookies as any).mockResolvedValue(store);
     });
 
-    it('deletes identity, display-name and every admin cookie present', async () => {
+    it('deletes identity and display-name cookies but keeps admin cookies', async () => {
         store.getAll.mockReturnValue([
             { name: 'tabletop_admin_abc', value: 'x' },
             { name: 'tabletop_admin_def', value: 'y' },
@@ -29,9 +29,10 @@ describe('POST /api/auth/clear-session', () => {
             'tabletop_user_telegram_name',
             'tabletop_user_discord_id',
             'tabletop_user_discord_name',
-            'tabletop_admin_abc',
-            'tabletop_admin_def',
         ]));
+        // An admin cookie is the only copy of a manager's access on this browser.
+        expect(deleted).not.toContain('tabletop_admin_abc');
+        expect(deleted).not.toContain('tabletop_admin_def');
         expect(deleted).not.toContain('unrelated');
     });
 });
