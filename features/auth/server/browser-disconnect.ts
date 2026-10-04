@@ -3,6 +3,7 @@
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
 import { IDENTITY_COOKIES, readIdentityCookie } from "@/shared/lib/session";
+import { platformParam } from "@/shared/lib/action-params";
 
 const log = Logger.get("BrowserDisconnect");
 
@@ -39,6 +40,9 @@ const PLATFORM_NAME_COOKIE: Record<Platform, string> = {
  * @returns {Promise<{ success: true, message: string } | { error: string }>}
  */
 export async function disconnectPlatformFromBrowser(platform: Platform): Promise<{ success: true, message: string } | { error: string }> {
+    // Public endpoint: only the two known platforms may select a cookie name.
+    if (!platformParam.safeParse(platform).success) return { error: "Invalid request." };
+
     try {
         const cookieStore = await cookies();
         const identityId = readIdentityCookie(cookieStore, platform);

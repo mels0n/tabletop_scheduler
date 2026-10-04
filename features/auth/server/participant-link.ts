@@ -3,6 +3,7 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
+import { z } from "zod";
 import {
     identityCookieOptions,
     participantCookieName,
@@ -13,6 +14,7 @@ import {
     verifyValue,
 } from "@/shared/lib/session";
 import { isLegacyParticipant } from "@/entities/participant";
+import { participantIdParam, platformParam, slugParam } from "@/shared/lib/action-params";
 import type { Participant } from "@prisma/client";
 
 const log = Logger.get("ParticipantLink");
@@ -29,6 +31,15 @@ interface ParticipantLinkParams {
     participantId: number;
     platform: Platform;
 }
+
+/** Public endpoint: every field is checked before the first lookup. */
+const participantLinkInput = z.object({
+    slug: slugParam,
+    participantId: participantIdParam,
+    platform: platformParam,
+});
+
+const INVALID_REQUEST = "Invalid request.";
 
 /** Human-readable platform names for user-facing error/success copy. */
 const PLATFORM_LABEL: Record<Platform, string> = {
@@ -94,7 +105,11 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
  * @param {Platform} params.platform - Which identity ('telegram' | 'discord') to stamp.
  * @returns {Promise<{ success: true, message?: string } | { error: string }>}
  */
-export async function linkParticipant({ slug, participantId, platform }: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+export async function linkParticipant(params: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+    const input = participantLinkInput.safeParse(params);
+    if (!input.success) return { error: INVALID_REQUEST };
+    const { slug, participantId, platform } = input.data;
+
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;
@@ -189,7 +204,11 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
  * @param {Platform} params.platform - Which identity ('telegram' | 'discord') to clear.
  * @returns {Promise<{ success: true, message?: string } | { error: string }>}
  */
-export async function unlinkParticipant({ slug, participantId, platform }: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+export async function unlinkParticipant(params: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+    const input = participantLinkInput.safeParse(params);
+    if (!input.success) return { error: INVALID_REQUEST };
+    const { slug, participantId, platform } = input.data;
+
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;
