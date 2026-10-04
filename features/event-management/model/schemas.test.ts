@@ -9,6 +9,7 @@ import {
     oneShotFinalizeSchema,
     campaignFinalizeSchema,
     isValidTimezone,
+    MAX_EVENT_SLOTS,
 } from './schemas';
 
 const slot = { startTime: '2026-11-01T18:00:00.000Z', endTime: '2026-11-01T22:00:00.000Z' };
@@ -55,7 +56,9 @@ describe('createEventSchema', () => {
         expect(createEventSchema.safeParse({ ...validEvent, title: 'x'.repeat(121) }).success).toBe(false);
         expect(createEventSchema.safeParse({ ...validEvent, description: 'x'.repeat(2001) }).success).toBe(false);
         expect(createEventSchema.safeParse({ ...validEvent, slots: [] }).success).toBe(false);
-        expect(createEventSchema.safeParse({ ...validEvent, slots: Array(101).fill(slot) }).success).toBe(false);
+        expect(MAX_EVENT_SLOTS).toBe(500);
+        expect(createEventSchema.safeParse({ ...validEvent, slots: Array(500).fill(slot) }).success).toBe(true);
+        expect(createEventSchema.safeParse({ ...validEvent, slots: Array(501).fill(slot) }).success).toBe(false);
     });
 
     it('rejects a slot whose end is not after its start, and non-ISO dates', () => {
@@ -97,9 +100,11 @@ describe('voteSchema', () => {
         expect(voteSchema.safeParse({ name: 'C', votes: [{ ...vote, preference: 'LOVE' }] }).success).toBe(false);
     });
 
-    it('rejects duplicate slot IDs and more than 100 votes', () => {
+    it('rejects duplicate slot IDs and more than 1000 votes', () => {
         expect(voteSchema.safeParse({ name: 'C', votes: [vote, vote] }).success).toBe(false);
-        const many = Array.from({ length: 101 }, (_, i) => ({ ...vote, slotId: i + 1 }));
+        const most = Array.from({ length: 1000 }, (_, i) => ({ ...vote, slotId: i + 1 }));
+        expect(voteSchema.safeParse({ name: 'C', votes: most }).success).toBe(true);
+        const many = Array.from({ length: 1001 }, (_, i) => ({ ...vote, slotId: i + 1 }));
         expect(voteSchema.safeParse({ name: 'C', votes: many }).success).toBe(false);
     });
 });
@@ -148,6 +153,9 @@ describe('finalize schemas', () => {
 
     it('campaignFinalizeSchema requires unique slot IDs', () => {
         expect(campaignFinalizeSchema.safeParse({ slotIds: [] }).success).toBe(false);
+        const ids = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+        expect(campaignFinalizeSchema.safeParse({ slotIds: ids(MAX_EVENT_SLOTS) }).success).toBe(true);
+        expect(campaignFinalizeSchema.safeParse({ slotIds: ids(MAX_EVENT_SLOTS + 1) }).success).toBe(false);
         expect(campaignFinalizeSchema.safeParse({ slotIds: [1, 1] }).success).toBe(false);
         expect(campaignFinalizeSchema.parse({ slotIds: [1, 2], houseId: '5' }).houseId).toBe(5);
     });

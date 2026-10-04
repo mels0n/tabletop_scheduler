@@ -19,6 +19,7 @@ export {
     campaignFinalizeSchema,
     reminderSettingsSchema,
     idParam,
+    MAX_EVENT_SLOTS,
 } from "./model/schemas";
 export type { CreateEventInput, VoteInput, SlotInput, ReminderSettingsInput } from "./model/schemas";
 export { PARTICIPANT_NOT_OWNED, voteErrorMessage } from "./model/vote-errors";

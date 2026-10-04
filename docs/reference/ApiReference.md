@@ -80,7 +80,7 @@ Creates a new event with candidate time slots. The response contains the plainte
 |-------|------|-------|
 | `title` | string | 1 to 120 characters (surrounding whitespace is trimmed). |
 | `description` | string | Optional, up to 2000 characters. |
-| `slots` | array | 1 to 100 entries. Each needs `startTime` and `endTime` as ISO 8601 strings with an explicit offset (`Z` or `+hh:mm`), with start before end. |
+| `slots` | array | 1 to 500 entries. Each needs `startTime` and `endTime` as ISO 8601 strings with an explicit offset (`Z` or `+hh:mm`), with start before end. |
 | `minPlayers` | integer | Optional, 1 to 100. Default 3. |
 | `maxPlayers` | integer or null | Optional. Null for no limit, otherwise at least `minPlayers` (and at most 1000). |
 | `timezone` | string | Optional. Must be an IANA zone known to the runtime, such as `America/Chicago`. Default `UTC`. |
@@ -160,7 +160,7 @@ Records a participant's availability. Votes are replaced as a set: slots you lea
 | `name` | string | 1 to 60 characters (trimmed). |
 | `telegramId` | string | Optional Telegram handle, up to 64 characters, stored without `@` and lowercased. Display only: it is shown in group posts in place of the name and never links an identity. |
 | `participantId` | integer | Optional. Present when editing an existing vote. |
-| `votes` | array | At most 100 entries, each `slotId` unique. `preference` is `YES`, `MAYBE`, or `NO`. `canHost` is an optional boolean (default false). Every slot must belong to this event, otherwise the request is rejected with 400. |
+| `votes` | array | At most 1000 entries, each `slotId` unique. `preference` is `YES`, `MAYBE`, or `NO`. `canHost` is an optional boolean (default false). Every slot must belong to this event, otherwise the request is rejected with 400. |
 | `linkTelegram`, `linkDiscord` | boolean | Optional, default true. Set false to keep that platform identity off this participant. |
 | `linkIdentity` | boolean | Optional legacy switch that sets both of the above when they are absent. |
 
@@ -187,7 +187,7 @@ Anything else returns 403 with `code: "participant_not_owned"`, including an adm
 **Endpoint:** `POST /api/event/[slug]/slot/suggest`
 **Auth:** none
 
-Lets any attendee propose a new slot when existing options do not work. Not allowed on finalized or cancelled events (400).
+Lets any attendee propose a new slot when existing options do not work. Not allowed on finalized or cancelled events (400), or once the event has 500 time options (400).
 
 **Request body:**
 ```json
@@ -209,7 +209,7 @@ Lets any attendee propose a new slot when existing options do not work. Not allo
 **Endpoint:** `POST /api/event/[slug]/slot`
 **Auth:** event admin
 
-Adds a slot. Not allowed on finalized or cancelled events (400).
+Adds a slot. Not allowed on finalized or cancelled events (400), or once the event has 500 time options (400).
 
 **Request body:** `{ "startTime": "ISO8601", "endTime": "ISO8601" }` with start before end.
 **Response (200):** `{ "success": true, "slot": { "id": 1, "startTime": "...", "endTime": "..." } }`
@@ -253,7 +253,7 @@ Locks the event on a slot (or, for campaigns, several). The slot, the host parti
   "participantIds": [1, 2, 3]
 }
 ```
-- `slotIds` (required): 1 to 100 unique slot IDs to lock in as sessions.
+- `slotIds` (required): 1 to 500 unique slot IDs to lock in as sessions.
 - `houseId` (optional): participant ID of the host, as a number or a numeric string.
 - `location` (optional): text, up to 200 characters.
 - `participantIds` (optional): explicit attendee list. Without it, attendees come from the votes.
@@ -466,7 +466,7 @@ What changed in October 2026 for anyone calling this API from their own code.
 
 - **Webhooks arrive sooner.** Each webhook gets its first delivery attempt immediately after the action that caused it (create, finalize, cancel). Failures are retried by the queue every 5 minutes with growing backoff, and a webhook is marked `FAILED` after 12 attempts. Every delivery carries `X-Tabletop-Signature`, `X-Tabletop-Event-Id` and `X-Webhook-Id` (stable across retries). The signature formula is under [Outbound Webhooks](#outbound-webhooks) and in [External Integrations](../guides/ExternalIntegrations.md).
 - **`fromUrl` must be a public `https` URL.** `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected with 400 at creation, and checked again before every delivery.
-- **Strict validation on [Create Event](#create-event).** `title` 1 to 120 characters; `description` up to 2000; 1 to 100 `slots`, each with ISO 8601 `startTime` before `endTime`; `minPlayers` 1 to 100; `maxPlayers` null or at least `minPlayers`; `timezone` a real IANA zone; `telegramLink`, when given, must start with `https://t.me/`. Anything else returns 400 with an `issues` array.
+- **Strict validation on [Create Event](#create-event).** `title` 1 to 120 characters; `description` up to 2000; 1 to 500 `slots`, each with ISO 8601 `startTime` before `endTime`; `minPlayers` 1 to 100; `maxPlayers` null or at least `minPlayers`; `timezone` a real IANA zone; `telegramLink`, when given, must start with `https://t.me/`. Anything else returns 400 with an `issues` array.
 - **Slugs are 14 characters** (letters and digits). Do not assume a shorter length.
 - **Errors share one shape.** Failures return `{ "error": "...", "code": "..." }` (see [Conventions](#conventions)), and every **event admin** route returns 403 to a caller that is not the admin.
 - **[Validate Events](#validate-events) accepts at most 50 slugs** per request.

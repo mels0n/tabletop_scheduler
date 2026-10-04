@@ -28,6 +28,7 @@ export const prisma = {
         createMany: vi.fn(),
     },
     timeSlot: {
+        count: vi.fn(),
         deleteMany: vi.fn(),
         findFirst: vi.fn(),
         findMany: vi.fn(),

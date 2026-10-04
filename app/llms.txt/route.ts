@@ -68,7 +68,7 @@ ${blogLines}
 
 ## API for Integrations
 
-- \`POST /api/event\` creates an event: title up to 120 characters, description up to 2000, 1 to 100 slots (each \`startTime\` before \`endTime\`), minPlayers 1 to 100, maxPlayers empty or at least minPlayers, a real IANA timezone. The response includes the slug and the admin token.
+- \`POST /api/event\` creates an event: title up to 120 characters, description up to 2000, 1 to 500 slots (each \`startTime\` before \`endTime\`), minPlayers 1 to 100, maxPlayers empty or at least minPlayers, a real IANA timezone. The response includes the slug and the admin token.
 - Event admin routes accept the admin token as \`Authorization: Bearer <adminToken>\` (or \`x-admin-token\`). Non-admin callers get 403. Errors are JSON \`{ "error", "code" }\`.
 - Pass a \`fromUrl\` (public \`https\` only) at creation to receive \`CREATED\`, \`FINALIZED\` and \`CANCELLED\` webhooks. Each delivery carries \`X-Tabletop-Signature\` (sha256 HMAC of the raw body), \`X-Tabletop-Event-Id\` and \`X-Webhook-Id\`; failures are retried with backoff and marked failed after 12 attempts.
 - Full reference: https://github.com/mels0n/tabletop_scheduler/blob/main/docs/reference/ApiReference.md
