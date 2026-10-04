@@ -83,7 +83,9 @@ memory/
 MEMORY.md
 tmp/
 
-# Public repo: tool config and strategy working docs stay local
+# Public repo: tool config and strategy working docs stay local.
+# The .claude/*.json line below must stay AFTER the "!.claude/*.json" line above:
+# the later rule wins, and removing either one would start tracking .claude/*.json again.
 .claude/*.json
 .impeccable/
 /briefs/
