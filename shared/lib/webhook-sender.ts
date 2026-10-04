@@ -108,6 +108,17 @@ export function isPrivateAddress(ip: string): boolean {
 /** A webhook host that does not resolve within this long is treated as unresolvable. */
 export const DNS_LOOKUP_TIMEOUT_MS = 5_000;
 
+/**
+ * The webhook host could not be resolved: lookup timeout, SERVFAIL, EAI_AGAIN or NXDOMAIN.
+ * Still a `ValidationError` (a 400 when an event is created with this URL), but delivery
+ * treats it as transient and retries, unlike a refused protocol, credential or address.
+ */
+export class WebhookHostUnresolvedError extends ValidationError {
+    constructor(message = "Webhook URL host does not resolve") {
+        super(message);
+    }
+}
+
 /** One address a webhook host resolved to, already checked to be public. */
 export interface VettedAddress {
     address: string;
@@ -118,7 +129,8 @@ export interface VettedAddress {
  * Validates `url` and resolves its host once: https only, no credentials, and every address
  * the host resolves to must be public. Returns the parsed URL and those vetted addresses so
  * the caller can connect to exactly them (closing the DNS-rebinding window between check and
- * connect). Throws `ValidationError`.
+ * connect). Throws `ValidationError`, or its subclass `WebhookHostUnresolvedError` when the
+ * host does not resolve.
  */
 export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL; addresses: VettedAddress[] }> {
     let parsed: URL;
@@ -144,7 +156,7 @@ export async function resolveSafeWebhookTarget(url: string): Promise<{ url: URL;
         });
         resolved = await Promise.race([lookup(host, { all: true, verbatim: true }), timeout]);
     } catch {
-        throw new ValidationError("Webhook URL host does not resolve");
+        throw new WebhookHostUnresolvedError();
     } finally {
         if (timer) clearTimeout(timer);
     }

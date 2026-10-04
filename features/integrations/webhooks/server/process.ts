@@ -30,8 +30,10 @@ export function claimableWhere(now: Date) {
  * Delivers one row the caller has already claimed (its `lockedAt` was set by the caller) and
  * records the outcome, always releasing the lock:
  * - 2xx: DELIVERED.
- * - refused destination (not https, or resolves to a private address): FAILED at once.
- * - other failure: attempts + 1. At 12 attempts FAILED; otherwise RETRY with
+ * - refused destination (bad protocol, credentials in the URL, or resolves to a private
+ *   address): FAILED at once.
+ * - other failure, including a host that does not resolve (DNS timeout, SERVFAIL,
+ *   EAI_AGAIN, NXDOMAIN): attempts + 1. At 12 attempts FAILED; otherwise RETRY with
  *   `nextAttempt = now + attempts^2 * 5 minutes`.
  */
 export async function attemptClaimedWebhook(row: OutboxRow & { attempts: number }): Promise<WebhookAttemptOutcome> {

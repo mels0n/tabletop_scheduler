@@ -1,6 +1,6 @@
 import { request } from "node:https";
 import type { LookupFunction } from "node:net";
-import { resolveSafeWebhookTarget, type VettedAddress } from "@/shared/lib/webhook-sender";
+import { resolveSafeWebhookTarget, WebhookHostUnresolvedError, type VettedAddress } from "@/shared/lib/webhook-sender";
 import { signWebhookBody } from "./signature";
 
 const TIMEOUT_MS = 10_000;
@@ -69,8 +69,9 @@ function postPinned(target: URL, addresses: VettedAddress[], headers: Record<str
  * `X-Tabletop-Signature` (see `signWebhookBody`). Redirects are never followed and the
  * request is abandoned after 10 seconds.
  *
- * Resolves on a 2xx response. Throws `WebhookRefusedError` for a refused destination and a
- * plain `Error` otherwise (non-2xx, redirect, network error, timeout). Never touches the
+ * Resolves on a 2xx response. Throws `WebhookRefusedError` for a refused destination (bad
+ * protocol, credentials in the URL, a private address) and a plain `Error` otherwise
+ * (host does not resolve, non-2xx, redirect, network error, timeout). Never touches the
  * database: the cron route owns claiming and status transitions.
  */
 export async function deliverWebhook(row: OutboxRow): Promise<void> {
@@ -78,6 +79,8 @@ export async function deliverWebhook(row: OutboxRow): Promise<void> {
     try {
         target = await resolveSafeWebhookTarget(row.url);
     } catch (error) {
+        // DNS trouble is usually transient: a plain Error lets the cron retry it.
+        if (error instanceof WebhookHostUnresolvedError) throw new Error(error.message);
         throw new WebhookRefusedError((error as Error).message);
     }
 
