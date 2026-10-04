@@ -3,7 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { lookupMock } = vi.hoisted(() => ({ lookupMock: vi.fn() }));
 vi.mock('node:dns/promises', () => ({ default: { lookup: lookupMock }, lookup: lookupMock }));
 
-import { assertSafeWebhookUrl, isPrivateAddress, resolveSafeWebhookTarget, DNS_LOOKUP_TIMEOUT_MS } from './webhook-sender';
+import { ValidationError } from '@/shared/errors';
+import {
+    assertSafeWebhookUrl,
+    isPrivateAddress,
+    resolveSafeWebhookTarget,
+    DNS_LOOKUP_TIMEOUT_MS,
+    WebhookHostUnresolvedError,
+} from './webhook-sender';
 
 function resolvesTo(...addresses: string[]) {
     lookupMock.mockResolvedValue(addresses.map((address) => ({ address, family: address.includes(':') ? 6 : 4 })));
@@ -55,6 +62,20 @@ describe('assertSafeWebhookUrl', () => {
         await expect(assertSafeWebhookUrl('https://nope.example/hook')).rejects.toThrow('does not resolve');
     });
 
+    it.each(['ENOTFOUND', 'EAI_AGAIN', 'ESERVFAIL'])('throws WebhookHostUnresolvedError (a ValidationError) on %s', async (code) => {
+        lookupMock.mockRejectedValue(Object.assign(new Error(`getaddrinfo ${code}`), { code }));
+        const error = await resolveSafeWebhookTarget('https://flaky.example/hook').catch((e) => e);
+        expect(error).toBeInstanceOf(WebhookHostUnresolvedError);
+        expect(error).toBeInstanceOf(ValidationError);
+    });
+
+    it('does not use WebhookHostUnresolvedError for a private address', async () => {
+        resolvesTo('10.0.0.5');
+        const error = await resolveSafeWebhookTarget('https://inside.example/hook').catch((e) => e);
+        expect(error).toBeInstanceOf(ValidationError);
+        expect(error).not.toBeInstanceOf(WebhookHostUnresolvedError);
+    });
+
     it('rejects unparseable URLs', async () => {
         await expect(assertSafeWebhookUrl('not a url')).rejects.toThrow();
     });
@@ -96,7 +117,7 @@ describe('DNS lookup timeout', () => {
         try {
             lookupMock.mockReturnValue(new Promise(() => {}));
             const pending = resolveSafeWebhookTarget('https://slow.example/hook');
-            const assertion = expect(pending).rejects.toThrow('does not resolve');
+            const assertion = expect(pending).rejects.toBeInstanceOf(WebhookHostUnresolvedError);
             expect(DNS_LOOKUP_TIMEOUT_MS).toBe(5_000);
             await vi.advanceTimersByTimeAsync(DNS_LOOKUP_TIMEOUT_MS);
             await assertion;
