@@ -64,6 +64,9 @@ class ParticipantNotOwnedError extends AppError {
  *      resolves to a chatId.
  * 3. Vote persistence: every slotId must belong to this event (400 otherwise); old votes for
  *    the user are replaced. The capacity count and status decision run in the same transaction.
+ *    On a finalized one-shot, a NO on the finalized slot or no entry for it makes the player
+ *    PENDING; otherwise `canTakeOpenSeat` decides ACCEPTED or WAITLIST (If Needed seats only
+ *    below the minimum) and an ACCEPTED row stays ACCEPTED.
  * 4. Quorum Detection (in the transaction): the first time the vote makes the event viable,
  *    `quorumReachedAt` is stamped. That alone stops voting reminders, independent of whether
  *    the manager could be reached.
@@ -184,10 +187,15 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             let nextStatus: string | undefined = undefined; // Undefined means no change or pending if new
 
             if (targetEvent.status === 'FINALIZED') {
+                // A one-shot has a single finalized slot; a campaign has none (its sessions live
+                // in FinalizedSession) and keeps the plain open-seat rule.
+                const isOneShot = targetEvent.finalizedSlotId !== null;
                 const finalizedVote = votes.find(v => v.slotId === targetEvent.finalizedSlotId);
 
-                if (finalizedVote && finalizedVote.preference === 'NO') {
-                    // User is voluntarily leaving the finalized slot
+                if (isOneShot && (!finalizedVote || finalizedVote.preference === 'NO')) {
+                    // A NO on the finalized slot, or no entry for it at all (the site submits
+                    // unpainted slots as NO, and the API matches): the player leaves the table,
+                    // freeing the seat. Waitlist promotion runs after the transaction.
                     nextStatus = 'PENDING';
                 }
                 else if (targetEvent.maxPlayers) {
@@ -203,8 +211,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                         nextStatus = 'ACCEPTED';
                     } else {
                         // Same rule as waitlist promotion: If Needed (MAYBE) seats only below the minimum.
+                        // Campaigns: any open seat, as before.
+                        const preference = isOneShot ? finalizedVote?.preference : 'YES';
                         nextStatus = canTakeOpenSeat(
-                            finalizedVote?.preference, acceptedCount, targetEvent.minPlayers || 0, targetEvent.maxPlayers
+                            preference, acceptedCount, targetEvent.minPlayers || 0, targetEvent.maxPlayers
                         ) ? 'ACCEPTED' : 'WAITLIST';
                     }
                 }
