@@ -15,8 +15,8 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure fresh execution; no ca
  *
  * Pattern: Trigger-Action.
  * Why? Next.js Server Actions or long-running processes (like poller loops) are hard to keep alive in Serverless.
- * This endpoint provides a "hook" that can be hit externally (Vercel Cron) or internally (Docker Loop)
- * to spin up the reminder check logic on demand.
+ * This endpoint provides a "hook" that is hit by pg_cron on hosted, the start.sh loop on self-host,
+ * GitHub Actions as backstop, to spin up the reminder check logic on demand.
  *
  * @param {Request} request - The trigger request.
  * @returns {NextResponse} 200 with per-type counts; 500 when a whole run threw, so the
