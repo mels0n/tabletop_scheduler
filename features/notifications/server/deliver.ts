@@ -130,17 +130,19 @@ export interface DirectMessageOptions {
 }
 
 const OPTED_OUT: DeliveryOutcome = { status: "skipped", reason: "opted_out" };
+const PREFERENCE_UNAVAILABLE: DeliveryOutcome = { status: "failed", error: "preference_unavailable" };
 
 /**
- * True when this target opted out. A failed lookup reads as not opted out, so a database
- * hiccup never silently drops a message; it is logged instead.
+ * Whether this target opted out, or null when the preference could not be read. A failed
+ * lookup fails closed: an opted-out user must never get an automatic DM because the
+ * database hiccuped. The failure is transient, so a reminder retries it later.
  */
-async function optedOut(platform: DmPlatform, platformId: string, context?: Record<string, unknown>): Promise<boolean> {
+async function optedOut(platform: DmPlatform, platformId: string, context?: Record<string, unknown>): Promise<boolean | null> {
     try {
         return await isDmOptedOut(prisma, platform, platformId);
     } catch (e) {
-        log.warn(`DM preference lookup failed on ${platform}; sending anyway`, { ...context, error: describeError(e) });
-        return false;
+        log.error(`DM preference lookup failed on ${platform}; not sending`, { ...context, error: describeError(e) });
+        return null;
     }
 }
 
@@ -151,7 +153,11 @@ async function unlessOptedOut(
     send: () => Promise<DeliveryOutcome>,
     context?: Record<string, unknown>
 ): Promise<DeliveryOutcome> {
-    if (respectOptOut && platformId && (await optedOut(platform, platformId, context))) return OPTED_OUT;
+    if (respectOptOut && platformId) {
+        const out = await optedOut(platform, platformId, context);
+        if (out === null) return PREFERENCE_UNAVAILABLE;
+        if (out) return OPTED_OUT;
+    }
     return send();
 }
 
