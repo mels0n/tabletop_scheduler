@@ -2,12 +2,16 @@
 
 > **Ditch the group chat chaos.** A scheduling tool for tabletop gamers, hosted for the community or self-hosted on your own server.
 
-![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)
-[![Events active](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.eventsActive&label=events%20active&color=34d399&cacheSeconds=3600)](https://tabletoptime.us/)
-[![Voting open](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.votingOpen&label=voting%20open&color=60a5fa&cacheSeconds=3600)](https://tabletoptime.us/)
-[![Players active](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.playersActive&label=players%20active&color=c084fc&cacheSeconds=3600)](https://tabletoptime.us/)
-[![Games locked in](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.gamesLockedIn&label=games%20locked%20in&color=fbbf24&cacheSeconds=3600)](https://tabletoptime.us/)
-<a href="https://ko-fi.com/N4N11VDWCU" target="_blank"><img height="36" src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" border="0" alt="Buy Me a Coffee at ko-fi.com" /></a>
+[![CI](https://img.shields.io/github/actions/workflow/status/mels0n/tabletop_scheduler/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/mels0n/tabletop_scheduler/actions/workflows/ci.yml)
+[![Docker image](https://img.shields.io/badge/docker-ghcr.io-2496ed?logo=docker&logoColor=white&style=flat-square)](https://github.com/mels0n/tabletop_scheduler/pkgs/container/tabletop_scheduler)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey?style=flat-square)](LICENSE)
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support%20the%20project-ff5e5b?logo=ko-fi&logoColor=white&style=flat-square)](https://ko-fi.com/N4N11VDWCU)
+
+**Live on [tabletoptime.us](https://tabletoptime.us/) right now:**
+[![Events active](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.eventsActive&label=events%20active&color=34d399&style=flat-square&cacheSeconds=3600)](https://tabletoptime.us/)
+[![Voting open](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.votingOpen&label=voting%20open&color=60a5fa&style=flat-square&cacheSeconds=3600)](https://tabletoptime.us/)
+[![Players active](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.playersActive&label=players%20active&color=c084fc&style=flat-square&cacheSeconds=3600)](https://tabletoptime.us/)
+[![Games locked in](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftabletoptime.us%2Fapi%2Fstats&query=%24.gamesLockedIn&label=games%20locked%20in&color=fbbf24&style=flat-square&cacheSeconds=3600)](https://tabletoptime.us/)
 
 ## What it is
 
@@ -140,7 +144,11 @@ The hosted version runs on Vercel with a Supabase Postgres database.
 - **Required settings.** `DATABASE_URL` (pooled), `DIRECT_URL`, `NEXT_PUBLIC_IS_HOSTED=true`, `NEXT_PUBLIC_BASE_URL`, `SESSION_SECRET`, and `CRON_SECRET`.
 - **Scheduled jobs.** Event cleanup runs daily from Vercel Cron. Reminders and the outbound webhook queue run from Supabase `pg_cron`, with a GitHub Actions reminder run every two hours as a backstop; the one-time setup is in [HostedMaintenance.md](docs/guides/HostedMaintenance.md#scheduling-reminders-with-pg_cron).
 
+## Support
+
+The hosted version is free to use. If TabletopTime saves your group some chaos, you can help with the hosting bill on [Ko-fi](https://ko-fi.com/N4N11VDWCU).
+
 ## License
-CC-BY-NC-SA 4.0
+CC-BY-NC-SA 4.0 (see [LICENSE](LICENSE)).
 
 [Hosted by UntapWeb](https://untapweb.com)
