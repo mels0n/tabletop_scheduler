@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sendDiscordMagicLogin, connectDiscordChannel, listDiscordChannels, recoverDiscordManagerLink } from './actions';
 import prisma from '@/shared/lib/prisma';
 import { createDMChannel, sendDiscordMessage, getGuildChannels, pinDiscordMessage, getDiscordUser } from '@/features/integrations/discord/model/discord';
-import { dmManagerLink } from '@/features/event-management/server/recovery';
+import { recoverManagerLink } from '@/features/event-management/server/recovery';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { cookies } from 'next/headers';
 import { signValue } from '@/shared/lib/session';
@@ -17,6 +17,7 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
 }));
 vi.mock('@/features/event-management/server/recovery', () => ({
     dmManagerLink: vi.fn(),
+    recoverManagerLink: vi.fn(),
 }));
 // requireEventAdmin keeps its real contract on top of the mocked verifyEventAdmin.
 vi.mock('@/features/auth/server/verify', async () => {
@@ -288,7 +289,7 @@ describe('Discord channel binding requires admin and a guild this admin just add
 
 describe('recoverDiscordManagerLink', () => {
     const mockGetUser = getDiscordUser as unknown as ReturnType<typeof vi.fn>;
-    const mockDmManagerLink = dmManagerLink as unknown as ReturnType<typeof vi.fn>;
+    const mockRecoverManagerLink = recoverManagerLink as unknown as ReturnType<typeof vi.fn>;
     const linked = (overrides: Record<string, unknown> = {}) => ({
         id: 7, slug: 'abc', managerDiscordId: '123456789012345678', managerDiscordUsername: 'GmSteve', ...overrides,
     });
@@ -298,7 +299,7 @@ describe('recoverDiscordManagerLink', () => {
         process.env.DISCORD_BOT_TOKEN = 'test-bot-token';
         mockPrisma.event.findUnique.mockResolvedValue(linked());
         mockPrisma.event.update.mockResolvedValue({});
-        mockDmManagerLink.mockResolvedValue({ success: true });
+        mockRecoverManagerLink.mockResolvedValue({ success: true });
     });
 
     // Catches: dropping the managerDiscordId guard (the recovery DM would go to nobody or to a
@@ -312,7 +313,7 @@ describe('recoverDiscordManagerLink', () => {
         const result = await recoverDiscordManagerLink('abc', 'GmSteve');
 
         expect(result).toEqual({ error: 'No Discord account linked to this event.' });
-        expect(mockDmManagerLink).not.toHaveBeenCalled();
+        expect(mockRecoverManagerLink).not.toHaveBeenCalled();
         expect(mockGetUser).not.toHaveBeenCalled();
     });
 
@@ -321,8 +322,9 @@ describe('recoverDiscordManagerLink', () => {
         const result = await recoverDiscordManagerLink('abc', input);
 
         expect(result).toEqual({ success: true });
-        expect(mockDmManagerLink).toHaveBeenCalledTimes(1);
-        expect(mockDmManagerLink).toHaveBeenCalledWith('abc');
+        expect(mockRecoverManagerLink).toHaveBeenCalledTimes(1);
+        // The public path re-matches the typed handle; the admin-only dmManagerLink is not used.
+        expect(mockRecoverManagerLink).toHaveBeenCalledWith('abc', input.replace('@', '').trim());
         expect(mockGetUser).not.toHaveBeenCalled();
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
@@ -338,8 +340,8 @@ describe('recoverDiscordManagerLink', () => {
         expect(result).toEqual({ success: true });
         expect(mockGetUser).toHaveBeenCalledWith('123456789012345678', 'test-bot-token');
         expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 7 }, data: { managerDiscordUsername: 'NewName' } });
-        expect(mockDmManagerLink).toHaveBeenCalledWith('abc');
-        expect(mockPrisma.event.update.mock.invocationCallOrder[0]).toBeLessThan(mockDmManagerLink.mock.invocationCallOrder[0]);
+        expect(mockRecoverManagerLink).toHaveBeenCalledWith('abc', 'newname');
+        expect(mockPrisma.event.update.mock.invocationCallOrder[0]).toBeLessThan(mockRecoverManagerLink.mock.invocationCallOrder[0]);
     });
 
     // Catches: dropping the final equality check, which would DM the manager link to whoever
@@ -354,7 +356,7 @@ describe('recoverDiscordManagerLink', () => {
         const result = await recoverDiscordManagerLink('abc', 'mallory');
 
         expect(result).toEqual({ error: 'Discord username does not match our records.' });
-        expect(mockDmManagerLink).not.toHaveBeenCalled();
+        expect(mockRecoverManagerLink).not.toHaveBeenCalled();
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
 });
