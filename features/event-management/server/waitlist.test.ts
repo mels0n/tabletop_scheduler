@@ -181,6 +181,33 @@ describe('processWaitlistPromotion', () => {
             }
         });
 
+        it('ranks MAYBE above NO: a NO on one campaign session does not hide a later MAYBE on another', async () => {
+            mockPrisma.event.findUnique.mockResolvedValue({ ...event, finalizedSlotId: null });
+            mockPrisma.finalizedSession.findMany.mockResolvedValue([{ timeSlotId: 7 }, { timeSlotId: 8 }]);
+            mockPrisma.participant.findMany.mockResolvedValue([{
+                id: 16, chatId: 'c16', discordId: null,
+                votes: [
+                    { timeSlotId: 7, preference: 'NO', createdAt: t('2026-01-01T00:00:00Z') },
+                    { timeSlotId: 8, preference: 'MAYBE', createdAt: t('2026-01-02T00:00:00Z') },
+                ],
+            }]);
+            mockPrisma.participant.count.mockResolvedValueOnce(2).mockResolvedValueOnce(3);
+
+            await processWaitlistPromotion(1);
+
+            expect(promotedIds()).toEqual([16]);
+        });
+
+        it('ranks an earlier NO voter after a later MAYBE voter', async () => {
+            const no = { id: 17, chatId: 'c17', discordId: null, votes: [{ timeSlotId: 3, preference: 'NO', createdAt: t('2026-01-01T00:00:00Z') }] };
+            mockPrisma.participant.findMany.mockResolvedValue([no, maybe(18, 2)]);
+            mockPrisma.participant.count.mockResolvedValueOnce(3).mockResolvedValueOnce(4);
+
+            await processWaitlistPromotion(1);
+
+            expect(promotedIds()).toEqual([18]);
+        });
+
         it('never promotes a candidate with no vote on the finalized slot', async () => {
             mockPrisma.participant.findMany.mockResolvedValue([{ id: 15, chatId: 'c15', discordId: null, votes: [] }]);
             mockPrisma.participant.count.mockResolvedValue(1);
