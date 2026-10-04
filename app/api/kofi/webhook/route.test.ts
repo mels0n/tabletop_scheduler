@@ -82,6 +82,8 @@ describe('POST /api/kofi/webhook', () => {
         expect(data).not.toHaveProperty('rawPayload');
         expect(data.amount).toBe('5.00');
         expect(data.kofiTransactionId).toBe('txn-1');
+        expect(data.amountCents).toBe(500);
+        expect(mockPrisma.donation.upsert.mock.calls[0][0].update).toEqual({ amountCents: 500 });
 
         const out = logged();
         expect(out).toContain('msg-1');
