@@ -123,14 +123,23 @@ export const publishedPosts: PublishedPost[] = ${JSON.stringify(posts, null, 4)}
 `;
 }
 
-function readPostFiles() {
-    if (!fs.existsSync(CONTENT_DIR)) {
-        return {};
+/**
+ * Reads the post files from `dir`. A missing directory is an error, because an empty
+ * module would publish a site with no posts. The self-host Docker build (which sets
+ * IS_DOCKER_BUILD=true and does not ship content/) is the one exception.
+ */
+export function readPostFiles(dir, env) {
+    if (!fs.existsSync(dir)) {
+        if (env.IS_DOCKER_BUILD === 'true') {
+            console.log(`blog: ${dir} not found; building with no posts (IS_DOCKER_BUILD=true)`);
+            return {};
+        }
+        throw new Error(`blog post directory not found: ${dir}`);
     }
     const files = {};
-    for (const fileName of fs.readdirSync(CONTENT_DIR)) {
+    for (const fileName of fs.readdirSync(dir)) {
         if (fileName.endsWith('.md')) {
-            files[fileName] = fs.readFileSync(path.join(CONTENT_DIR, fileName), 'utf8');
+            files[fileName] = fs.readFileSync(path.join(dir, fileName), 'utf8');
         }
     }
     return files;
@@ -144,7 +153,7 @@ function main() {
         );
     }
     const cutoff = resolveCutoff(process.env);
-    const { posts, heldBack } = selectPosts(readPostFiles(), { cutoff, mode });
+    const { posts, heldBack } = selectPosts(readPostFiles(CONTENT_DIR, process.env), { cutoff, mode });
     fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
     fs.writeFileSync(OUT_FILE, renderModule(posts));
     const preview = [mode.showScheduled && 'scheduled', mode.showDrafts && 'drafts'].filter(Boolean);
@@ -155,5 +164,10 @@ function main() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    main();
+    try {
+        main();
+    } catch (error) {
+        console.error(`blog: ${error.message}`);
+        process.exit(1);
+    }
 }

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { renderModule, resolveCutoff, resolveMode, selectPosts } from './generate-published-posts.mjs';
+import os from 'os';
+import path from 'path';
+import { readPostFiles, renderModule, resolveCutoff, resolveMode, selectPosts } from './generate-published-posts.mjs';
 
 const post = (title: string, date: string, extra: string[] = []) =>
     ['---', `title: "${title}"`, `date: "${date}"`, ...extra, '---', `${title} body`].join('\n');
@@ -67,6 +69,19 @@ describe('resolveMode', () => {
             expect(mode).toEqual({ showScheduled: false, showDrafts: false, ignoredFlags: true });
         },
     );
+});
+
+describe('readPostFiles', () => {
+    const missing = path.join(os.tmpdir(), 'tabletop-no-such-blog-dir');
+
+    it('throws when the directory is missing', () => {
+        expect(() => readPostFiles(missing, {})).toThrow(/not found/);
+        expect(() => readPostFiles(missing, { IS_DOCKER_BUILD: 'false' })).toThrow(/not found/);
+    });
+
+    it('allows a missing directory for the Docker build', () => {
+        expect(readPostFiles(missing, { IS_DOCKER_BUILD: 'true' })).toEqual({});
+    });
 });
 
 describe('renderModule', () => {
