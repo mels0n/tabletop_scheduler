@@ -73,3 +73,20 @@ export const prisma = {
 };
 
 export default prisma;
+
+/** A transaction client: the same delegates as the mock above, each method a fresh `vi.fn()`. */
+export type TxStub = Omit<typeof prisma, '$transaction'>;
+
+/**
+ * A transaction client distinct from the top-level mock. `$transaction.mockImplementation` hands
+ * it to the callback, so a test can assert a call went through `tx` and none reached the
+ * top-level mock. Passing the top-level mock as `tx` (`cb(prisma)`) cannot tell the two apart.
+ */
+export function createTxStub(): TxStub {
+    const tx: Record<string, unknown> = {};
+    for (const [name, delegate] of Object.entries(prisma)) {
+        if (name.startsWith('$')) continue;
+        tx[name] = Object.fromEntries(Object.keys(delegate).map((method) => [method, vi.fn()]));
+    }
+    return tx as TxStub;
+}

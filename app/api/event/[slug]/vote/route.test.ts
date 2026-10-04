@@ -8,6 +8,7 @@ import { hashToken } from '@/shared/lib/token';
 import { resetServerConfigForTests } from '@/shared/config/server';
 import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
 import { broadcastToEvent } from '@/features/notifications';
+import { createTxStub } from '@/shared/lib/__mocks__/prisma';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/notifications', () => ({
@@ -1030,5 +1031,211 @@ describe('POST /api/event/[slug]/vote - group announcement cooldown', () => {
 
         expect(broadcastToEvent).not.toHaveBeenCalled();
         expect(sendDirectMessage).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('POST /api/event/[slug]/vote - finalized status machine on a distinct tx client', () => {
+    const db = prisma as any;
+    const vote = { slotId: 1, preference: 'YES', canHost: false };
+    const finalized = { ...baseEvent, status: 'FINALIZED', maxPlayers: 5, minPlayers: 3, finalizedSlotId: 1 };
+    const call = (body: any) => POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+    const seated = { id: 47, eventId: 1, chatId: null, discordId: null, status: 'ACCEPTED', ownerCookieIssuedAt: MARKED };
+
+    let tx: ReturnType<typeof createTxStub>;
+
+    /** Reads and writes the transaction body must make on tx, never on the top-level client. */
+    const topLevelTransactionCalls = () => [
+        db.timeSlot.findMany, db.participant.findFirst, db.participant.count, db.participant.create,
+        db.participant.update, db.vote.findMany, db.vote.deleteMany, db.vote.createMany,
+        db.event.updateMany,
+    ].flatMap((fn: any) => fn.mock.calls);
+
+    /** What the post-transaction promotion reads: the waitlist of this event. */
+    const promotionRan = () => db.participant.findMany.mock.calls.some(
+        (c: any) => c[0]?.where?.status === 'WAITLIST' && c[0]?.where?.eventId === 1);
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        headerJar.clear();
+        afterQueue.length = 0;
+        tx = createTxStub();
+        db.$transaction.mockImplementation((cb: any) => cb(tx));
+        db.event.findUnique.mockResolvedValue(finalized);
+        // Promotion (after the transaction) finds nobody on the waitlist and stops there.
+        db.participant.findMany.mockResolvedValue([]);
+        (tx.timeSlot.findMany as any).mockResolvedValue([{ id: 1 }, { id: 2 }]);
+        (tx.vote.findMany as any).mockResolvedValue([]);
+        (tx.event.updateMany as any).mockResolvedValue({ count: 1 });
+        (tx.event.findUnique as any).mockResolvedValue({ ...finalized, timeSlots: [] });
+        (tx.participant.create as any).mockResolvedValue({ id: 50 });
+        (tx.participant.update as any).mockResolvedValue({ id: 47 });
+        (tx.participant.count as any).mockResolvedValue(0);
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+    });
+
+    const createdStatus = () => (tx.participant.create as any).mock.calls[0][0].data.status;
+    const updatedStatus = () => (tx.participant.update as any).mock.calls[0][0].data.status;
+
+    describe('transaction membership', () => {
+        it('a new voter on a finalized event is created inside the transaction, never on the top-level client', async () => {
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+
+            expect(tx.timeSlot.findMany).toHaveBeenCalled();
+            expect(tx.participant.count).toHaveBeenCalledWith({ where: { eventId: 1, status: 'ACCEPTED' } });
+            expect(tx.participant.create).toHaveBeenCalledTimes(1);
+            expect(tx.vote.createMany).toHaveBeenCalledTimes(1);
+            expect(tx.event.findUnique).toHaveBeenCalled();
+            expect(tx.event.updateMany).toHaveBeenCalledTimes(1);
+            expect(topLevelTransactionCalls()).toEqual([]);
+        });
+
+        it('an edit of an existing participant reads, updates and replaces votes on tx only', async () => {
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+            (tx.participant.findFirst as any).mockResolvedValue(seated);
+
+            await call({ name: 'Seated', participantId: 47, votes: [vote] });
+
+            expect(tx.participant.findFirst).toHaveBeenCalledWith({ where: { id: 47, eventId: 1 } });
+            expect(tx.participant.update).toHaveBeenCalledTimes(1);
+            expect(tx.vote.findMany).toHaveBeenCalledWith({ where: { participantId: 47 } });
+            expect(tx.vote.deleteMany).toHaveBeenCalledWith({ where: { participantId: 47 } });
+            expect(tx.vote.createMany).toHaveBeenCalledTimes(1);
+            expect(topLevelTransactionCalls()).toEqual([]);
+        });
+
+        it('touches the event row before counting ACCEPTED, and counts before writing the participant', async () => {
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+
+            expect(tx.event.updateMany).toHaveBeenCalledWith({ where: { id: 1 }, data: { updatedAt: expect.any(Date) } });
+            const touchedAt = (tx.event.updateMany as any).mock.invocationCallOrder[0];
+            const countedAt = (tx.participant.count as any).mock.invocationCallOrder[0];
+            const createdAt = (tx.participant.create as any).mock.invocationCallOrder[0];
+            expect(touchedAt).toBeLessThan(countedAt);
+            expect(countedAt).toBeLessThan(createdAt);
+        });
+
+        it('runs the waitlist promotion after the transaction has written the vote', async () => {
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+
+            expect(promotionRan()).toBe(true);
+            const promotedAt = db.participant.findMany.mock.invocationCallOrder[0];
+            expect(promotedAt).toBeGreaterThan((tx.vote.createMany as any).mock.invocationCallOrder[0]);
+        });
+    });
+
+    describe('status on the finalized slot', () => {
+        beforeEach(() => {
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        });
+
+        it('a NO on the finalized slot makes a new voter PENDING and runs promotion without taking a seat', async () => {
+            await call({ name: 'Out', linkIdentity: false, votes: [{ ...vote, preference: 'NO' }] });
+
+            expect(createdStatus()).toBe('PENDING');
+            expect(promotionRan()).toBe(true);
+        });
+
+        it('a NO on the finalized slot moves an ACCEPTED player to PENDING and runs promotion to refill the seat', async () => {
+            (tx.participant.findFirst as any).mockResolvedValue(seated);
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            const res = await call({ name: 'Seated', participantId: 47, votes: [{ ...vote, preference: 'NO' }] });
+
+            expect(res.status).toBe(200);
+            expect(updatedStatus()).toBe('PENDING');
+            expect(promotionRan()).toBe(true);
+        });
+
+        it('an ACCEPTED player at full capacity stays ACCEPTED when re-saving YES', async () => {
+            (tx.participant.findFirst as any).mockResolvedValue(seated);
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            await call({ name: 'Seated', participantId: 47, votes: [vote] });
+
+            expect(updatedStatus()).toBe('ACCEPTED');
+        });
+
+        it('a WAITLIST player at full capacity stays on the waitlist when re-saving YES', async () => {
+            (tx.participant.findFirst as any).mockResolvedValue({ ...seated, status: 'WAITLIST' });
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            await call({ name: 'Waiting', participantId: 47, votes: [vote] });
+
+            expect(updatedStatus()).toBe('WAITLIST');
+        });
+
+        it('a new YES voter with a free seat is ACCEPTED', async () => {
+            cookieJar.clear();
+            (tx.participant.count as any).mockResolvedValue(4);
+
+            await call({ name: 'Yes', linkIdentity: false, votes: [vote] });
+
+            expect(createdStatus()).toBe('ACCEPTED');
+        });
+
+        it('a new YES voter on a full event is WAITLIST', async () => {
+            cookieJar.clear();
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            await call({ name: 'Late', linkIdentity: false, votes: [vote] });
+
+            expect(createdStatus()).toBe('WAITLIST');
+        });
+
+        it('a new MAYBE voter takes a free seat only while below the minimum', async () => {
+            cookieJar.clear();
+            (tx.participant.count as any).mockResolvedValue(2);
+            await call({ name: 'Maybe', linkIdentity: false, votes: [{ ...vote, preference: 'MAYBE' }] });
+            expect(createdStatus()).toBe('ACCEPTED');
+
+            (tx.participant.create as any).mockClear();
+            (tx.participant.count as any).mockResolvedValue(3);
+            await call({ name: 'Maybe2', linkIdentity: false, votes: [{ ...vote, preference: 'MAYBE' }] });
+            expect(createdStatus()).toBe('WAITLIST');
+        });
+
+        it('a campaign voter ignores the slot preference and takes any open seat', async () => {
+            cookieJar.clear();
+            db.event.findUnique.mockResolvedValue({ ...finalized, finalizedSlotId: null });
+            (tx.event.findUnique as any).mockResolvedValue({ ...finalized, finalizedSlotId: null, timeSlots: [] });
+            (tx.participant.count as any).mockResolvedValue(4);
+
+            await call({ name: 'Camp', linkIdentity: false, votes: [{ ...vote, preference: 'NO' }] });
+
+            expect(createdStatus()).toBe('ACCEPTED');
+        });
+    });
+
+    describe('events that are not finalized with a capacity', () => {
+        it('does not touch the event row, count seats or run promotion on a VOTING event', async () => {
+            db.event.findUnique.mockResolvedValue({ ...baseEvent, status: 'VOTING', maxPlayers: 5, minPlayers: 3 });
+            (tx.event.findUnique as any).mockResolvedValue({ ...baseEvent, status: 'VOTING', maxPlayers: 5, timeSlots: [] });
+
+            await call({ name: 'Early', linkIdentity: false, votes: [vote] });
+
+            expect(createdStatus()).toBe('PENDING');
+            expect(tx.event.updateMany).not.toHaveBeenCalled();
+            expect(tx.participant.count).not.toHaveBeenCalledWith({ where: { eventId: 1, status: 'ACCEPTED' } });
+            expect(promotionRan()).toBe(false);
+        });
+
+        it('does not run promotion on a DRAFT event with a maximum', async () => {
+            db.event.findUnique.mockResolvedValue({ ...baseEvent, status: 'DRAFT', maxPlayers: 5 });
+            (tx.event.findUnique as any).mockResolvedValue({ ...baseEvent, status: 'DRAFT', maxPlayers: 5, timeSlots: [] });
+
+            await call({ name: 'Early', linkIdentity: false, votes: [vote] });
+
+            expect(promotionRan()).toBe(false);
+        });
+
+        it('does not run promotion on a finalized event with no maximum', async () => {
+            db.event.findUnique.mockResolvedValue({ ...finalized, maxPlayers: null });
+            (tx.event.findUnique as any).mockResolvedValue({ ...finalized, maxPlayers: null, timeSlots: [] });
+
+            await call({ name: 'Open', linkIdentity: false, votes: [vote] });
+
+            expect(promotionRan()).toBe(false);
+        });
     });
 });

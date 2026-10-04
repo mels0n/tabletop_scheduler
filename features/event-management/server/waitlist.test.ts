@@ -5,6 +5,7 @@ vi.mock('@/features/event-management/server/dashboard-sync', () => ({ syncDashbo
 vi.mock('@/features/notifications', () => ({ sendDirectMessage: vi.fn() }));
 
 import prisma from '@/shared/lib/prisma';
+import { createTxStub } from '@/shared/lib/__mocks__/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
 import { processWaitlistPromotion } from './waitlist';
@@ -216,6 +217,71 @@ describe('processWaitlistPromotion', () => {
 
             expect(mockPrisma.participant.updateMany).not.toHaveBeenCalled();
             expect(mockSend).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('transaction membership (a distinct tx client, not the top-level mock)', () => {
+        const topLevelCalls = () => [
+            mockPrisma.event.updateMany,
+            mockPrisma.participant.updateMany,
+            mockPrisma.participant.count,
+        ].flatMap((fn: any) => fn.mock.calls);
+
+        let tx: ReturnType<typeof createTxStub>;
+
+        beforeEach(() => {
+            tx = createTxStub();
+            mockPrisma.$transaction.mockImplementation((cb: any) => cb(tx));
+            (tx.event.updateMany as any).mockResolvedValue({ count: 1 });
+            (tx.participant.updateMany as any).mockResolvedValue({ count: 1 });
+        });
+
+        it('touches the event row, counts, claims and recounts on tx, and never on the top-level client', async () => {
+            (tx.participant.count as any).mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+
+            await processWaitlistPromotion(1);
+
+            expect(tx.event.updateMany).toHaveBeenCalledWith({ where: { id: 1 }, data: { updatedAt: expect.any(Date) } });
+            expect(tx.participant.updateMany).toHaveBeenCalledWith({
+                where: { id: 11, eventId: 1, status: 'WAITLIST' },
+                data: { status: 'ACCEPTED' },
+            });
+            expect(tx.participant.count).toHaveBeenCalledTimes(2);
+            expect(tx.participant.count).toHaveBeenCalledWith({ where: { eventId: 1, status: 'ACCEPTED' } });
+            expect(topLevelCalls()).toEqual([]);
+            expect(mockSend).toHaveBeenCalledTimes(1);
+        });
+
+        it('touches the event row before the first count and before the first claim', async () => {
+            (tx.participant.count as any).mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+
+            await processWaitlistPromotion(1);
+
+            const touchedAt = (tx.event.updateMany as any).mock.invocationCallOrder[0];
+            expect(touchedAt).toBeLessThan((tx.participant.count as any).mock.invocationCallOrder[0]);
+            expect(touchedAt).toBeLessThan((tx.participant.updateMany as any).mock.invocationCallOrder[0]);
+        });
+
+        it('touches the event row even when the table is full and nobody is promoted', async () => {
+            (tx.participant.count as any).mockResolvedValue(2);
+
+            await processWaitlistPromotion(1);
+
+            expect(tx.event.updateMany).toHaveBeenCalledTimes(1);
+            expect(tx.participant.updateMany).not.toHaveBeenCalled();
+            expect(topLevelCalls()).toEqual([]);
+        });
+
+        it('reverts an overbooked promotion on tx, not on the top-level client', async () => {
+            (tx.participant.count as any).mockResolvedValueOnce(1).mockResolvedValueOnce(3);
+
+            await processWaitlistPromotion(1);
+
+            expect(tx.participant.updateMany).toHaveBeenLastCalledWith({
+                where: { id: 11, eventId: 1, status: 'ACCEPTED' },
+                data: { status: 'WAITLIST' },
+            });
+            expect(topLevelCalls()).toEqual([]);
         });
     });
 
