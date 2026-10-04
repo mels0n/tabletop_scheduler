@@ -81,6 +81,7 @@ export const voteSchema = z.object({
     name: z.string().trim().min(1).max(60),
     telegramId: z.string().max(64).nullish(),
     participantId: positiveInt.nullish(),
+    slug: z.string().max(64).optional(),
     linkIdentity: z.boolean().optional(),
     linkTelegram: z.boolean().optional(),
     linkDiscord: z.boolean().optional(),

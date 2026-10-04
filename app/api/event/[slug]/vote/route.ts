@@ -51,7 +51,8 @@ class ParticipantNotOwnedError extends AppError {
  *      c. Legacy: see below.
  *      Anyone else gets 403 with `code: 'participant_not_owned'`.
  *    - Legacy rows: a row with no `ownerCookieIssuedAt` marker was created before participant
- *      cookies existed, so it is accepted by its stored id from any browser. The same
+ *      cookies existed, so it is accepted by its stored id from any browser that also sends
+ *      the event's `slug` (proof it holds the event link). The same
  *      transaction marks it with a conditional update (`ownerCookieIssuedAt: null` in the
  *      where), and the response issues the cookie. If that update matches nothing, another
  *      browser claimed the row first and the normal check applies. A marked row never
@@ -73,7 +74,7 @@ class ParticipantNotOwnedError extends AppError {
  *    out the vote and make the client retry. `quorumViableNotified`/`quorumPerfectNotified`
  *    are set only when the DM was delivered.
  *
- * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, linkTelegram?, linkDiscord? }
+ * @param {Request} req - JSON Payload: { name, telegramId, votes: [{ slotId, preference, canHost }], participantId?, slug?, linkTelegram?, linkDiscord? }
  *   `linkTelegram`/`linkDiscord` (each default true): when explicitly false, opts this
  *   vote out of that platform's identity linking — `linkTelegram=false` doesn't write the
  *   verified chatId, `linkDiscord=false` doesn't write discordId/discordUsername.
@@ -160,10 +161,13 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
                     // An integration (or the host) editing someone else's row: no ownership
                     // marker, no cookie, no identity linking.
                     actingAsEventAdmin = true;
-                } else if (existing && isLegacyParticipant(existing)) {
+                } else if (existing && isLegacyParticipant(existing) && body.slug === targetEvent.slug) {
                     // Created before participant cookies existed: the stored id is all this voter
-                    // has. Claim the row for this browser; the response issues the cookie. The
-                    // conditional where makes exactly one concurrent claimant win.
+                    // has. The client also sends the event link's slug (the URL is not guessable
+                    // from the numeric ids), so a guessed id alone cannot claim the row. Without
+                    // it the normal ownership check below applies. Claim the row for this
+                    // browser; the response issues the cookie. The conditional where makes
+                    // exactly one concurrent claimant win.
                     const claim = await tx.participant.updateMany({
                         where: { id: existing.id, ownerCookieIssuedAt: null },
                         data: { ownerCookieIssuedAt: now }

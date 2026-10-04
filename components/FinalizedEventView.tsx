@@ -138,6 +138,8 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                 name: userName,
                 telegramId: userTelegram,
                 participantId, // Send if updating existing participant or re-joining
+                // Proves this browser holds the event link; the API needs it to claim a legacy row.
+                slug: event.slug,
                 discordUsername: discordIdentity?.username,
                 votes: [{
                     slotId: finalizedSlot.id,
@@ -361,6 +363,7 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                                                     name: userName || localStorage.getItem('tabletop_username') || "Unknown",
                                                     telegramId: userTelegram || localStorage.getItem('tabletop_telegram') || "",
                                                     participantId,
+                                                    slug: event.slug,
                                                     votes: [{
                                                         slotId: finalizedSlot.id,
                                                         preference: 'NO', // Relinquish spot
