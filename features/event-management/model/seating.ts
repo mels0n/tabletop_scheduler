@@ -7,12 +7,13 @@
  *   finalize, which adds If Needed players only to reach the minimum. No minimum (0) means
  *   never.
  * - NO never takes a seat.
- * - No preference (no vote on the finalized slot) takes any open seat, as before.
+ * - No preference (no vote on the finalized slot) counts as NO: never seated. The site
+ *   submits every unpainted slot as NO, and the API treats an omitted slot the same way.
  *
  * Pure and client-safe.
  */
 export function canTakeOpenSeat(preference: string | undefined, accepted: number, min: number, max: number): boolean {
-    if (preference === undefined || preference === "YES") return accepted < max;
+    if (preference === "YES") return accepted < max;
     if (preference === "MAYBE") return accepted < Math.min(min, max);
     return false;
 }

@@ -23,8 +23,8 @@ describe('canTakeOpenSeat', () => {
         expect(canTakeOpenSeat('NO', 0, 3, 5)).toBe(false);
     });
 
-    it('treats a missing preference like a YES (open seat below the maximum)', () => {
-        expect(canTakeOpenSeat(undefined, 4, 3, 5)).toBe(true);
-        expect(canTakeOpenSeat(undefined, 5, 3, 5)).toBe(false);
+    it('never seats a missing preference (no vote on the finalized slot counts as NO)', () => {
+        expect(canTakeOpenSeat(undefined, 0, 3, 5)).toBe(false);
+        expect(canTakeOpenSeat(undefined, 4, 3, 5)).toBe(false);
     });
 });

@@ -857,6 +857,42 @@ describe('POST /api/event/[slug]/vote - validation and ownership', () => {
             expect(mockPrisma.participant.create.mock.calls[1][0].data.status).toBe('WAITLIST');
         });
 
+        it('treats a payload without the finalized slot as NO: an ACCEPTED player becomes PENDING and promotion runs', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...waitlisted, status: 'ACCEPTED' });
+            mockPrisma.participant.count.mockResolvedValue(4);
+            mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+            // The event row read back inside the transaction drives the promotion call.
+            mockPrisma.event.findUnique.mockImplementation(async (args: any) =>
+                args.include ? { ...finalized, timeSlots: [] } : finalized);
+            mockPrisma.participant.findMany.mockResolvedValue([]);
+
+            const res = await call({ name: 'Seated', participantId: 47, votes: [{ ...vote, slotId: 2 }] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('PENDING');
+            // processWaitlistPromotion ran: it reads the waitlist for this event.
+            expect(mockPrisma.participant.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId: 1, status: 'WAITLIST' } }));
+        });
+
+        it('treats a new voter without the finalized slot as NO: PENDING, never ACCEPTED', async () => {
+            cookieJar.clear();
+            mockPrisma.participant.count.mockResolvedValue(0);
+
+            await call({ name: 'Elsewhere', linkIdentity: false, votes: [{ ...vote, slotId: 2 }] });
+
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('PENDING');
+        });
+
+        it('keeps the open-seat rule for campaigns, which have no single finalized slot', async () => {
+            cookieJar.clear();
+            mockPrisma.event.findUnique.mockResolvedValue({ ...finalized, finalizedSlotId: null });
+            mockPrisma.participant.count.mockResolvedValue(1);
+
+            await call({ name: 'Campaigner', linkIdentity: false, votes: [vote] });
+
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('ACCEPTED');
+        });
+
         it('keeps an ACCEPTED player ACCEPTED when they switch to MAYBE above the minimum', async () => {
             mockPrisma.participant.findFirst.mockResolvedValue({ ...waitlisted, status: 'ACCEPTED' });
             mockPrisma.participant.count.mockResolvedValue(4);
