@@ -180,7 +180,7 @@ describe.skipIf(!generatedClientIsSqlite())('cleanup cron retention (SQLite inte
                 eventId: withWebhook.id,
                 url: 'https://partner.example/hook',
                 payload: '{}',
-                status: 'PENDING',
+                status: 'DELIVERED',
                 nextAttempt: new Date(),
             },
         });
@@ -191,6 +191,39 @@ describe.skipIf(!generatedClientIsSqlite())('cleanup cron retention (SQLite inte
         expect(body).toMatchObject({ success: true, deleted: 205, errors: 0 });
         expect(await p.event.count()).toBe(0);
         expect(await p.webhookEvent.count()).toBe(0);
+    });
+
+    it('keeps an expired event while a recent webhook row is still waiting to be delivered', async () => {
+        const p = db.prisma;
+        const pending = await makeEvent(p, { status: 'CANCELLED', updatedAt: daysAgo(2) });
+        await p.webhookEvent.create({
+            data: {
+                eventId: pending.id,
+                url: 'https://partner.example/hook',
+                payload: '{"type":"CANCELLED"}',
+                status: 'RETRY',
+                attempts: 3,
+                nextAttempt: daysAhead(1),
+                createdAt: daysAgo(1),
+            },
+        });
+        const stale = await makeEvent(p, { status: 'CANCELLED', updatedAt: daysAgo(5) });
+        await p.webhookEvent.create({
+            data: {
+                eventId: stale.id,
+                url: 'https://partner.example/hook',
+                payload: '{"type":"CANCELLED"}',
+                status: 'RETRY',
+                attempts: 11,
+                nextAttempt: daysAhead(1),
+                createdAt: daysAgo(4),
+            },
+        });
+
+        await GET(cronRequest());
+        expect(await exists(p, pending.id)).toBe(true);
+        expect(await p.webhookEvent.count({ where: { eventId: pending.id } })).toBe(1);
+        expect(await exists(p, stale.id)).toBe(false);
     });
 
     it('removes expired login tokens', async () => {
