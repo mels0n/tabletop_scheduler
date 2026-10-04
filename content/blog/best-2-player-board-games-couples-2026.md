@@ -17,11 +17,11 @@ The following table provides a high-density breakdown of the top-rated games for
 
 | Game Title | BGG Weight (1-5) | The Vibe | Social Proof (Reddit/Community) |
 | --- | --- | --- | --- |
-| **7 Wonders Duel** | 2.22 (Med) | **Tense Strategy.** You are building civilizations head-to-head. Zero "multiplayer solitaire." | "I win the majority of games against my wife... but when she wins, it's a f*ing blowout." — *u/ofrootloop* |
-| **Sky Team** | 2.06 (Med) | **Co-Op Anxiety.** You are co-pilots landing a plane in silence. High trust required. | "The best couple game he'd ever played... one of the best thematic games I've ever played." — *u/SnazzyStooge* |
-| **Patchwork** | 1.62 (Light) | **Cozy Competitive.** Tetris with buttons. Deceptively cutthroat beneath the quilt theme. | "DIS MY QUILT, BITCH." — *Reddit User on the hidden aggression of Patchwork.* |
+| **7 Wonders Duel** | 2.22 (Med) | **Tense Strategy.** You are building civilizations head-to-head. Zero "multiplayer solitaire." | "I win the majority of games against my wife... but when she wins, it's a f*ing blowout." (*u/ofrootloop*) |
+| **Sky Team** | 2.06 (Med) | **Co-Op Anxiety.** You are co-pilots landing a plane in silence. High trust required. | "The best couple game he'd ever played... one of the best thematic games I've ever played." (*u/SnazzyStooge*) |
+| **Patchwork** | 1.62 (Light) | **Cozy Competitive.** Tetris with buttons. Deceptively cutthroat beneath the quilt theme. | "DIS MY QUILT, BITCH." (*Reddit User on the hidden aggression of Patchwork.*) |
 | **Fog of Love** | 2.25 (Med) | **Roleplay Simulator.** A romantic comedy generator. You play characters, not yourselves. | "It's either worth its weight in gold... or socially uncomfortable. A chaotic valentine date." |
-| **Jaipur** | 1.48 (Light) | **Fast & Trading.** A set collection duel. Quick, punchy, and addictive. | "He who controls the camels, controls the game." — *Meeple Mountain* |
+| **Jaipur** | 1.48 (Light) | **Fast & Trading.** A set collection duel. Quick, punchy, and addictive. | "He who controls the camels, controls the game." (*Meeple Mountain*) |
 | **Codenames: Duet** | 1.30 (Light) | **Word Association.** Cooperative deduction. You win or lose together. | "It rewards cleverness without requiring it... very challenging and tests your sense of empathy." |
 | **Splendor Duel** | 2.00 (Med) | **Engine Building.** A tighter, meaner version of the classic. | "A compact, tight two-player experience that offers deeper strategic options." |
 
@@ -44,7 +44,7 @@ For couples who bond over conflict, **7 Wonders Duel** and **Splendor Duel** off
 
 The biggest hurdle for couples living together isn't a lack of games, but a lack of **intentionality**. Because partners share a domestic space, leisure time often gets subsumed by chores or passive screen time.
 
-To combat this, you must treat your romantic game night with the same logistical respect as a 6-person D&D campaign. Using **Tabletop Time** to send a scheduling link—even to someone sitting on the same couch—psychologically shifts the activity from "something we might do" to a **booked event**.
+To combat this, you must treat your romantic game night with the same logistical respect as a 6-person D&D campaign. Using **Tabletop Time** to send a scheduling link (even to someone sitting on the same couch) psychologically shifts the activity from "something we might do" to a **booked event**.
 
 **Key benefits of formal scheduling for couples include:**
 

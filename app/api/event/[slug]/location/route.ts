@@ -1,73 +1,50 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
-import { getBaseUrl } from "@/shared/lib/url";
-import { buildFinalizedMessage } from "@/shared/lib/eventMessage";
-import { editMessageText } from "@/features/telegram/lib/telegram-client";
 import Logger from "@/shared/lib/logger";
 
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
+import { ForbiddenError, toResponse } from "@/shared/errors";
+import { locationSchema, syncDashboard } from "@/features/event-management";
 
 const log = Logger.get("API:Location");
 
 /**
  * @function POST
- * @description Handles location updates for an already finalized event.
+ * @description Handles location updates for an event.
  *
  * Responsibilities:
  * 1. Updates the `location` field in the database.
- * 2. If the event is linked to Telegram and has a pinned "Finalized" message:
- *    - Regenerates the message HTML with the new location logic.
- *    - Edits the existing Telegram message in-place using `editMessageText`.
- *    - This ensures users see the new location without needing a new notification spam.
+ * 2. Re-renders the pinned dashboard on each linked platform via `syncDashboard`, the same
+ *    path every other change uses, so the finalized message keeps its attendee and
+ *    waitlist lists. Users see the new location without a new notification.
  *
- * @param {Request} req - JSON body containing `{ location: string }`.
+ * @param {Request} req - JSON body containing `{ location: string | null }` (max 200 chars). Admin only (403).
  * @param {Object} context - Route parameters.
  * @param {string} context.params.slug - The event identifier.
  * @returns {NextResponse} Success status and updated location.
  */
-export async function POST(
-    req: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const params = await props.params;
     try {
-        const { location } = await req.json();
-
-        if (!await verifyEventAdmin(params.slug)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!(await verifyEventAdmin(params.slug))) {
+            throw new ForbiddenError();
         }
+
+        const { location } = locationSchema.parse(await req.json());
 
         log.info("Updating location", { slug: params.slug });
 
-        // Action: Database Update
         const event = await prisma.event.update({
             where: { slug: params.slug },
             data: { location },
-            include: {
-                timeSlots: true,
-                finalizedHost: true
-            }
+            select: { id: true, location: true }
         });
 
-        // Action: Telegram Sync
-        // Intent: Keep the "pinned" message up-to-date with the latest location info.
-        if (event.telegramChatId && event.pinnedMessageId && process.env.TELEGRAM_BOT_TOKEN && event.finalizedSlotId) {
-            const slot = event.timeSlots.find(s => s.id === event.finalizedSlotId);
-            if (slot) {
-                const origin = getBaseUrl(req.headers);
-                const msg = buildFinalizedMessage(event, slot, origin);
-
-                await editMessageText(
-                    event.telegramChatId,
-                    event.pinnedMessageId,
-                    msg,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-        }
+        // Never throws: each platform is attempted independently and failures are logged.
+        await syncDashboard(event.id);
 
         return NextResponse.json({ success: true, location: event.location });
     } catch (error) {
-        log.error("Location update failed", error as Error);
-        return NextResponse.json({ error: "Failed to update location" }, { status: 500 });
+        return toResponse(error, log.forRequest(req));
     }
 }

@@ -43,7 +43,7 @@ export function CampaignStatusBanner({ eventId, acceptedIds, waitlistIds, server
             <span className="text-2xl">⚠️</span>
             <div>
                 <p className="font-bold text-yellow-300 text-lg">You&apos;re on the waitlist</p>
-                <p className="text-yellow-400/70 text-sm">You&apos;ll be contacted if a spot opens up for a session.</p>
+                <p className="text-yellow-400/70 text-sm">If a spot opens up you move in automatically, with a DM if you linked Telegram or Discord.</p>
             </div>
         </div>
     );

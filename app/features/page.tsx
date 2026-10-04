@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 
 export const metadata: Metadata = {
-    title: 'Features — Game Night Scheduling Built for Tabletop Groups',
-    description: 'The Doodle replacement built for gaming groups. Quorum logic, waitlists, Telegram & Discord bots — and no sign-up required for anyone. Free forever.',
+    title: 'Features: Game Night Scheduling Built for Tabletop Groups',
+    description: 'The Doodle replacement built for gaming groups. Quorum logic, waitlists, Telegram & Discord bots, and no sign-up required for anyone. Free forever.',
     alternates: {
         canonical: '/features',
     },
@@ -19,10 +19,10 @@ const schema = [
         alternateName: 'Tabletop Scheduler',
         featureList: [
             'No sign-up required for organizers or participants',
-            'Quorum logic — automatically highlights dates that meet minimum player count',
+            'Quorum logic: automatically highlights dates that meet minimum player count',
             'Waitlists and player capacity limits',
-            'Telegram bot integration — live availability in group chat',
-            'Discord bot integration — scheduling inside your server',
+            'Telegram bot integration: live availability in group chat',
+            'Discord bot integration: scheduling inside your server',
             'One-click Google Calendar and ICS event export',
             'Zero ads, zero tracking, open source',
         ],
@@ -30,7 +30,7 @@ const schema = [
     SchemaGenerator.faq([
         {
             question: 'Is Tabletop Time a Doodle replacement for game nights?',
-            answer: 'Yes. Tabletop Time replaces Doodle for gaming groups with features Doodle does not have: no sign-up required for anyone, quorum logic for minimum player counts, waitlists, and native Telegram and Discord bot integration — all completely free with no ads.',
+            answer: 'Yes. Tabletop Time replaces Doodle for gaming groups with features Doodle does not have: no sign-up required for anyone, quorum logic for minimum player counts, waitlists, and native Telegram and Discord bot integration, all completely free with no ads.',
         },
         {
             question: 'What is the difference between Tabletop Time and Doodle?',
@@ -82,12 +82,12 @@ export default function FeaturesPage() {
                     <FeatureCard
                         icon={<Bot className="w-8 h-8 text-cyan-400" />}
                         title="Chat Integration"
-                        description="Don't leave the group chat. Our Telegram & Discord bots assist with voting, reminders, and managing the event directly from your DM."
+                        description="Don't leave the group chat. Our Telegram & Discord bots pin a live vote tally in your group, post reminders and the final result, and DM you login links and results."
                     />
                     <FeatureCard
                         icon={<CalendarDays className="w-8 h-8 text-violet-400" />}
                         title="Campaign / Multi-Session Scheduling"
-                        description="Running a D&D campaign, Legacy series, or recurring game night? Campaign mode groups candidate dates by shared player availability so you can see at a glance which run of sessions works for your whole table. Click the group that fits, tick the dates you want, and confirm — all inline, no extra steps. Per-session Google, Outlook, and .ics calendar buttons are generated automatically."
+                        description="Running a D&D campaign, Legacy series, or recurring game night? Campaign mode groups candidate dates by shared player availability so you can see at a glance which run of sessions works for your whole table. Click the group that fits, tick the dates you want, and confirm, all inline with no extra steps. Per-session Google, Outlook, and .ics calendar buttons are generated automatically."
                     />
                 </div>
 
@@ -95,7 +95,7 @@ export default function FeaturesPage() {
                 <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 md:p-8 overflow-hidden">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold text-white mb-4">Why Switch?</h2>
-                        <p className="text-slate-400">See how we stack up against the general-purpose tools — including Doodle.</p>
+                        <p className="text-slate-400">See how we stack up against the general-purpose tools, including Doodle.</p>
                     </div>
 
                     <div className="overflow-x-auto">

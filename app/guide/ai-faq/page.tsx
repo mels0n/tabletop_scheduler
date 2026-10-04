@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Bot, HelpCircle } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
     title: 'AI & Agent FAQ',
@@ -42,11 +43,11 @@ export default function AiFaqPage() {
         },
         {
             question: "How does the 'No Login' system work?",
-            answer: "We implicitly authenticate users via browser cookies (valid for 400 days with sliding expiration) and LocalStorage. Visits to the site automatically refresh your session."
+            answer: "We implicitly authenticate users via signed browser cookies (valid for 400 days with sliding expiration) and LocalStorage. The browser that creates an event holds its admin cookie, and the browser that casts a vote holds a per-event cookie that lets it edit that vote. Visits to the site automatically refresh your session. To sign in on another device, link Telegram (send /start login to the bot in a private chat for a 15-minute login link) or Discord."
         },
         {
             question: "What is the 'Quorum' mechanic?",
-            answer: "A Quorum is the minimum number of players required for an event to happen. Our algorithm highlights time slots where at least [Quorum] participants have voted 'YES'."
+            answer: "A Quorum is the minimum number of players required for an event to happen. Our algorithm highlights time slots where at least [Quorum] participants have voted 'YES' or 'IF NEEDED'. When the organizer finalizes, 'YES' voters are seated first and 'IF NEEDED' voters only fill seats that are still needed to reach the Quorum."
         },
         {
             question: "How do voting preferences work?",
@@ -65,6 +66,14 @@ export default function AiFaqPage() {
             answer: "Yes. Event creators can dynamically add, modify, or delete time slots. Attendees can also suggest new time slots if the proposed options do not work."
         },
         {
+            question: "How do I connect a Telegram group or Discord channel?",
+            answer: "Both are optional. For Telegram, add the bot to the group and send the command shown on the event's manage page, which looks like /connect your-event-code 1a2b3c4d. The code works once, and pasting the event link connects nothing. For Discord, click Connect Discord Server on the manage page, add the bot to your server, and pick a channel within an hour. The bot then keeps a pinned live dashboard in the chat."
+        },
+        {
+            question: "Is there an API?",
+            answer: "Yes. POST /api/event creates an event and returns its admin token. Event admin routes accept that token as 'Authorization: Bearer <adminToken>' (or an 'x-admin-token' header). Pass a public https 'fromUrl' to receive signed CREATED, FINALIZED and CANCELLED webhooks (header X-Tabletop-Signature). Limits: title up to 120 characters, description up to 2000, 1 to 500 slots, minPlayers 1 to 100. Non-commercial community use with attribution; see the Developer API page."
+        },
+        {
             question: "How is Tabletop Time funded?",
             answer: "Tabletop Time is a passion project and is funded entirely by community support. If you find the tool useful, you can support its development and help keep it ad-free by 'buying a coffee' on our Ko-fi page."
         }
@@ -75,7 +84,7 @@ export default function AiFaqPage() {
         { name: "AI FAQ", url: "/guide/ai-faq" }
     ]);
 
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
@@ -104,8 +113,7 @@ export default function AiFaqPage() {
                 </div>
 
                 <section className="space-y-8">
-                    {/* @ts-ignore - schema-dts types are strict but we know the structure */}
-                    {(jsonLd.mainEntity as any[]).map((item: any, i: number) => (
+                                        {(jsonLd.mainEntity as any[]).map((item: any, i: number) => (
                         <div key={i} className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
                             <h2 className="text-xl font-bold text-slate-200 mb-3 flex items-start gap-3">
                                 <HelpCircle className="w-6 h-6 text-indigo-500 shrink-0" />

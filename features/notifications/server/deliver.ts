@@ -1,0 +1,184 @@
+import Logger from "@/shared/lib/logger";
+import { htmlToDiscordMarkdown } from "@/shared/lib/discordMarkdown";
+import { sendTelegramMessageResult } from "@/features/telegram/lib/telegram-client";
+import { sendDiscordMessage, sendDiscordDM } from "@/features/integrations/discord/model/discord";
+import { getServerConfig } from "@/shared/config/server";
+import prisma from "@/shared/lib/prisma";
+import { isDmOptedOut, type DmPlatform } from "@/entities/notification-preference";
+
+const log = Logger.get("Notifications");
+
+/**
+ * Telegram and Discord are peers. Every send goes to each platform the target
+ * is linked to, independently: a missing token, missing link, or failed send on
+ * one platform never prevents delivery on the other.
+ */
+
+/**
+ * A message authored once. Telegram gets `html`; Discord gets `discord`, or `html` converted.
+ *
+ * Escaping contract: delivery never escapes. The author escapes user text once at
+ * interpolation: `escapeHtml` in `html`, `escapeDiscordMarkdown` in `discord`
+ * (both from `@/shared/lib/escape`). When `discord` is omitted, `htmlToDiscordMarkdown`
+ * converts the already-escaped HTML and escapes its text for Discord.
+ */
+export interface NotificationMessage {
+    html: string;
+    discord?: string;
+}
+
+/** Where a group/channel post goes. Pass the Event row (or a pick of it). */
+export interface EventChannels {
+    telegramChatId?: string | null;
+    discordChannelId?: string | null;
+}
+
+/** Where a direct message goes. Map from Participant (`chatId`, `discordId`) or the Event's manager fields. */
+export interface UserTargets {
+    telegramChatId?: string | null;
+    discordUserId?: string | null;
+}
+
+export type DeliveryOutcome =
+    | { status: "sent"; messageId: string }
+    | { status: "failed"; error: string }
+    /** `opted_out`: the user turned off bot direct messages for this platform. Nothing to do, never a failure. */
+    | { status: "skipped"; reason: "not_linked" | "not_configured" | "opted_out" };
+
+export interface DeliveryResult {
+    telegram: DeliveryOutcome;
+    discord: DeliveryOutcome;
+}
+
+export function isDelivered(result: DeliveryResult): boolean {
+    return result.telegram.status === "sent" || result.discord.status === "sent";
+}
+
+function toDiscord(message: NotificationMessage): string {
+    return message.discord ?? htmlToDiscordMarkdown(message.html);
+}
+
+function describeError(error: unknown): string {
+    if (!error) return "unknown error";
+    if (typeof error === "string") return error;
+    if (error instanceof Error) return error.message;
+    const e = error as { code?: unknown; message?: unknown };
+    if (e.code !== undefined || e.message !== undefined) return `${e.code ?? ""} ${e.message ?? ""}`.trim();
+    return JSON.stringify(error);
+}
+
+async function viaTelegram(chatId: string | null | undefined, html: string): Promise<DeliveryOutcome> {
+    if (!chatId) return { status: "skipped", reason: "not_linked" };
+    const token = getServerConfig().telegram.token ?? undefined;
+    if (!token) return { status: "skipped", reason: "not_configured" };
+    try {
+        // Telegram's own description ("Forbidden: bot was kicked...", "Bad Request: chat not
+        // found") is carried through so callers can recognise a dead chat.
+        const res = await sendTelegramMessageResult(chatId, html, token);
+        return res.ok ? { status: "sent", messageId: String(res.value) } : { status: "failed", error: res.status ? `${res.status} ${res.error}` : res.error };
+    } catch (e) {
+        return { status: "failed", error: describeError(e) };
+    }
+}
+
+async function viaDiscord(
+    target: string | null | undefined,
+    content: string,
+    send: (target: string, content: string, token: string) => Promise<{ id?: string; error?: unknown }>
+): Promise<DeliveryOutcome> {
+    if (!target) return { status: "skipped", reason: "not_linked" };
+    const token = getServerConfig().discord.botToken ?? undefined;
+    if (!token) return { status: "skipped", reason: "not_configured" };
+    try {
+        const res = await send(target, content, token);
+        return res.id ? { status: "sent", messageId: res.id } : { status: "failed", error: describeError(res.error) };
+    } catch (e) {
+        return { status: "failed", error: describeError(e) };
+    }
+}
+
+function logFailures(kind: string, result: DeliveryResult, context?: Record<string, unknown>) {
+    for (const platform of ["telegram", "discord"] as const) {
+        const outcome = result[platform];
+        if (outcome.status === "failed") {
+            log.warn(`${kind} failed on ${platform}`, { ...context, error: outcome.error });
+        }
+    }
+}
+
+/** Posts a message to the event's linked Telegram group and Discord channel. */
+export async function broadcastToEvent(
+    channels: EventChannels,
+    message: NotificationMessage,
+    context?: Record<string, unknown>
+): Promise<DeliveryResult> {
+    const [telegram, discord] = await Promise.all([
+        viaTelegram(channels.telegramChatId, message.html),
+        viaDiscord(channels.discordChannelId, toDiscord(message), sendDiscordMessage),
+    ]);
+    const result = { telegram, discord };
+    logFailures("broadcast", result, context);
+    return result;
+}
+
+export interface DirectMessageOptions {
+    /**
+     * Skip any platform where the user turned off bot direct messages. Defaults to true.
+     * Pass false only for a message the user explicitly asked for (a login link).
+     */
+    respectOptOut?: boolean;
+}
+
+const OPTED_OUT: DeliveryOutcome = { status: "skipped", reason: "opted_out" };
+const PREFERENCE_UNAVAILABLE: DeliveryOutcome = { status: "failed", error: "preference_unavailable" };
+
+/**
+ * Whether this target opted out, or null when the preference could not be read. A failed
+ * lookup fails closed: an opted-out user must never get an automatic DM because the
+ * database hiccuped. The failure is transient, so a reminder retries it later.
+ */
+async function optedOut(platform: DmPlatform, platformId: string, context?: Record<string, unknown>): Promise<boolean | null> {
+    try {
+        return await isDmOptedOut(prisma, platform, platformId);
+    } catch (e) {
+        log.error(`DM preference lookup failed on ${platform}; not sending`, { ...context, error: describeError(e) });
+        return null;
+    }
+}
+
+async function unlessOptedOut(
+    platform: DmPlatform,
+    platformId: string | null | undefined,
+    respectOptOut: boolean,
+    send: () => Promise<DeliveryOutcome>,
+    context?: Record<string, unknown>
+): Promise<DeliveryOutcome> {
+    if (respectOptOut && platformId) {
+        const out = await optedOut(platform, platformId, context);
+        if (out === null) return PREFERENCE_UNAVAILABLE;
+        if (out) return OPTED_OUT;
+    }
+    return send();
+}
+
+/**
+ * Sends a direct message to a user on every platform they have linked, skipping any
+ * platform where they turned off bot direct messages (unless `respectOptOut` is false).
+ */
+export async function sendDirectMessage(
+    target: UserTargets,
+    message: NotificationMessage,
+    context?: Record<string, unknown>,
+    options: DirectMessageOptions = {}
+): Promise<DeliveryResult> {
+    const respectOptOut = options.respectOptOut ?? true;
+    const [telegram, discord] = await Promise.all([
+        unlessOptedOut("telegram", target.telegramChatId, respectOptOut,
+            () => viaTelegram(target.telegramChatId, message.html), context),
+        unlessOptedOut("discord", target.discordUserId, respectOptOut,
+            () => viaDiscord(target.discordUserId, toDiscord(message), sendDiscordDM), context),
+    ]);
+    const result = { telegram, discord };
+    logFailures("direct message", result, context);
+    return result;
+}

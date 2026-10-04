@@ -1,24 +1,27 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { format } from "date-fns";
 import { Calendar, Clock, MapPin, Home, User as UserIcon, Loader2, Check } from "lucide-react";
 import { clsx } from "clsx";
 import { ClientDate, ClientTimezone } from "./ClientDate";
 import { AddToCalendar } from "./AddToCalendar";
+import type { PublicEvent, PublicParticipant, PublicSlot } from "@/features/event-management/model/dto";
+import { voteErrorMessage } from "@/features/event-management/model/vote-errors";
 
 /**
  * @interface FinalizedEventViewProps
  * @description Props for the FinalizedEventView component.
- * @property {any} event - The full event object.
- * @property {any} finalizedSlot - The TimeSlot object that was selected as final.
+ * @property {PublicEvent} event - The public event DTO.
+ * @property {PublicSlot} finalizedSlot - The time slot (with votes) that was selected as final.
+ * @property {PublicParticipant[]} participants - Public participant DTOs, used to resolve voters.
  * @property {number} [serverParticipantId] - Optional ID if the user is already authenticated via server cookie.
  */
 interface FinalizedEventViewProps {
-    event: any;
-    finalizedSlot: any;
+    event: PublicEvent;
+    finalizedSlot: PublicSlot;
+    participants: PublicParticipant[];
     serverParticipantId?: number;
-    discordIdentity?: { id: string, username: string };
+    discordIdentity?: { username: string };
 }
 
 /**
@@ -30,7 +33,7 @@ interface FinalizedEventViewProps {
  * @param {FinalizedEventViewProps} props - Component props.
  * @returns {JSX.Element} The finalized event dashboard.
  */
-export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, discordIdentity }: FinalizedEventViewProps) {
+export function FinalizedEventView({ event, finalizedSlot, participants, serverParticipantId, discordIdentity }: FinalizedEventViewProps) {
     // Intent: State for handling the "Join" form inputs and submission status.
     const [userName, setUserName] = useState("");
     const [userTelegram, setUserTelegram] = useState("");
@@ -42,13 +45,18 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
     // Memoize to prevent effect dependency churn.
     const attendees = useMemo(() => {
         // 1. Filter candidates
+        const participantsById = new Map(participants.map(p => [p.id, p]));
         const candidates = finalizedSlot.votes
-            .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
-            .map((v: any) => ({
-                ...v.participant,
-                preference: v.preference,
-                voteCreatedAt: v.createdAt // Capture vote time for tie-breaking
-            }));
+            .filter(v => v.value === 'YES' || v.value === 'MAYBE')
+            .flatMap(v => {
+                const participant = participantsById.get(v.participantId);
+                if (!participant) return [];
+                return [{
+                    ...participant,
+                    preference: v.value,
+                    voteCreatedAt: v.createdAt // Capture vote time for tie-breaking
+                }];
+            });
 
         // 2. Sort candidates: YES first, then by FIFO (Time)
         candidates.sort((a: any, b: any) => {
@@ -72,7 +80,7 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                 status: existingStatus || computedStatus
             };
         });
-    }, [finalizedSlot.votes, event.maxPlayers]);
+    }, [finalizedSlot.votes, participants, event.maxPlayers]);
 
     // Intent: Separate attendees (ACCEPTED) from waitlist (WAITLIST)
     const acceptedDetails = attendees.filter((a: any) => a.status === 'ACCEPTED');
@@ -131,7 +139,8 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                 name: userName,
                 telegramId: userTelegram,
                 participantId, // Send if updating existing participant or re-joining
-                discordId: discordIdentity?.id,
+                // Proves this browser holds the event link; the API needs it to claim a legacy row.
+                slug: event.slug,
                 discordUsername: discordIdentity?.username,
                 votes: [{
                     slotId: finalizedSlot.id,
@@ -154,10 +163,11 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                 setHasJoined(true);
                 window.location.reload(); // Intent: Refresh to ensure server-side lists update accurately.
             } else {
-                alert("Failed to join event");
+                // A 403 participant_not_owned (or any other refusal) gets the specific message.
+                alert(voteErrorMessage(await res.json().catch(() => null)));
             }
         } catch (e) {
-            console.error(e);
+            console.error("Failed to join event", e);
             alert("Error joining event");
         } finally {
             setIsSubmitting(false);
@@ -221,7 +231,12 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                     {/* Add to Calendar */}
                     <div className="border-t border-slate-700/50 pt-6">
                         <AddToCalendar
-                            event={event}
+                            event={{
+                                title: event.title,
+                                description: event.description || undefined,
+                                location: event.location,
+                                slug: event.slug,
+                            }}
                             slot={finalizedSlot}
                         />
                     </div>
@@ -322,7 +337,7 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                                         myStatus === 'WAITLIST' ? "text-yellow-400/60" : "text-green-400/60"
                                 )}>
                                     {isWaitlistedButSpaceAvailable ? "We have space! Change your RSVP to 'Available' to join." :
-                                        myStatus === 'WAITLIST' ? "We'll let you know if a spot opens up." : "See you at the session."}
+                                        myStatus === 'WAITLIST' ? "If a spot opens up you move in automatically, with a DM if you linked Telegram or Discord." : "See you at the session."}
                                 </p>
                             </div>
                         </div>
@@ -350,6 +365,7 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                                                     name: userName || localStorage.getItem('tabletop_username') || "Unknown",
                                                     telegramId: userTelegram || localStorage.getItem('tabletop_telegram') || "",
                                                     participantId,
+                                                    slug: event.slug,
                                                     votes: [{
                                                         slotId: finalizedSlot.id,
                                                         preference: 'NO', // Relinquish spot
@@ -363,9 +379,13 @@ export function FinalizedEventView({ event, finalizedSlot, serverParticipantId, 
                                                     headers: { 'Content-Type': 'application/json' }
                                                 });
 
-                                                if (res.ok) window.location.reload();
+                                                if (res.ok) {
+                                                    window.location.reload();
+                                                } else {
+                                                    alert(voteErrorMessage(await res.json().catch(() => null)));
+                                                }
                                             } catch (e) {
-                                                console.error(e);
+                                                console.error("Failed to update attendance status", e);
                                                 alert("Error updating status");
                                             } finally {
                                                 setIsSubmitting(false);

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -30,7 +29,7 @@ export default function DevelopersPage() {
                 </h2>
                 <p className="text-slate-300 mb-4">
                     Our API and integration points are free to use for <strong>non-commercial community projects</strong>.
-                    Commercial use — including integrations embedded in paid products, SaaS platforms, or services that generate revenue — is not permitted without prior written agreement.
+                    Commercial use is not permitted without prior written agreement. That includes integrations embedded in paid products, SaaS platforms, or services that generate revenue.
                     We also require that any public-facing integration provides clear credit.
                 </p>
                 <div className="bg-slate-900/50 p-4 rounded-lg border border-indigo-500/20">
@@ -51,7 +50,7 @@ export default function DevelopersPage() {
                         Send users directly to a pre-filled voting page from your app.
                     </p>
                     <div className="bg-black/50 p-3 rounded font-mono text-xs text-emerald-400 mb-4 overflow-x-auto">
-                        ?userID=Chris&avatar=...
+                        ?userID=Chris
                     </div>
                     <a
                         href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/guides/ExternalIntegrations.md"
@@ -66,7 +65,7 @@ export default function DevelopersPage() {
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-indigo-500/50 transition-colors">
                     <h3 className="text-xl font-bold text-white mb-3">📡 Webhooks</h3>
                     <p className="text-slate-400 mb-4">
-                        Get real-time JSON payloads when events are created, finalized, or cancelled.
+                        Get JSON payloads when events are created, finalized, or cancelled. Your <code>fromUrl</code> must be a public <code>https</code> address, and every delivery is signed with an <code>X-Tabletop-Signature</code> header you can verify.
                     </p>
                     <div className="bg-black/50 p-3 rounded font-mono text-xs text-emerald-400 mb-4">
                         POST /your-endpoint {"{ type: 'FINALIZED', ... }"}
@@ -80,6 +79,27 @@ export default function DevelopersPage() {
                         View Payloads &rarr;
                     </a>
                 </div>
+            </div>
+
+            {/* Integrator changes */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-16">
+                <h2 className="text-2xl font-bold text-white mb-3">What changed in October 2026</h2>
+                <p className="text-slate-400">
+                    Webhooks are now sent right after each change, retried automatically, and signed with an{" "}
+                    <code>X-Tabletop-Signature</code> header. A <code>fromUrl</code> must be a public <code>https</code> address. Event creation
+                    checks every field strictly, and event links now use 14-character codes. Every event admin route accepts your
+                    event&apos;s admin token in an <code>Authorization: Bearer</code> (or <code>x-admin-token</code>) header, and an integration that edits a
+                    participant by id must send it. Pages can no longer be embedded in an iframe. If you already call the API, read the{" "}
+                    <a
+                        href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/reference/ApiReference.md#changes-for-integrators-2026-10"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                        changes for integrators
+                    </a>{" "}
+                    before you update.
+                </p>
             </div>
 
             {/* Resources */}

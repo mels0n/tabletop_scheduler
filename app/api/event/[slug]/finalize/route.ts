@@ -1,10 +1,52 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import { redirect } from "next/navigation";
 import Logger from "@/shared/lib/logger";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
+import { ConflictError, ForbiddenError, NotFoundError, toResponse } from "@/shared/errors";
+import { campaignFinalizeSchema, oneShotFinalizeSchema } from "@/features/event-management/model/schemas";
+import { escapeHtml } from "@/shared/lib/escape";
+import { getServerConfig } from "@/shared/config/server";
+import { processWebhookRow } from "@/features/integrations/webhooks";
 
 const log = Logger.get("API:Finalize");
+
+const NOT_OPEN = "Event is not open for finalizing";
+
+/**
+ * Schedules the first delivery attempt of a just-committed webhook row for after the response.
+ * Never throws: the finalize has committed, and any failure (scheduling or delivery) only
+ * leaves the row queued for the webhooks cron to retry.
+ */
+function attemptWebhookAfterResponse(webhookId: string | null): void {
+    if (!webhookId) return;
+    try {
+        after(() => processWebhookRow(webhookId).then(
+            (outcome) => log.info("Immediate webhook attempt", { id: webhookId, outcome }),
+            (e) => log.error("Immediate webhook attempt failed", e as Error),
+        ));
+    } catch (e) {
+        log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: webhookId, error: String(e) });
+    }
+}
+
+/** The one-shot modal posts FormData; campaign clients post JSON. Both become a plain object. */
+async function readBody(req: Request): Promise<unknown> {
+    const contentType = req.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) return req.json();
+    const form = await req.formData();
+    return Object.fromEntries(form.entries());
+}
+
+/**
+ * Throws `NotFoundError` unless `houseId` (when given) is a participant of this event.
+ * `finalizedHostId` has a foreign key but no event scope, so the check lives here.
+ */
+async function assertHostInEvent(houseId: number | null, eventId: number): Promise<void> {
+    if (houseId === null) return;
+    const host = await prisma.participant.findFirst({ where: { id: houseId, eventId }, select: { id: true } });
+    if (!host) throw new NotFoundError("Host not found");
+}
 
 /**
  * @function POST
@@ -12,57 +54,58 @@ const log = Logger.get("API:Finalize");
  *
  * ONE_SHOT: Accepts FormData with slotId/houseId/location. Redirects on success.
  * CAMPAIGN: Accepts JSON with slotIds[]/houseId/location. Returns JSON on success.
+ *
+ * Every slot, host and participant is resolved within this event (404 otherwise), and the
+ * status flip is conditional on the event still being DRAFT (409 otherwise), so a request
+ * can neither touch another event nor re-finalize (and re-notify) this one.
  */
-export async function POST(
-    req: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const { slug } = await props.params;
     try {
-        log.info("Request received", { slug: params.slug });
+        log.info("Request received", { slug });
 
-        if (!await verifyEventAdmin(params.slug)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!(await verifyEventAdmin(slug))) {
+            throw new ForbiddenError();
         }
 
         const currentEvent = await prisma.event.findUnique({
-            where: { slug: params.slug },
-            select: { id: true, maxPlayers: true, minPlayers: true, title: true, eventType: true, minSessions: true }
+            where: { slug },
+            select: { id: true, status: true, maxPlayers: true, minPlayers: true, title: true, eventType: true, minSessions: true, timezone: true }
         });
 
         if (!currentEvent) {
-            return NextResponse.json({ error: "Event not found" }, { status: 404 });
+            throw new NotFoundError("Event not found");
         }
 
         if (currentEvent.eventType === 'CAMPAIGN') {
-            return await handleCampaignFinalize(req, params.slug, currentEvent);
+            return await handleCampaignFinalize(req, slug, currentEvent);
         }
 
-        // ─── ONE-SHOT PATH (original logic, unchanged) ────────────────────────────
+        // ─── ONE-SHOT PATH ────────────────────────────────────────────────────────
 
-        const formData = await req.formData();
-        const slotId = formData.get("slotId");
-        const hostId = formData.get("houseId");
-        const location = formData.get("location");
+        const input = oneShotFinalizeSchema.parse(await readBody(req));
 
-        if (!slotId) {
-            log.warn("Missing Slot ID", { slug: params.slug });
-            return NextResponse.json({ error: "Missing Slot ID" }, { status: 400 });
+        const slot = await prisma.timeSlot.findFirst({
+            where: { id: input.slotId, eventId: currentEvent.id },
+            select: { id: true }
+        });
+        if (!slot) {
+            throw new NotFoundError("Slot not found");
         }
+        await assertHostInEvent(input.houseId, currentEvent.id);
 
-        const updateData: any = {
+        const updateData: { status: string; finalizedSlotId: number; location: string | null; finalizedHostId?: number } = {
             status: "FINALIZED",
-            finalizedSlotId: parseInt(slotId.toString()),
-            location: location ? location.toString() : null
+            finalizedSlotId: slot.id,
+            location: input.location
         };
 
-        if (hostId) {
-            updateData.finalizedHostId = parseInt(hostId.toString());
+        if (input.houseId !== null) {
+            updateData.finalizedHostId = input.houseId;
         }
 
-        const sId = parseInt(slotId.toString());
-
         const votes = await prisma.vote.findMany({
-            where: { timeSlotId: sId, preference: { in: ['YES', 'MAYBE'] } },
+            where: { timeSlotId: slot.id, preference: { in: ['YES', 'MAYBE'] }, participant: { eventId: currentEvent.id } },
             include: { participant: true }
         });
 
@@ -102,33 +145,46 @@ export async function POST(
         acceptedNames = allAccepted.map(v => v.participant.name);
         waitlistNames = allWaitlist.map(v => v.participant.name);
 
-        const transactionResult = await prisma.$transaction(async (tx) => {
-            const updatedEvent = await tx.event.update({
-                where: { slug: params.slug },
-                data: updateData,
+        let webhookId: string | null = null;
+        const finalizedEvent = await prisma.$transaction(async (tx) => {
+            // Precondition: only a DRAFT event can be finalized, exactly once.
+            const claimed = await tx.event.updateMany({
+                where: { id: currentEvent.id, status: 'DRAFT' },
+                data: updateData
+            });
+            if (claimed.count !== 1) {
+                throw new ConflictError(NOT_OPEN);
+            }
+
+            const updatedEvent = await tx.event.findUnique({
+                where: { id: currentEvent.id },
                 include: { timeSlots: true, finalizedHost: true }
             });
+            if (!updatedEvent) {
+                throw new NotFoundError("Event not found");
+            }
 
             if (acceptedIds.length > 0) {
                 await tx.participant.updateMany({
-                    where: { id: { in: acceptedIds } },
+                    where: { id: { in: acceptedIds }, eventId: currentEvent.id },
                     data: { status: 'ACCEPTED' }
                 });
             }
             if (waitlistIds.length > 0) {
                 await tx.participant.updateMany({
-                    where: { id: { in: waitlistIds } },
+                    where: { id: { in: waitlistIds }, eventId: currentEvent.id },
                     data: { status: 'WAITLIST' }
                 });
             }
 
             const sTime = updatedEvent.timeSlots.find(s => s.id === updatedEvent.finalizedSlotId);
 
-            let webhookId: string | null = null;
+            // The webhook row is queued in the same transaction; its first delivery attempt runs
+            // after the response and /api/cron/webhooks retries it.
             if (updatedEvent.fromUrl) {
-                const { getBaseUrl } = await import("@/shared/lib/url");
-                const origin = getBaseUrl(req.headers);
-                const wh = await tx.webhookEvent.create({
+                const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+                const origin = getBaseUrlOrNull();
+                const row = await tx.webhookEvent.create({
                     data: {
                         eventId: updatedEvent.id,
                         url: updatedEvent.fromUrl,
@@ -140,7 +196,7 @@ export async function POST(
                             eventId: updatedEvent.id,
                             fromUrlId: updatedEvent.fromUrlId || null,
                             slug: updatedEvent.slug,
-                            link: `${origin}/e/${updatedEvent.slug}`,
+                            ...(origin ? { link: `${origin}/e/${updatedEvent.slug}` } : {}),
                             title: updatedEvent.title,
                             finalizedSlot: {
                                 id: updatedEvent.finalizedSlotId,
@@ -154,93 +210,45 @@ export async function POST(
                         })
                     }
                 });
-                webhookId = wh.id;
+                webhookId = row.id;
             }
 
-            return { event: updatedEvent, webhookId };
+            return updatedEvent;
         });
+        attemptWebhookAfterResponse(webhookId);
 
-        const { event: finalizedEvent, webhookId } = transactionResult;
+        const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+        const origin = getBaseUrlOrNull();
+        const detailsLink = origin ? `\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
-        if (webhookId) {
-            const { processWebhook } = await import("@/shared/lib/webhook-sender");
-            await processWebhook(webhookId);
-        }
+        // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+        const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
+        const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === slot.id)!;
+        await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
 
-        const { getBaseUrl } = await import("@/shared/lib/url");
-        const origin = getBaseUrl(req.headers);
-        const eventLink = `${origin}/e/${params.slug}`;
+        const { sendDirectMessage } = await import("@/features/notifications");
+        const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
+        const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
+        await Promise.all([
+            ...acceptedParticipants.map(p => sendDirectMessage(
+                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.${detailsLink}` },
+                { slug, kind: "finalize-accepted" }
+            )),
+            ...waitlistedParticipants.map(p => sendDirectMessage(
+                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nWe'll let you know if a spot opens up!` },
+                { slug, kind: "finalize-waitlist" }
+            )),
+        ]);
 
-        if (process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage } = await import("@/features/telegram");
-            const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
-            for (const p of acceptedParticipants) {
-                if (p.participant.chatId) {
-                    await sendTelegramMessage(
-                        p.participant.chatId,
-                        `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n<a href="${eventLink}">View Details</a>`,
-                        process.env.TELEGRAM_BOT_TOKEN
-                    );
-                }
-            }
-            const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
-            for (const p of waitlistedParticipants) {
-                if (p.participant.chatId) {
-                    await sendTelegramMessage(
-                        p.participant.chatId,
-                        `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nWe'll let you know if a spot opens up!`,
-                        process.env.TELEGRAM_BOT_TOKEN
-                    );
-                }
-            }
-        }
-
-        if (finalizedEvent.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
-            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-            const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
-
-            if (finalizedEvent.pinnedMessageId) {
-                await deleteMessage(finalizedEvent.telegramChatId, finalizedEvent.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
-            }
-            const msg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
-            const msgId = await sendTelegramMessage(finalizedEvent.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
-            if (msgId) {
-                await pinChatMessage(finalizedEvent.telegramChatId, msgId, process.env.TELEGRAM_BOT_TOKEN);
-                await prisma.event.update({ where: { id: finalizedEvent.id }, data: { pinnedMessageId: msgId } });
-            }
-        }
-
-        if (finalizedEvent.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
-            const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-            const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === parseInt(slotId.toString()))!;
-
-            if (finalizedEvent.discordMessageId) {
-                await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
-            }
-            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
-            const htmlMsg = buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames);
-            const discordMsg = htmlToDiscordMarkdown(htmlMsg);
-
-            const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-            const msgId = res.id;
-            if (msgId) {
-                await pinDiscordMessage(finalizedEvent.discordChannelId, msgId, process.env.DISCORD_BOT_TOKEN);
-                await prisma.event.update({ where: { id: finalizedEvent.id }, data: { discordMessageId: msgId } });
-            } else {
-                log.warn("Failed to send Discord finalize message", { error: res.error });
-            }
-        }
-
-        log.info("One-shot event finalized successfully", { slug: params.slug });
+        log.info("One-shot event finalized successfully", { slug });
 
     } catch (error) {
-        log.error("Finalize failed", error as Error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return toResponse(error, log.forRequest(req));
     }
 
-    redirect(`/e/${params.slug}/manage`);
+    redirect(`/e/${slug}/manage`);
 }
 
 // ─── CAMPAIGN FINALIZATION ─────────────────────────────────────────────────────
@@ -252,6 +260,7 @@ interface CampaignEventMeta {
     title: string;
     eventType: string;
     minSessions: number | null;
+    timezone: string;
 }
 
 async function handleCampaignFinalize(
@@ -259,32 +268,22 @@ async function handleCampaignFinalize(
     slug: string,
     currentEvent: CampaignEventMeta
 ): Promise<NextResponse> {
-    let body: { slotIds: number[]; houseId?: string; location?: string; participantIds?: number[] };
-    try {
-        body = await req.json();
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
+    const { slotIds, houseId, location, participantIds } = campaignFinalizeSchema.parse(await req.json());
 
-    const { slotIds, houseId, location, participantIds } = body;
-
-    if (!slotIds || !Array.isArray(slotIds) || slotIds.length === 0) {
-        return NextResponse.json({ error: "slotIds must be a non-empty array" }, { status: 400 });
-    }
-
-    // Validate all submitted slots belong to this event
+    // Every submitted slot must belong to this event.
     const validSlots = await prisma.timeSlot.findMany({
-        where: { id: { in: slotIds }, event: { slug } },
+        where: { id: { in: slotIds }, eventId: currentEvent.id },
         orderBy: { startTime: 'asc' }
     });
 
     if (validSlots.length !== slotIds.length) {
-        return NextResponse.json({ error: "One or more slot IDs are invalid for this event" }, { status: 400 });
+        throw new NotFoundError("One or more slots not found");
     }
+    await assertHostInEvent(houseId, currentEvent.id);
 
-    // Fetch all votes across selected slots — needed for DM notifications regardless of selection path
+    // Fetch all votes across selected slots: needed for DM notifications regardless of selection path
     const allVotes = await prisma.vote.findMany({
-        where: { timeSlotId: { in: slotIds }, preference: { in: ['YES', 'MAYBE'] } },
+        where: { timeSlotId: { in: slotIds }, preference: { in: ['YES', 'MAYBE'] }, participant: { eventId: currentEvent.id } },
         include: { participant: true }
     });
 
@@ -297,7 +296,7 @@ async function handleCampaignFinalize(
     let waitlistNames: string[];
 
     if (participantIds && participantIds.length > 0) {
-        // Explicit list from the UI — everyone on it is ACCEPTED, no waitlist
+        // Explicit list from the UI: everyone on it is ACCEPTED, no waitlist
         const participants = await prisma.participant.findMany({
             where: { id: { in: participantIds }, eventId: currentEvent.id },
             select: { id: true, name: true }
@@ -330,9 +329,9 @@ async function handleCampaignFinalize(
         const yesCandidates = candidates.filter(v => v.preference === 'YES').sort(byTime);
         const maybeCandidates = candidates.filter(v => v.preference === 'MAYBE').sort(byTime);
         const yesAccepted = max ? yesCandidates.slice(0, max) : yesCandidates;
-        let count = yesAccepted.length;
+        const count = yesAccepted.length;
         let maybeAccepted: typeof candidates = [];
-        if (count < min) { maybeAccepted = maybeCandidates.slice(0, min - count); count += maybeAccepted.length; }
+        if (count < min) { maybeAccepted = maybeCandidates.slice(0, min - count); }
         const allAccepted = [...yesAccepted, ...maybeAccepted];
         const allWaitlist = [...(max ? yesCandidates.slice(max) : []), ...maybeCandidates.slice(maybeAccepted.length)];
         allWaitlist.sort((a, b) => { if (a.preference !== b.preference) return a.preference === 'YES' ? -1 : 1; return a.earliestTime.getTime() - b.earliestTime.getTime(); });
@@ -343,35 +342,48 @@ async function handleCampaignFinalize(
     }
 
     // ── ATOMIC DB UPDATE ─────────────────────────────────────────────────────────
-    const updateData: any = { status: "FINALIZED", location: location || null };
-    if (houseId) updateData.finalizedHostId = parseInt(houseId);
+    const updateData: { status: string; location: string | null; finalizedHostId?: number } = { status: "FINALIZED", location };
+    if (houseId !== null) updateData.finalizedHostId = houseId;
 
-    const transactionResult = await prisma.$transaction(async (tx) => {
-        const updatedEvent = await tx.event.update({
-            where: { slug },
-            data: updateData,
+    let webhookId: string | null = null;
+    const finalizedEvent = await prisma.$transaction(async (tx) => {
+        // Precondition: only a DRAFT campaign can be finalized, exactly once.
+        const claimed = await tx.event.updateMany({
+            where: { id: currentEvent.id, status: 'DRAFT' },
+            data: updateData
+        });
+        if (claimed.count !== 1) {
+            throw new ConflictError(NOT_OPEN);
+        }
+
+        const updatedEvent = await tx.event.findUnique({
+            where: { id: currentEvent.id },
             include: { timeSlots: true, finalizedHost: true }
         });
+        if (!updatedEvent) {
+            throw new NotFoundError("Event not found");
+        }
 
         await tx.finalizedSession.createMany({
-            data: slotIds.map(slotId => ({ eventId: updatedEvent.id, timeSlotId: slotId }))
+            data: validSlots.map(s => ({ eventId: updatedEvent.id, timeSlotId: s.id }))
         });
 
         // Reset everyone first so stale ACCEPTED statuses from prior runs don't linger
         await tx.participant.updateMany({ where: { eventId: updatedEvent.id }, data: { status: 'PENDING' } });
 
         if (acceptedIds.length > 0) {
-            await tx.participant.updateMany({ where: { id: { in: acceptedIds } }, data: { status: 'ACCEPTED' } });
+            await tx.participant.updateMany({ where: { id: { in: acceptedIds }, eventId: updatedEvent.id }, data: { status: 'ACCEPTED' } });
         }
         if (waitlistIds.length > 0) {
-            await tx.participant.updateMany({ where: { id: { in: waitlistIds } }, data: { status: 'WAITLIST' } });
+            await tx.participant.updateMany({ where: { id: { in: waitlistIds }, eventId: updatedEvent.id }, data: { status: 'WAITLIST' } });
         }
 
-        let webhookId: string | null = null;
+        // The webhook row is queued in the same transaction; its first delivery attempt runs
+        // after the response and /api/cron/webhooks retries it.
         if (updatedEvent.fromUrl) {
-            const { getBaseUrl } = await import("@/shared/lib/url");
-            const origin = getBaseUrl(req.headers as any);
-            const wh = await tx.webhookEvent.create({
+            const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+            const origin = getBaseUrlOrNull();
+            const row = await tx.webhookEvent.create({
                 data: {
                     eventId: updatedEvent.id,
                     url: updatedEvent.fromUrl,
@@ -383,7 +395,7 @@ async function handleCampaignFinalize(
                         eventId: updatedEvent.id,
                         fromUrlId: updatedEvent.fromUrlId || null,
                         slug: updatedEvent.slug,
-                        link: `${origin}/e/${updatedEvent.slug}`,
+                        ...(origin ? { link: `${origin}/e/${updatedEvent.slug}` } : {}),
                         title: updatedEvent.title,
                         finalizedSessions: validSlots.map(s => ({
                             id: s.id,
@@ -397,91 +409,51 @@ async function handleCampaignFinalize(
                     })
                 }
             });
-            webhookId = wh.id;
+            webhookId = row.id;
         }
 
-        return { event: updatedEvent, webhookId };
+        return updatedEvent;
     });
+    attemptWebhookAfterResponse(webhookId);
 
-    const { event: finalizedEvent, webhookId } = transactionResult;
-
-    if (webhookId) {
-        const { processWebhook } = await import("@/shared/lib/webhook-sender");
-        await processWebhook(webhookId);
-    }
-
-    const { getBaseUrl } = await import("@/shared/lib/url");
-    const origin = getBaseUrl(req.headers as any);
-    const eventLink = `${origin}/e/${slug}`;
-
-    // ── DM NOTIFICATIONS ─────────────────────────────────────────────────────────
-    if (process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage } = await import("@/features/telegram");
-
-        const sessionList = validSlots
-            .map(s => `📅 ${s.startTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`)
-            .join('\n');
-
-        const notifiedAccepted = new Set<number>();
-        for (const vote of allVotes.filter(v => acceptedIds.includes(v.participantId))) {
-            if (!notifiedAccepted.has(vote.participantId) && vote.participant.chatId) {
-                notifiedAccepted.add(vote.participantId);
-                await sendTelegramMessage(
-                    vote.participant.chatId,
-                    `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${currentEvent.title}</b>.\n\nSessions locked in:\n${sessionList}\n\n<a href="${eventLink}">View Details</a>`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-        }
-
-        const notifiedWaitlist = new Set<number>();
-        for (const vote of allVotes.filter(v => waitlistIds.includes(v.participantId))) {
-            if (!notifiedWaitlist.has(vote.participantId) && vote.participant.chatId) {
-                notifiedWaitlist.add(vote.participantId);
-                await sendTelegramMessage(
-                    vote.participant.chatId,
-                    `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${currentEvent.title}</b>.\nYou may be called in as a substitute if a regular player can't make a session.`,
-                    process.env.TELEGRAM_BOT_TOKEN
-                );
-            }
-        }
-    }
+    const { getBaseUrlOrNull } = await import("@/shared/lib/url");
+    const origin = getBaseUrlOrNull();
+    const detailsLink = origin ? `\n\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
     // ── GROUP CHANNEL NOTIFICATIONS ───────────────────────────────────────────────
-    if (finalizedEvent.telegramChatId && process.env.TELEGRAM_BOT_TOKEN) {
-        const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
-        const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
+    // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+    const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
+    await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
 
-        if (finalizedEvent.pinnedMessageId) {
-            await deleteMessage(finalizedEvent.telegramChatId, finalizedEvent.pinnedMessageId, process.env.TELEGRAM_BOT_TOKEN);
-        }
-        const msg = buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames);
-        const msgId = await sendTelegramMessage(finalizedEvent.telegramChatId, msg, process.env.TELEGRAM_BOT_TOKEN);
-        if (msgId) {
-            await pinChatMessage(finalizedEvent.telegramChatId, msgId, process.env.TELEGRAM_BOT_TOKEN);
-            await prisma.event.update({ where: { id: finalizedEvent.id }, data: { pinnedMessageId: msgId } });
-        }
-    }
+    // ── DM NOTIFICATIONS ─────────────────────────────────────────────────────────
+    const { sendDirectMessage } = await import("@/features/notifications");
 
-    if (finalizedEvent.discordChannelId && process.env.DISCORD_BOT_TOKEN) {
-        const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/discord/model/discord");
-        const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
+    const sessionList = validSlots
+        .map(s => `📅 ${s.startTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: currentEvent.timezone || 'UTC' })}`)
+        .join('\n');
 
-        if (finalizedEvent.discordMessageId) {
-            await unpinDiscordMessage(finalizedEvent.discordChannelId, finalizedEvent.discordMessageId, process.env.DISCORD_BOT_TOKEN);
-        }
-        const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
-        const htmlMsg = buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames);
-        const discordMsg = htmlToDiscordMarkdown(htmlMsg);
+    // One DM per participant even when they voted on several sessions.
+    const uniqueParticipants = (ids: number[]) => {
+        const seen = new Set<number>();
+        return allVotes.filter(v => {
+            if (!ids.includes(v.participantId) || seen.has(v.participantId)) return false;
+            seen.add(v.participantId);
+            return true;
+        });
+    };
 
-        const res = await sendDiscordMessage(finalizedEvent.discordChannelId, discordMsg, process.env.DISCORD_BOT_TOKEN);
-        if (res.id) {
-            await pinDiscordMessage(finalizedEvent.discordChannelId, res.id, process.env.DISCORD_BOT_TOKEN);
-            await prisma.event.update({ where: { id: finalizedEvent.id }, data: { discordMessageId: res.id } });
-        } else {
-            log.warn("Failed to send Discord campaign finalize message", { error: res.error });
-        }
-    }
+    await Promise.all([
+        ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
+            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}${detailsLink}` },
+            { slug, kind: "finalize-campaign-accepted" }
+        )),
+        ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
+            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+            { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
+            { slug, kind: "finalize-campaign-waitlist" }
+        )),
+    ]);
 
     log.info("Campaign finalized successfully", { slug, sessionCount: slotIds.length });
 
@@ -490,4 +462,55 @@ async function handleCampaignFinalize(
         : null;
 
     return NextResponse.json({ success: true, warning, sessionCount: slotIds.length });
+}
+
+// ─── GROUP ANNOUNCEMENT ────────────────────────────────────────────────────────
+
+/**
+ * Replaces the event's pinned status message on each linked platform with the finalized
+ * announcement. Telegram and Discord are independent: each runs in its own try/catch so
+ * a failure (or absence) on one never blocks the other.
+ */
+async function announceFinalized(
+    event: { id: number; slug: string; telegramChatId: string | null; pinnedMessageId: number | null; discordChannelId: string | null; discordMessageId: string | null },
+    htmlMsg: string
+) {
+    const telegramToken = getServerConfig().telegram.token ?? undefined;
+    if (event.telegramChatId && telegramToken) {
+        try {
+            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
+            if (event.pinnedMessageId) {
+                await deleteMessage(event.telegramChatId, event.pinnedMessageId, telegramToken);
+            }
+            const msgId = await sendTelegramMessage(event.telegramChatId, htmlMsg, telegramToken);
+            if (msgId) {
+                await pinChatMessage(event.telegramChatId, msgId, telegramToken);
+                await prisma.event.update({ where: { id: event.id }, data: { pinnedMessageId: msgId } });
+            }
+        } catch (e) {
+            log.warn("Telegram finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+        }
+    }
+
+    const discordToken = getServerConfig().discord.botToken ?? undefined;
+    if (event.discordChannelId && discordToken) {
+        try {
+            const { sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } = await import("@/features/integrations/discord/model/discord");
+            const { htmlToDiscordMarkdown } = await import("@/shared/lib/discordMarkdown");
+
+            if (event.discordMessageId) {
+                await unpinDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+                await deleteDiscordMessage(event.discordChannelId, event.discordMessageId, discordToken);
+            }
+            const res = await sendDiscordMessage(event.discordChannelId, htmlToDiscordMarkdown(htmlMsg), discordToken);
+            if (res.id) {
+                await pinDiscordMessage(event.discordChannelId, res.id, discordToken);
+                await prisma.event.update({ where: { id: event.id }, data: { discordMessageId: res.id } });
+            } else {
+                log.warn("Failed to send Discord finalize message", { error: res.error });
+            }
+        } catch (e) {
+            log.warn("Discord finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+        }
+    }
 }

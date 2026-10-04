@@ -1,0 +1,119 @@
+name: CI
+
+# Required checks for every change: typecheck, lint, unit tests, production build,
+# the hosted-migration drift check, the self-host upgrade check and the
+# dependency-direction check.
+# Also callable from docker-publish.yml (workflow_call) so the image is only
+# published from a commit that passed these jobs.
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'fix/**']
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # A build must succeed with no bot tokens or secrets present.
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_IS_HOSTED: 'true'
+          DATABASE_URL: file:./ci.db
+          NEXT_PUBLIC_BASE_URL: https://ci.example
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      # Fails on an upward import, an import cycle or an unresolvable import.
+      - name: Dependency direction
+        run: npm run depcruise
+
+  selfhost-upgrade:
+    # Fails when the current prisma/schema.prisma cannot be applied with a plain
+    # `prisma db push` (no --accept-data-loss, as start.sh runs it) to a database
+    # created by any release snapshotted in prisma/compat/, or loses its rows.
+    # SQLite temp files only; no database service needed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Self-host schema upgrades from every release snapshot
+        run: npm run db:upgrade-check
+
+  migration-diff:
+    # Fails when prisma/hosted/schema.prisma has changes that no migration under
+    # prisma/hosted/migrations produces (schema edited without a migration).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shadow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Hosted migrations match hosted schema
+        run: >-
+          npx prisma migrate diff
+          --from-migrations prisma/hosted/migrations
+          --to-schema-datamodel prisma/hosted/schema.prisma
+          --shadow-database-url postgresql://postgres:postgres@localhost:5432/shadow
+          --exit-code

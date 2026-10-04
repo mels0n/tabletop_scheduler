@@ -1,15 +1,16 @@
 import { PrismaClient } from '@prisma/client';
+import { getServerConfig } from '@/shared/config/server';
 
 /**
  * @function prismaClientSingleton
  * @description Creates a new instance of the Prisma Client.
- * Configures logging based on environment variables for debugging.
+ * Logs queries only when the validated config's log level is debug.
  *
  * @returns {PrismaClient} Fresh client instance.
  */
 const prismaClientSingleton = () => {
     // Intent: Log queries in debug mode only to reduce noise in production.
-    const isDebug = process.env.LOG_LEVEL === 'debug';
+    const isDebug = getServerConfig().logLevel === 'debug';
     return new PrismaClient({
         log: isDebug ? ['query', 'error', 'warn'] : ['error', 'warn'],
     });

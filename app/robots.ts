@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next';
+import { publicConfig } from "@/shared/config/public";
 
 /**
  * @function robots
@@ -9,8 +10,8 @@ import { MetadataRoute } from 'next';
  * - Self-Hosted: Disallow everything (Privacy First).
  */
 export default function robots(): MetadataRoute.Robots {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === 'true';
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const isHosted = publicConfig.isHosted;
+    const baseUrl = publicConfig.baseUrl;
 
     if (!isHosted || !baseUrl) {
         return {

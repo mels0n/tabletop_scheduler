@@ -17,7 +17,6 @@ import { clsx } from "clsx";
  */
 export function Navbar() {
     const pathname = usePathname();
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
 
     // Intent: Helper to determine if a specific route is currently active for UI highlighting.
     const isActive = (path: string) => pathname === path;

@@ -1,29 +1,56 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
-import { resolvePassiveChatId } from '@/features/auth/server/passive-link';
 import prisma from '@/shared/lib/prisma';
+import { sendDirectMessage } from '@/features/notifications';
+import { checkEventQuorum } from '@/shared/lib/quorum';
+import { signValue } from '@/shared/lib/session';
+import { hashToken } from '@/shared/lib/token';
+import { resetServerConfigForTests } from '@/shared/config/server';
+import { syncDashboard } from '@/features/event-management/server/dashboard-sync';
+import { broadcastToEvent } from '@/features/notifications';
+import { createTxStub } from '@/shared/lib/__mocks__/prisma';
 
 vi.mock('@/shared/lib/prisma');
-// syncDashboard is dynamically imported unconditionally at the end of every POST; stub it
-// out so the test only exercises the participant/vote persistence being tested here.
-vi.mock('@/app/api/event/[slug]/slot/notify', () => ({
+vi.mock('@/features/notifications', () => ({
+    sendDirectMessage: vi.fn(),
+    broadcastToEvent: vi.fn(),
+    isDelivered: (r: any) => r.telegram.status === 'sent' || r.discord.status === 'sent',
+}));
+vi.mock('@/shared/lib/quorum', () => ({
+    checkEventQuorum: vi.fn(),
+}));
+// syncDashboard runs in after() on every POST; stub it out so the tests only exercise
+// what they target.
+vi.mock('@/features/event-management/server/dashboard-sync', () => ({
     syncDashboard: vi.fn(),
 }));
 
+// after() callbacks are queued here and run by flushAfter(), standing in for Next running
+// them once the response has been sent.
+const { afterQueue } = vi.hoisted(() => ({ afterQueue: [] as Array<() => unknown> }));
+vi.mock('next/server', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('next/server')>()),
+    after: (task: () => unknown) => { afterQueue.push(task); },
+}));
+async function flushAfter() {
+    while (afterQueue.length) await afterQueue.shift()!();
+}
+
 // Discord identity is sourced from the httpOnly session cookies, never the body.
 // cookieJar is the per-test cookie state; vi.hoisted so the hoisted mock factory can see it.
-const { cookieJar } = vi.hoisted(() => ({ cookieJar: new Map<string, string>() }));
+const { cookieJar, headerJar } = vi.hoisted(() => ({ cookieJar: new Map<string, string>(), headerJar: new Map<string, string>() }));
 vi.mock('next/headers', () => ({
     cookies: () => ({
         get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name)! } : undefined),
     }),
-    headers: () => new Headers(),
+    headers: () => new Headers(Object.fromEntries(headerJar)),
 }));
 
 const mockPrisma = prisma as unknown as {
-    event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn> },
-    participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn> },
+    event: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, updateMany: ReturnType<typeof vi.fn> },
+    participant: { findUnique: ReturnType<typeof vi.fn>, findFirst: ReturnType<typeof vi.fn>, findMany: ReturnType<typeof vi.fn>, create: ReturnType<typeof vi.fn>, update: ReturnType<typeof vi.fn>, updateMany: ReturnType<typeof vi.fn>, count: ReturnType<typeof vi.fn> },
     vote: { findMany: ReturnType<typeof vi.fn>, deleteMany: ReturnType<typeof vi.fn>, createMany: ReturnType<typeof vi.fn> },
+    timeSlot: { findMany: ReturnType<typeof vi.fn> },
     $transaction: ReturnType<typeof vi.fn>,
 };
 
@@ -45,18 +72,26 @@ const baseEvent = {
     timeSlots: [],
 };
 
-describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
+/** A row whose participant cookie has been issued: editing it needs the cookie or a matching identity. */
+const MARKED = new Date('2026-10-03T12:00:00Z');
+
+describe('POST /api/event/[slug]/vote: linkIdentity opt-out', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         cookieJar.clear();
+        headerJar.clear();
+        afterQueue.length = 0;
         mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
         mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
         mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
     });
 
-    it('skips passive chatId resolution and discordId/discordUsername write when linkIdentity is false', async () => {
+    it('links neither the verified chatId nor discordId/discordUsername when linkIdentity is false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 42 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '777'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
@@ -68,7 +103,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkIdentity: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -83,7 +118,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
 
     it('links Discord from the session cookie (not the body) when linkDiscord=true and linkTelegram=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 44 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
         const res = await POST(
@@ -96,11 +131,11 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkDiscord: true,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
-        // Telegram off: no passive resolution, chatId stays null.
+        // Telegram off: chatId stays null.
         expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
         expect(mockPrisma.event.findFirst).not.toHaveBeenCalled();
 
@@ -122,7 +157,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkDiscord: true,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -132,9 +167,10 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     });
 
     it('sources Discord identity from the cookie on participant update as well', async () => {
-        mockPrisma.participant.findUnique.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '123' });
         mockPrisma.participant.update.mockResolvedValue({ id: 47 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-2');
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-2'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser2');
 
         const res = await POST(
@@ -145,7 +181,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 discordUsername: 'ForgedUser',
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -154,33 +190,68 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
         expect(updateData.discordUsername).toBe('CookieUser2');
     });
 
-    it('resolves Telegram but skips Discord write when linkTelegram=true and linkDiscord=false', async () => {
-        mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
+    it('links Telegram from the verified chat cookie but skips Discord when linkTelegram=true and linkDiscord=false', async () => {
         mockPrisma.participant.create.mockResolvedValue({ id: 45 });
-        cookieJar.set('tabletop_user_discord_id', 'cookie-discord-1');
+        cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '999'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'cookie-discord-1'));
         cookieJar.set('tabletop_user_discord_name', 'CookieUser');
 
-        const res = await POST(
+        await POST(
             mockRequest({
                 name: 'Chris',
                 telegramId: '@someone',
-                discordId: 'discord-1',
-                discordUsername: 'SomeUser',
                 linkTelegram: true,
                 linkDiscord: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
-        await res;
 
-        // Telegram on: passive resolution runs and its chatId is inherited.
-        expect(mockPrisma.participant.findFirst).toHaveBeenCalled();
         const createData = mockPrisma.participant.create.mock.calls[0][0].data;
         expect(createData.chatId).toBe('999');
-        // Discord off: identity not written.
         expect(createData).not.toHaveProperty('discordId');
         expect(createData).not.toHaveProperty('discordUsername');
+    });
+
+    it('never resolves a chatId from a typed handle', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 48 });
+        mockPrisma.participant.findFirst.mockResolvedValue({ chatId: '999' });
+        mockPrisma.event.findFirst.mockResolvedValue({ managerChatId: '888' });
+
+        await POST(
+            mockRequest({ name: 'Mallory', telegramId: '@victim', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
+            { params: Promise.resolve({ slug: '1' }) }
+        );
+
+        expect(mockPrisma.participant.findFirst).not.toHaveBeenCalled();
+        expect(mockPrisma.event.findFirst).not.toHaveBeenCalled();
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.chatId).toBeNull();
+    });
+
+    it('ignores an unsigned chat cookie', async () => {
+        mockPrisma.participant.create.mockResolvedValue({ id: 49 });
+        cookieJar.set('tabletop_user_chat_id', '999');
+
+        await POST(
+            mockRequest({ name: 'Mallory', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
+            { params: Promise.resolve({ slug: '1' }) }
+        );
+
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.chatId).toBeNull();
+    });
+
+    it('self-heals a missing chatId on update from the verified chat cookie only', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '555'));
+
+        await POST(
+            mockRequest({ name: 'Chris', participantId: 47, telegramId: 'chris', votes: [{ slotId: 1, preference: 'YES', canHost: false }] }),
+            { params: Promise.resolve({ slug: '1' }) }
+        );
+
+        expect(mockPrisma.participant.update.mock.calls[0][0].data.chatId).toBe('555');
     });
 
     it('stores telegramId canonicalized (no leading @, lowercased) regardless of how the voter typed it', async () => {
@@ -193,7 +264,7 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
                 linkIdentity: false,
                 votes: [{ slotId: 1, preference: 'YES', canHost: false }],
             }),
-            { params: { slug: '1' } }
+            { params: Promise.resolve({ slug: '1' }) }
         );
         await res;
 
@@ -202,59 +273,969 @@ describe('POST /api/event/[slug]/vote — linkIdentity opt-out', () => {
     });
 });
 
-describe('resolvePassiveChatId', () => {
-    it('matches an existing Participant chatId regardless of @ prefix on either side', async () => {
-        const tx = {
-            participant: {
-                findFirst: vi.fn().mockResolvedValue({ chatId: '111' })
-            },
-            event: {
-                findFirst: vi.fn()
-            }
-        };
+describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
+    const mockSend = sendDirectMessage as unknown as ReturnType<typeof vi.fn>;
+    const mockQuorum = checkEventQuorum as unknown as ReturnType<typeof vi.fn>;
+    const mockEventUpdate = (prisma as any).event.update as ReturnType<typeof vi.fn>;
+    const mockParticipantCount = (prisma as any).participant.count as ReturnType<typeof vi.fn>;
+    const sent = { status: 'sent', messageId: '1' };
+    const notLinked = { status: 'skipped', reason: 'not_linked' };
+    const failed = { status: 'failed', error: 'boom' };
 
-        const result = await resolvePassiveChatId(tx, '@pyaniz');
+    const body = { name: 'Chris', linkIdentity: false, votes: [{ slotId: 1, preference: 'YES', canHost: false }] };
 
-        expect(result).toBe('111');
-        expect(tx.participant.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-            where: expect.objectContaining({
-                telegramId: { in: ['pyaniz', '@pyaniz'] },
-                NOT: { chatId: null }
-            })
-        }));
-        // Found via Participant; should never fall back to the Event manager lookup.
-        expect(tx.event.findFirst).not.toHaveBeenCalled();
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        headerJar.clear();
+        afterQueue.length = 0;
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 1 });
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+        mockParticipantCount.mockResolvedValue(4);
+        mockQuorum.mockReturnValue({ perfect: false, viable: true });
     });
 
-    it('falls back to Event.managerTelegram/managerChatId when no Participant row matches', async () => {
-        const tx = {
-            participant: {
-                findFirst: vi.fn().mockResolvedValue(null)
-            },
-            event: {
-                findFirst: vi.fn().mockResolvedValue({ managerChatId: '171713700' })
-            }
-        };
+    it('DMs a Discord-only manager on viable quorum and sets the flag', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
 
-        const result = await resolvePassiveChatId(tx, 'mels0n');
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
-        expect(result).toBe('171713700');
-        expect(tx.event.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-            where: expect.objectContaining({
-                managerTelegram: { in: ['mels0n', '@mels0n'] },
-                NOT: { managerChatId: null }
-            })
-        }));
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd-mgr' });
+        expect(mockSend.mock.calls[0][1].html).toContain('Viable Quorum Reached');
+        expect(mockEventUpdate).toHaveBeenCalledWith({ where: { id: 1 }, data: { quorumViableNotified: true } });
     });
 
-    it('returns null when neither a Participant nor an Event manager record matches', async () => {
-        const tx = {
-            participant: { findFirst: vi.fn().mockResolvedValue(null) },
-            event: { findFirst: vi.fn().mockResolvedValue(null) }
-        };
+    it('sets both flags on perfect quorum for a Discord-only manager', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
+        mockQuorum.mockReturnValue({ perfect: true, viable: true });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
 
-        const result = await resolvePassiveChatId(tx, 'nobody');
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
 
-        expect(result).toBeNull();
+        expect(mockSend.mock.calls[0][1].html).toContain('Perfect Match Found');
+        expect(mockEventUpdate).toHaveBeenCalledWith({ where: { id: 1 }, data: { quorumPerfectNotified: true, quorumViableNotified: true } });
+    });
+
+    it('leaves the flag unset when delivery failed on every platform (retries next vote)', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerChatId: '55', managerDiscordId: 'd-mgr' });
+        mockSend.mockResolvedValue({ telegram: failed, discord: failed });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('neither sends nor sets the flag when the manager has no linked platform', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night' });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('does not re-alert when the viable flag is already set', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumViableNotified: true });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('records quorumReachedAt inside the transaction the first time quorum is met', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: null });
+        const order: string[] = [];
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+            order.push('tx-start');
+            const out = await cb(prisma);
+            order.push('tx-end');
+            return out;
+        });
+        mockPrisma.event.updateMany.mockImplementation(async () => { order.push('quorum'); return { count: 1 }; });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 1, quorumReachedAt: null },
+            data: { quorumReachedAt: expect.any(Date) },
+        });
+        expect(order).toEqual(['tx-start', 'quorum', 'tx-end']);
+    });
+
+    it('sets quorumReachedAt even when the manager DM fails, but not the notified flag', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumReachedAt: null });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: failed });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { quorumReachedAt: expect.any(Date) } }));
+        expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    it('leaves quorumReachedAt alone when it is already set or quorum is not met', async () => {
+        const quorumWrite = expect.objectContaining({ data: { quorumReachedAt: expect.any(Date) } });
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: new Date('2026-10-01T00:00:00Z') });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalledWith(quorumWrite);
+
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: null });
+        mockQuorum.mockReturnValue({ perfect: false, viable: false });
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalledWith(quorumWrite);
+    });
+
+    it('defers dashboard sync, group broadcast and the quorum DM until after the response', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', discordChannelId: 'dc1', managerDiscordId: 'd-mgr' });
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
+
+        const res = await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+
+        expect(res.status).toBe(200);
+        expect(syncDashboard).not.toHaveBeenCalled();
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(mockSend).not.toHaveBeenCalled();
+
+        await flushAfter();
+
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('still sends the DM when the dashboard sync throws', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr' });
+        (syncDashboard as any).mockRejectedValue(new Error('down'));
+        mockSend.mockResolvedValue({ telegram: notLinked, discord: sent });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('POST /api/event/[slug]/vote - user text in group messages', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        headerJar.clear();
+        afterQueue.length = 0;
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 1 });
+        mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+    });
+
+    it('escapes a hostile voter name and title in the availability broadcast', async () => {
+        const hostile = '<a href="https://evil">x</a>';
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'D&D <night>', telegramChatId: 'tg1', discordChannelId: 'dc1' });
+
+        await POST(mockRequest({ name: hostile, linkIdentity: false, votes: [{ slotId: 1, preference: 'YES', canHost: false }] }), { params: Promise.resolve({ slug: '1' }) });
+        await flushAfter();
+
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        const message = (broadcastToEvent as any).mock.calls[0][1];
+        expect(message.html).toContain('&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;');
+        expect(message.html).toContain('D&amp;D &lt;night&gt;');
+        expect(message.html).not.toContain('<a href');
+        expect(message.discord).toContain(String.raw`<a href="https://evil"\>x</a\>`);
+        expect(message.discord).not.toContain('](');
+    });
+});
+
+describe('POST /api/event/[slug]/vote - validation and ownership', () => {
+    const vote = { slotId: 1, preference: 'YES', canHost: false };
+    const call = (body: any, slug = '1') => POST(mockRequest(body), { params: Promise.resolve({ slug }) });
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        headerJar.clear();
+        afterQueue.length = 0;
+        mockPrisma.event.findUnique.mockResolvedValue(baseEvent);
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 50 });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+    });
+
+    it("rejects a vote on another event's slot with 400 and writes nothing", async () => {
+        const res = await call({ name: 'Mallory', votes: [vote, { ...vote, slotId: 999 }] });
+
+        expect(res.status).toBe(400);
+        expect(mockPrisma.timeSlot.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId: 1 } }));
+        expect(mockPrisma.participant.create).not.toHaveBeenCalled();
+        expect(mockPrisma.vote.createMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a string participantId and malformed bodies with 400', async () => {
+        expect((await call({ name: 'C', participantId: '47', votes: [vote] })).status).toBe(400);
+        expect((await call({ name: '', votes: [vote] })).status).toBe(400);
+        expect((await call({ name: 'C', votes: [vote, vote] })).status).toBe(400);
+        expect((await call({ name: 'C', votes: [vote] }, 'abc')).status).toBe(400);
+    });
+
+    it('returns 404 for an unknown event', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(null);
+        expect((await call({ name: 'C', votes: [vote] })).status).toBe(404);
+    });
+
+    it('sets a signed participant cookie when a participant is created', async () => {
+        const res = await call({ name: 'Chris', votes: [vote] });
+
+        expect(res.status).toBe(200);
+        const cookie = (res as any).cookies.get('tabletop_participant_test-event');
+        expect(cookie.value).toBe(signValue('participant:test-event', '50'));
+        expect(cookie.httpOnly).toBe(true);
+    });
+
+    it("refuses to edit someone else's participant row with 403 participant_not_owned", async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '555', discordId: 'victim', ownerCookieIssuedAt: MARKED });
+
+        const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(403);
+        expect(await res.json()).toEqual({ error: expect.any(String), code: 'participant_not_owned' });
+        expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        expect(mockPrisma.vote.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('ignores an unsigned participant cookie', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', '47');
+
+        const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(403);
+    });
+
+    it('rejects a participant cookie signed for a different participant', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '48'));
+
+        expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+    });
+
+    describe('event admin token (integrations editing by id)', () => {
+        const ADMIN_TOKEN = 'raw-admin-token-for-test-event';
+        const OTHER_TOKEN = 'raw-admin-token-for-other-event';
+        const marked = { id: 47, eventId: 1, chatId: '555', discordId: 'victim', discordUsername: null, ownerCookieIssuedAt: MARKED };
+
+        beforeEach(() => {
+            headerJar.clear();
+            // The route reads the event by id; verifyEventAdmin reads it by slug.
+            mockPrisma.event.findUnique.mockImplementation(async ({ where }: any) => {
+                if (where.slug === 'test-event') return { adminToken: hashToken(ADMIN_TOKEN), managerChatId: null, managerDiscordId: null };
+                if (where.slug === 'other-event') return { adminToken: hashToken(OTHER_TOKEN), managerChatId: null, managerDiscordId: null };
+                return baseEvent;
+            });
+            mockPrisma.participant.findFirst.mockResolvedValue(marked);
+        });
+
+        it('edits a marked row by id with a valid bearer admin token, without marking it or issuing a cookie', async () => {
+            headerJar.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+
+            const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(await res.json()).toEqual({ success: true, participantId: 47 });
+            expect(mockPrisma.participant.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 47 } }));
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
+            expect(mockPrisma.participant.create).not.toHaveBeenCalled();
+            expect((res as any).cookies.get('tabletop_participant_test-event')).toBeUndefined();
+        });
+
+        it('accepts the x-admin-token header the same way', async () => {
+            headerJar.set('x-admin-token', ADMIN_TOKEN);
+
+            const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+        });
+
+        it('edits an unmarked legacy row by id without claiming it', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...marked, ownerCookieIssuedAt: null });
+            headerJar.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+
+            const res = await call({ name: 'Edited by integrator', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
+            expect((res as any).cookies.get('tabletop_participant_test-event')).toBeUndefined();
+        });
+
+        it("never stamps the caller's own identity onto the row it edits for someone else", async () => {
+            headerJar.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+            cookieJar.set('tabletop_user_chat_id', signValue('identity:telegram', '777'));
+            cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'admin-discord'));
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...marked, chatId: null, discordId: null });
+
+            const res = await call({ name: 'Edited by host', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            const data = mockPrisma.participant.update.mock.calls[0][0].data;
+            expect(data).not.toHaveProperty('discordId');
+            expect(data).not.toHaveProperty('discordUsername');
+            expect(data).not.toHaveProperty('chatId');
+        });
+
+        it('refuses a wrong bearer token with 403 participant_not_owned', async () => {
+            headerJar.set('authorization', 'Bearer not-the-admin-token');
+
+            const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it("refuses another event's admin token with 403", async () => {
+            headerJar.set('authorization', `Bearer ${OTHER_TOKEN}`);
+
+            const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it('refuses the stored hash presented as the bearer token', async () => {
+            headerJar.set('authorization', `Bearer ${hashToken(ADMIN_TOKEN)}`);
+
+            expect((await call({ name: 'Mallory', participantId: 47, votes: [vote] })).status).toBe(403);
+        });
+    });
+
+    describe('ownership marker (ownerCookieIssuedAt)', () => {
+        it('accepts an edit by id of an unmarked legacy row from a browser with no cookie, issues the cookie and marks the row', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: null });
+            mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+            const res = await call({ name: 'Old Voter', participantId: 47, slug: 'test-event', votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.updateMany).toHaveBeenCalledWith({
+                where: { id: 47, ownerCookieIssuedAt: null },
+                data: { ownerCookieIssuedAt: expect.any(Date) },
+            });
+            expect(mockPrisma.participant.update).toHaveBeenCalled();
+            expect(mockPrisma.participant.create).not.toHaveBeenCalled();
+            const cookie = (res as any).cookies.get('tabletop_participant_test-event');
+            expect(cookie.value).toBe(signValue('participant:test-event', '47'));
+        });
+
+        it('accepts an unmarked legacy row even when it is linked to an identity', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: '555', discordId: null, ownerCookieIssuedAt: null });
+            mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+            const res = await call({ name: 'Old Voter', participantId: 47, slug: 'test-event', votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.updateMany).toHaveBeenCalled();
+        });
+
+        it('refuses a legacy claim that does not carry the event link slug, without claiming the row', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: null });
+            mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+            for (const body of [
+                { name: 'Guesser', participantId: 47, votes: [vote] },
+                { name: 'Guesser', participantId: 47, slug: 'other-event', votes: [vote] },
+            ]) {
+                const res = await call(body);
+                expect(res.status).toBe(403);
+                expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            }
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it('refuses with 403 when another browser marked the legacy row first (claim count 0)', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: null });
+            mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
+
+            const res = await call({ name: 'Second Browser', participantId: 47, slug: 'test-event', votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+            expect(mockPrisma.vote.deleteMany).not.toHaveBeenCalled();
+        });
+
+        it('refuses a marked row from a browser with no cookie and no matching identity', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: MARKED });
+
+            const res = await call({ name: 'Mallory', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(403);
+            expect(await res.json()).toMatchObject({ code: 'participant_not_owned' });
+            expect(mockPrisma.participant.updateMany.mock.calls.some(([arg]: any) => arg?.data && "ownerCookieIssuedAt" in arg.data)).toBe(false);
+            expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        });
+
+        it('accepts a marked row when the participant cookie names it, without re-marking', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: MARKED });
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+
+            const res = await call({ name: 'Chris', participantId: 47, votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.update).toHaveBeenCalled();
+            expect(mockPrisma.participant.updateMany).not.toHaveBeenCalledWith(
+                expect.objectContaining({ data: { ownerCookieIssuedAt: expect.any(Date) } })
+            );
+        });
+
+        it('marks a newly created participant in the same create', async () => {
+            const res = await call({ name: 'New Voter', votes: [vote] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.ownerCookieIssuedAt).toBeInstanceOf(Date);
+        });
+    });
+
+    it('never overwrites an existing discordUsername from the display-name cookie', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'd-47', discordUsername: 'RealName' });
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'd-47'));
+        cookieJar.set('tabletop_user_discord_name', 'Spoofed');
+
+        const res = await call({ name: 'Dee', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(200);
+        const data = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(data.discordId).toBe('d-47');
+        expect(data).not.toHaveProperty('discordUsername');
+    });
+
+    it('never replaces a Discord link already on the row with a different signed-in account', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'discord-A', discordUsername: null, ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'discord-B'));
+        cookieJar.set('tabletop_user_discord_name', 'UserB');
+
+        const res = await call({ name: 'Dee', participantId: 47, votes: [vote] });
+
+        expect(res.status).toBe(200);
+        const data = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(data).not.toHaveProperty('discordId');
+        expect(data).not.toHaveProperty('discordUsername');
+    });
+
+    it('links Discord onto an owned row that has no Discord link yet', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, discordUsername: null, ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'discord-B'));
+        cookieJar.set('tabletop_user_discord_name', 'UserB');
+
+        await call({ name: 'Dee', participantId: 47, votes: [vote] });
+
+        const data = mockPrisma.participant.update.mock.calls[0][0].data;
+        expect(data).toMatchObject({ discordId: 'discord-B', discordUsername: 'UserB' });
+    });
+
+    it('leaves the stored Telegram handle alone when an update omits telegramId', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: null, telegramId: 'kept', ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+
+        await call({ name: 'Dee', participantId: 47, votes: [vote] });
+        expect(mockPrisma.participant.update.mock.calls[0][0].data).not.toHaveProperty('telegramId');
+
+        await call({ name: 'Dee', participantId: 47, telegramId: null, votes: [vote] });
+        expect(mockPrisma.participant.update.mock.calls[1][0].data.telegramId).toBeNull();
+
+        await call({ name: 'Dee', participantId: 47, telegramId: '@New', votes: [vote] });
+        expect(mockPrisma.participant.update.mock.calls[2][0].data.telegramId).toBe('new');
+    });
+
+    it('ignores the display-name cookie when the discord id does not verify', async () => {
+        cookieJar.set('tabletop_user_discord_id', 'd-47');
+        cookieJar.set('tabletop_user_discord_name', 'Spoofed');
+
+        await call({ name: 'Dee', votes: [vote] });
+
+        const data = mockPrisma.participant.create.mock.calls[0][0].data;
+        expect(data).not.toHaveProperty('discordId');
+        expect(data).not.toHaveProperty('discordUsername');
+    });
+
+    it('allows an edit when a verified identity matches the row', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue({ id: 47, eventId: 1, chatId: null, discordId: 'd-47', ownerCookieIssuedAt: MARKED });
+        cookieJar.set('tabletop_user_discord_id', signValue('identity:discord', 'd-47'));
+
+        const res = await call({ name: 'Dee', participantId: 47, linkIdentity: false, votes: [vote] });
+
+        expect(res.status).toBe(200);
+        expect(mockPrisma.participant.update).toHaveBeenCalled();
+    });
+
+    it('scopes the participant lookup to the event', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(null);
+
+        await call({ name: 'Chris', participantId: 47, linkIdentity: false, votes: [vote] });
+
+        expect(mockPrisma.participant.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 47, eventId: 1 } }));
+        // Not in this event: a fresh participant is created instead of touching row 47.
+        expect(mockPrisma.participant.update).not.toHaveBeenCalled();
+        expect(mockPrisma.participant.create).toHaveBeenCalled();
+    });
+
+    it('waitlists a new voter on a full finalized event, counting inside the transaction', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, status: 'FINALIZED', maxPlayers: 2, finalizedSlotId: 1 });
+        const order: string[] = [];
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+            order.push('tx-start');
+            const out = await cb(prisma);
+            order.push('tx-end');
+            return out;
+        });
+        mockPrisma.participant.count.mockImplementation(async () => { order.push('count'); return 2; });
+
+        await call({ name: 'Late', linkIdentity: false, votes: [vote] });
+
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('WAITLIST');
+        expect(order.indexOf('count')).toBeGreaterThan(order.indexOf('tx-start'));
+        expect(order.indexOf('count')).toBeLessThan(order.indexOf('tx-end'));
+    });
+
+    describe('If Needed seating on a finalized event (canTakeOpenSeat)', () => {
+        const finalized = { ...baseEvent, status: 'FINALIZED', maxPlayers: 5, minPlayers: 3, finalizedSlotId: 1 };
+        const waitlisted = { id: 47, eventId: 1, chatId: null, discordId: null, status: 'WAITLIST', ownerCookieIssuedAt: MARKED };
+
+        beforeEach(() => {
+            mockPrisma.event.findUnique.mockResolvedValue(finalized);
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        });
+
+        it('selects minPlayers for the status decision', async () => {
+            mockPrisma.participant.count.mockResolvedValue(0);
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+            expect(mockPrisma.event.findUnique.mock.calls[0][0].select).toMatchObject({ minPlayers: true });
+        });
+
+        it('keeps a waitlisted MAYBE voter on the waitlist when re-saving at or above the minimum', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue(waitlisted);
+            mockPrisma.participant.count.mockResolvedValue(3);
+
+            const res = await call({ name: 'Maybe', participantId: 47, votes: [{ ...vote, preference: 'MAYBE' }] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('WAITLIST');
+        });
+
+        it('seats a MAYBE voter while the event is below the minimum', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue(waitlisted);
+            mockPrisma.participant.count.mockResolvedValue(2);
+
+            await call({ name: 'Maybe', participantId: 47, votes: [{ ...vote, preference: 'MAYBE' }] });
+
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('ACCEPTED');
+        });
+
+        it('seats a YES voter up to the maximum, then waitlists', async () => {
+            mockPrisma.participant.count.mockResolvedValue(4);
+            await call({ name: 'Yes', linkIdentity: false, votes: [vote] });
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('ACCEPTED');
+
+            mockPrisma.participant.count.mockResolvedValue(5);
+            await call({ name: 'Yes2', linkIdentity: false, votes: [vote] });
+            expect(mockPrisma.participant.create.mock.calls[1][0].data.status).toBe('WAITLIST');
+        });
+
+        it('treats a payload without the finalized slot as NO: an ACCEPTED player becomes PENDING and promotion runs', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...waitlisted, status: 'ACCEPTED' });
+            mockPrisma.participant.count.mockResolvedValue(4);
+            mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+            // The event row read back inside the transaction drives the promotion call.
+            mockPrisma.event.findUnique.mockImplementation(async (args: any) =>
+                args.include ? { ...finalized, timeSlots: [] } : finalized);
+            mockPrisma.participant.findMany.mockResolvedValue([]);
+
+            const res = await call({ name: 'Seated', participantId: 47, votes: [{ ...vote, slotId: 2 }] });
+
+            expect(res.status).toBe(200);
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('PENDING');
+            // processWaitlistPromotion ran: it reads the waitlist for this event.
+            expect(mockPrisma.participant.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { eventId: 1, status: 'WAITLIST' } }));
+        });
+
+        it('treats a new voter without the finalized slot as NO: PENDING, never ACCEPTED', async () => {
+            cookieJar.clear();
+            mockPrisma.participant.count.mockResolvedValue(0);
+
+            await call({ name: 'Elsewhere', linkIdentity: false, votes: [{ ...vote, slotId: 2 }] });
+
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('PENDING');
+        });
+
+        it('keeps the open-seat rule for campaigns, which have no single finalized slot', async () => {
+            cookieJar.clear();
+            mockPrisma.event.findUnique.mockResolvedValue({ ...finalized, finalizedSlotId: null });
+            mockPrisma.participant.count.mockResolvedValue(1);
+
+            await call({ name: 'Campaigner', linkIdentity: false, votes: [vote] });
+
+            expect(mockPrisma.participant.create.mock.calls[0][0].data.status).toBe('ACCEPTED');
+        });
+
+        it('keeps an ACCEPTED player ACCEPTED when they switch to MAYBE above the minimum', async () => {
+            mockPrisma.participant.findFirst.mockResolvedValue({ ...waitlisted, status: 'ACCEPTED' });
+            mockPrisma.participant.count.mockResolvedValue(4);
+
+            await call({ name: 'Seated', participantId: 47, votes: [{ ...vote, preference: 'MAYBE' }] });
+
+            expect(mockPrisma.participant.update.mock.calls[0][0].data.status).toBe('ACCEPTED');
+        });
+    });
+});
+
+describe('POST /api/event/[slug]/vote - group announcement cooldown', () => {
+    const vote = { slotId: 1, preference: 'YES', canHost: false };
+    const MINUTE = 60_000;
+    const call = (body: any) => POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+    /** An existing, cookie-owned row whose last group announcement was `minutesAgo` ago (null = never). */
+    const ownedRow = (minutesAgo: number | null) => ({
+        id: 47, eventId: 1, chatId: null, discordId: null, ownerCookieIssuedAt: MARKED,
+        lastAnnouncedAt: minutesAgo === null ? null : new Date(Date.now() - minutesAgo * MINUTE),
+    });
+    const stampWrites = () => mockPrisma.participant.updateMany.mock.calls
+        .map((c: any[]) => c[0])
+        .filter((arg: any) => arg?.data && 'lastAnnouncedAt' in arg.data);
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        afterQueue.length = 0;
+        vi.stubEnv('VOTE_ANNOUNCE_COOLDOWN_MINUTES', '');
+        resetServerConfigForTests();
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', telegramChatId: 'tg1', discordChannelId: 'dc1' });
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(prisma));
+        mockPrisma.vote.findMany.mockResolvedValue([]);
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 1 }]);
+        mockPrisma.participant.create.mockResolvedValue({ id: 50 });
+        mockPrisma.participant.update.mockResolvedValue({ id: 47 });
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+        cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        resetServerConfigForTests();
+    });
+
+    it('announces a first vote and stamps lastAnnouncedAt on the new row', async () => {
+        await call({ name: 'New Voter', votes: [vote] });
+        await flushAfter();
+
+        expect(mockPrisma.participant.create.mock.calls[0][0].data.lastAnnouncedAt).toBeInstanceOf(Date);
+        expect(stampWrites()).toEqual([]);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('skips the group post for a re-vote inside the window but still syncs the dashboard', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(10));
+
+        const res = await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(res.status).toBe(200);
+        expect(mockPrisma.vote.createMany).toHaveBeenCalled();
+        expect(stampWrites()).toEqual([]);
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('announces again once the window has passed, stamping with a conditional update', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(61));
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        const writes = stampWrites();
+        expect(writes).toHaveLength(1);
+        const { where, data } = writes[0];
+        expect(where).toEqual({
+            id: 47,
+            OR: [{ lastAnnouncedAt: null }, { lastAnnouncedAt: { lt: expect.any(Date) } }],
+        });
+        expect(data.lastAnnouncedAt).toBeInstanceOf(Date);
+        expect(data.lastAnnouncedAt.getTime() - where.OR[1].lastAnnouncedAt.lt.getTime()).toBe(60 * MINUTE);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('announces an existing row that was never announced (lastAnnouncedAt null)', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(null));
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(stampWrites()).toHaveLength(1);
+        expect(broadcastToEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not announce when a concurrent vote stamped the row first (count 0)', async () => {
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(120));
+        mockPrisma.participant.updateMany.mockResolvedValue({ count: 0 });
+
+        const res = await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(res.status).toBe(200);
+        expect(stampWrites()).toHaveLength(1);
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(syncDashboard).toHaveBeenCalledWith(1);
+    });
+
+    it('announces every vote when the cooldown is 0', async () => {
+        vi.stubEnv('VOTE_ANNOUNCE_COOLDOWN_MINUTES', '0');
+        resetServerConfigForTests();
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(1));
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(broadcastToEvent).toHaveBeenCalledTimes(2);
+        expect(syncDashboard).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves the quorum DM independent of the cooldown', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', telegramChatId: 'tg1', managerDiscordId: 'd-mgr' });
+        mockPrisma.participant.findFirst.mockResolvedValue(ownedRow(5));
+        mockPrisma.participant.count.mockResolvedValue(4);
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: true });
+        (sendDirectMessage as any).mockResolvedValue({ telegram: { status: 'skipped' }, discord: { status: 'sent', messageId: '1' } });
+
+        await call({ name: 'Chris', participantId: 47, votes: [vote] });
+        await flushAfter();
+
+        expect(broadcastToEvent).not.toHaveBeenCalled();
+        expect(sendDirectMessage).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('POST /api/event/[slug]/vote - finalized status machine on a distinct tx client', () => {
+    const db = prisma as any;
+    const vote = { slotId: 1, preference: 'YES', canHost: false };
+    const finalized = { ...baseEvent, status: 'FINALIZED', maxPlayers: 5, minPlayers: 3, finalizedSlotId: 1 };
+    const call = (body: any) => POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+    const seated = { id: 47, eventId: 1, chatId: null, discordId: null, status: 'ACCEPTED', ownerCookieIssuedAt: MARKED };
+
+    let tx: ReturnType<typeof createTxStub>;
+
+    /** Reads and writes the transaction body must make on tx, never on the top-level client. */
+    const topLevelTransactionCalls = () => [
+        db.timeSlot.findMany, db.participant.findFirst, db.participant.count, db.participant.create,
+        db.participant.update, db.vote.findMany, db.vote.deleteMany, db.vote.createMany,
+        db.event.updateMany,
+    ].flatMap((fn: any) => fn.mock.calls);
+
+    /** What the post-transaction promotion reads: the waitlist of this event. */
+    const promotionRan = () => db.participant.findMany.mock.calls.some(
+        (c: any) => c[0]?.where?.status === 'WAITLIST' && c[0]?.where?.eventId === 1);
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        cookieJar.clear();
+        headerJar.clear();
+        afterQueue.length = 0;
+        tx = createTxStub();
+        db.$transaction.mockImplementation((cb: any) => cb(tx));
+        db.event.findUnique.mockResolvedValue(finalized);
+        // Promotion (after the transaction) finds nobody on the waitlist and stops there.
+        db.participant.findMany.mockResolvedValue([]);
+        (tx.timeSlot.findMany as any).mockResolvedValue([{ id: 1 }, { id: 2 }]);
+        (tx.vote.findMany as any).mockResolvedValue([]);
+        (tx.event.updateMany as any).mockResolvedValue({ count: 1 });
+        (tx.event.findUnique as any).mockResolvedValue({ ...finalized, timeSlots: [] });
+        (tx.participant.create as any).mockResolvedValue({ id: 50 });
+        (tx.participant.update as any).mockResolvedValue({ id: 47 });
+        (tx.participant.count as any).mockResolvedValue(0);
+        (checkEventQuorum as any).mockReturnValue({ perfect: false, viable: false });
+    });
+
+    const createdStatus = () => (tx.participant.create as any).mock.calls[0][0].data.status;
+    const updatedStatus = () => (tx.participant.update as any).mock.calls[0][0].data.status;
+
+    describe('transaction membership', () => {
+        it('a new voter on a finalized event is created inside the transaction, never on the top-level client', async () => {
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+
+            expect(tx.timeSlot.findMany).toHaveBeenCalled();
+            expect(tx.participant.count).toHaveBeenCalledWith({ where: { eventId: 1, status: 'ACCEPTED' } });
+            expect(tx.participant.create).toHaveBeenCalledTimes(1);
+            expect(tx.vote.createMany).toHaveBeenCalledTimes(1);
+            expect(tx.event.findUnique).toHaveBeenCalled();
+            expect(tx.event.updateMany).toHaveBeenCalledTimes(1);
+            expect(topLevelTransactionCalls()).toEqual([]);
+        });
+
+        it('an edit of an existing participant reads, updates and replaces votes on tx only', async () => {
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+            (tx.participant.findFirst as any).mockResolvedValue(seated);
+
+            await call({ name: 'Seated', participantId: 47, votes: [vote] });
+
+            expect(tx.participant.findFirst).toHaveBeenCalledWith({ where: { id: 47, eventId: 1 } });
+            expect(tx.participant.update).toHaveBeenCalledTimes(1);
+            expect(tx.vote.findMany).toHaveBeenCalledWith({ where: { participantId: 47 } });
+            expect(tx.vote.deleteMany).toHaveBeenCalledWith({ where: { participantId: 47 } });
+            expect(tx.vote.createMany).toHaveBeenCalledTimes(1);
+            expect(topLevelTransactionCalls()).toEqual([]);
+        });
+
+        it('touches the event row before counting ACCEPTED, and counts before writing the participant', async () => {
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+
+            expect(tx.event.updateMany).toHaveBeenCalledWith({ where: { id: 1 }, data: { updatedAt: expect.any(Date) } });
+            const touchedAt = (tx.event.updateMany as any).mock.invocationCallOrder[0];
+            const countedAt = (tx.participant.count as any).mock.invocationCallOrder[0];
+            const createdAt = (tx.participant.create as any).mock.invocationCallOrder[0];
+            expect(touchedAt).toBeLessThan(countedAt);
+            expect(countedAt).toBeLessThan(createdAt);
+        });
+
+        it('runs the waitlist promotion after the transaction has written the vote', async () => {
+            await call({ name: 'New', linkIdentity: false, votes: [vote] });
+
+            expect(promotionRan()).toBe(true);
+            const promotedAt = db.participant.findMany.mock.invocationCallOrder[0];
+            expect(promotedAt).toBeGreaterThan((tx.vote.createMany as any).mock.invocationCallOrder[0]);
+        });
+    });
+
+    describe('status on the finalized slot', () => {
+        beforeEach(() => {
+            cookieJar.set('tabletop_participant_test-event', signValue('participant:test-event', '47'));
+        });
+
+        it('a NO on the finalized slot makes a new voter PENDING and runs promotion without taking a seat', async () => {
+            await call({ name: 'Out', linkIdentity: false, votes: [{ ...vote, preference: 'NO' }] });
+
+            expect(createdStatus()).toBe('PENDING');
+            expect(promotionRan()).toBe(true);
+        });
+
+        it('a NO on the finalized slot moves an ACCEPTED player to PENDING and runs promotion to refill the seat', async () => {
+            (tx.participant.findFirst as any).mockResolvedValue(seated);
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            const res = await call({ name: 'Seated', participantId: 47, votes: [{ ...vote, preference: 'NO' }] });
+
+            expect(res.status).toBe(200);
+            expect(updatedStatus()).toBe('PENDING');
+            expect(promotionRan()).toBe(true);
+        });
+
+        it('an ACCEPTED player at full capacity stays ACCEPTED when re-saving YES', async () => {
+            (tx.participant.findFirst as any).mockResolvedValue(seated);
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            await call({ name: 'Seated', participantId: 47, votes: [vote] });
+
+            expect(updatedStatus()).toBe('ACCEPTED');
+        });
+
+        it('a WAITLIST player at full capacity stays on the waitlist when re-saving YES', async () => {
+            (tx.participant.findFirst as any).mockResolvedValue({ ...seated, status: 'WAITLIST' });
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            await call({ name: 'Waiting', participantId: 47, votes: [vote] });
+
+            expect(updatedStatus()).toBe('WAITLIST');
+        });
+
+        it('a new YES voter with a free seat is ACCEPTED', async () => {
+            cookieJar.clear();
+            (tx.participant.count as any).mockResolvedValue(4);
+
+            await call({ name: 'Yes', linkIdentity: false, votes: [vote] });
+
+            expect(createdStatus()).toBe('ACCEPTED');
+        });
+
+        it('a new YES voter on a full event is WAITLIST', async () => {
+            cookieJar.clear();
+            (tx.participant.count as any).mockResolvedValue(5);
+
+            await call({ name: 'Late', linkIdentity: false, votes: [vote] });
+
+            expect(createdStatus()).toBe('WAITLIST');
+        });
+
+        it('a new MAYBE voter takes a free seat only while below the minimum', async () => {
+            cookieJar.clear();
+            (tx.participant.count as any).mockResolvedValue(2);
+            await call({ name: 'Maybe', linkIdentity: false, votes: [{ ...vote, preference: 'MAYBE' }] });
+            expect(createdStatus()).toBe('ACCEPTED');
+
+            (tx.participant.create as any).mockClear();
+            (tx.participant.count as any).mockResolvedValue(3);
+            await call({ name: 'Maybe2', linkIdentity: false, votes: [{ ...vote, preference: 'MAYBE' }] });
+            expect(createdStatus()).toBe('WAITLIST');
+        });
+
+        it('a campaign voter ignores the slot preference and takes any open seat', async () => {
+            cookieJar.clear();
+            db.event.findUnique.mockResolvedValue({ ...finalized, finalizedSlotId: null });
+            (tx.event.findUnique as any).mockResolvedValue({ ...finalized, finalizedSlotId: null, timeSlots: [] });
+            (tx.participant.count as any).mockResolvedValue(4);
+
+            await call({ name: 'Camp', linkIdentity: false, votes: [{ ...vote, preference: 'NO' }] });
+
+            expect(createdStatus()).toBe('ACCEPTED');
+        });
+    });
+
+    describe('events that are not finalized with a capacity', () => {
+        it('does not touch the event row, count seats or run promotion on a VOTING event', async () => {
+            db.event.findUnique.mockResolvedValue({ ...baseEvent, status: 'VOTING', maxPlayers: 5, minPlayers: 3 });
+            (tx.event.findUnique as any).mockResolvedValue({ ...baseEvent, status: 'VOTING', maxPlayers: 5, timeSlots: [] });
+
+            await call({ name: 'Early', linkIdentity: false, votes: [vote] });
+
+            expect(createdStatus()).toBe('PENDING');
+            expect(tx.event.updateMany).not.toHaveBeenCalled();
+            expect(tx.participant.count).not.toHaveBeenCalledWith({ where: { eventId: 1, status: 'ACCEPTED' } });
+            expect(promotionRan()).toBe(false);
+        });
+
+        it('does not run promotion on a DRAFT event with a maximum', async () => {
+            db.event.findUnique.mockResolvedValue({ ...baseEvent, status: 'DRAFT', maxPlayers: 5 });
+            (tx.event.findUnique as any).mockResolvedValue({ ...baseEvent, status: 'DRAFT', maxPlayers: 5, timeSlots: [] });
+
+            await call({ name: 'Early', linkIdentity: false, votes: [vote] });
+
+            expect(promotionRan()).toBe(false);
+        });
+
+        it('does not run promotion on a finalized event with no maximum', async () => {
+            db.event.findUnique.mockResolvedValue({ ...finalized, maxPlayers: null });
+            (tx.event.findUnique as any).mockResolvedValue({ ...finalized, maxPlayers: null, timeSlots: [] });
+
+            await call({ name: 'Open', linkIdentity: false, votes: [vote] });
+
+            expect(promotionRan()).toBe(false);
+        });
     });
 });

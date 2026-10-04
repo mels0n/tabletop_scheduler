@@ -2,9 +2,10 @@ import { Shield, EyeOff, Github, Server, Ban } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from "@/shared/config/public";
 
 export const metadata: Metadata = {
-    title: 'No Ads, No Tracking — Schedule Board Games Privately',
+    title: 'No Ads, No Tracking: Schedule Board Games Privately',
     description: 'Schedule game nights with zero tracking, no ads, and no account required. Free, open-source scheduler for board games, D&D, MTG, and tabletop gaming groups.',
     alternates: {
         canonical: '/privacy',
@@ -18,7 +19,7 @@ const schema = SchemaGenerator.faq([
     },
     {
         question: 'Do I need an account to schedule a board game night?',
-        answer: 'Absolutely not. You can schedule, vote, and manage events as a guest. Tabletop Time does not require an email or password from anyone — organizer or participant. Optionally, link Telegram or Discord for cross-device session recovery.',
+        answer: 'Absolutely not. You can schedule, vote, and manage events as a guest. Tabletop Time does not require an email or password from anyone (organizer or participant). Optionally, link Telegram or Discord for cross-device session recovery.',
     },
     {
         question: 'What data does Tabletop Time collect when scheduling games?',
@@ -26,7 +27,7 @@ const schema = SchemaGenerator.faq([
     },
     {
         question: 'How is game night data deleted?',
-        answer: 'Automatically. On the hosted version, events are purged daily once they are older than 24 hours. Old events, votes, and participant names are wiped from the database on a recurring schedule with no manual deletion required. Linked Discord or Telegram identities can also be removed instantly from the Privacy & Data page in your profile.',
+        answer: 'Automatically. On the hosted version, a cleanup job runs daily. Events are deleted one day after they end: a one-shot one day after its chosen slot ends, and a campaign one day after its last session. Drafts are deleted one day after their last proposed time, and cancelled events one day after cancellation. Self-hosters can change these with the CLEANUP_RETENTION_DAYS_* variables. Votes and participant names go with them, with no manual deletion required. Linked Discord or Telegram identities can also be removed instantly from the Privacy & Data page in your profile. No third-party analytics run on the hosted site.',
     },
     {
         question: 'Can I self-host this board game scheduler with no data leaving my network?',
@@ -56,7 +57,7 @@ export default function PrivacyPage() {
                         The &quot;Zero Tracking&quot; Promise
                     </h1>
                     <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-                        We believe that scheduling a board game night shouldn&apos;t require surrendering your personal data — or sitting through ads.
+                        We believe that scheduling a board game night shouldn&apos;t require surrendering your personal data or sitting through ads.
                     </p>
                 </div>
 
@@ -74,7 +75,7 @@ export default function PrivacyPage() {
                         <Ban className="w-8 h-8 text-amber-400" />
                         <h2 className="text-2xl font-bold text-slate-200">No Ads. Ever.</h2>
                         <p className="text-slate-400 leading-relaxed">
-                            There are no ads on any page of Tabletop Time — no banners, no sponsored results, no promoted listings. Scheduling a board game, D&amp;D session, or MTG draft night should not come with an ad tax.
+                            There are no ads on any page of Tabletop Time: no banners, no sponsored results, no promoted listings. Scheduling a board game, D&amp;D session, or MTG draft night should not come with an ad tax.
                         </p>
                     </div>
 
@@ -93,7 +94,7 @@ export default function PrivacyPage() {
                         <Server className="w-8 h-8 text-indigo-400" />
                         <h2 className="text-2xl font-bold text-slate-200">Self-Hostable</h2>
                         <p className="text-slate-400 leading-relaxed">
-                            Want 100% control? Host Tabletop Scheduler on your own server using our Docker image. In self-hosted mode, no data ever leaves your network — not even anonymized telemetry.
+                            Want 100% control? Host Tabletop Scheduler on your own server using our Docker image. In self-hosted mode, no data ever leaves your network, not even anonymized telemetry.
                         </p>
                     </div>
                 </div>
@@ -121,14 +122,14 @@ export default function PrivacyPage() {
                                     &quot;I want to close my browser and come back exactly as I left it.&quot;
                                 </span>
                                 <br />
-                                That is what our cookie does. It restores your session so you don&apos;t have to re-enter your name. It contains no ad-tech ID.
+                                That is what our cookies do, and these are the only ones we set: a <strong>manager cookie</strong> for each event you organize (set when you create the event or open its manager link), a signed <strong>participant cookie</strong> for each event you vote on (so only this browser can edit that vote), and, if you link Telegram or Discord, a signed <strong>identity cookie</strong> plus your display name. Discord sign-in also uses two short-lived cookies: one that guards the sign-in itself and one that lasts an hour after you add the bot to a server. Your name is remembered in your browser&apos;s local storage, not in a cookie. None of these cookies track you, carry an ad-tech ID, or are shared with anyone.
                             </p>
                         </div>
 
                         <div className="pt-8">
                             <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: How is my data deleted?</h3>
                             <p className="text-slate-300">
-                                <strong className="text-white">Automatically.</strong> On the hosted version, events are purged daily once they are older than 24 hours. There is no manual step required, since old events, votes, and participant names are wiped from our database on a recurring schedule. If you want immediate deletion, you can close the event early as the host, or simply self-host and control the data lifecycle yourself. Linked a Discord or Telegram account? You can remove that identity from all of your data instantly via &quot;Linked Accounts&quot; on your <Link href="/profile/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy &amp; Data page</Link>.
+                                <strong className="text-white">Automatically.</strong> On the hosted version, a cleanup job runs daily. Events are deleted one day after they end: a one-shot one day after its chosen slot ends, and a campaign one day after its last session. Drafts are deleted one day after their last proposed time, and cancelled events one day after cancellation. These are the defaults, and self-hosters can change them with the CLEANUP_RETENTION_DAYS_* variables. There is no manual step required, since old events, votes, and participant names are wiped from our database on that schedule. No third-party analytics run on the hosted site. If you want immediate deletion, the host can delete the event from its Manage page (a finalized event is cancelled first, then deleted), or you can self-host and control the data lifecycle yourself. Linked a Discord or Telegram account? You can remove that identity from all of your data instantly via &quot;Linked Accounts&quot; on your <Link href="/profile/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy &amp; Data page</Link>.
                             </p>
                         </div>
 
@@ -139,7 +140,7 @@ export default function PrivacyPage() {
                             </p>
                         </div>
 
-                        {process.env.NEXT_PUBLIC_IS_HOSTED === "true" && (
+                        {publicConfig.isHosted && (
                             <div className="pt-8">
                                 <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: To comply with various global privacy laws, does TableTop Time have a Formal Privacy Policy?</h3>
                                 <p className="text-slate-300">

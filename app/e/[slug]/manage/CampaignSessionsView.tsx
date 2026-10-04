@@ -151,7 +151,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                     <div className="space-y-1">
                         <p className="text-slate-300 font-medium">Pick the group you want to run this campaign with</p>
                         <ol className="list-decimal list-inside space-y-0.5 text-slate-500 text-xs">
-                            <li>Click any group below to select it — all dates pre-ticked</li>
+                            <li>Click any group below to select it. All its dates start ticked.</li>
                             <li>Untick any dates you don&apos;t need</li>
                             <li>Toggle any dimmed names on row 2 to add a guest to that session</li>
                             <li>Set a host and location, then confirm</li>

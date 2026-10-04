@@ -6,9 +6,7 @@ import {
     Article,
     BlogPosting,
     BreadcrumbList,
-    ItemList,
-    ListItem,
-    Review
+    ItemList
 } from 'schema-dts';
 
 // --- Types ---

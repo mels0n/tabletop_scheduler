@@ -1,6 +1,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
+import Logger from "@/shared/lib/logger";
+import { toResponse } from "@/shared/errors";
+import { validateSlugsSchema } from "@/features/event-management";
+
+const log = Logger.get("API:EventsValidate");
 
 /**
  * @function POST
@@ -11,7 +16,8 @@ import prisma from "@/shared/lib/prisma";
  * - This endpoint allows the client to periodically "prune" its history list by checking
  *   which events still exist in the database (e.g., separating deleted/expired events).
  *
- * @param {NextRequest} req - JSON Payload: { slugs: string[] }
+ * @param {NextRequest} req - JSON Payload: { slugs: string[] } (at most 50; 400 otherwise, so the
+ *   endpoint cannot be used to test slugs in bulk)
  * @returns {NextResponse} JSON:
  *   - validSlugs: string[] of events that exist in DB.
  *   - events: per-slug { slug, id, status, scheduledDate } so the client can reflect
@@ -37,12 +43,7 @@ const resolveScheduledDate = (e: {
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-        const { slugs } = body;
-
-        if (!slugs || !Array.isArray(slugs)) {
-            return NextResponse.json({ error: "Invalid slugs" }, { status: 400 });
-        }
+        const { slugs } = validateSlugsSchema.parse(await req.json());
 
         if (slugs.length === 0) {
             return NextResponse.json({ validSlugs: [], events: [] });
@@ -72,7 +73,6 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ validSlugs, events });
     } catch (e) {
-        console.error("Validation error", e);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return toResponse(e, log.forRequest(req));
     }
 }

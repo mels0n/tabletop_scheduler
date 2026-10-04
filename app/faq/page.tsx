@@ -15,6 +15,7 @@ import { SchemaGenerator } from "@/shared/lib/aeo";
  */
 import { FAQItem } from "@/components/FAQItem";
 import { DataTooltip } from "@/components/DataTooltip";
+import { publicConfig } from "@/shared/config/public";
 
 
 /**
@@ -27,7 +28,7 @@ import { DataTooltip } from "@/components/DataTooltip";
  * - Pure client component for simplicity, though could be RSC.
  */
 export default function FAQPage() {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+    const isHosted = publicConfig.isHosted;
 
     const jsonLd = SchemaGenerator.faq([
         {
@@ -36,11 +37,11 @@ export default function FAQPage() {
         },
         {
             question: "How does the app remember who I am?",
-            answer: "We use your browser's local storage to remember your name and the events you've interacted with. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again."
+            answer: "We use your browser's local storage to remember your name and the events you've interacted with, and a signed cookie for each event you vote on so that only this browser can edit that vote. This means if you clear your cache, use incognito mode, or switch devices, you will look like a new user and can vote again. Link Telegram or Discord to carry your linked votes across devices."
         },
         {
             question: "Where is my data stored?",
-            answer: "If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. If you are self-hosting, the data lives on your own server."
+            answer: "If you are using the hosted version, your data is stored securely in Supabase. We automatically delete events one day after they end (a finalized event one day after its chosen slot, a campaign one day after its last session), drafts one day after their last proposed time, and cancelled events one day after cancellation. No third-party analytics run on the hosted site. If you are self-hosting, the data lives on your own server, and you can change these periods with the CLEANUP_RETENTION_DAYS_* variables."
         },
         {
             question: "How do I find my past events?",
@@ -48,15 +49,15 @@ export default function FAQPage() {
         },
         {
             question: "What is a 'Magic Link'?",
-            answer: "If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
+            answer: "If you switch devices, send /start login to our Telegram bot in a private chat (or use Connect Telegram on My Events) to get a 'Magic Link' valid for 15 minutes, or sign in with Discord. This verifies your identity and restores the events linked to it on the new device."
         },
         {
             question: "Can I link an event to my Telegram or Discord after I've already voted?",
-            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. Events you manage also show a separate indigo 'Manager' badge marking your role there, which doesn't by itself mean the event is linked to your identity. You need to have voted on the event first, and you can only link or unlink your own identity."
+            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. Events you manage also show a separate indigo 'Manager' badge marking your role there, which doesn't by itself mean the event is linked to your identity. You need to have voted on the event from this browser first, and you can only link or unlink your own identity."
         },
         {
             question: "How does the waitlist work?",
-            answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist and notify the group!"
+            answer: "Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough 'Yes' votes to play, 'If Needed' players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist, update the group dashboard, and DM the promoted player if they linked Telegram or Discord!"
         },
         {
             question: "Can I suggest a different time?",
@@ -98,7 +99,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="How does the app remember who I am?"
-                        answer="For verified users (Telegram/Discord), we use a secure cookie that lasts for 400 days and auto-refreshes every time you visit. For anonymous users, we use your browser's local storage to remember your name."
+                        answer="For verified users (Telegram/Discord), we use a secure cookie that lasts for 400 days and auto-refreshes every time you visit. For anonymous users, we use your browser's local storage to remember your name, plus a signed cookie for each event you vote on so that only this browser can edit that vote."
                     />
 
 
@@ -106,7 +107,7 @@ export default function FAQPage() {
                         question="Where is my data stored?"
                         answer={
                             <span>
-                                If you are using the hosted version, your data is stored securely in Supabase. We automatically purge events once a day if they are older than 24 hours to ensure your privacy. We don&apos;t mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you.
+                                If you are using the hosted version, your data is stored securely in Supabase. We automatically delete events one day after they end (a finalized event one day after its chosen slot, a campaign one day after its last session), drafts one day after their last proposed time, and cancelled events one day after cancellation. No third-party analytics run on the hosted site. We don&apos;t mine, sell, or keep your <DataTooltip />. If you are self-hosting, the data lives on your own server and stays with you, and you can change these periods with the CLEANUP_RETENTION_DAYS_* variables.
                             </span>
                         }
                     />
@@ -116,7 +117,7 @@ export default function FAQPage() {
                     />
                     <FAQItem
                         question="What is a 'Magic Link'?"
-                        answer="(Optional) If you switch devices, you can generate a 'Magic Link' via Telegram or Discord. This secure link verifies your identity and restores access to all your events on the new device."
+                        answer="(Optional) If you switch devices, send /start login to our Telegram bot in a private chat (or use Connect Telegram on My Events) to get a 'Magic Link' valid for 15 minutes, or sign in with Discord. This verifies your identity and restores the events linked to it on the new device."
                     />
                     <FAQItem
                         question="Can I link an event to my Telegram or Discord after I've already voted?"
@@ -126,7 +127,7 @@ export default function FAQPage() {
                                 <Link href="/profile" className="text-indigo-400 hover:text-indigo-300 underline">
                                     My Events
                                 </Link>{" "}
-                                page has a badge: a gray &quot;This Device Only&quot; badge means it&apos;s only saved in this browser, and clicking it lets you link it to any platform you&apos;re synced with. A colored &quot;Telegram Synced&quot; or &quot;Discord Synced&quot; badge means it&apos;s already linked, and clicking it lets you unlink it. You need to have voted on the event first, and you can only link or unlink your own identity.
+                                page has a badge: a gray &quot;This Device Only&quot; badge means it&apos;s only saved in this browser, and clicking it lets you link it to any platform you&apos;re synced with. A colored &quot;Telegram Synced&quot; or &quot;Discord Synced&quot; badge means it&apos;s already linked, and clicking it lets you unlink it. You need to have voted on the event from this browser first, and you can only link or unlink your own identity.
                             </span>
                         }
                     />
@@ -134,7 +135,7 @@ export default function FAQPage() {
                         question="How does the waitlist work?"
                         answer={
                             <span>
-                                Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough &quot;Yes&quot; votes to play, &quot;If Needed&quot; players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist and notify the group!{" "}
+                                Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough &quot;Yes&quot; votes to play, &quot;If Needed&quot; players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist, update the group dashboard, and DM the promoted player if they linked Telegram or Discord!{" "}
                                 <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
                                     See full logic & examples
                                 </Link>.

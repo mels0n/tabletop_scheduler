@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 /**
  * @component GlobalError
@@ -23,8 +22,6 @@ export default function GlobalError({
     error: Error & { digest?: string };
     reset: () => void;
 }) {
-    const router = useRouter();
-
     useEffect(() => {
         // Log to console for debugging without exposing details to users
         console.error("[GlobalError]", error);

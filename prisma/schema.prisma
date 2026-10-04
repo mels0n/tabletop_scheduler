@@ -3,8 +3,8 @@
 
 generator client {
   provider = "prisma-client-js"
-  // Binary targets ensure compatibility with both local Windows dev and Docker (Linux musl)
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  // Binary targets ensure compatibility with both local Windows dev and Docker (Linux musl, amd64 and arm64)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -23,11 +23,12 @@ model Event {
   description String?
   
   // Security & Management
-  adminToken  String?       @default(uuid()) // Saved in cookie to allow edits without login
+  adminToken  String?       // SHA-256 hash of the admin token; always written explicitly
   
   // Telegram Integration
   telegramLink String?      // Invite link to the group chat
   telegramChatId String?    // The numeric ID of the linked group (for bot notifications)
+  telegramConnectNonce String? // Rotated on every successful /connect; part of the connect code HMAC so each code is single-use
   managerTelegram String?   // Creator's handle (e.g. @user) used for recovery
   managerChatId   String?   // Creator's numeric ID (for private bot DMs)
   pinnedMessageId Int?      // ID of the pinned status message to update/unpin
@@ -45,8 +46,11 @@ model Event {
   reminderTime         String?   // "HH:mm" (24h) in Event Timezone
   reminderDays         String?   // "0,1,2,3,4,5,6" (Comma separated, 0=Sun)
   lastReminderSent     DateTime? // Track to avoid duplicates
+  sessionReminderEnabled     Boolean @default(false) // Post a heads-up in the group/channel before a scheduled session
+  sessionReminderLeadMinutes Int?    // Minutes before session start: 120 | 1440 | 2880 (features/notifications/model/leads.ts)
   quorumViableNotified Boolean   @default(false)
   quorumPerfectNotified Boolean  @default(false)
+  quorumReachedAt      DateTime? // Set when quorum is first met (voting reminders stop)
   
   // Recovery
   recoveryToken        String?   @unique // Short temporary token for deep linking
@@ -57,7 +61,7 @@ model Event {
   maxPlayers  Int?
   eventType   String        @default("ONE_SHOT") // ONE_SHOT | CAMPAIGN
   minSessions Int?          // Minimum sessions to schedule (campaigns only)
-  status      String        @default("DRAFT") // DRAFT -> ACTIVE -> FINALIZED
+  status      String        @default("DRAFT") // DRAFT | FINALIZED | CANCELLED
   
   // Finalization State
   finalizedSlotId Int?
@@ -78,15 +82,21 @@ model Event {
   participants      Participant[]
   finalizedSessions FinalizedSession[]
   webhooks          WebhookEvent[]
+
+  @@index([managerChatId])
+  @@index([managerDiscordId])
+  @@index([managerTelegram])
+  @@index([status])
 }
 
 // Represents a voteable window of time.
 model TimeSlot {
   id        Int       @id @default(autoincrement())
-  event     Event     @relation(fields: [eventId], references: [id])
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId   Int
   startTime DateTime
   endTime   DateTime
+  sessionReminderSentAt DateTime? // Set once the session reminder has been delivered
   votes            Vote[]
   finalizedSession FinalizedSession?
 
@@ -97,7 +107,7 @@ model TimeSlot {
 // Identity is loosely tracked via localStorage or Telegram ID.
 model Participant {
   id         Int      @id @default(autoincrement())
-  event      Event    @relation(fields: [eventId], references: [id])
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId    Int
   name       String
   telegramId  String? // The handle (e.g. @user), captured from input or bot
@@ -108,19 +118,28 @@ model Participant {
   discordUsername String? // The username/discriminatorvia webhook)
   createdAt  DateTime @default(now())
   status     String   @default("PENDING") // PENDING, ACCEPTED, WAITLIST
+  // Set when a signed participant cookie was first issued for this row. Null = created before
+  // participant cookies existed: editable by stored id until a browser claims it.
+  ownerCookieIssuedAt DateTime?
+  // Last time an "updated their availability" group post went out for this row. Null = never.
+  // Bounds those posts to one per VOTE_ANNOUNCE_COOLDOWN_MINUTES per participant.
+  lastAnnouncedAt DateTime?
   
   votes      Vote[]
   hostedEvents Event[] @relation("FinalizedHost")
 
   @@index([eventId])
+  @@index([chatId])
+  @@index([discordId])
+  @@index([telegramId])
 }
 
 // Linking table for preferences.
 model Vote {
   id            Int         @id @default(autoincrement())
-  participant   Participant @relation(fields: [participantId], references: [id])
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   participantId Int
-  timeSlot      TimeSlot    @relation(fields: [timeSlotId], references: [id])
+  timeSlot      TimeSlot    @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
   timeSlotId    Int
   
   preference    String      // YES: Available, MAYBE: If needed, NO: Busy
@@ -147,19 +166,22 @@ model FinalizedSession {
 
 // Temporary tokens for global "My Events" login
 model LoginToken {
-  token     String   @id @default(uuid())
+  token     String   @id // SHA-256 hash of the emailed/DM'd token; always written explicitly
   chatId    String?   // The Telegram Chat ID being authenticated
   telegramUsername String? // For display purposes (mirrors discordUsername)
   discordId String?   // The Discord User ID being authenticated
   discordUsername String? // For display purposes
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([discordId, createdAt])
+  @@index([expiresAt])
 }
 
 // Webhook Delivery Queue
 model WebhookEvent {
   id          String   @id @default(uuid())
-  event       Event    @relation(fields: [eventId], references: [id])
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId     Int
   
   url         String
@@ -167,6 +189,7 @@ model WebhookEvent {
   status      String   // PENDING, DELIVERED, FAILED
   attempts    Int      @default(0)
   nextAttempt DateTime
+  lockedAt    DateTime? // Set while a cron run is delivering this row
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -175,13 +198,14 @@ model WebhookEvent {
 
 // Ko-fi donation records received via webhook.
 // Used for social proof display ("Wall of Love") on the landing page.
-// Only stores public-safe fields — email is intentionally excluded.
+// Only stores public-safe fields; email is intentionally excluded.
 model Donation {
   id                  String   @id @default(uuid())
   kofiTransactionId   String   @unique // Deduplication key from Ko-fi webhook payload
   fromName            String           // Supporter's display name
   message             String?          // Optional public message left by the supporter
   amount              String           // Dollar amount as string (e.g., "5.00")
+  amountCents         Int?             // Parsed amount in minor units; null on rows stored before it existed
   currency            String   @default("USD")
   isPublic            Boolean  @default(true) // Only display if supporter opted for public visibility
   type                String   @default("Donation") // Donation, Subscription, Commission, Shop Order
@@ -190,3 +214,21 @@ model Donation {
   createdAt           DateTime @default(now())
 }
 
+// Data migrations (backfills that a schema change cannot express) already applied.
+// Written by scripts/run-data-migrations.mjs in the same transaction as the backfill.
+model AppMigration {
+  id        String   @id // Stable id from scripts/data-migrations/index.mjs
+  appliedAt DateTime @default(now())
+}
+
+// Per-identity direct message preference. Keyed by platform and that platform's user id
+// (the Telegram chat id or Discord user id), so it holds for every event the user joins or
+// manages. No row means direct messages are on.
+model DmPreference {
+  platform   String
+  platformId String
+  dmOptOut   Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+
+  @@id([platform, platformId])
+}

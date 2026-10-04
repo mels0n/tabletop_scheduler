@@ -1,8 +1,12 @@
 import { Metadata } from "next";
 import prisma from "@/shared/lib/prisma";
 import { cookies } from "next/headers";
-import { getBotUsername } from "@/features/telegram/lib/telegram-client";
+import { readIdentity } from "@/shared/lib/session";
+import { getBotUsername } from "@/features/telegram";
+import Logger from "@/shared/lib/logger";
 import { ProfileDashboard } from "./ProfileDashboard";
+import { getServerConfig } from "@/shared/config/server";
+import { getDmPreferences, type DmPreferences } from "@/features/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +19,7 @@ export const metadata: Metadata = {
  * @description Server-side wrapper for the Profile Dashboard.
  *
  * Responsibilities:
- * 1. Checks for a persistent `tabletop_user_chat_id` cookie.
+ * 1. Reads the signed identity cookies (`tabletop_user_chat_id`, `tabletop_user_discord_id`).
  * 2. If present, fetches all associated events from the database:
  *    - Events Managed (where managerChatId matches).
  *    - Events Participated (via Participant relation).
@@ -25,11 +29,12 @@ export const metadata: Metadata = {
  * 4. Hydrates the Client Component `ProfileDashboard` with this trusted server data.
  */
 export default async function ProfilePage() {
-    // Security: Only read the HTTP-only cookie.
-    const cookieStore = cookies();
-    const telegramChatId = cookieStore.get("tabletop_user_chat_id")?.value;
-    const discordUserId = cookieStore.get("tabletop_user_discord_id")?.value;
-    const discordUserName = cookieStore.get("tabletop_user_discord_name")?.value;
+    // Security: Only trust the signed HTTP-only identity cookies.
+    const cookieStore = await cookies();
+    const identity = readIdentity(cookieStore);
+    const telegramChatId = identity.chatId ?? undefined;
+    const discordUserId = identity.discordId ?? undefined;
+    const discordUserName = discordUserId ? cookieStore.get("tabletop_user_discord_name")?.value : undefined;
 
     let serverEvents: any[] = [];
     let serverUserName: string | null = discordUserName || null;
@@ -227,17 +232,24 @@ export default async function ProfilePage() {
     // fetchEvents, and getBotUsername never throws (returns null on failure), so it's
     // safe to start eagerly without a try/catch here. Preserves the original condition
     // exactly: only actually called when `!telegramChatId` and the token is set.
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = getServerConfig().telegram.token ?? undefined;
     const botUsernamePromise: Promise<string | null> = (!telegramChatId && botToken)
         ? getBotUsername(botToken)
         : Promise.resolve(null);
+
+    // Direct message preferences for the linked platforms. A failed read hides the toggles
+    // rather than showing a state that might be wrong.
+    const dmPreferencesPromise: Promise<DmPreferences> = getDmPreferences().catch((e) => {
+        Logger.get("Page:Profile").error("Failed to read DM preferences", e as Error);
+        return { telegram: null, discord: null };
+    });
 
     try {
         await fetchEvents(telegramChatId, discordUserId);
         // Sort by recency
         serverEvents = Array.from(eventMap.values()).sort((a, b) => new Date(b.lastVisited).getTime() - new Date(a.lastVisited).getTime());
     } catch (e) {
-        console.error("Failed to fetch server events", e);
+        Logger.get("Page:Profile").error("Failed to fetch server events", e as Error);
     }
 
     // Resolve the bot username server-side so the "Connect Telegram" pill can deep-link
@@ -249,6 +261,8 @@ export default async function ProfilePage() {
         telegramConnectUrl = botUsername ? `https://t.me/${botUsername}?start=login` : null;
     }
 
+    const dmPreferences = await dmPreferencesPromise;
+
     return (
         <ProfileDashboard
             serverEvents={serverEvents}
@@ -256,6 +270,7 @@ export default async function ProfilePage() {
             isDiscordSynced={!!discordUserId}
             serverUserName={serverUserName || undefined}
             telegramConnectUrl={telegramConnectUrl}
+            dmPreferences={dmPreferences}
         />
     );
 }

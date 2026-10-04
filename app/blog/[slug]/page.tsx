@@ -6,13 +6,14 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { publicConfig } from "@/shared/config/public";
 
 interface Props {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-    if (process.env.NEXT_PUBLIC_IS_HOSTED !== "true") {
+    if (!publicConfig.isHosted) {
         return [];
     }
     const posts = getAllPosts();
@@ -21,7 +22,8 @@ export async function generateStaticParams() {
     }));
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+    const params = await props.params;
     const post = getPostBySlug(params.slug);
     if (!post) {
         return {
@@ -43,8 +45,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-export default function BlogPost({ params }: Props) {
-    const isHosted = process.env.NEXT_PUBLIC_IS_HOSTED === "true";
+export default async function BlogPost(props: Props) {
+    const params = await props.params;
+    const isHosted = publicConfig.isHosted;
 
     if (!isHosted) {
         notFound();
@@ -117,6 +120,7 @@ export default function BlogPost({ params }: Props) {
                         components={{
                             h1: ({ children }) => <h2>{children}</h2>,
                             img: ({ src, alt }) => (
+                                // eslint-disable-next-line @next/next/no-img-element -- markdown images of unknown size; images.unoptimized is on
                                 <img src={src} alt={alt ?? ''} className="w-full rounded-lg my-6" />
                             ),
                         }}

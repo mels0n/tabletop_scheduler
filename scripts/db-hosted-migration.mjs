@@ -8,9 +8,11 @@
  * Why diff against the live database instead of `--from-migrations`?
  * `migrate diff --from-migrations` needs a shadow database to replay history
  * into, and Supabase does not hand one out. Diffing from the live DB gives the
- * same answer as long as production actually matches the migration history --
- * which is what the db-drift workflow verifies on every push. If that gate is
- * green, prod state IS the history's end state.
+ * same answer only while production actually matches the migration history.
+ * Nothing checks that automatically: run `npm run db:status:hosted` first and
+ * make sure every migration is applied. Prisma does not diff row level security,
+ * so a migration that creates a table must also add its RLS statements by hand
+ * (see the enable_rls migration).
  *
  * Requires DIRECT_URL (port 5432). The pooled connection cannot run DDL.
  */

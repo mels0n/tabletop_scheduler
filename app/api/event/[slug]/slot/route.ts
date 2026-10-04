@@ -1,37 +1,33 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
-import { verifyEventAdmin } from "@/features/auth/server/actions";
+import { verifyEventAdmin } from "@/features/auth";
 import Logger from "@/shared/lib/logger";
+import { ForbiddenError, NotFoundError, ValidationError, toResponse } from "@/shared/errors";
+import { MAX_EVENT_SLOTS, pushSlotUpdates, slotSchema } from "@/features/event-management";
 
 const log = Logger.get("API:Slot:Create");
 
-import { pushSlotUpdates } from "./notify";
 
-export async function POST(
-    req: Request,
-    { params }: { params: { slug: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ slug: string }> }) {
+    const { slug } = await props.params;
     try {
-        const { slug } = params;
-        const body = await req.json();
-        const { startTime, endTime } = body;
-
-        if (!startTime || !endTime) {
-            return NextResponse.json({ error: "Missing start or end time" }, { status: 400 });
+        if (!(await verifyEventAdmin(slug))) {
+            throw new ForbiddenError();
         }
 
-        const isAdmin = await verifyEventAdmin(slug);
-        if (!isAdmin) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-        }
+        const { startTime, endTime } = slotSchema.parse(await req.json());
 
-        const eventInfo = await prisma.event.findUnique({ where: { slug } });
+        const eventInfo = await prisma.event.findUnique({ where: { slug }, select: { id: true, status: true } });
         if (!eventInfo) {
-            return NextResponse.json({ error: "Event not found" }, { status: 404 });
+            throw new NotFoundError("Event not found");
         }
 
         if (eventInfo.status === 'FINALIZED' || eventInfo.status === 'CANCELLED') {
-            return NextResponse.json({ error: "Cannot modify slots on a finalized or cancelled event." }, { status: 400 });
+            throw new ValidationError("Cannot modify slots on a finalized or cancelled event.");
+        }
+
+        if ((await prisma.timeSlot.count({ where: { eventId: eventInfo.id } })) >= MAX_EVENT_SLOTS) {
+            throw new ValidationError("This event already has the maximum number of time options.");
         }
 
         const newSlot = await prisma.timeSlot.create({
@@ -39,15 +35,18 @@ export async function POST(
                 eventId: eventInfo.id,
                 startTime: new Date(startTime),
                 endTime: new Date(endTime),
-            }
+            },
+            select: { id: true, startTime: true, endTime: true }
         });
 
         // Trigger notifications
         await pushSlotUpdates(eventInfo.id, "A new time option was added by the creator");
 
-        return NextResponse.json({ success: true, slot: newSlot });
+        return NextResponse.json({
+            success: true,
+            slot: { id: newSlot.id, startTime: newSlot.startTime, endTime: newSlot.endTime }
+        });
     } catch (error) {
-        log.error("Failed to create slot", error as Error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return toResponse(error, log.forRequest(req));
     }
 }

@@ -8,15 +8,17 @@
 # Order matters:
 #   1. generate       - build the Prisma client from the HOSTED schema.
 #   2. migrate deploy - apply any pending migrations to the production DB.
-#   3. next build     - compile the app.
+#   3. data migrations - run pending backfills (scripts/data-migrations), each
+#                        once, in a transaction, recorded in AppMigration.
+#   4. next build     - compile the app.
 #
 # `set -e` means a failed migration fails the deploy. That is deliberate: the
 # alternative is shipping code that expects columns the database does not have,
 # which is exactly the failure this script exists to prevent.
 #
-# Migrations run ONLY for production deployments. Preview builds share the same
-# DATABASE_URL, so letting them apply DDL would let any feature branch mutate
-# the live schema.
+# Migrations run ONLY for production deployments. Preview has no database
+# configured, so there is nothing to migrate there, and keeping the gate means a
+# feature branch can never apply DDL to the production schema.
 # ==============================================================================
 set -e
 
@@ -28,8 +30,10 @@ npx prisma generate --schema="$SCHEMA"
 if [ "$VERCEL_ENV" = "production" ]; then
     echo "▶ prisma migrate deploy (production)"
     npx prisma migrate deploy --schema="$SCHEMA"
+    echo "▶ data migrations (production)"
+    node scripts/run-data-migrations.mjs
 else
-    echo "▶ skipping migrate deploy (VERCEL_ENV=${VERCEL_ENV:-unset}, not production)"
+    echo "▶ skipping migrate deploy and data migrations (VERCEL_ENV=${VERCEL_ENV:-unset}, not production)"
 fi
 
 echo "▶ next build"

@@ -1,64 +1,52 @@
 import { NextResponse } from "next/server";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
-import { pushSlotUpdates } from "../notify";
+import { NotFoundError, ValidationError, toResponse } from "@/shared/errors";
+import { MAX_EVENT_SLOTS, pushSlotUpdates, slotSuggestionSchema } from "@/features/event-management";
+import { escapeHtml } from "@/shared/lib/escape";
 
 const log = Logger.get("API:Slot:Suggest");
 
-export async function POST(
-    request: Request,
-    { params }: { params: { slug: string } }
-) {
+/** Any visitor may suggest a time while the event is open; no admin check by design. */
+export async function POST(request: Request, props: { params: Promise<{ slug: string }> }) {
+    const { slug } = await props.params;
     try {
-        const body = await request.json();
-        const { startTime, endTime, suggesterName } = body;
-
-        if (!startTime || !endTime || !suggesterName) {
-            return NextResponse.json({ error: "Start time, end time, and your name are required." }, { status: 400 });
-        }
+        const { startTime, endTime, suggesterName } = slotSuggestionSchema.parse(await request.json());
 
         // Find the event to ensure it exists
         const event = await prisma.event.findUnique({
-            where: { slug: params.slug },
+            where: { slug },
             select: { id: true, status: true }
         });
 
         if (!event) {
-            return NextResponse.json({ error: "Event not found." }, { status: 404 });
+            throw new NotFoundError("Event not found.");
         }
 
         if (event.status === 'FINALIZED' || event.status === 'CANCELLED') {
-            return NextResponse.json({ error: "Event is no longer accepting suggestions." }, { status: 400 });
+            throw new ValidationError("Event is no longer accepting suggestions.");
         }
 
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-            return NextResponse.json({ error: "Invalid date format." }, { status: 400 });
-        }
-
-        if (start >= end) {
-            return NextResponse.json({ error: "Start time must be before end time." }, { status: 400 });
+        if ((await prisma.timeSlot.count({ where: { eventId: event.id } })) >= MAX_EVENT_SLOTS) {
+            throw new ValidationError("This event already has the maximum number of time options.");
         }
 
         // Create the slot
         await prisma.timeSlot.create({
             data: {
                 eventId: event.id,
-                startTime: start,
-                endTime: end
+                startTime: new Date(startTime),
+                endTime: new Date(endTime)
             }
         });
 
         // Notify Discord/Telegram
-        const safeName = suggesterName.substring(0, 50); // limit length
-        await pushSlotUpdates(event.id, `A new time option was suggested by <b>${safeName}</b>`);
+        const name = String(suggesterName).substring(0, 50); // limit length
+        await pushSlotUpdates(event.id, `A new time option was suggested by <b>${escapeHtml(name)}</b>`);
 
         return NextResponse.json({ success: true });
 
     } catch (error) {
-        log.error(`Failed to suggest slot for event ${params.slug}`, error as Error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return toResponse(error, log.forRequest(request));
     }
 }

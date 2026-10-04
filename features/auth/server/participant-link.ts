@@ -3,6 +3,18 @@
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
+import { z } from "zod";
+import {
+    identityCookieOptions,
+    participantCookieName,
+    participantPurpose,
+    readDiscordDisplayName,
+    readIdentityCookie,
+    signValue,
+    verifyValue,
+} from "@/shared/lib/session";
+import { isLegacyParticipant } from "@/entities/participant";
+import { participantIdParam, platformParam, slugParam } from "@/shared/lib/action-params";
 import type { Participant } from "@prisma/client";
 
 const log = Logger.get("ParticipantLink");
@@ -20,16 +32,19 @@ interface ParticipantLinkParams {
     platform: Platform;
 }
 
+/** Public endpoint: every field is checked before the first lookup. */
+const participantLinkInput = z.object({
+    slug: slugParam,
+    participantId: participantIdParam,
+    platform: platformParam,
+});
+
+const INVALID_REQUEST = "Invalid request.";
+
 /** Human-readable platform names for user-facing error/success copy. */
 const PLATFORM_LABEL: Record<Platform, string> = {
     telegram: 'Telegram',
     discord: 'Discord',
-};
-
-/** httpOnly cookie set by each platform's verified magic-link/OAuth flow. */
-const PLATFORM_COOKIE: Record<Platform, string> = {
-    telegram: 'tabletop_user_chat_id',
-    discord: 'tabletop_user_discord_id',
 };
 
 /**
@@ -41,12 +56,12 @@ const PLATFORM_COOKIE: Record<Platform, string> = {
  *
  * @param {string} slug - The event slug.
  * @param {number} participantId - The Participant row being claimed/released.
- * @returns {Promise<{ participant: Participant } | { error: string }>} The participant row, or an error.
+ * @returns The participant row and its event's slug, or an error.
  */
-async function loadOwnedParticipant(slug: string, participantId: number): Promise<{ participant: Participant } | { error: string }> {
+async function loadOwnedParticipant(slug: string, participantId: number): Promise<{ participant: Participant; eventSlug: string } | { error: string }> {
     const event = await prisma.event.findUnique({
         where: { slug },
-        select: { id: true }
+        select: { id: true, slug: true }
     });
     if (!event) {
         return { error: "Event not found." };
@@ -62,7 +77,7 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
         return { error: "Participant not found for this event." };
     }
 
-    return { participant };
+    return { participant, eventSlug: event.slug };
 }
 
 /**
@@ -70,6 +85,16 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
  * @description Stamps the caller's verified platform identity (read from their httpOnly
  * cookie) onto an event Participant row, claiming an "unclaimed" vote as their own so it
  * surfaces on their profile going forward.
+ *
+ * Ownership: participant ids are public, so a signed identity alone is not enough. The
+ * caller must also hold the signed `tabletop_participant_<slug>` cookie the vote route set
+ * when this browser cast the vote, and it must name this row.
+ *
+ * Legacy rows: a row without `ownerCookieIssuedAt` was created before participant cookies
+ * existed, so its voter has only the stored id. Such a row is claimed for this browser
+ * (conditional update on `ownerCookieIssuedAt: null`, so exactly one browser wins) and the
+ * participant cookie is set here, the same cookie the vote route issues. If the claim
+ * matches nothing, another browser got there first and the cookie is required as usual.
  *
  * Idempotent: re-linking a row already stamped with the caller's own identity is a no-op
  * success. Linking a row already claimed by a *different* verified identity is refused.
@@ -80,19 +105,45 @@ async function loadOwnedParticipant(slug: string, participantId: number): Promis
  * @param {Platform} params.platform - Which identity ('telegram' | 'discord') to stamp.
  * @returns {Promise<{ success: true, message?: string } | { error: string }>}
  */
-export async function linkParticipant({ slug, participantId, platform }: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+export async function linkParticipant(params: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+    const input = participantLinkInput.safeParse(params);
+    if (!input.success) return { error: INVALID_REQUEST };
+    const { slug, participantId, platform } = input.data;
+
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;
-        const { participant } = loaded;
+        const { participant, eventSlug } = loaded;
 
-        const cookieStore = cookies();
-        const identityId = cookieStore.get(PLATFORM_COOKIE[platform])?.value;
+        const cookieStore = await cookies();
+        const identityId = readIdentityCookie(cookieStore, platform);
 
         // Guard: UI shouldn't offer linking a platform the user hasn't synced, but a
         // stale page or replayed request could still hit this action without the cookie.
+        // Checked before any legacy claim so a request that cannot link never marks the row.
         if (!identityId) {
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };
+        }
+
+        const cookieName = participantCookieName(eventSlug);
+        const cookiePurpose = participantPurpose(eventSlug);
+        let claimedLegacy = false;
+        if (isLegacyParticipant(participant)) {
+            const claim = await prisma.participant.updateMany({
+                where: { id: participant.id, ownerCookieIssuedAt: null },
+                data: { ownerCookieIssuedAt: new Date() }
+            });
+            claimedLegacy = claim?.count === 1;
+        }
+
+        if (claimedLegacy) {
+            cookieStore.set(cookieName, signValue(cookiePurpose, String(participant.id)), identityCookieOptions());
+        } else {
+            const ownedId = verifyValue(cookiePurpose, cookieStore.get(cookieName)?.value);
+            if (ownedId !== String(participant.id)) {
+                log.warn("Refused participant link: browser does not own the row", { slug: eventSlug, participantId });
+                return { error: "This browser did not cast this vote. Link it from the browser you voted with." };
+            }
         }
 
         if (platform === 'telegram') {
@@ -116,9 +167,9 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
                 return { error: "This participant is already linked to a different Discord account." };
             }
 
-            // Best-effort display name; not required to link (only client-readable, never
-            // used for identity checks).
-            const discordUsername = cookieStore.get('tabletop_user_discord_name')?.value;
+            // Best-effort display name from a client-writable cookie: only beside the verified
+            // id, and never replacing a username the row already has.
+            const discordUsername = participant.discordUsername ? null : readDiscordDisplayName(cookieStore);
 
             await prisma.participant.update({
                 where: { id: participantId },
@@ -153,14 +204,18 @@ export async function linkParticipant({ slug, participantId, platform }: Partici
  * @param {Platform} params.platform - Which identity ('telegram' | 'discord') to clear.
  * @returns {Promise<{ success: true, message?: string } | { error: string }>}
  */
-export async function unlinkParticipant({ slug, participantId, platform }: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+export async function unlinkParticipant(params: ParticipantLinkParams): Promise<{ success: true, message?: string } | { error: string }> {
+    const input = participantLinkInput.safeParse(params);
+    if (!input.success) return { error: INVALID_REQUEST };
+    const { slug, participantId, platform } = input.data;
+
     try {
         const loaded = await loadOwnedParticipant(slug, participantId);
         if ('error' in loaded) return loaded;
         const { participant } = loaded;
 
-        const cookieStore = cookies();
-        const identityId = cookieStore.get(PLATFORM_COOKIE[platform])?.value;
+        const cookieStore = await cookies();
+        const identityId = readIdentityCookie(cookieStore, platform);
 
         if (!identityId) {
             return { error: `Not synced with ${PLATFORM_LABEL[platform]} on this browser.` };
