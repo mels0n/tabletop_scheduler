@@ -86,7 +86,7 @@ export async function deliverWebhook(row: OutboxRow): Promise<void> {
         target = await resolveSafeWebhookTarget(row.url);
     } catch (error) {
         // DNS trouble is usually transient: a plain Error lets the cron retry it.
-        if (error instanceof WebhookHostUnresolvedError) throw new Error(error.message);
+        if (error instanceof WebhookHostUnresolvedError) throw new Error(error.message, { cause: error });
         throw new WebhookRefusedError((error as Error).message);
     }
 
