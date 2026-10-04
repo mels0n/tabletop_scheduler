@@ -21,7 +21,7 @@ TELEGRAM_BOT_TOKEN=your_token_here
 NEXT_PUBLIC_BASE_URL=https://scheduler.example.com
 ```
 
-`NEXT_PUBLIC_BASE_URL` is **required whenever a bot token is set, in every mode, polling included**. Every link the bot sends (login links, the connect dashboard, event links, reminders, recovery messages) is built from it, and the server refuses to start without it. On a home server behind NAT, set it to the address your players use to reach the app (a LAN address such as `http://nas.local:3000` works if everyone is on that network) and choose polling explicitly, as described below.
+`NEXT_PUBLIC_BASE_URL` is **needed whenever a bot token is set, in every mode, polling included**. Every link the bot sends (login links, the connect dashboard, event links, reminders, recovery messages) is built from it. Hosted and Vercel deployments refuse to start without it; a self-hosted install starts, logs an error, and sends broken links until it is set. On a home server behind NAT, set it to the address your players use to reach the app (a LAN address such as `http://nas.local:3000` works if everyone is on that network). Polling is the self-host default, so no public URL is needed.
 
 ## 3. Deployment Modes (Webhook vs Polling)
 TabletopTime supports two ways of receiving Telegram messages. Set `TELEGRAM_MODE` to choose one explicitly, or leave it unset and the app picks:
@@ -31,18 +31,18 @@ TabletopTime supports two ways of receiving Telegram messages. Set `TELEGRAM_MOD
 | `webhook` | Telegram pushes updates to your server. |
 | `polling` | Your server connects out to Telegram and asks for updates. |
 | `off` | Telegram is disabled even if a token is set. |
-| unset | `webhook` when a token is set (the base URL is then required anyway); `off` without a token. Polling is never picked automatically, so set `TELEGRAM_MODE=polling` to use it. |
+| unset | With a token: `polling` on a self-hosted install, `webhook` when hosted (`NEXT_PUBLIC_IS_HOSTED=true`) or on Vercel. Without a token: `off`. A self-hosted install with a public HTTPS address sets `TELEGRAM_MODE=webhook` to use webhooks. |
 
 Whichever mode you pick, every update goes through the same handler, and an update Telegram delivers twice is processed once.
 
 ### A. Webhook (recommended)
-*   **Best for:** Vercel, cloud hosting, or any instance with a public HTTPS domain.
+*   **Best for:** Vercel, cloud hosting, or any instance with a public HTTPS domain. The default when hosted or on Vercel; a self-hosted install opts in with `TELEGRAM_MODE=webhook`.
 *   **Behavior:** On startup the app registers `<NEXT_PUBLIC_BASE_URL>/api/telegram/webhook` with Telegram (plus a short fingerprint query parameter that changes when the bot token changes), only if Telegram's current webhook differs. Telegram then pushes messages there, and the route rejects (401) any request without the secret token registered alongside it. After that check it always answers 200, so Telegram never redelivers an update the app has already handled. To force a re-registration, call `GET /api/telegram/setup` with `Authorization: Bearer <CRON_SECRET>`.
 *   **Requirement:** The URL must be public and use HTTPS.
 
 ### B. Polling
 *   **Best for:** Local development and home servers with no public domain.
-*   **How to use:** Set `TELEGRAM_BOT_TOKEN`, `NEXT_PUBLIC_BASE_URL`, and `TELEGRAM_MODE=polling`. Polling is not available on Vercel (the server refuses to start). The poller never deletes a webhook: if one is still registered for the bot, Telegram answers with a conflict and the log tells you to delete the webhook yourself or switch the mode.
+*   **How to use:** Set `TELEGRAM_BOT_TOKEN` and `NEXT_PUBLIC_BASE_URL`. Polling is the default on a self-hosted install, so `TELEGRAM_MODE` can stay unset (or set it to `polling` to be explicit). Polling is not available on Vercel (the server refuses to start). The poller never deletes a webhook: if one is still registered for the bot, Telegram answers with a conflict and the log tells you to delete the webhook yourself or switch the mode.
 *   **Behavior:** The app connects out to Telegram to check for messages, so Telegram never needs to reach your server and no public domain or SSL is required. Polling uses the same message handler as the webhook, so the bot behaves identically.
 *   **Base URL:** Still required. It does not need to be public, but every link the bot sends points at it, so it must be an address your players can open.
 

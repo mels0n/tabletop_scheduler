@@ -16,9 +16,9 @@
 # alternative is shipping code that expects columns the database does not have,
 # which is exactly the failure this script exists to prevent.
 #
-# Migrations run ONLY for production deployments. Preview builds share the same
-# DATABASE_URL, so letting them apply DDL would let any feature branch mutate
-# the live schema.
+# Migrations run ONLY for production deployments. Preview has no database
+# configured, so there is nothing to migrate there, and keeping the gate means a
+# feature branch can never apply DDL to the production schema.
 # ==============================================================================
 set -e
 
