@@ -23,6 +23,7 @@ vi.mock('next/headers', () => ({
 
 import prisma from '@/shared/lib/prisma';
 import { signValue } from '@/shared/lib/session';
+import { hashToken } from '@/shared/lib/token';
 import { processWebhookRow } from '@/features/integrations/webhooks';
 import { POST } from './route';
 
@@ -70,6 +71,9 @@ describe('POST /api/event', () => {
         expect(body.slug).toMatch(/^[A-Za-z0-9]{14}$/);
         expect(body.adminToken).toBeTruthy();
         const data = mockPrisma.event.create.mock.calls[0][0].data;
+        // Catches: storing the raw admin token (a database leak would hand out every admin link).
+        expect(data.adminToken).toBe(hashToken(body.adminToken));
+        expect(data.adminToken).not.toBe(body.adminToken);
         expect(data.timezone).toBe('Europe/London');
         expect(data.timeSlots.create[0].startTime).toEqual(new Date(slot.startTime));
     });
