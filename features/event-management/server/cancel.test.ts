@@ -100,6 +100,68 @@ describe('cancel / delete notify both platforms independently', () => {
         expect(processWebhookRow).toHaveBeenCalledWith('wh-cancel');
     });
 
+    it('cancelEvent flips the status and queues the webhook in one transaction', async () => {
+        afterQueue.length = 0;
+        (processWebhookRow as any).mockResolvedValue('delivered');
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, fromUrl: 'https://hooks.example/cancel', fromUrlId: 'ext-9' });
+        const tx = {
+            event: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+            webhookEvent: { create: vi.fn().mockResolvedValue({ id: 'wh-tx' }) },
+        };
+        let committed = false;
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+            const result = await cb(tx);
+            committed = true;
+            return result;
+        });
+        (sendDiscordMessage as any).mockImplementation(async () => {
+            expect(committed).toBe(true);
+            return { id: 'x' };
+        });
+
+        expect(await cancelEvent('s')).toEqual({ success: true });
+
+        expect(tx.event.updateMany).toHaveBeenCalledWith({
+            where: { id: 1, status: { not: 'CANCELLED' } },
+            data: { status: 'CANCELLED' },
+        });
+        expect(tx.webhookEvent.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({ url: 'https://hooks.example/cancel', status: 'PENDING' }),
+        });
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalled();
+        expect(prisma.webhookEvent.create).not.toHaveBeenCalled();
+        expect(sendDiscordMessage).toHaveBeenCalled();
+        await flushAfter();
+        expect(processWebhookRow).toHaveBeenCalledWith('wh-tx');
+    });
+
+    it('cancelEvent does not commit the status when queueing the webhook throws', async () => {
+        afterQueue.length = 0;
+        mockPrisma.event.findUnique.mockResolvedValue({ ...event, fromUrl: 'https://hooks.example/cancel', fromUrlId: 'ext-9' });
+        const tx = {
+            event: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+            webhookEvent: { create: vi.fn().mockRejectedValue(new Error('db down')) },
+        };
+        let committed = false;
+        // Stand-in for a real transaction: commit only when the callback succeeds, rethrow otherwise.
+        mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+            const result = await cb(tx);
+            committed = true;
+            return result;
+        });
+
+        const result = await cancelEvent('s');
+
+        expect(result).toEqual({ error: 'Failed to cancel event' });
+        expect(tx.event.updateMany).toHaveBeenCalled();
+        expect(committed).toBe(false);
+        expect(mockPrisma.event.updateMany).not.toHaveBeenCalled();
+        expect(editMessageText).not.toHaveBeenCalled();
+        expect(editDiscordMessage).not.toHaveBeenCalled();
+        expect(sendDiscordMessage).not.toHaveBeenCalled();
+        expect(afterQueue).toHaveLength(0);
+    });
+
     it('cancelEvent schedules no delivery attempt for an event without fromUrl', async () => {
         afterQueue.length = 0;
         await cancelEvent('s');

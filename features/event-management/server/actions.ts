@@ -152,8 +152,9 @@ export async function deleteEvent(slug: string) {
 
 /**
  * Marks an event as CANCELLED without deleting it. When the event came from an integration
- * (`fromUrl`), a CANCELLED webhook row is queued and its first delivery attempt runs after the
- * action returns (`after()`); the webhooks cron retries it if that attempt fails.
+ * (`fromUrl`), a CANCELLED webhook row is queued in the same transaction as the status flip;
+ * dashboards and announcements follow the commit, and the first delivery attempt runs after the
+ * action returns (`after()`). The webhooks cron retries it if that attempt fails.
  */
 export async function cancelEvent(slug: string) {
     if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
@@ -169,12 +170,38 @@ export async function cancelEvent(slug: string) {
     log.warn("Cancelling event", { slug, title: event.title });
 
     try {
-        // Idempotent: only the call that flips the status edits dashboards or announces.
-        const { count } = await prisma.event.updateMany({
-            where: { id: event.id, status: { not: 'CANCELLED' } },
-            data: { status: 'CANCELLED' }
+        // The status flip and the CANCELLED webhook row commit together: an integration is
+        // never left believing the event is live because the enqueue failed after the flip.
+        // Idempotent: only the call that flips the status queues, edits dashboards or announces.
+        const { flipped, webhookRowId } = await prisma.$transaction(async (tx) => {
+            const { count } = await tx.event.updateMany({
+                where: { id: event.id, status: { not: 'CANCELLED' } },
+                data: { status: 'CANCELLED' }
+            });
+            if (count !== 1) return { flipped: false, webhookRowId: null };
+            if (!event.fromUrl) return { flipped: true, webhookRowId: null };
+
+            log.info("Queueing cancellation webhook", { slug, fromUrl: event.fromUrl });
+            const payload = {
+                type: "CANCELLED",
+                eventId: event.id,
+                fromUrlId: event.fromUrlId,
+                slug: event.slug,
+                title: event.title,
+                timestamp: new Date().toISOString()
+            };
+            const row = await tx.webhookEvent.create({
+                data: {
+                    eventId: event.id,
+                    url: event.fromUrl,
+                    payload: JSON.stringify(payload),
+                    status: "PENDING",
+                    nextAttempt: new Date()
+                }
+            });
+            return { flipped: true, webhookRowId: row.id };
         });
-        if (count !== 1) {
+        if (!flipped) {
             log.info("Event already cancelled", { slug });
             return { success: true };
         }
@@ -225,33 +252,15 @@ export async function cancelEvent(slug: string) {
             { slug, kind: "event-cancelled" }
         );
 
-        if (event.fromUrl) {
-            log.info("Queueing cancellation webhook", { slug, fromUrl: event.fromUrl });
-            const payload = {
-                type: "CANCELLED",
-                eventId: event.id,
-                fromUrlId: event.fromUrlId,
-                slug: event.slug,
-                title: event.title,
-                timestamp: new Date().toISOString()
-            };
-            const row = await prisma.webhookEvent.create({
-                data: {
-                    eventId: event.id,
-                    url: event.fromUrl,
-                    payload: JSON.stringify(payload),
-                    status: "PENDING",
-                    nextAttempt: new Date()
-                }
-            });
+        if (webhookRowId) {
             // First delivery attempt once the action has returned; the webhooks cron retries it.
             try {
-                after(() => processWebhookRow(row.id).then(
-                    (outcome) => log.info("Immediate webhook attempt", { id: row.id, outcome }),
+                after(() => processWebhookRow(webhookRowId).then(
+                    (outcome) => log.info("Immediate webhook attempt", { id: webhookRowId, outcome }),
                     (e) => log.error("Immediate webhook attempt failed", e as Error),
                 ));
             } catch (e) {
-                log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: row.id, error: String(e) });
+                log.warn("Could not schedule the immediate webhook attempt; the cron will deliver it", { id: webhookRowId, error: String(e) });
             }
         }
 
