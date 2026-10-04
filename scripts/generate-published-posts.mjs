@@ -4,14 +4,15 @@
 //
 // Run by `prebuild` and `predev` (with --dev), by scripts/vercel-build.sh and by CI.
 //
-// Cutoff: today in UTC, because a date-only `date:` parses as UTC midnight.
-// BUILD_DATE=YYYY-MM-DD overrides it. A post is live when `draft` is not true and
-// its date is on or before the cutoff.
+// Cutoff: the build time. A date-only `date:` parses as UTC midnight, so such a post
+// goes live in the first build at or after 00:00 UTC on that date.
+// BUILD_DATE=YYYY-MM-DD (UTC midnight) overrides it for a local build; it is ignored
+// in CI and production. A post is live when `draft` is not true and its date is on or
+// before the cutoff.
 //
 // Local preview (only with --dev, never in CI or production):
 //   SHOW_SCHEDULED=1  also include future-dated posts
 //   SHOW_DRAFTS=1     also include `draft: true` posts
-// BLOG_SHOW_SCHEDULED=1 is accepted as an alias for SHOW_SCHEDULED=1.
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,29 +22,37 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTENT_DIR = path.join(ROOT, 'content', 'blog');
 const OUT_FILE = path.join(ROOT, 'shared', 'data', 'published-posts.generated.ts');
 
+/** True in CI and production, where local overrides are never honoured. */
+function isLockedEnv(env) {
+    return Boolean(
+        env.CI || env.WORKERS_CI || env.NODE_ENV === 'production' || env.VERCEL_ENV === 'production',
+    );
+}
+
 /** Preview flags are honoured only for a local `--dev` run outside CI and production. */
 export function resolveMode(env, argv) {
     const dev = argv.includes('--dev');
-    const requested =
-        env.SHOW_SCHEDULED === '1' || env.BLOG_SHOW_SCHEDULED === '1' || env.SHOW_DRAFTS === '1';
-    const locked = Boolean(
-        env.CI ||
-            env.WORKERS_CI ||
-            env.NODE_ENV === 'production' ||
-            env.VERCEL_ENV === 'production',
-    );
+    const requested = env.SHOW_SCHEDULED === '1' || env.SHOW_DRAFTS === '1';
+    const locked = isLockedEnv(env);
     const preview = dev && !locked;
     return {
-        showScheduled: preview && (env.SHOW_SCHEDULED === '1' || env.BLOG_SHOW_SCHEDULED === '1'),
+        showScheduled: preview && env.SHOW_SCHEDULED === '1',
         showDrafts: preview && env.SHOW_DRAFTS === '1',
         ignoredFlags: requested && !preview,
     };
 }
 
-/** Cutoff timestamp in ms: BUILD_DATE (UTC midnight) or the current time. */
+/**
+ * Cutoff timestamp in ms: BUILD_DATE (UTC midnight) or the current time.
+ * BUILD_DATE is ignored in CI and production.
+ */
 export function resolveCutoff(env, now = Date.now()) {
     if (env.BUILD_DATE) {
-        const parsed = Date.parse(env.BUILD_DATE);
+        if (isLockedEnv(env)) {
+            console.log('blog: BUILD_DATE ignored (it applies only to local builds outside CI and production)');
+            return now;
+        }
+        const parsed = /^\d{4}-\d{2}-\d{2}$/.test(env.BUILD_DATE) ? Date.parse(env.BUILD_DATE) : NaN;
         if (Number.isNaN(parsed)) {
             throw new Error(`BUILD_DATE must be YYYY-MM-DD, got "${env.BUILD_DATE}"`);
         }
@@ -125,15 +134,10 @@ export const publishedPosts: PublishedPost[] = ${JSON.stringify(posts, null, 4)}
 
 /**
  * Reads the post files from `dir`. A missing directory is an error, because an empty
- * module would publish a site with no posts. The self-host Docker build (which sets
- * IS_DOCKER_BUILD=true and does not ship content/) is the one exception.
+ * module would publish a site with no posts.
  */
-export function readPostFiles(dir, env) {
+export function readPostFiles(dir) {
     if (!fs.existsSync(dir)) {
-        if (env.IS_DOCKER_BUILD === 'true') {
-            console.log(`blog: ${dir} not found; building with no posts (IS_DOCKER_BUILD=true)`);
-            return {};
-        }
         throw new Error(`blog post directory not found: ${dir}`);
     }
     const files = {};
@@ -153,7 +157,7 @@ function main() {
         );
     }
     const cutoff = resolveCutoff(process.env);
-    const { posts, heldBack } = selectPosts(readPostFiles(CONTENT_DIR, process.env), { cutoff, mode });
+    const { posts, heldBack } = selectPosts(readPostFiles(CONTENT_DIR), { cutoff, mode });
     fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
     fs.writeFileSync(OUT_FILE, renderModule(posts));
     const preview = [mode.showScheduled && 'scheduled', mode.showDrafts && 'drafts'].filter(Boolean);

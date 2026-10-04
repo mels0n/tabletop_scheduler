@@ -141,7 +141,7 @@ npm run typecheck
 npm run lint
 npm test
 npm run depcruise
-npx next build
+npm run build
 ```
 
 The app has two Prisma targets from one codebase: `prisma/schema.prisma` (SQLite, self-host and local development) and `prisma/hosted/schema.prisma` (Postgres, hosted). A schema change edits both files and adds a migration under `prisma/hosted/migrations/`. See [CONTRIBUTING.md](CONTRIBUTING.md) and [HostedMaintenance.md](docs/guides/HostedMaintenance.md).
