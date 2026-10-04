@@ -6,7 +6,7 @@ import Logger from "@/shared/lib/logger";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { hashToken } from "@/shared/lib/token";
 import { getBaseUrlOrNull } from "@/shared/lib/url";
-import { readIdentity } from "@/shared/lib/session";
+import { readDiscordDisplayName, readIdentity } from "@/shared/lib/session";
 import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
 import { ConflictError, toResponse } from "@/shared/errors";
 import { createEventSchema, type CreateEventInput } from "@/features/event-management";
@@ -53,7 +53,9 @@ interface ManagerIdentity {
 async function resolveManagerIdentity(): Promise<ManagerIdentity> {
     const cookieStore = await cookies();
     const { chatId: globalChatId, discordId: globalDiscordId } = readIdentity(cookieStore);
-    const globalDiscordName = globalDiscordId ? cookieStore.get("tabletop_user_discord_name")?.value || null : null;
+    // Display name only beside a verified id, and through the shared reader: the cookie is
+    // client-writable, so its length and characters are checked before it is stored.
+    const globalDiscordName = globalDiscordId ? readDiscordDisplayName(cookieStore) : null;
 
     // Auto-hydrate their Telegram Handle if we know their Chat ID from a past event.
     let inferredTelegramHandle: string | null = null;
