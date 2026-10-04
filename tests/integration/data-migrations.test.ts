@@ -87,4 +87,33 @@ describe.skipIf(!generatedClientIsSqlite())('data migration runner (SQLite integ
         const result = await runDataMigrations(db.prisma, dataMigrations, { log: silent });
         expect(result.applied.length + result.skipped.length).toBe(dataMigrations.length);
     });
+
+    it('backfills Event.quorumReachedAt for events that already sent a quorum notice', async () => {
+        const flagged = await db.prisma.event.create({
+            data: { slug: 'flagged', title: 'Flagged', quorumViableNotified: true },
+        });
+        const perfect = await db.prisma.event.create({
+            data: { slug: 'perfect', title: 'Perfect', quorumPerfectNotified: true },
+        });
+        const untouched = await db.prisma.event.create({ data: { slug: 'plain', title: 'Plain' } });
+        const earlier = new Date('2026-01-01T00:00:00Z');
+        const stamped = await db.prisma.event.create({
+            data: { slug: 'stamped', title: 'Stamped', quorumViableNotified: true, quorumReachedAt: earlier },
+        });
+
+        const first = await runDataMigrations(db.prisma, dataMigrations, { log: silent });
+        expect(first.applied).toContain('2026-10-03-backfill-quorum-reached-at');
+
+        const read = (id: number) => db.prisma.event.findUniqueOrThrow({ where: { id } });
+        const flaggedAt = (await read(flagged.id)).quorumReachedAt;
+        expect(flaggedAt).toBeInstanceOf(Date);
+        expect((await read(perfect.id)).quorumReachedAt).toBeInstanceOf(Date);
+        expect((await read(untouched.id)).quorumReachedAt).toBeNull();
+        expect((await read(stamped.id)).quorumReachedAt?.toISOString()).toBe(earlier.toISOString());
+
+        const second = await runDataMigrations(db.prisma, dataMigrations, { log: silent });
+        expect(second.applied).toEqual([]);
+        expect(second.skipped).toContain('2026-10-03-backfill-quorum-reached-at');
+        expect((await read(flagged.id)).quorumReachedAt?.toISOString()).toBe(flaggedAt?.toISOString());
+    });
 });
