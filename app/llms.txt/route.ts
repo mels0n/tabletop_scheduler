@@ -3,10 +3,9 @@ import { publicConfig } from "@/shared/config/public";
 
 export const dynamic = 'force-static';
 
-// Rendered at build time (no force-dynamic): getAllPosts() is date-gated, so
-// the Blog list below only ever shows published posts, and future-dated posts
-// appear automatically when the fortnightly deploy rebuilds the site on/after
-// their date. NEXT_PUBLIC_IS_HOSTED is baked in at build time either way.
+// Rendered at build time (no force-dynamic): getAllPosts() returns only the posts the
+// build was generated with, so the Blog list below shows exactly the published posts.
+// NEXT_PUBLIC_IS_HOSTED is baked in at build time either way.
 export async function GET() {
     const isHosted = publicConfig.isHosted;
 

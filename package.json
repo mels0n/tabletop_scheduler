@@ -7,10 +7,12 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "node scripts/generate-published-posts.mjs --dev",
     "dev": "next dev",
+    "prebuild": "node scripts/generate-published-posts.mjs",
     "build": "next build",
-    "build:hosted": "prisma generate --schema=prisma/hosted/schema.prisma && next build",
-    "build:selfhosted": "prisma generate --schema=prisma/schema.prisma && next build",
+    "build:hosted": "prisma generate --schema=prisma/hosted/schema.prisma && node scripts/generate-published-posts.mjs && next build",
+    "build:selfhosted": "prisma generate --schema=prisma/schema.prisma && node scripts/generate-published-posts.mjs && next build",
     "db:status:hosted": "prisma migrate status --schema=prisma/hosted/schema.prisma",
     "db:new:hosted": "node scripts/db-hosted-migration.mjs",
     "db:diff:hosted": "node scripts/db-hosted-migration.mjs --dry-run",
@@ -23,7 +25,12 @@
     "lint": "eslint . --max-warnings=0",
     "depcruise": "depcruise --config .dependency-cruiser.cjs app components features entities shared",
     "blog:queue": "node scripts/blog-queue.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/generate-published-posts.mjs",
+    "pretypecheck": "node scripts/generate-published-posts.mjs",
+    "prelint": "node scripts/generate-published-posts.mjs",
+    "predepcruise": "node scripts/generate-published-posts.mjs",
+    "blog:generate": "node scripts/generate-published-posts.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
