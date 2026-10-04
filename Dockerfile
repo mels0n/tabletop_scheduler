@@ -12,7 +12,7 @@
 # - NEXT_TELEMETRY_DISABLED=1 (Hardcoded)
 # - NEXT_PUBLIC_IS_HOSTED=false (Hardcoded)
 # ==============================================================================
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ------------------------------------------------------------------------------
