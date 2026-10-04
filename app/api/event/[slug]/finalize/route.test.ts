@@ -3,6 +3,7 @@ import { POST } from './route';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
+import { createTxStub } from '@/shared/lib/__mocks__/prisma';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
@@ -366,5 +367,96 @@ describe('POST /api/event/[slug]/finalize (campaign)', () => {
 
         expect(res!.status).toBe(409);
         expect(mockPrisma.finalizedSession.createMany).not.toHaveBeenCalled();
+    });
+});
+
+describe('POST /api/event/[slug]/finalize - the claim and every write run on the transaction client', () => {
+    let tx: ReturnType<typeof createTxStub>;
+
+    /** Writes the transaction body must make on tx; the top-level mock must see none of them. */
+    const topLevelTransactionWrites = () => [
+        mockPrisma.event.updateMany,
+        mockPrisma.participant.updateMany,
+        mockPrisma.finalizedSession.createMany,
+        mockPrisma.webhookEvent.create,
+    ].flatMap((fn: any) => fn.mock.calls);
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        afterQueue.length = 0;
+        (verifyEventAdmin as any).mockResolvedValue(true);
+        tx = createTxStub();
+        mockPrisma.$transaction.mockImplementation((cb: any) => cb(tx));
+        (tx.event.updateMany as any).mockResolvedValue({ count: 1 });
+        (tx.participant.updateMany as any).mockResolvedValue({ count: 1 });
+        (tx.finalizedSession.createMany as any).mockResolvedValue({ count: 1 });
+        (tx.webhookEvent.create as any).mockResolvedValue({ id: 'wh-tx' });
+        mockPrisma.vote.findMany.mockResolvedValue([discordOnlyVote]);
+        mockPrisma.timeSlot.findFirst.mockResolvedValue({ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt });
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt }]);
+        mockPrisma.event.update.mockResolvedValue(finalizedEvent);
+        (discord.sendDiscordMessage as any).mockResolvedValue({ id: 'new-msg' });
+    });
+
+    it('one-shot: claims the DRAFT row, seats participants and queues the webhook on tx', async () => {
+        mockPrisma.event.findUnique.mockResolvedValueOnce(eventMeta);
+        (tx.event.findUnique as any).mockResolvedValue({ ...finalizedEvent, fromUrl: 'https://hooks.example/finalized' });
+
+        await POST(oneShotRequest(), params);
+
+        expect(tx.event.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 1, status: 'DRAFT' } }));
+        expect(tx.participant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: [7] }, eventId: 1 },
+            data: { status: 'ACCEPTED' },
+        });
+        expect(tx.webhookEvent.create).toHaveBeenCalledTimes(1);
+        expect(topLevelTransactionWrites()).toEqual([]);
+        // Claim before any participant write.
+        expect((tx.event.updateMany as any).mock.invocationCallOrder[0])
+            .toBeLessThan((tx.participant.updateMany as any).mock.invocationCallOrder[0]);
+    });
+
+    it('one-shot: a lost claim (count 0) writes nothing else on tx and returns 409', async () => {
+        mockPrisma.event.findUnique.mockResolvedValueOnce(eventMeta);
+        (tx.event.updateMany as any).mockResolvedValue({ count: 0 });
+
+        const res = await POST(oneShotRequest(), params);
+
+        expect(res!.status).toBe(409);
+        expect(tx.participant.updateMany).not.toHaveBeenCalled();
+        expect(tx.webhookEvent.create).not.toHaveBeenCalled();
+        expect(topLevelTransactionWrites()).toEqual([]);
+    });
+
+    it('campaign: claims the DRAFT row, records the sessions, resets and seats participants and queues the webhook on tx', async () => {
+        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, eventType: 'CAMPAIGN', minSessions: 1 });
+        (tx.event.findUnique as any).mockResolvedValue({ ...finalizedEvent, finalizedSlotId: null, fromUrl: 'https://hooks.example/campaign' });
+
+        const res = await POST(campaignRequest({ slotIds: [3] }), params);
+
+        expect(res!.status).toBe(200);
+        expect(tx.event.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 1, status: 'DRAFT' } }));
+        expect(tx.finalizedSession.createMany).toHaveBeenCalledWith({ data: [{ eventId: 1, timeSlotId: 3 }] });
+        expect(tx.participant.updateMany).toHaveBeenCalledWith({ where: { eventId: 1 }, data: { status: 'PENDING' } });
+        expect(tx.participant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: [7] }, eventId: 1 },
+            data: { status: 'ACCEPTED' },
+        });
+        expect(tx.webhookEvent.create).toHaveBeenCalledTimes(1);
+        expect(topLevelTransactionWrites()).toEqual([]);
+        expect((tx.event.updateMany as any).mock.invocationCallOrder[0])
+            .toBeLessThan((tx.finalizedSession.createMany as any).mock.invocationCallOrder[0]);
+    });
+
+    it('campaign: a lost claim (count 0) records no sessions and returns 409', async () => {
+        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, eventType: 'CAMPAIGN', minSessions: 1 });
+        (tx.event.updateMany as any).mockResolvedValue({ count: 0 });
+
+        const res = await POST(campaignRequest({ slotIds: [3] }), params);
+
+        expect(res!.status).toBe(409);
+        expect(tx.finalizedSession.createMany).not.toHaveBeenCalled();
+        expect(tx.participant.updateMany).not.toHaveBeenCalled();
+        expect(topLevelTransactionWrites()).toEqual([]);
     });
 });
