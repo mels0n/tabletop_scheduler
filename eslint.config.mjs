@@ -77,7 +77,7 @@ export default defineConfig([
                     message: "Raw blog posts are read only by scripts/generate-published-posts.mjs. Use shared/lib/blog.",
                 },
                 {
-                    selector: "CallExpression[arguments.0.value='content'][arguments.1.value='blog']",
+                    selector: "CallExpression > Literal[value='content'] + Literal[value='blog']",
                     message: "Raw blog posts are read only by scripts/generate-published-posts.mjs. Use shared/lib/blog.",
                 },
             ],
