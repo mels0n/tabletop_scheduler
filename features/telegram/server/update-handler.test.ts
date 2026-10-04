@@ -313,3 +313,98 @@ describe('handleTelegramUpdate: no passive identity capture', () => {
         for (const data of writes()) expect(data).not.toHaveProperty('managerChatId');
     });
 });
+
+describe('handleTelegramUpdate: /start rec_<token> manager recovery', () => {
+    const RAW = 'cafef00d';
+    const recoverable = (overrides: Record<string, unknown> = {}) => ({
+        ...event,
+        recoveryToken: hashToken(RAW),
+        recoveryTokenExpires: new Date(Date.now() + 60_000),
+        ...overrides,
+    });
+    const recover = (username: string | null = 'mallory') => {
+        const u = update(`/start rec_${RAW}`, 'private', 4242, username as string);
+        if (username === undefined) delete (u.message!.from as { username?: string }).username;
+        return handleTelegramUpdate(u);
+    };
+    const managerChatIdWrites = () => writes().filter((d) => 'managerChatId' in d);
+    const clearedToken = () => writes().some((d) => d.recoveryToken === null && d.recoveryTokenExpires === null);
+    const lastReply = () => sent.mock.calls.at(-1)?.[1] as string;
+
+    // Catches: removing the sender-vs-manager handle comparison, which would let anyone holding
+    // a recovery link bind their own chat as the manager of an event managed by someone else.
+    it('refuses a sender whose username differs from the manager handle, and still burns the token', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'victim' }));
+
+        await recover('mallory');
+
+        expect(managerChatIdWrites()).toEqual([]);
+        expect(lastReply()).toContain('Identity Mismatch');
+        expect(lastReply()).toContain('@victim');
+        expect(clearedToken()).toBe(true);
+    });
+
+    // Catches: making the comparison case- or @-sensitive (locks real managers out), or loosening it.
+    it.each([
+        ['same case', 'victim', 'victim'],
+        ['different case', '@Victim', 'VICTIM'],
+        ['leading @ stored', '@victim', 'victim'],
+    ])('links the chat for a matching username (%s)', async (_label, stored, sender) => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: stored }));
+
+        await recover(sender);
+
+        expect(managerChatIdWrites()).toEqual([{ managerChatId: '4242' }]);
+        expect(lastReply()).toContain('Recovery Setup Complete');
+        expect(clearedToken()).toBe(true);
+    });
+
+    // Catches: removing the lookup-miss guard (would proceed with an undefined event).
+    it('replies invalid for an unknown token and writes nothing', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(null);
+
+        await recover();
+
+        expect(mockPrisma.event.findUnique).toHaveBeenCalledWith({ where: { recoveryToken: hashToken(RAW) } });
+        expect(lastReply()).toContain('Invalid Recovery Link');
+        expect(writes()).toEqual([]);
+    });
+
+    // Catches: dropping the expiry check, which would let a stale link complete recovery.
+    it.each([
+        ['an elapsed expiry', new Date(Date.now() - 1000)],
+        ['a missing expiry', null],
+    ])('replies expired for %s and links nothing', async (_label, expires) => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'mallory', recoveryTokenExpires: expires }));
+
+        await recover('mallory');
+
+        expect(lastReply()).toContain('Expired Link');
+        expect(managerChatIdWrites()).toEqual([]);
+    });
+
+    // Catches: falling back to the numeric id when there is no username (nothing to verify against).
+    it('writes no manager link for a sender without a username, but still burns the token', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'victim' }));
+
+        await recover(null);
+
+        expect(managerChatIdWrites()).toEqual([]);
+        expect(lastReply()).toContain('Could not verify identity');
+        expect(clearedToken()).toBe(true);
+    });
+
+    // Catches: moving the token clear after the identity checks, so a failed attempt leaves a
+    // replayable token.
+    it('clears the recovery token before any manager write', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(recoverable({ managerTelegram: 'victim' }));
+
+        await recover('victim');
+
+        const all = writes();
+        const clearIdx = all.findIndex((d) => d.recoveryToken === null);
+        const linkIdx = all.findIndex((d) => 'managerChatId' in d);
+        expect(clearIdx).toBeGreaterThanOrEqual(0);
+        expect(clearIdx).toBeLessThan(linkIdx);
+    });
+});
