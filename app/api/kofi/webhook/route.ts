@@ -102,12 +102,14 @@ export async function POST(request: Request) {
 
     await prisma.donation.upsert({
       where: { kofiTransactionId: transactionId },
-      update: {}, // No-op if already exists (idempotent for retries)
+      // A retry changes nothing but the parsed amount, which also fills rows stored before amountCents existed.
+      update: { amountCents: cents },
       create: {
         kofiTransactionId: transactionId,
         fromName: payload.from_name || 'Anonymous',
         message: payload.message || null,
         amount: ((cents ?? 0) / 100).toFixed(2),
+        amountCents: cents,
         currency: payload.currency || 'USD',
         isPublic,
         type: payload.type || 'Donation',
