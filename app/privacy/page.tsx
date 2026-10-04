@@ -1,4 +1,5 @@
-import { Shield, EyeOff, Github, Server, Ban } from 'lucide-react';
+import { Shield, EyeOff, Server, Ban } from 'lucide-react';
+import GithubIcon from '@/components/GithubIcon';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
@@ -80,7 +81,7 @@ export default function PrivacyPage() {
                     </div>
 
                     <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                        <Github className="w-8 h-8 text-slate-100" />
+                        <GithubIcon className="w-8 h-8 text-slate-100" />
                         <h2 className="text-2xl font-bold text-slate-200">The Code IS the Audit</h2>
                         <p className="text-slate-400 leading-relaxed">
                             Don&apos;t just take our word for it. Our entire codebase is Open Source on GitHub. You can inspect every line of code to verify that we are not harvesting your data.
