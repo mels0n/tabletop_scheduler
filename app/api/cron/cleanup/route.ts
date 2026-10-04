@@ -22,7 +22,8 @@ export const dynamic = 'force-dynamic'; // Intent: Ensure not cached by Vercel E
  *    - CANCELLED: Y days after cancellation (last update).
  *    - DRAFT: Z days after its last proposed slot ends; a draft with no slots, Z days after creation.
  * 3. Execution: Deletes expired events in batches; the schema cascades to participants, votes, slots,
- *    finalized sessions and queued webhooks.
+ *    finalized sessions and queued webhooks. An event with a webhook still PENDING or RETRY that was
+ *    queued in the last 3 days is kept until that row is delivered, fails or ages out.
  * 4. Cleanup: Unpins associated Telegram messages to keep chat history clean.
  *
  * @param {Request} req - The incoming request.
@@ -45,7 +46,8 @@ export async function GET(req: Request) {
         const cutoffDraft = new Date(now - cleanupRetentionDays.draft * DAY_MS);
         const cutoffCancelled = new Date(now - cleanupRetentionDays.cancelled * DAY_MS);
 
-        const expired = expiredEventsWhere(cutoffFinalized, cutoffDraft, cutoffCancelled);
+        const webhookGrace = new Date(now - WEBHOOK_GRACE_DAYS * DAY_MS);
+        const expired = expiredEventsWhere(cutoffFinalized, cutoffDraft, cutoffCancelled, webhookGrace);
 
         let deletedCount = 0;
         let errors = 0;
@@ -128,6 +130,8 @@ export async function GET(req: Request) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BATCH_SIZE = 200;
+/** An undelivered webhook younger than this keeps its event (and so the row) out of cleanup. */
+const WEBHOOK_GRACE_DAYS = 3;
 
 /** Only what deletion and pin cleanup need; no user text is loaded. */
 const CANDIDATE_FIELDS = {
@@ -149,40 +153,54 @@ type Candidate = Prisma.EventGetPayload<{ select: typeof CANDIDATE_FIELDS }>;
  * one-shots are pre-filtered here and confirmed against their finalized slot in
  * `dropLiveOneShots`, because `finalizedSlotId` is not a relation Prisma can filter through.
  */
-function expiredEventsWhere(cutoffFinalized: Date, cutoffDraft: Date, cutoffCancelled: Date): Prisma.EventWhereInput {
+function expiredEventsWhere(
+    cutoffFinalized: Date,
+    cutoffDraft: Date,
+    cutoffCancelled: Date,
+    webhookGrace: Date,
+): Prisma.EventWhereInput {
+    // Deleting the event cascades to its webhook rows, so one still in flight would be lost.
+    const noPendingWebhook: Prisma.EventWhereInput = {
+        webhooks: { none: { status: { in: ["PENDING", "RETRY"] }, createdAt: { gte: webhookGrace } } },
+    };
     return {
-        OR: [
-            // Campaign: its last finalized session ended before the cutoff.
+        AND: [
+            noPendingWebhook,
             {
-                status: "FINALIZED",
-                eventType: "CAMPAIGN",
-                finalizedSessions: { some: {}, none: { timeSlot: { endTime: { gte: cutoffFinalized } } } },
-            },
-            // Campaign finalized without any session rows: fall back to the last edit.
-            {
-                status: "FINALIZED",
-                eventType: "CAMPAIGN",
-                finalizedSessions: { none: {} },
-                updatedAt: { lt: cutoffFinalized },
-            },
-            // One-shot: some slot ended before the cutoff (confirmed against the finalized slot below).
-            {
-                status: "FINALIZED",
-                eventType: { not: "CAMPAIGN" },
-                finalizedSlotId: { not: null },
-                timeSlots: { some: { endTime: { lt: cutoffFinalized } } },
-            },
-            { status: "CANCELLED", updatedAt: { lt: cutoffCancelled } },
-            // Draft: its last proposed slot ended before the cutoff. Edits do not extend it.
-            {
-                status: "DRAFT",
-                timeSlots: { some: {}, none: { endTime: { gte: cutoffDraft } } },
-            },
-            // Draft with no proposed slots at all: counted from creation.
-            {
-                status: "DRAFT",
-                timeSlots: { none: {} },
-                createdAt: { lt: cutoffDraft },
+                OR: [
+                    // Campaign: its last finalized session ended before the cutoff.
+                    {
+                        status: "FINALIZED",
+                        eventType: "CAMPAIGN",
+                        finalizedSessions: { some: {}, none: { timeSlot: { endTime: { gte: cutoffFinalized } } } },
+                    },
+                    // Campaign finalized without any session rows: fall back to the last edit.
+                    {
+                        status: "FINALIZED",
+                        eventType: "CAMPAIGN",
+                        finalizedSessions: { none: {} },
+                        updatedAt: { lt: cutoffFinalized },
+                    },
+                    // One-shot: some slot ended before the cutoff (confirmed against the finalized slot below).
+                    {
+                        status: "FINALIZED",
+                        eventType: { not: "CAMPAIGN" },
+                        finalizedSlotId: { not: null },
+                        timeSlots: { some: { endTime: { lt: cutoffFinalized } } },
+                    },
+                    { status: "CANCELLED", updatedAt: { lt: cutoffCancelled } },
+                    // Draft: its last proposed slot ended before the cutoff. Edits do not extend it.
+                    {
+                        status: "DRAFT",
+                        timeSlots: { some: {}, none: { endTime: { gte: cutoffDraft } } },
+                    },
+                    // Draft with no proposed slots at all: counted from creation.
+                    {
+                        status: "DRAFT",
+                        timeSlots: { none: {} },
+                        createdAt: { lt: cutoffDraft },
+                    },
+                ],
             },
         ],
     };
