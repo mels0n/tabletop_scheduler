@@ -54,6 +54,39 @@ describe('telegram-client', () => {
         });
     });
 
+    describe('link previews', () => {
+        const sent = () => JSON.parse(fetchMock.mock.calls[0][1].body);
+
+        it('disables link previews by default for a DM to a private chat', async () => {
+            fetchMock.mockResolvedValue(reply(200, { ok: true, result: { message_id: 1 } }));
+            await sendTelegramMessage('424242', 'Log in: https://x.example/auth/login?token=abc', 'tok');
+            expect(sent().link_preview_options).toEqual({ is_disabled: true });
+        });
+
+        it('keeps link previews in group chats unless asked', async () => {
+            fetchMock.mockResolvedValue(reply(200, { ok: true, result: { message_id: 1 } }));
+            await sendTelegramMessage('-1001', 'hi', 'tok');
+            expect(sent()).not.toHaveProperty('link_preview_options');
+        });
+
+        it('honours an explicit option either way', async () => {
+            fetchMock.mockResolvedValue(reply(200, { ok: true, result: { message_id: 1 } }));
+            await sendTelegramMessageResult('-1001', 'hi', 'tok', { disableLinkPreview: true });
+            expect(sent().link_preview_options).toEqual({ is_disabled: true });
+            fetchMock.mockClear();
+            await sendTelegramMessageResult(42, 'hi', 'tok', { disableLinkPreview: false });
+            expect(sent()).not.toHaveProperty('link_preview_options');
+        });
+
+        it('keeps the option on the supergroup retry', async () => {
+            fetchMock
+                .mockResolvedValueOnce(reply(400, MIGRATED))
+                .mockResolvedValueOnce(reply(200, { ok: true, result: { message_id: 77 } }));
+            await sendTelegramMessageResult('-123', 'hi', 'tok', { disableLinkPreview: true });
+            expect(JSON.parse(fetchMock.mock.calls[1][1].body).link_preview_options).toEqual({ is_disabled: true });
+        });
+    });
+
     describe('error results', () => {
         const KICKED = { ok: false, error_code: 403, description: 'Forbidden: bot was kicked from the group chat' };
 

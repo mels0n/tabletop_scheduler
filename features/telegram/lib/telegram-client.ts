@@ -55,12 +55,34 @@ async function adoptMigratedChat(oldChatId: string | number, newChatId: number):
     }
 }
 
+export interface SendMessageOptions {
+    /**
+     * Ask Telegram not to unfurl links in the message. Defaults to true for a private chat
+     * (a DM: positive chat id), where links are often one-time login links that a preview
+     * fetch could expose, and false for groups and channels.
+     */
+    disableLinkPreview?: boolean;
+}
+
+/** Telegram user (private chat) ids are positive; group, supergroup and channel ids are negative. */
+function isPrivateChat(chatId: string | number): boolean {
+    const n = typeof chatId === "number" ? chatId : Number(chatId);
+    return Number.isFinite(n) && n > 0;
+}
+
 /**
  * Sends an HTML message and reports Telegram's error on failure. When the group was upgraded
  * to a supergroup, bound events are repointed and the send is retried once in the new chat.
+ * Link previews are off by default in DMs (see `SendMessageOptions`).
  */
-export async function sendTelegramMessageResult(chatId: string | number, text: string, token: string): Promise<TelegramResult<number>> {
-    return postMessage(chatId, text, token, true);
+export async function sendTelegramMessageResult(
+    chatId: string | number,
+    text: string,
+    token: string,
+    options: SendMessageOptions = {},
+): Promise<TelegramResult<number>> {
+    const disableLinkPreview = options.disableLinkPreview ?? isPrivateChat(chatId);
+    return postMessage(chatId, text, token, true, disableLinkPreview);
 }
 
 /**
@@ -70,12 +92,23 @@ export async function sendTelegramMessageResult(chatId: string | number, text: s
  *
  * @returns {Promise<number | null>} The sent message id, or null if the send failed.
  */
-export async function sendTelegramMessage(chatId: string | number, text: string, token: string): Promise<number | null> {
-    const result = await sendTelegramMessageResult(chatId, text, token);
+export async function sendTelegramMessage(
+    chatId: string | number,
+    text: string,
+    token: string,
+    options: SendMessageOptions = {},
+): Promise<number | null> {
+    const result = await sendTelegramMessageResult(chatId, text, token, options);
     return result.ok ? result.value : null;
 }
 
-async function postMessage(chatId: string | number, text: string, token: string, allowMigrationRetry: boolean): Promise<TelegramResult<number>> {
+async function postMessage(
+    chatId: string | number,
+    text: string,
+    token: string,
+    allowMigrationRetry: boolean,
+    disableLinkPreview: boolean,
+): Promise<TelegramResult<number>> {
     if (!token) {
         log.error("Token is missing");
         return failure("Telegram bot token is missing", 0);
@@ -90,7 +123,8 @@ async function postMessage(chatId: string | number, text: string, token: string,
             body: JSON.stringify({
                 chat_id: chatId,
                 text: text,
-                parse_mode: 'HTML'
+                parse_mode: 'HTML',
+                ...(disableLinkPreview ? { link_preview_options: { is_disabled: true } } : {}),
             })
         });
 
@@ -98,7 +132,7 @@ async function postMessage(chatId: string | number, text: string, token: string,
             const err = parseErrorBody(res.status, await res.text());
             if (allowMigrationRetry && err.migrateToChatId !== null) {
                 await adoptMigratedChat(chatId, err.migrateToChatId);
-                return postMessage(err.migrateToChatId, text, token, false);
+                return postMessage(err.migrateToChatId, text, token, false, disableLinkPreview);
             }
             log.error("API Error (sendMessage)", { status: res.status, error: err.description });
             return failure(err.description, res.status);
