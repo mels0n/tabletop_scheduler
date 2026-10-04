@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { listDiscordChannels, connectDiscordChannel } from "@/features/integrations/discord/server/actions";
 import { AlertCircle, CheckCircle, Loader2, Save } from "lucide-react";
+import { publicConfig } from "@/shared/config/public";
 
 function CheckIcon({ className }: { className?: string }) {
     return <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12" /></svg>;
@@ -223,7 +224,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                         <ol className="text-xs text-amber-100/80 list-decimal ml-8 space-y-1">
                             <li>Go to <b>Discord Channel Settings</b></li>
                             <li>Click <b>Permissions</b></li>
-                            <li>Add <b>{process.env.NEXT_PUBLIC_BOT_NAME || "the Bot"}</b></li>
+                            <li>Add <b>{publicConfig.botName || "the Bot"}</b></li>
                             <li>Grant: <b className="text-white">View Channel</b> & <b className="text-white">Send Messages</b></li>
                         </ol>
                         <button onClick={handleSave} className="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white rounded text-xs font-bold transition-colors">
