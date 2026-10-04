@@ -1,6 +1,7 @@
 "use server";
 
 import { after } from "next/server";
+import { z } from "zod";
 import prisma from "@/shared/lib/prisma";
 import Logger from "@/shared/lib/logger";
 import { verifyEventAdmin } from "@/features/auth/server/verify";
@@ -9,16 +10,25 @@ import { escapeHtml, escapeDiscordMarkdown } from "@/shared/lib/escape";
 // Allowed session reminder lead times (2 hours, 1 day, 2 days), shared with the manage page.
 import { isSessionReminderLead } from "@/features/notifications/model/leads";
 import { reminderSettingsSchema } from "../model/schemas";
+import { handleParam, slugParam } from "@/shared/lib/action-params";
 import { getServerConfig } from "@/shared/config/server";
 import { processWebhookRow } from "@/features/integrations/webhooks";
 
 const log = Logger.get("EventActions");
+
+/** Bounded like the create-event schema's invite link; the `https://t.me/` check stays in the action. */
+const inviteLinkParam = z.string().max(200);
+
+const INVALID_REQUEST = "Invalid request";
+
+const isSlug = (slug: unknown): boolean => slugParam.safeParse(slug).success;
 
 /**
  * Checks the manager's connection status (Telegram linkage). Public callers get only the
  * boolean; the manager's handle is returned to the event admin alone.
  */
 export async function checkManagerStatus(slug: string): Promise<{ hasManagerChatId: boolean; handle?: string | null }> {
+    if (!isSlug(slug)) return { hasManagerChatId: false };
     const event = await prisma.event.findUnique({
         where: { slug },
         select: { managerChatId: true, managerTelegram: true }
@@ -33,6 +43,7 @@ export async function checkManagerStatus(slug: string): Promise<{ hasManagerChat
  * Checks if the event is connected to a Telegram group chat.
  */
 export async function checkEventStatus(slug: string) {
+    if (!isSlug(slug)) return { hasTelegramChatId: false };
     const event = await prisma.event.findUnique({
         where: { slug },
         select: { telegramChatId: true }
@@ -47,6 +58,7 @@ export async function checkEventStatus(slug: string) {
  * Updates the manager's Telegram handle.
  */
 export async function updateManagerHandle(slug: string, handle: string) {
+    if (!isSlug(slug) || !handleParam.safeParse(handle).success) return { error: INVALID_REQUEST };
     if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     // Canonicalize: accept the handle with or without '@' and store it '@'-less
@@ -73,6 +85,7 @@ export async function updateManagerHandle(slug: string, handle: string) {
  * Updates the Telegram invite link associated with the event.
  */
 export async function updateTelegramInviteLink(slug: string, link: string) {
+    if (!isSlug(slug) || !inviteLinkParam.safeParse(link).success) return { error: INVALID_REQUEST };
     if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     if (!link || !link.startsWith("https://t.me/")) {
@@ -96,6 +109,7 @@ export async function updateTelegramInviteLink(slug: string, link: string) {
  * Permanently deletes an event and all associated data.
  */
 export async function deleteEvent(slug: string) {
+    if (!isSlug(slug)) return { error: INVALID_REQUEST };
     if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     const event = await prisma.event.findUnique({
@@ -157,6 +171,7 @@ export async function deleteEvent(slug: string) {
  * action returns (`after()`). The webhooks cron retries it if that attempt fails.
  */
 export async function cancelEvent(slug: string) {
+    if (!isSlug(slug)) return { error: INVALID_REQUEST };
     if (!(await verifyEventAdmin(slug))) return { error: "Unauthorized" };
 
     const event = await prisma.event.findUnique({
@@ -283,6 +298,7 @@ export async function cancelEvent(slug: string) {
  */
 export async function updateReminderSettings(slug: string, enabled: boolean, time: string, days: number[]) {
     try {
+        if (!isSlug(slug)) return { success: false, error: INVALID_REQUEST };
         if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
 
         // Server actions are public endpoints: validate every argument (weekdays 0..6,
@@ -334,6 +350,7 @@ export async function updateReminderSettings(slug: string, enabled: boolean, tim
  */
 export async function updateSessionReminderSettings(slug: string, enabled: boolean, leadMinutes: number) {
     try {
+        if (!isSlug(slug)) return { success: false, error: INVALID_REQUEST };
         if (!(await verifyEventAdmin(slug))) return { success: false, error: "Unauthorized" };
 
         if (typeof enabled !== "boolean" || typeof leadMinutes !== "number" || !isSessionReminderLead(leadMinutes)) {
