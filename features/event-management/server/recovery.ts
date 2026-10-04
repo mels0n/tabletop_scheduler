@@ -5,7 +5,9 @@ import Logger from "@/shared/lib/logger";
 import { getBaseUrl } from "@/shared/lib/url";
 import { escapeHtml } from "@/shared/lib/escape";
 import { normalizeHandle } from "@/shared/lib/handle";
-import { AppError } from "@/shared/errors";
+import { z } from "zod";
+import { AppError, ValidationError } from "@/shared/errors";
+import { handleParam, slugParam } from "@/shared/lib/action-params";
 import { requireEventAdmin } from "@/features/auth/server/verify";
 import { sendDirectMessage, isDelivered, type DeliveryOutcome, type DeliveryResult } from "@/features/notifications";
 import {
@@ -35,6 +37,15 @@ function toActionError(e: unknown, fallback: string): ActionFailure {
     if (e instanceof AppError && e.status < 500) return { error: e.message, code: e.code };
     log.error(fallback, e as Error);
     return { error: fallback };
+}
+
+const recoverArgs = z.object({ slug: slugParam, handle: handleParam });
+
+/** Throws `ValidationError` unless `slug` is a well-formed slug; `toActionError` maps it. */
+function parseSlug(slug: unknown): string {
+    const parsed = slugParam.safeParse(slug);
+    if (!parsed.success) throw new ValidationError();
+    return parsed.data;
 }
 
 const managerSelect = {
@@ -124,6 +135,9 @@ async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResul
  * manager's DMs.
  */
 export async function recoverManagerLink(slug: string, handle: string): Promise<ManagerLinkResult> {
+    if (!recoverArgs.safeParse({ slug, handle }).success) {
+        return toActionError(new ValidationError(), "Could not send the link. Please try again.");
+    }
     const event = await prisma.event.findUnique({ where: { slug }, select: managerSelect });
 
     if (!event || (!event.managerTelegram && !event.managerDiscordId)) {
@@ -154,6 +168,7 @@ export async function recoverManagerLink(slug: string, handle: string): Promise<
  */
 export async function dmManagerLink(slug: string): Promise<ManagerLinkResult> {
     try {
+        parseSlug(slug);
         await requireEventAdmin(slug);
     } catch (e) {
         return toActionError(e, "Could not send the link. Please try again.");
@@ -169,6 +184,7 @@ export async function dmManagerLink(slug: string): Promise<ManagerLinkResult> {
  */
 export async function startTelegramRecovery(slug: string): Promise<{ success: true; token: string; error?: undefined } | ActionFailure> {
     try {
+        parseSlug(slug);
         const token = await generateShortRecoveryToken(slug);
         return { success: true as const, token };
     } catch (e) {
@@ -179,6 +195,7 @@ export async function startTelegramRecovery(slug: string): Promise<{ success: tr
 /** Admin only: the `/connect <slug> <code>` command shown on the manage page. */
 export async function connectCommandForAdmin(slug: string): Promise<{ success: true; command: string; error?: undefined } | ActionFailure> {
     try {
+        parseSlug(slug);
         await requireEventAdmin(slug);
         return { success: true as const, command: await getConnectCommand(slug) };
     } catch (e) {
