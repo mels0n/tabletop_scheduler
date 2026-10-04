@@ -2,7 +2,10 @@ name: Repo Hygiene
 
 # Keeps local-only working files out of the published repository and keeps
 # public-facing docs free of references to the tooling around the project.
-# A FAILING gate, not advisory. Adjust the two pattern lists per repo if needed.
+# A FAILING gate, not advisory. Three pattern lists, adjust per repo if needed:
+# local-only paths (all repos), private working files (public repos only; keep
+# in step with PUBLIC_REPO_GITIGNORE in melson-agents/scripts/scaffold/
+# standards-scaffold.mjs), and internal-tooling markers in public docs.
 
 on:
   push:
@@ -38,6 +41,26 @@ jobs:
             exit 1
           fi
           echo "ok: no local-only paths tracked"
+
+      - name: Public repo keeps tool config and strategy docs private
+        # Private repos may share .claude/ rules and keep strategy docs in git.
+        # A public repo publishes none of it: no .claude/ at all (pipeline
+        # config included), no content briefs, SEO audits, action plans or
+        # strategy docs.
+        # Runs unless the event payload says the repo is private, so a missing
+        # visibility field fails closed (the step runs) rather than open.
+        if: ${{ github.event.repository.private != true }}
+        run: |
+          set -euo pipefail
+          bad=$(git ls-files -z | tr '\0' '\n' \
+            | grep -E '^(\.claude/|\.impeccable/|briefs/|strategy/)|(^|/)ACTION-PLAN\.md$|(^|/)[^/]*AUDIT-REPORT[^/]*\.md$|(^|/)[^/]*_STRATEGY\.md$' \
+            || true)
+          if [ -n "$bad" ]; then
+            echo "::error::This repository is public and tracks private working files. Untrack them and remove them from history."
+            echo "$bad"
+            exit 1
+          fi
+          echo "ok: no private working files tracked in a public repo"
 
       - name: Public docs carry no internal references
         run: |
