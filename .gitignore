@@ -82,3 +82,12 @@ docs/superpowers/
 memory/
 MEMORY.md
 tmp/
+
+# Public repo: tool config and strategy working docs stay local
+.claude/*.json
+.impeccable/
+/briefs/
+/strategy/
+ACTION-PLAN.md
+*AUDIT-REPORT*.md
+*_STRATEGY.md
