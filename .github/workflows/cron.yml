@@ -2,10 +2,10 @@ name: Trigger Reminders
 
 on:
   schedule:
-    # Backstop only. Hosted reminders run every 10 minutes from Supabase pg_cron
-    # (scripts/sql/pg-cron-reminders.sql); this catches a stalled pg_cron. GitHub delays
-    # scheduled runs by hours, so it stays infrequent and off the top of the hour.
-    # Overlap with pg_cron is safe: each reminder is claimed in the database before sending.
+    # Backstop only. Hosted reminders and webhook retries run from Supabase pg_cron
+    # (scripts/sql/pg-cron-reminders.sql); this catches a stalled pg_cron. GitHub delays scheduled runs by
+    # hours, so it stays infrequent and off the top of the hour. Overlap with pg_cron is
+    # safe: each reminder and each webhook row is claimed in the database before sending.
     - cron: '7 */2 * * *'
   workflow_dispatch: # Allow manual trigger
 
@@ -29,6 +29,21 @@ jobs:
                curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/reminders"
              fi
              echo "Pinged ${{ secrets.DEPLOYMENT_URL }}"
+          else
+             echo "No DEPLOYMENT_URL secret set. Skipping."
+          fi
+
+      - name: Call Webhook Retry API
+        # Runs even when the reminder call failed, so one bad route does not stall the other.
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -n "${{ secrets.DEPLOYMENT_URL }}" ]; then
+             if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+               curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/webhooks" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+             else
+               curl --location-trusted --fail --show-error -X GET "${{ secrets.DEPLOYMENT_URL }}/api/cron/webhooks"
+             fi
+             echo "Pinged ${{ secrets.DEPLOYMENT_URL }}/api/cron/webhooks"
           else
              echo "No DEPLOYMENT_URL secret set. Skipping."
           fi

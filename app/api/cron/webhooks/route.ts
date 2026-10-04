@@ -7,7 +7,7 @@ import { attemptClaimedWebhook, claimableWhere } from "@/features/integrations/w
 
 const log = Logger.get("Cron:Webhooks");
 
-// Vercel Cron Config
+// Triggered by pg_cron on hosted, the start.sh loop on self-host, GitHub Actions as backstop.
 export const dynamic = 'force-dynamic'; // Ensure not cached
 export const maxDuration = 60; // Allow 60s execution
 
