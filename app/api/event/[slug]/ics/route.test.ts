@@ -60,4 +60,37 @@ describe('GET /api/event/[slug]/ics', () => {
         const res = await GET(new Request('https://tabletop.example/api/event/evt/ics'), params);
         expect(res.status).toBe(404);
     });
+
+    describe('campaign sessions', () => {
+        const sessions = [1, 2, 3].map((n) => ({
+            id: 10 + n,
+            timeSlotId: 100 + n,
+            timeSlot: { startTime: start, endTime: end },
+        }));
+        const campaign = { ...event, eventType: 'CAMPAIGN', finalizedSlotId: null };
+
+        beforeEach(() => {
+            mockPrisma.event.findUnique.mockResolvedValue(campaign);
+            mockPrisma.finalizedSession.findMany.mockResolvedValue(sessions);
+            mockPrisma.participant.findMany.mockResolvedValue([]);
+        });
+
+        it('queries finalized sessions once for a campaign download', async () => {
+            await GET(new Request('https://tabletop.example/api/event/evt/ics'), params);
+            expect(mockPrisma.finalizedSession.findMany).toHaveBeenCalledTimes(1);
+        });
+
+        it('numbers a single requested session by its position among all sessions', async () => {
+            const res = await GET(new Request('https://tabletop.example/api/event/evt/ics?slot=102'), params);
+            const ics = await res.text();
+            expect(ics).toContain('(Session 2)');
+            expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+            expect(res.headers.get('Content-Disposition')).toContain('evt-session-2.ics');
+        });
+
+        it('returns 404 when the requested slot is not a finalized session', async () => {
+            const res = await GET(new Request('https://tabletop.example/api/event/evt/ics?slot=999'), params);
+            expect(res.status).toBe(404);
+        });
+    });
 });
