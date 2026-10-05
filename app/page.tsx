@@ -45,11 +45,11 @@ export default async function Home() {
   // Intent: Determine deployment mode to toggle text/features (e.g., "Free & Open" vs "Self Hosted").
   const isHosted = publicConfig.isHosted;
 
-  // Fetch public donations for the ticker, only in hosted mode to preserve self-hosted static generation.
-  const donations = isHosted ? await getDonations(20) : [];
-
-  // Fetch live event stats for badges, only in hosted mode.
-  const eventStats = isHosted ? await getEventStats() : null;
+  // Fetch public donations for the ticker and live event stats for badges in parallel, only in hosted mode.
+  const [donations, eventStats] = await Promise.all([
+    isHosted ? getDonations(20) : Promise.resolve([]),
+    isHosted ? getEventStats() : Promise.resolve(null),
+  ]);
 
   /**
    * @constant jsonLd
