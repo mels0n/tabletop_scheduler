@@ -38,32 +38,32 @@ export default function HowItWorksPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <div className="max-w-4xl mx-auto space-y-12">
+            <div className="max-w-7xl mx-auto space-y-12">
                 {/* Header */}
                 <div className="space-y-4">
-                    <Link href="/" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4">
+                    <Link href="/" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                         <ArrowLeft className="w-4 h-4" /> Back Home
                     </Link>
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                    <h1 className="text-4xl md:text-5xl font-bold font-display text-parchment">
                         How It Works
                     </h1>
-                    <p className="text-xl text-slate-400 max-w-2xl">
+                    <p className="text-xl text-parchment-2 max-w-2xl">
                         The philosophy behind the world&apos;s simplest, most private D&D scheduler.
                     </p>
                 </div>
 
                 {/* The Problem */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-semibold text-slate-200 flex items-center gap-2">
-                        <Users className="w-6 h-6 text-indigo-500" />
+                    <h2 className="font-display text-2xl font-bold text-parchment flex items-center gap-2">
+                        <Users className="w-6 h-6 text-gold-bright" aria-hidden="true" />
                         The Problem: Group Chat Chaos
                     </h2>
-                    <div className="prose prose-invert prose-slate max-w-none text-slate-400">
+                    <div className="prose max-w-none">
                         <p>
                             We&apos;ve all been there. You have a party of 5 adventurers ready to slay the dragon, but the real boss battle is the group chat.
                             <em>&quot;I can do Tuesday but not after 6,&quot;</em> says the Rogue. <em>&quot;Wednesday works if we start late,&quot;</em> says the Cleric.
@@ -76,11 +76,11 @@ export default function HowItWorksPage() {
 
                 {/* The Solution */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-semibold text-slate-200 flex items-center gap-2">
-                        <Zap className="w-6 h-6 text-indigo-500" />
+                    <h2 className="font-display text-2xl font-bold text-parchment flex items-center gap-2">
+                        <Zap className="w-6 h-6 text-gold-bright" aria-hidden="true" />
                         The Solution: Frictionless Voting
                     </h2>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid lg:grid-cols-2 gap-6">
                         <StepCard
                             step="1"
                             title="Create an Event"
@@ -97,7 +97,7 @@ export default function HowItWorksPage() {
                             desc={
                                 <span>
                                     Players tap times they are free, or <b>suggest new times</b> if the proposed ones don&apos;t work.{" "}
-                                    <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
+                                    <Link href="/voting-logic" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                         Read the logic
                                     </Link>.
                                 </span>
@@ -112,12 +112,12 @@ export default function HowItWorksPage() {
                 </section>
 
                 {/* Philosophy */}
-                <section className="space-y-6 bg-slate-900/40 p-8 rounded-2xl border border-slate-800">
-                    <h2 className="text-2xl font-semibold text-slate-200 flex items-center gap-2">
-                        <Shield className="w-6 h-6 text-indigo-500" />
+                <section className="space-y-6 bg-surface p-8 rounded-card border border-line">
+                    <h2 className="font-display text-2xl font-bold text-parchment flex items-center gap-2">
+                        <Shield className="w-6 h-6 text-gold-bright" aria-hidden="true" />
                         Why functionality is limited (The Privacy Trade-off)
                     </h2>
-                    <div className="prose prose-invert prose-slate max-w-none text-slate-400">
+                    <div className="prose max-w-none">
                         <p>
                             You might notice <strong>Tabletop Time</strong> doesn&apos;t have user profiles, friend lists, or email notifications. This is intentional.
                         </p>
@@ -129,12 +129,13 @@ export default function HowItWorksPage() {
                     </div>
                 </section>
 
-                <div className="flex justify-center pt-8">
+                <div className="ornament" aria-hidden="true">✦</div>
+                <div className="flex justify-center">
                     <Link
                         href="/new"
-                        className="flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 font-bold text-white shadow-lg shadow-indigo-500/20 transition-all transform hover:scale-105"
+                        className="btn-primary px-8 py-4"
                     >
-                        <Calendar className="w-5 h-5" />
+                        <Calendar className="w-5 h-5" aria-hidden="true" />
                         Start Scheduling Now
                     </Link>
                 </div>
@@ -145,13 +146,13 @@ export default function HowItWorksPage() {
 
 function StepCard({ step, title, desc }: { step: string, title: string, desc: string | React.ReactNode }) {
     return (
-        <div className="flex gap-4 p-4 rounded-lg bg-slate-900/50 border border-slate-800 hover:border-indigo-500/30 transition-colors">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-indigo-400 border border-slate-700">
+        <div className="flex gap-4 p-4 rounded-card bg-surface border border-line">
+            <div className="flex-shrink-0 w-10 h-10 rounded-control bg-surface-2 flex items-center justify-center font-display text-lg font-bold tabular-nums text-gold-bright border border-line">
                 {step}
             </div>
             <div>
-                <h3 className="font-semibold text-slate-200 mb-1">{title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+                <h3 className="font-display text-lg font-bold text-parchment mb-1">{title}</h3>
+                <p className="text-sm text-parchment-2 leading-relaxed">{desc}</p>
             </div>
         </div>
     )

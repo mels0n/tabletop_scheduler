@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 
 export default function VotingLogicPage() {
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
-            <div className="max-w-4xl mx-auto space-y-12">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
+            <div className="max-w-7xl mx-auto space-y-12">
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{
@@ -40,44 +40,44 @@ export default function VotingLogicPage() {
 
                 {/* Header */}
                 <div className="space-y-4">
-                    <Link href="/how-it-works" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4">
+                    <Link href="/how-it-works" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                         <ArrowLeft className="w-4 h-4" /> Back to How It Works
                     </Link>
-                    <h1 className="text-4xl md:text-5xl font-bold text-white">
-                        The Logic of <span className="text-indigo-400">Voting</span>
+                    <h1 className="font-display text-4xl md:text-5xl font-bold text-parchment">
+                        The Logic of <span className="text-gold-bright">Voting</span>
                     </h1>
-                    <p className="text-xl text-slate-400 max-w-2xl">
+                    <p className="text-xl text-parchment-2 max-w-2xl">
                         Transparency is key. Here is exactly how we determine who plays, who waits, and who gets promoted.
                     </p>
                 </div>
 
                 {/* 1. The Options */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-semibold text-slate-200">1. The Three Choices</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">1. The Three Choices</h2>
                     <div className="grid gap-4 md:grid-cols-3">
-                        <div className="p-6 rounded-xl bg-green-900/10 border border-green-800/30">
-                            <h3 className="text-green-400 font-bold mb-2 flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5" /> Available (Yes)
+                        <div className="p-6 rounded-card bg-yes-bg border border-yes/40">
+                            <h3 className="text-yes font-bold mb-2 flex items-center gap-2">
+                                <CheckCircle className="w-5 h-5" aria-hidden="true" /> Available (Yes)
                             </h3>
-                            <p className="text-slate-400 text-sm">
+                            <p className="text-mist text-sm">
                                 &quot;I want to play.&quot; <br />
-                                <strong className="text-slate-300">Priority: High</strong>
+                                <strong className="text-parchment-2">Priority: High</strong>
                             </p>
                         </div>
-                        <div className="p-6 rounded-xl bg-indigo-900/10 border border-indigo-800/30">
-                            <h3 className="text-indigo-400 font-bold mb-2 flex items-center gap-2">
-                                <AlertCircle className="w-5 h-5" /> If Needed
+                        <div className="p-6 rounded-card bg-maybe-bg border border-maybe/40">
+                            <h3 className="text-maybe font-bold mb-2 flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5" aria-hidden="true" /> If Needed
                             </h3>
-                            <p className="text-slate-400 text-sm">
+                            <p className="text-mist text-sm">
                                 &quot;I&apos;ll play if you need numbers to run.&quot; <br />
-                                <strong className="text-slate-300">Priority: Backup Only</strong>
+                                <strong className="text-parchment-2">Priority: Backup Only</strong>
                             </p>
                         </div>
-                        <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-700">
-                            <h3 className="text-slate-400 font-bold mb-2 flex items-center gap-2">
-                                <Clock className="w-5 h-5" /> Busy (No)
+                        <div className="p-6 rounded-card bg-surface border border-line">
+                            <h3 className="text-mist font-bold mb-2 flex items-center gap-2">
+                                <Clock className="w-5 h-5" aria-hidden="true" /> Busy (No)
                             </h3>
-                            <p className="text-slate-500 text-sm">
+                            <p className="text-mist text-sm">
                                 &quot;I cannot make it.&quot;
                             </p>
                         </div>
@@ -86,12 +86,12 @@ export default function VotingLogicPage() {
 
                 {/* 2. Finalization Process */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-semibold text-slate-200">2. How Finalization Works</h2>
-                    <div className="prose prose-invert prose-slate max-w-none text-slate-400">
+                    <h2 className="font-display text-2xl font-bold text-parchment">2. How Finalization Works</h2>
+                    <div className="prose max-w-none">
                         <p>
                             When a Manager clicks &quot;Finalize&quot;, the system locks in the guest list. This is the moment of truth. We select players based on the following strict hierarchy:
                         </p>
-                        <ol className="list-decimal pl-5 space-y-2 marker:text-indigo-500">
+                        <ol className="list-decimal pl-5 space-y-2 marker:text-gold">
                             <li>
                                 <strong>Availability (Yes):</strong> We fill the table with &quot;Yes&quot; votes first, up to the Max Player limit.
                             </li>
@@ -106,9 +106,9 @@ export default function VotingLogicPage() {
                                 <strong>Tie-Breaker:</strong> If we have to choose between two equal votes (e.g., two &quot;Yes&quot; votes for the last spot), the person who voted <strong>earliest</strong> gets the spot.
                             </li>
                         </ol>
-                        <div className="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg mt-4">
-                            <h4 className="font-bold text-indigo-300 flex items-center gap-2 mb-1">
-                                <ShieldCheck className="w-4 h-4" /> The &quot;Lock&quot;
+                        <div className="bg-surface border-l-2 border-gold p-4 rounded-r-control mt-4">
+                            <h4 className="font-bold text-gold-bright flex items-center gap-2 mb-1">
+                                <ShieldCheck className="w-4 h-4" aria-hidden="true" /> The &quot;Lock&quot;
                             </h4>
                             <p className="text-sm">
                                 Once finalized, the list is <strong>frozen</strong>. A new player signing up (even with &quot;Yes&quot;) takes an open seat only if the table is not full; otherwise they go to the waitlist. They will NOT displace a confirmed player.
@@ -119,8 +119,8 @@ export default function VotingLogicPage() {
 
                 {/* 3. Examples */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-semibold text-slate-200">3. Scenarios</h2>
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <h2 className="font-display text-2xl font-bold text-parchment">3. Scenarios</h2>
+                    <div className="grid gap-6 lg:grid-cols-2">
                         {/* Scenario A */}
                         <ScenarioCard
                             title="The 'Backup' Stay Waitlisted"
@@ -163,22 +163,22 @@ export default function VotingLogicPage() {
 
 function ScenarioCard({ title, config, votes, result, explanation }: any) {
     return (
-        <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6 hover:border-indigo-500/30 transition-colors">
-            <h3 className="font-bold text-slate-200 mb-2 border-b border-slate-800 pb-2">{title}</h3>
+        <div className="bg-surface border border-line rounded-card p-6">
+            <h3 className="font-display text-lg font-bold text-parchment mb-2 border-b border-line pb-2">{title}</h3>
             <div className="space-y-3 text-sm">
                 <div>
-                    <span className="text-slate-500 text-xs uppercase tracking-wider">Config</span>
-                    <div className="text-indigo-300 font-medium">{config}</div>
+                    <span className="text-mist text-xs uppercase tracking-wider">Config</span>
+                    <div className="text-gold-bright font-medium">{config}</div>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-xs uppercase tracking-wider">Votes</span>
-                    <div className="text-slate-300">{votes}</div>
+                    <span className="text-mist text-xs uppercase tracking-wider">Votes</span>
+                    <div className="text-parchment-2">{votes}</div>
                 </div>
                 <div>
-                    <span className="text-slate-500 text-xs uppercase tracking-wider">Result</span>
-                    <div className="text-green-400 font-bold">{result}</div>
+                    <span className="text-mist text-xs uppercase tracking-wider">Result</span>
+                    <div className="text-yes font-bold">{result}</div>
                 </div>
-                <div className="bg-slate-950/50 p-3 rounded-lg text-slate-400 italic">
+                <div className="bg-field p-3 rounded-control text-mist italic">
                     {explanation}
                 </div>
             </div>

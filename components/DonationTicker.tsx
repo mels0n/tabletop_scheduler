@@ -6,7 +6,7 @@ import type { DonorComment } from '@/entities/donation';
  * Placed between the CTA buttons and the "Built for Every Tabletop Experience" section.
  * The entire ticker is a clickable link to the Ko-fi page.
  *
- * Design: No header. Compact single-row marquee (~48px). Gradient edge fades.
+ * Design: No header. Compact single-row marquee (~48px) between line hairlines.
  * Behavior: Seamless CSS loop, pauses on hover.
  *
  * @see ADR-003 in DECISIONS.md for design rationale.
@@ -23,7 +23,7 @@ function CoffeeIcons({ count }: { count: number }) {
   const showPlus = count > 5;
   
   return (
-    <span className="inline-flex items-center gap-0.5 text-amber-500" aria-label={`${count} coffees`}>
+    <span className="inline-flex items-center gap-0.5 text-gold-bright" aria-label={`${count} coffees`}>
       {Array.from({ length: displayCount }).map((_, i) => (
         <svg key={i} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
@@ -64,11 +64,11 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
   const chips = paddedDonations.map((d, i) => (
     <span
       key={i}
-      className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/[0.05] border border-white/10 rounded-full text-xs whitespace-nowrap flex-shrink-0"
+      className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface-2 border border-line rounded-control text-xs whitespace-nowrap flex-shrink-0"
     >
-      <strong className="text-slate-200 font-semibold">{d.name}</strong>
+      <strong className="text-parchment font-semibold">{d.name}</strong>
       {d.message && (
-        <em className="text-slate-400 font-normal">&ldquo;{truncate(d.message)}&rdquo;</em>
+        <em className="text-mist font-normal">&ldquo;{truncate(d.message)}&rdquo;</em>
       )}
       <CoffeeIcons count={d.coffees} />
     </span>
@@ -79,16 +79,9 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
       href={KOFI_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="block w-full min-w-0 ticker-wrapper relative overflow-hidden py-2 cursor-pointer group"
+      className="block w-full min-w-0 ticker-wrapper relative overflow-hidden py-2 border-y border-line bg-surface cursor-pointer group"
       aria-label="Support Tabletop Time on Ko-fi"
     >
-      {/* Gradient fade: left edge */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-16 md:w-24 z-10 pointer-events-none"
-        style={{
-          background: 'linear-gradient(to right, rgb(15 23 42) 0%, transparent 100%)',
-        }}
-      />
 
       {/* Scrolling track: two copies for seamless loop.
           Duration scales with chip count to keep a consistent ~7s-per-chip pace. */}
@@ -105,13 +98,6 @@ export default function DonationTicker({ donations }: DonationTickerProps) {
         ))}
       </div>
 
-      {/* Gradient fade: right edge */}
-      <div
-        className="absolute right-0 top-0 bottom-0 w-16 md:w-24 z-10 pointer-events-none"
-        style={{
-          background: 'linear-gradient(to left, rgb(15 23 42) 0%, transparent 100%)',
-        }}
-      />
     </a>
   );
 }
