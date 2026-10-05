@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Copy, PlusCircle, ArrowRight, MessageCircle, ShieldCheck, Swords, Layers, Dices } from "lucide-react";
+import { Copy, PlusCircle, ArrowRight, ShieldCheck, Swords, Layers, Dices } from "lucide-react";
 import { SchemaGenerator } from "@/shared/lib/aeo";
 import { getDonations } from "@/entities/donation";
 import { getEventStats } from "@/shared/lib/event-stats";
@@ -280,7 +280,9 @@ export default async function Home() {
           desc="We automatically find the best slot where everyone can play, or at least your required quorum."
         />
         <FeatureCard
-          icon={<MessageCircle className="w-6 h-6 text-telegram" />}
+          icon={
+            <svg className="w-6 h-6 fill-current text-telegram" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" /></svg>
+          }
           title="Telegram Integration"
           desc="Optional: Bind a Telegram bot to your group to get instant poll results and reminders where you chat."
         />
