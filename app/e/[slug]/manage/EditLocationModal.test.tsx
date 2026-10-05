@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ refresh: vi.fn() }),
@@ -16,7 +16,7 @@ describe('EditLocationModal: dialog body loads on demand', () => {
 
         const input = await screen.findByPlaceholderText('e.g. 123 Main St');
         expect((input as HTMLInputElement).value).toBe('Old Place');
-        expect(document.activeElement).toBe(input);
+        await waitFor(() => expect(document.activeElement).toBe(input));
         fireEvent.change(input, { target: { value: 'New Place' } });
 
         fireEvent.click(screen.getByText('Cancel'));
@@ -25,6 +25,6 @@ describe('EditLocationModal: dialog body loads on demand', () => {
         fireEvent.click(screen.getByTitle('Edit Location'));
         const reopened = await screen.findByPlaceholderText('e.g. 123 Main St') as HTMLInputElement;
         expect(reopened.value).toBe('New Place');
-        expect(document.activeElement).toBe(reopened);
+        await waitFor(() => expect(document.activeElement).toBe(reopened));
     });
 });
