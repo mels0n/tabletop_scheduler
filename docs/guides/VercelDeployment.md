@@ -11,7 +11,7 @@ This is how the hosted version runs: Vercel for the app, Supabase Postgres for t
 Configure the following in your Vercel Project Settings. [EnvVariables.md](../reference/EnvVariables.md) has the full reference.
 
 ### Core
-- `DATABASE_URL`: Connection string to your Postgres DB. On Supabase this is the **pooled** string (port 6543, with `?pgbouncer=true&connection_limit=1`).
+- `DATABASE_URL`: Connection string to your Postgres DB. On Supabase this is the **pooled** string (port 6543, with `?pgbouncer=true&connection_limit=3`).
 - `DIRECT_URL`: The **direct** connection string (port 5432). Required: Prisma Migrate cannot run DDL through a transaction pooler, and the build applies migrations.
 - `NEXT_PUBLIC_BASE_URL`: The production URL (e.g., `https://your-project.vercel.app`). Required whenever a bot token is set.
 - `SESSION_SECRET`: 32 or more random bytes. Required on production deployments; the server will not start without it.
