@@ -93,3 +93,21 @@ describe('TelegramConnect polling', () => {
         expect(checkEventStatus).not.toHaveBeenCalled();
     });
 });
+
+describe('TelegramConnect manager DM', () => {
+    afterEach(() => cleanup());
+
+    // Catches: the button calling dmManagerLink without its platform, which DMed every
+    // linked platform (Telegram and Discord) instead of Telegram only.
+    it('asks for the login link on Telegram only', async () => {
+        const { dmManagerLink } = await import('@/features/event-management/server/recovery');
+        vi.mocked(dmManagerLink).mockResolvedValue({ success: true, message: 'sent' });
+        render(<TelegramConnect slug="evt" botUsername="bot" hasChatId={false} initialHandle={null} hasManagerChatId={true} />);
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Send Magic Link (Telegram DM)' }));
+        });
+
+        expect(dmManagerLink).toHaveBeenCalledWith('evt', 'telegram');
+    });
+});

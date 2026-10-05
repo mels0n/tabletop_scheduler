@@ -37,6 +37,5 @@ export {
     connectDiscordChannel,
     listDiscordChannels,
     dmDiscordManagerLink,
-    sendDiscordMagicLogin,
 } from "./server/actions";
 export { DiscordConnect } from "./ui/DiscordConnect";

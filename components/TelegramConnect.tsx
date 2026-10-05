@@ -142,7 +142,7 @@ export function TelegramConnect({
         setError("");
         try {
             const { dmManagerLink } = await import("@/features/event-management/server/recovery");
-            const res = await dmManagerLink(slug);
+            const res = await dmManagerLink(slug, "telegram");
             if (res.error) {
                 setError(res.error);
             } else {
