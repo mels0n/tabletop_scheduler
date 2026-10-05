@@ -3,6 +3,9 @@
 
 generator client {
   provider        = "prisma-client-js"
+  // Hosted only: enables Prisma to load nested relations with a single joined query by default on Postgres.
+  // Do not copy to prisma/schema.prisma; SQLite does not support it. Shared code must not pass relationLoadStrategy
+  // because the SQLite client used by self-host and CI does not accept that option.
   previewFeatures = ["relationJoins"]
   // Binary targets ensure compatibility with both local Windows dev and Docker (Linux musl, amd64 and arm64)
   binaryTargets   = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]

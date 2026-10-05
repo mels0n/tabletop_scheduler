@@ -7,9 +7,10 @@ import { join } from 'path';
  *   prisma/schema.prisma        -> sqlite, self-hosted / local dev
  *   prisma/hosted/schema.prisma -> postgresql, Vercel + Supabase
  *
- * They must describe the SAME data model; only the datasource block differs.
- * A field added to one and not the other means one of the two products is
- * silently broken at runtime, with nothing in the build to catch it.
+ * The data models (all model and enum blocks) must match exactly. Only the datasource
+ * and generator blocks are allowed to differ. A field added to one and not the other
+ * means one of the two products is silently broken at runtime, with nothing in the
+ * build to catch it.
  */
 
 const SELF_HOSTED = join(process.cwd(), 'prisma', 'schema.prisma');
