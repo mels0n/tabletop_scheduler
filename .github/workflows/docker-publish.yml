@@ -18,7 +18,7 @@ name: Docker Build & Push
 #
 # Only the newest run per ref publishes: a new push to main cancels the run
 # still in progress for the previous commit. The merge job also moves `latest`
-# only when the commit is still the head of its branch, so re-running an older
+# only when no newer commit on the branch will publish, so re-running an older
 # run cannot roll `latest` back (it still cancels a newer run in progress, so
 # re-run only the newest main run). The `build` gate requires ci to have
 # succeeded, not merely "not failed": `!failure()` alone lets a cancelled ci
@@ -103,8 +103,8 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # Only the labels are used here; the tags (kept identical to the
-          # merge job's) set the org.opencontainers.image.version label.
+          # Only the labels are used here; the tags (the merge job's, without
+          # its newest-commit check) set the org.opencontainers.image.version label.
           tags: |
             type=sha
             type=semver,pattern={{version}}
@@ -194,20 +194,39 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # A re-run of an older commit must not move `latest` backwards.
-      - name: Check this commit is still the branch head
+      # `latest` moves only when no newer commit on this branch will publish:
+      # either this commit is the head, or every commit after it touched only
+      # paths that `paths-ignore` above skips (keep the two lists in sync).
+      # This stops a re-run of an older commit from moving `latest` backwards.
+      - name: Check no newer commit will publish
         id: head
         if: github.ref_type == 'branch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$GITHUB_REF_NAME" --jq .object.sha)
+          newest=false
           if [ "$head" = "$GITHUB_SHA" ]; then
-            echo "is_head=true" >> "$GITHUB_OUTPUT"
+            newest=true
           else
-            echo "::warning::$GITHUB_SHA is no longer the head of $GITHUB_REF_NAME ($head); not moving latest"
-            echo "is_head=false" >> "$GITHUB_OUTPUT"
+            cmp=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$head")
+            status=$(jq -r .status <<< "$cmp")
+            count=$(jq '.files | length' <<< "$cmp")
+            # The compare API lists at most 300 files; treat more as unknown.
+            if [ "$status" = "ahead" ] && [ "$count" -lt 300 ]; then
+              newest=true
+              while IFS= read -r f; do
+                case "$f" in
+                  *.md|docs/*|content/*|.claude/*) ;;
+                  *) newest=false ;;
+                esac
+              done < <(jq -r '.files[].filename' <<< "$cmp")
+            fi
           fi
+          if [ "$newest" != "true" ]; then
+            echo "::warning::A newer commit on $GITHUB_REF_NAME ($head) will publish; not moving latest"
+          fi
+          echo "is_newest=$newest" >> "$GITHUB_OUTPUT"
 
       - name: Extract Docker metadata
         id: meta
@@ -217,7 +236,7 @@ jobs:
           tags: |
             type=sha
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.head.outputs.is_head == 'true' }}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.head.outputs.is_newest == 'true' }}
 
       - name: Create and push multi-arch manifest
         working-directory: ${{ runner.temp }}/digests
