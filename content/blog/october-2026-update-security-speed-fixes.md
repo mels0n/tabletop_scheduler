@@ -4,7 +4,7 @@ description: "One weekend, ten merged changes. Signed sessions, hashed admin lin
 date: "2026-10-05"
 tags: ["Product Update", "Security", "Performance", "Self-Hosting", "Telegram", "Discord"]
 listTitle: "What Changed in the October 2026 Update"
-itemList: ["Signed sessions and hashed admin links", "Opt out of bot direct messages", "Reminders and webhooks that retry instead of failing silently", "Faster finalize, vote and manage pages", "Clearer If Needed seating rules", "Automatic self-host upgrades from any earlier release", "Native arm64 Docker images", "Public community stats"]
+itemList: ["Signed sessions and hashed admin links", "Opt out of bot direct messages", "Reminders and webhooks that retry instead of failing silently", "Faster finalize, vote and manage pages", "Clearer If Needed seating rules", "Automatic self-host upgrades from any earlier release", "Native arm64 Docker images", "Public community stats", "A new look across the whole site"]
 faq:
   - question: "Do my old admin links still work after the October 2026 update?"
     answer: "Yes. Every admin link created before the update keeps working. The stored token is upgraded to a hashed form the first time the link is used, so nothing needs to be regenerated or reshared."
@@ -20,7 +20,7 @@ faq:
 
 # October Update: Tighter Security, Faster Pages and a Pile of Fixes
 
-The first weekend of October turned into a long one. Ten changes landed, built from more than 140 individual commits, and most of them are things you will never see. That is the point. This post walks through what changed, what (if anything) you need to do about it, and why it matters for your game night.
+The first weekend of October turned into a long one. Eleven changes landed, built from more than 140 individual commits, and most of them are things you will never see. That is the point. This post walks through what changed, what (if anything) you need to do about it, and why it matters for your game night.
 
 The short version: your links still work, your votes are safer, your pages are faster, and reminders now show up when they are supposed to.
 
@@ -83,6 +83,14 @@ If you run Tabletop Time on your own server, upgrades should now be boring, whic
 - **Framework refresh.** Next.js 16.3, React 19.3 and Node 22, plus the usual round of dependency updates.
 
 Integrators calling the API should skim the "Changes for integrators" section of the API reference in the [project repository](https://github.com/mels0n/tabletop_scheduler). The biggest one: editing a participant by id now needs the event's admin token in an `Authorization` header.
+
+## A New Look
+
+Tabletop Time has a new coat of paint. The old design was the generic dark tech-site style you have seen a hundred times. The new one takes its cues from a well-set rulebook: deep navy, aged gold and small-caps headings.
+
+Nothing about how it works has changed. Every page, button and link is where it was, your events and votes are untouched, and the vote buttons still say Available, If Needed and No. On a wide screen, pages now use more of the space, so long lists and comparison tables are easier to scan.
+
+The fonts are served from tabletoptime.us itself rather than a font service, so loading a page still sends nothing to anyone else.
 
 ## A Few Small Things
 
