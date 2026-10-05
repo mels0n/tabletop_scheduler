@@ -2,14 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tome palette. RGB channels so Tailwind opacity modifiers work (bg-gold/20). */
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 15, 23, 42; /* slate-900 */
-  --background-end-rgb: 0, 0, 0;
+  --c-ink: 15 22 38;            /* #0F1626 page */
+  --c-surface: 21 32 54;        /* #152036 cards, panels */
+  --c-surface-2: 28 42 69;      /* #1C2A45 raised, selected */
+  --c-field: 13 20 36;          /* #0D1424 inputs */
+  --c-line: 36 52 90;           /* #24345A hairlines */
+  --c-line-strong: 86 112 159;  /* #56709F control borders */
+  --c-parchment: 238 230 211;   /* #EEE6D3 text */
+  --c-parchment-2: 207 198 178; /* #CFC6B2 secondary text */
+  --c-mist: 147 160 186;        /* #93A0BA muted text */
+  --c-gold: 212 175 90;         /* #D4AF5A accent */
+  --c-gold-bright: 224 192 122; /* #E0C07A accent hover, eyebrows */
+  --c-on-gold: 26 20 4;         /* #1A1404 */
+  --c-yes: 95 168 138;          /* #5FA88A */
+  --c-yes-bg: 19 42 42;         /* #132A2A */
+  --c-on-yes: 6 21 15;          /* #06150F */
+  --c-maybe: 212 175 90;        /* #D4AF5A */
+  --c-maybe-bg: 42 38 24;       /* #2A2618 */
+  --c-on-maybe: 26 20 4;        /* #1A1404 */
+  --c-no: 207 122 114;          /* #CF7A72 */
+  --c-no-bg: 42 26 30;          /* #2A1A1E */
+  --c-on-no: 31 10 8;           /* #1F0A08 */
+  --c-discord: 88 101 242;      /* #5865F2 */
+  --c-telegram: 34 158 217;     /* #229ED9 */
+  --c-untap: 56 178 172;        /* #38B2AC */
+  color-scheme: dark;
 }
 
 html {
-  @apply bg-slate-900;
+  @apply bg-ink;
 }
 
 html, body {
@@ -17,8 +40,79 @@ html, body {
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  @apply bg-gradient-to-b from-slate-900 via-slate-950 to-black min-h-screen;
+  @apply bg-ink text-parchment font-sans antialiased;
+}
+
+@layer base {
+  h1, h2 {
+    @apply font-display;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-gold));
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgb(var(--c-gold));
+    color: rgb(var(--c-on-gold));
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-control font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-gold text-on-gold hover:bg-gold-bright;
+  }
+  .btn-secondary {
+    @apply btn border border-line-strong text-parchment hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply btn bg-no text-on-no hover:bg-no/90;
+  }
+  .card {
+    @apply bg-surface border border-line rounded-card p-6;
+  }
+  .card-accent {
+    @apply card border-t-2 border-t-gold;
+  }
+  .field {
+    @apply bg-field border border-line-strong rounded-control px-3 py-2.5 text-parchment placeholder:text-mist;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 bg-surface-2 text-parchment-2 rounded-[3px] text-xs px-2 py-0.5 font-medium;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-gold-bright;
+  }
+  .icon-tile {
+    @apply grid place-items-center size-9 shrink-0 rounded-control bg-surface-2 text-gold-bright;
+  }
+  .heading-display {
+    @apply font-display tracking-[0.01em];
+    text-wrap: balance;
+  }
+  /* Use as <div className="ornament" aria-hidden="true">✦</div> */
+  .ornament {
+    @apply flex items-center gap-3 w-full max-w-xs mx-auto text-gold;
+  }
+  .ornament::before,
+  .ornament::after {
+    content: "";
+    @apply flex-1 border-t border-line-strong;
+  }
+  .segmented {
+    @apply grid grid-flow-col auto-cols-fr bg-surface border border-line rounded-control overflow-hidden;
+  }
+  .segmented > .is-active,
+  .segmented > [aria-pressed="true"],
+  .segmented > [aria-selected="true"] {
+    @apply bg-surface-2 text-parchment;
+  }
 }
 
 @layer utilities {
@@ -26,7 +120,7 @@ body {
     text-wrap: balance;
   }
 
-  /* Donation ticker — CSS-only infinite scrolling marquee */
+  /* Donation ticker: CSS-only infinite scrolling marquee */
   @keyframes ticker-scroll {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
@@ -35,4 +129,8 @@ body {
   .ticker-track {
     animation: ticker-scroll var(--ticker-duration, 15s) linear infinite;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
 }
