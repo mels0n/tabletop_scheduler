@@ -40,7 +40,7 @@ Tabletop Time has never asked you to make an account, and that is not changing. 
 
 The bot sends direct messages for things that matter to you personally: when an event you joined is finalized, when you move off the waitlist, when quorum is reached on an event you run. Some people want that. Some people do not.
 
-You can now turn direct messages off from **My Events**. Group posts in your Telegram or Discord channel keep working as normal, and login links you ask for are still delivered (otherwise you could lock yourself out). The [Discord setup guide](/guide/discord-setup) lists exactly what gets sent and when.
+You can now turn direct messages off from [My Events](/profile). Group posts in your Telegram or Discord channel keep working as normal, and login links you ask for are still delivered (otherwise you could lock yourself out). Our [privacy policy](/legal) lists exactly what the bot sends and why.
 
 ## Reminders That Actually Arrive
 
