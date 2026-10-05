@@ -98,7 +98,7 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                 onPointerMove={handlePointerMove}
             >
                 {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                    <div key={`empty-${i}`} />
+                    <div key={`empty-${i}`} className="bg-ink" />
                 ))}
 
                 {days.map((day) => {
@@ -113,17 +113,17 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                             data-date={isPast ? undefined : dateStr}
                             onPointerDown={isPast ? undefined : (e) => handlePointerDown(e, dateStr)}
                             className={[
-                                "min-h-[44px] flex items-center justify-center bg-surface text-sm tabular-nums transition-colors",
+                                "min-h-[44px] flex items-center justify-center text-sm tabular-nums transition-colors",
                                 isPast
-                                    ? "text-mist/40 cursor-not-allowed"
+                                    ? "bg-surface text-mist/40 cursor-not-allowed"
                                     : "cursor-pointer",
                                 isSelected
                                     ? "bg-gold text-on-gold font-semibold"
                                     : isPast
                                         ? ""
                                         : isTodayDate
-                                            ? "text-gold-bright underline underline-offset-4 decoration-gold hover:bg-surface-2"
-                                            : "text-parchment-2 hover:bg-surface-2",
+                                            ? "bg-surface text-gold-bright underline underline-offset-4 decoration-gold hover:bg-surface-2"
+                                            : "bg-surface text-parchment-2 hover:bg-surface-2",
                             ].join(" ")}
                         >
                             {format(day, "d")}
