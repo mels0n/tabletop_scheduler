@@ -1,6 +1,6 @@
 ---
 title: "October Update: Tighter Security, Faster Pages and a Pile of Fixes"
-description: "One weekend, eleven merged changes. Signed sessions, hashed admin links, reminders that never miss, faster vote and manage pages, and a cleaner self-host upgrade path."
+description: "One weekend, ten merged changes. Signed sessions, hashed admin links, reminders that never miss, faster vote and manage pages, and a cleaner self-host upgrade path."
 date: "2026-10-05"
 tags: ["Product Update", "Security", "Performance", "Self-Hosting", "Telegram", "Discord"]
 listTitle: "What Changed in the October 2026 Update"
@@ -9,7 +9,7 @@ faq:
   - question: "Do my old admin links still work after the October 2026 update?"
     answer: "Yes. Every admin link created before the update keeps working. The stored token is upgraded to a hashed form the first time the link is used, so nothing needs to be regenerated or reshared."
   - question: "Why was I signed out of Telegram or Discord on Tabletop Time?"
-    answer: "The October 2026 update moved linked identities to signed cookies. That required one fresh sign-in for linked Telegram and Discord users. Your events, votes and links are unchanged, and it will not happen again on future updates."
+    answer: "The October 2026 update moved linked identities to signed cookies. That required one fresh sign-in for linked Telegram and Discord users. Your events, votes and links are unchanged, and it is not expected to happen again."
   - question: "Can I stop the Tabletop Time bot from sending me direct messages?"
     answer: "Yes. Turn off direct messages from the My Events page. Group posts in your Telegram or Discord channel are not affected, and login links you ask for are still delivered."
   - question: "When does an If Needed vote get a seat automatically?"
@@ -20,7 +20,7 @@ faq:
 
 # October Update: Tighter Security, Faster Pages and a Pile of Fixes
 
-The first weekend of October turned into a long one. Eleven changes landed, built from more than 140 individual commits, and most of them are things you will never see. That is the point. This post walks through what changed, what (if anything) you need to do about it, and why it matters for your game night.
+The first weekend of October turned into a long one. Ten changes landed, built from more than 140 individual commits, and most of them are things you will never see. That is the point. This post walks through what changed, what (if anything) you need to do about it, and why it matters for your game night.
 
 The short version: your links still work, your votes are safer, your pages are faster, and reminders now show up when they are supposed to.
 
@@ -34,7 +34,7 @@ Tabletop Time has never asked you to make an account, and that is not changing. 
 - **Safer integrations.** Webhooks are now signed so a receiving server can confirm they really came from Tabletop Time, and they can only be sent to public `https` addresses.
 - **No more embedding.** Pages can no longer be loaded inside another site's frame, which closes off a class of click-hijacking tricks.
 
-**One thing you might notice:** if you linked Telegram or Discord, you were signed out once when this went live. That was the switch to signed cookies. Sign back in and everything is exactly where you left it. It will not happen again.
+**One thing you might notice:** if you linked Telegram or Discord, you were signed out once when this went live. That was the switch to signed cookies. Sign back in and everything is exactly where you left it. It is not expected to happen again.
 
 ## Your Inbox, Your Call: Bot DM Opt-Out
 
@@ -61,7 +61,6 @@ Three pages do most of the work on Tabletop Time: voting, finalizing and the org
 - **Voting** reads only what it needs, and only loads every slot and vote when quorum still has to be checked.
 - **The manage page** runs its permission check and data load at the same time instead of one after the other, and no longer loads fields it never shows.
 - **Smaller downloads.** Manage-page dialogs load their code only when you are about to open one. The FAQ page is now fully static. Background polling pauses when the tab is hidden.
-- **Closer to the data.** The hosted site's server functions now run in the same region as its database.
 
 If you leave a manage page open across a deploy and a dialog cannot load, you now get a clear "this page was updated" message with a Reload button, instead of a dialog that silently does nothing. Anything you typed elsewhere on the page is kept.
 
