@@ -45,15 +45,15 @@ function PlatformRow({ platform }: { platform: Platform }) {
         <div className="py-3 first:pt-0 last:pb-0">
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-sm font-medium text-slate-200">{label}</p>
-                    <p className="text-xs text-slate-500">Linked on this browser</p>
+                    <p className="text-sm font-medium text-parchment">{label}</p>
+                    <p className="text-xs text-mist">Linked on this browser</p>
                 </div>
                 {!confirming && (
                     <button
                         type="button"
                         onClick={() => { setMsg(null); setConfirming(true); }}
                         disabled={pending}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-rose-300 border border-rose-900/60 rounded-lg hover:bg-rose-950/40 hover:border-rose-800 disabled:opacity-50 transition-colors"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-no border border-no rounded-control hover:bg-no-bg disabled:opacity-50 transition-colors"
                     >
                         <Link2Off className="w-3.5 h-3.5" />
                         Unlink {label}
@@ -62,8 +62,8 @@ function PlatformRow({ platform }: { platform: Platform }) {
             </div>
 
             {confirming && (
-                <div className="mt-3 p-4 bg-amber-950/20 border border-amber-900/50 rounded-lg space-y-3">
-                    <p className="text-xs text-amber-200 leading-relaxed">
+                <div className="mt-3 p-4 bg-maybe-bg border border-maybe rounded-card space-y-3">
+                    <p className="text-xs text-parchment-2 leading-relaxed">
                         This removes your {label} identity from every event you voted on or manage,
                         deletes any pending login links, and signs this browser out of {label} sync.
                         You will lose {label} magic-link recovery for events you manage: if this
@@ -76,7 +76,7 @@ function PlatformRow({ platform }: { platform: Platform }) {
                             type="button"
                             onClick={handleConfirm}
                             disabled={pending}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-600 disabled:opacity-50 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-on-no bg-no hover:bg-no/90 disabled:opacity-50 rounded-control transition-colors"
                         >
                             {pending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Link2Off className="w-3.5 h-3.5" />}
                             Yes, unlink {label}
@@ -85,7 +85,7 @@ function PlatformRow({ platform }: { platform: Platform }) {
                             type="button"
                             onClick={() => setConfirming(false)}
                             disabled={pending}
-                            className="px-3 py-1.5 text-xs font-medium text-slate-300 border border-slate-700 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium text-parchment border border-line-strong rounded-control hover:bg-surface-2 disabled:opacity-50 transition-colors"
                         >
                             Cancel
                         </button>
@@ -94,7 +94,7 @@ function PlatformRow({ platform }: { platform: Platform }) {
             )}
 
             {msg && (
-                <p className={`text-xs mt-2 ${msg.type === 'success' ? 'text-green-400' : 'text-amber-400'}`}>
+                <p className={`text-xs mt-2 ${msg.type === 'success' ? 'text-yes' : 'text-maybe'}`}>
                     {msg.text}
                 </p>
             )}
@@ -112,21 +112,21 @@ function PlatformRow({ platform }: { platform: Platform }) {
  */
 export function LinkedAccountsPanel({ isTelegramSynced, isDiscordSynced }: { isTelegramSynced?: boolean; isDiscordSynced?: boolean }) {
     return (
-        <div className="pt-8 border-t border-slate-800">
-            <h3 className="text-lg font-medium text-slate-200 mb-1 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-slate-400" />
+        <div className="pt-8 border-t border-line">
+            <h3 className="text-lg font-medium text-parchment mb-1 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-gold-bright" />
                 Linked Accounts
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-mist mb-4">
                 Unlinking removes that platform&apos;s identity from all of your Tabletop Time data.
             </p>
             {(isTelegramSynced || isDiscordSynced) ? (
-                <div className="bg-slate-900 border border-slate-700 rounded-xl px-6 py-3 divide-y divide-slate-800">
+                <div className="bg-surface border border-line rounded-card px-6 py-3 divide-y divide-line">
                     {isTelegramSynced && <PlatformRow platform="telegram" />}
                     {isDiscordSynced && <PlatformRow platform="discord" />}
                 </div>
             ) : (
-                <div className="text-center py-8 px-6 text-sm text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                <div className="text-center py-8 px-6 text-sm text-mist border border-dashed border-line rounded-card">
                     No platforms are linked on this browser. Connect Telegram or Discord from your
                     profile page first, then manage or delete that data here.
                 </div>

@@ -23,7 +23,7 @@ import { setAdminCookie } from "@/features/auth/server/actions";
 // Basic wrapper to support useSearchParams without de-opting static generation where unnecessary
 export default function NewEventPage() {
     return (
-        <Suspense fallback={<Loader2 className="animate-spin text-white" />}>
+        <Suspense fallback={<Loader2 className="animate-spin text-parchment" />}>
             <NewEventForm />
         </Suspense>
     );
@@ -137,45 +137,45 @@ function NewEventForm() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
-            <div className="max-w-3xl mx-auto">
-                <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
+            <div className="max-w-4xl mx-auto">
+                <h1 className="text-3xl font-bold mb-8 font-display text-parchment">
                     Create New Event
                 </h1>
 
-                <form onSubmit={handleSubmit} className="space-y-8">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Event Type Selector */}
-                    <div className="space-y-3">
-                        <label className="font-semibold text-slate-200">Event Type</label>
+                    <div className="space-y-3 lg:col-span-2">
+                        <label className="font-semibold text-parchment">Event Type</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* One-Shot Card */}
                             <button
                                 type="button"
                                 onClick={() => setEventType("ONE_SHOT")}
-                                className={`text-left p-4 rounded-lg border-2 transition-all bg-slate-900 ${
+                                className={`text-left p-4 rounded-card border transition-colors bg-surface ${
                                     eventType === "ONE_SHOT"
-                                        ? "border-indigo-500 ring-1 ring-indigo-500/40"
-                                        : "border-slate-700 hover:border-slate-500"
+                                        ? "border-gold bg-surface-2"
+                                        : "border-line-strong hover:bg-surface-2"
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
-                                        <p className={`font-semibold text-sm ${eventType === "ONE_SHOT" ? "text-indigo-400" : "text-slate-200"}`}>
+                                        <p className={`font-semibold text-sm ${eventType === "ONE_SHOT" ? "text-gold-bright" : "text-parchment"}`}>
                                             One-Shot Session
                                         </p>
-                                        <p className="text-xs text-slate-400 mt-1">
+                                        <p className="text-xs text-mist mt-1">
                                             A single session scheduled from your candidate dates
                                         </p>
                                     </div>
                                     <div className="relative flex-shrink-0 mt-0.5">
                                         <Info
                                             size={15}
-                                            className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                                            className="text-mist hover:text-parchment cursor-pointer transition-colors"
                                             onMouseEnter={() => setShowOneShotTooltip(true)}
                                             onMouseLeave={() => setShowOneShotTooltip(false)}
                                         />
                                         {showOneShotTooltip && (
-                                            <div className="absolute right-0 top-6 z-10 w-56 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
+                                            <div className="absolute right-0 top-6 z-10 w-56 rounded-control border border-line-strong bg-surface-2 px-3 py-2 text-xs text-parchment-2 shadow-modal">
                                                 Best for one-time events, conventions, or trying a new game with a group
                                             </div>
                                         )}
@@ -187,30 +187,30 @@ function NewEventForm() {
                             <button
                                 type="button"
                                 onClick={() => setEventType("CAMPAIGN")}
-                                className={`text-left p-4 rounded-lg border-2 transition-all bg-slate-900 ${
+                                className={`text-left p-4 rounded-card border transition-colors bg-surface ${
                                     eventType === "CAMPAIGN"
-                                        ? "border-indigo-500 ring-1 ring-indigo-500/40"
-                                        : "border-slate-700 hover:border-slate-500"
+                                        ? "border-gold bg-surface-2"
+                                        : "border-line-strong hover:bg-surface-2"
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
-                                        <p className={`font-semibold text-sm ${eventType === "CAMPAIGN" ? "text-indigo-400" : "text-slate-200"}`}>
+                                        <p className={`font-semibold text-sm ${eventType === "CAMPAIGN" ? "text-gold-bright" : "text-parchment"}`}>
                                             Campaign / Series
                                         </p>
-                                        <p className="text-xs text-slate-400 mt-1">
+                                        <p className="text-xs text-mist mt-1">
                                             Schedule multiple sessions for an ongoing campaign or game night series
                                         </p>
                                     </div>
                                     <div className="relative flex-shrink-0 mt-0.5">
                                         <Info
                                             size={15}
-                                            className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                                            className="text-mist hover:text-parchment cursor-pointer transition-colors"
                                             onMouseEnter={() => setShowCampaignTooltip(true)}
                                             onMouseLeave={() => setShowCampaignTooltip(false)}
                                         />
                                         {showCampaignTooltip && (
-                                            <div className="absolute right-0 top-6 z-10 w-64 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
+                                            <div className="absolute right-0 top-6 z-10 w-64 rounded-control border border-line-strong bg-surface-2 px-3 py-2 text-xs text-parchment-2 shadow-modal">
                                                 Best for D&amp;D campaigns, ongoing board game series, or recurring game nights where you need to lock in multiple sessions
                                             </div>
                                         )}
@@ -223,29 +223,29 @@ function NewEventForm() {
                         {eventType === "CAMPAIGN" && (
                             <div className="flex flex-col gap-2 pt-1">
                                 <div className="flex items-center gap-2">
-                                    <label className="font-semibold text-slate-200 text-sm">Minimum Sessions</label>
+                                    <label className="font-semibold text-parchment text-sm">Minimum Sessions</label>
                                     <div className="relative">
                                         <Info
                                             size={14}
-                                            className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                                            className="text-mist hover:text-parchment cursor-pointer transition-colors"
                                             onMouseEnter={() => setShowMinSessionsTooltip(true)}
                                             onMouseLeave={() => setShowMinSessionsTooltip(false)}
                                         />
                                         {showMinSessionsTooltip && (
-                                            <div className="absolute left-0 top-5 z-10 w-72 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-slate-300 shadow-lg">
+                                            <div className="absolute left-0 top-5 z-10 w-72 rounded-control border border-line-strong bg-surface-2 px-3 py-2 text-xs text-parchment-2 shadow-modal">
                                                 You&apos;ll see a warning during finalization if you haven&apos;t selected enough dates. This is only a guide, so it won&apos;t block you.
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                                <p className="text-xs text-slate-400">
+                                <p className="text-xs text-mist">
                                     The minimum number of sessions you&apos;re trying to schedule for this campaign
                                 </p>
                                 <input
                                     type="number"
                                     min="1"
                                     max="52"
-                                    className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full md:w-40 text-base"
+                                    className="field px-4 py-3 w-full md:w-40 text-base"
                                     value={minSessions}
                                     onChange={(e) => setMinSessions(parseInt(e.target.value) || 1)}
                                 />
@@ -255,24 +255,24 @@ function NewEventForm() {
 
                     <div className="space-y-4">
                         <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-slate-200">Event Title</label>
+                            <label className="font-semibold text-parchment">Event Title</label>
                             <input
                                 data-testid="event-title-input"
                                 type="text"
                                 required
                                 placeholder="e.g. Campaign Session 42"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600 text-base"
+                                className="field px-4 py-3 text-base"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                             />
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="font-semibold text-slate-200">Description (Optional)</label>
+                            <label className="font-semibold text-parchment">Description (Optional)</label>
                             <textarea
                                 data-testid="event-description-input"
                                 placeholder="What are we playing? Any prep needed?"
-                                className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all min-h-[100px] placeholder:text-slate-600 text-base"
+                                className="field px-4 py-3 min-h-[100px] text-base"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                             />
@@ -280,29 +280,29 @@ function NewEventForm() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex flex-col gap-2">
-                                <label className="font-semibold text-slate-200">Minimum Players</label>
-                                <p className="text-xs text-slate-400">Lowest number of players required for this event</p>
+                                <label className="font-semibold text-parchment">Minimum Players</label>
+                                <p className="text-xs text-mist">Lowest number of players required for this event</p>
                                 <input
                                     data-testid="min-players-input"
                                     type="number"
                                     min="2"
                                     max="100"
-                                    className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full text-base"
+                                    className="field px-4 py-3 w-full text-base"
                                     value={minPlayers}
                                     onChange={(e) => setMinPlayers(parseInt(e.target.value))}
                                 />
                             </div>
 
                             <div className="flex flex-col gap-2">
-                                <label className="font-semibold text-slate-200">Maximum Players (Optional)</label>
-                                <p className="text-xs text-slate-400">Limit the event size (e.g. for a 5-player one-shot)</p>
+                                <label className="font-semibold text-parchment">Maximum Players (Optional)</label>
+                                <p className="text-xs text-mist">Limit the event size (e.g. for a 5-player one-shot)</p>
                                 <input
                                     data-testid="max-players-input"
                                     type="number"
                                     min={minPlayers}
                                     max="100"
                                     placeholder="Unimited"
-                                    className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full placeholder:text-slate-600 text-base"
+                                    className="field px-4 py-3 w-full text-base"
                                     value={maxPlayers || ""}
                                     onChange={(e) => {
                                         const val = parseInt(e.target.value);
@@ -316,18 +316,18 @@ function NewEventForm() {
                     <div className="space-y-4">
                         <TimeSlotPicker value={slots} onChange={setSlots} />
                         {eventType === "CAMPAIGN" && (
-                            <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-xs text-mist mt-1">
                                 Add all candidate dates, and players will vote on each one
                             </p>
                         )}
                     </div>
 
-                    <div className="pt-6 border-t border-slate-800">
+                    <div className="pt-6 border-t border-line lg:col-span-2">
                         <button
                             data-testid="create-event-button"
                             type="submit"
                             disabled={loading || slots.length === 0 || success}
-                            className="w-full py-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="btn-primary w-full py-4 font-bold text-lg"
                         >
                             {loading ? <Loader2 className="animate-spin" /> : success ? "Redirecting..." : "Create Event & Get Link"}
                         </button>
