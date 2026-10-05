@@ -79,6 +79,19 @@ const finalizedEvent = {
     finalizedSlotId: 3,
 };
 
+// What the after() task reads when it runs: the event as it is then.
+const freshEvent = (over: Record<string, unknown> = {}) => ({
+    ...finalizedEvent,
+    status: 'FINALIZED',
+    description: null,
+    finalizedHost: null,
+    location: 'Old Place',
+    timezone: 'UTC',
+    finalizedSessions: [{ timeSlot: { id: 3, startTime: createdAt, endTime: createdAt } }],
+    participants: [{ name: 'Dee', status: 'ACCEPTED' }],
+    ...over,
+});
+
 const eventMeta = { id: 1, status: 'DRAFT', maxPlayers: 4, minPlayers: 1, title: 'Game Night', eventType: 'ONE_SHOT', minSessions: null, timezone: 'UTC' };
 
 function oneShotRequest(fields: Record<string, string> = { slotId: '3' }) {
@@ -101,7 +114,7 @@ describe('POST /api/event/[slug]/finalize', () => {
         process.env.TELEGRAM_BOT_TOKEN = 'tg-token';
         process.env.DISCORD_BOT_TOKEN = 'dc-token';
         // First read: event metadata; second read (inside the transaction): the finalized event.
-        mockPrisma.event.findUnique.mockResolvedValueOnce(eventMeta).mockResolvedValueOnce(finalizedEvent);
+        mockPrisma.event.findUnique.mockResolvedValueOnce(eventMeta).mockResolvedValueOnce(finalizedEvent).mockResolvedValue(freshEvent());
         mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockPrisma.timeSlot.findFirst.mockResolvedValue({ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt });
         mockPrisma.vote.findMany.mockResolvedValue([discordOnlyVote]);
@@ -129,6 +142,35 @@ describe('POST /api/event/[slug]/finalize', () => {
         expect(discord.deleteDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
         expect(discord.pinDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
         expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', discordMessageId: 'old-msg' }, data: { discordMessageId: 'new-msg' } });
+    });
+
+    it('builds the group message from the event as it is when the announcement runs', async () => {
+        realMessages.on = true;
+        try {
+            await POST(oneShotRequest(), params);
+            // The admin edits the location after the response, before the after() task runs.
+            mockPrisma.event.findUnique.mockResolvedValue(freshEvent({ location: 'New Place' }));
+            await flushAfter();
+
+            expect((telegram.sendTelegramMessage as any).mock.calls[0][1]).toContain('New Place');
+            expect((telegram.sendTelegramMessage as any).mock.calls[0][1]).not.toContain('Old Place');
+        } finally {
+            realMessages.on = false;
+        }
+    });
+
+    it.each([
+        ['deleted', null],
+        ['cancelled', { status: 'CANCELLED' }],
+    ])('posts nothing when the event was %s before the announcement runs', async (_n, change) => {
+        await POST(oneShotRequest(), params);
+        mockPrisma.event.findUnique.mockResolvedValue(change ? freshEvent(change) : null);
+        await flushAfter();
+
+        expect(telegram.sendTelegramMessage).not.toHaveBeenCalled();
+        expect(discord.sendDiscordMessage).not.toHaveBeenCalled();
+        expect(telegram.deleteMessage).not.toHaveBeenCalled();
+        expect(discord.deleteDiscordMessage).not.toHaveBeenCalled();
     });
 
     it('guard holds: swaps the stored ids and removes nothing extra', async () => {
@@ -293,7 +335,8 @@ describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
         (verifyEventAdmin as any).mockResolvedValue(true);
         process.env.TELEGRAM_BOT_TOKEN = 'tg-token';
         process.env.DISCORD_BOT_TOKEN = 'dc-token';
-        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, title: hostile }).mockResolvedValueOnce(event);
+        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, title: hostile }).mockResolvedValueOnce(event)
+            .mockResolvedValue(freshEvent({ ...event, status: 'FINALIZED', participants: [{ name: hostile, status: 'ACCEPTED' }] }));
         mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockPrisma.timeSlot.findFirst.mockResolvedValue({ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt });
         mockPrisma.vote.findMany.mockResolvedValue([hostileVote]);
@@ -379,7 +422,8 @@ describe('POST /api/event/[slug]/finalize (campaign)', () => {
         vi.resetAllMocks();
         afterQueue.length = 0;
         (verifyEventAdmin as any).mockResolvedValue(true);
-        mockPrisma.event.findUnique.mockResolvedValueOnce(campaignMeta).mockResolvedValueOnce({ ...finalizedEvent, finalizedSlotId: null });
+        mockPrisma.event.findUnique.mockResolvedValueOnce(campaignMeta).mockResolvedValueOnce({ ...finalizedEvent, finalizedSlotId: null })
+            .mockResolvedValue(freshEvent({ finalizedSlotId: null }));
         mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockPrisma.vote.findMany.mockResolvedValue([discordOnlyVote]);
         mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
