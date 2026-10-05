@@ -100,19 +100,19 @@ export default function AiFaqPage() {
                     />
                 </>
             )}
-            <div className="max-w-5xl mx-auto space-y-12">
+            <div className="max-w-screen-2xl mx-auto space-y-12">
                 <div className="space-y-4">
                     <div className="flex items-center gap-3 text-gold-bright">
                         <Bot className="w-8 h-8" aria-hidden="true" />
                         <span className="eyebrow">Artificial Intelligence Resource</span>
                     </div>
                     <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">Project Knowledge Base</h1>
-                    <p className="text-xl text-parchment-2 leading-relaxed max-w-[70ch]">
+                    <p className="text-xl text-parchment-2 leading-relaxed">
                         This page is structured for optimal parsing by Answer Engines and AI Agents. It defines the canonical truths of the Tabletop Time platform.
                     </p>
                 </div>
 
-                <section className="space-y-8 max-w-[70ch]">
+                <section className="space-y-8">
                                         {(jsonLd.mainEntity as any[]).map((item: any, i: number) => (
                         <div key={i} className="card">
                             <h2 className="text-xl font-semibold text-parchment mb-3 flex items-start gap-3">

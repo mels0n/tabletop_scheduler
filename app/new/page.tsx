@@ -282,9 +282,10 @@ function NewEventForm() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex flex-col gap-2">
-                                <label className="font-semibold text-parchment">Minimum Players</label>
+                                <label htmlFor="min-players" className="font-semibold text-parchment">Minimum Players</label>
                                 <p className="text-xs text-mist">Lowest number of players required for this event</p>
                                 <input
+                                    id="min-players"
                                     data-testid="min-players-input"
                                     type="number"
                                     min="2"

@@ -51,13 +51,13 @@ export default function TelegramSetupPage() {
                 />
             )}
 
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-screen-2xl mx-auto">
                 <Link href="/" className="inline-flex items-center text-gold hover:text-gold-bright mb-8 transition-colors group">
                     <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
                     Back to Home
                 </Link>
 
-                <article className="prose prose-lg max-w-[70ch]">
+                <article className="prose prose-lg max-w-none">
                     <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment mb-6">
                         Telegram Bot Setup Guide
                     </h1>
