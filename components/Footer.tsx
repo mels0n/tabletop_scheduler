@@ -12,30 +12,30 @@ export function Footer() {
     const isHosted = publicConfig.isHosted;
 
     return (
-        <footer className="border-t border-slate-800 bg-slate-950/50 mt-auto">
-            <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-6 text-sm text-slate-500">
+        <footer className="border-t border-line bg-ink mt-auto">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 flex flex-col items-center gap-6 text-sm text-mist">
 
                 {/* Navigation Links */}
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-                    <Link href="/features" className="hover:text-indigo-400 transition-colors">
+                    <Link href="/features" className="hover:text-gold-bright transition-colors">
                         Features
                     </Link>
-                    <Link href="/how-it-works" className="hover:text-indigo-400 transition-colors">
+                    <Link href="/how-it-works" className="hover:text-gold-bright transition-colors">
                         How it Works
                     </Link>
 
                     {isHosted && (
                         <>
-                            <Link href="/pricing" className="hover:text-indigo-400 transition-colors">
+                            <Link href="/pricing" className="hover:text-gold-bright transition-colors">
                                 Pricing
                             </Link>
-                            <Link href="/about" className="hover:text-indigo-400 transition-colors">
+                            <Link href="/about" className="hover:text-gold-bright transition-colors">
                                 About
                             </Link>
-                            <Link href="/blog" className="hover:text-indigo-400 transition-colors">
+                            <Link href="/blog" className="hover:text-gold-bright transition-colors">
                                 Blog
                             </Link>
-                            <Link href="/developers" className="hover:text-indigo-400 transition-colors">
+                            <Link href="/developers" className="hover:text-gold-bright transition-colors">
                                 Developers
                             </Link>
                         </>
@@ -43,15 +43,15 @@ export function Footer() {
 
 
 
-                    <Link href="/faq" className="hover:text-indigo-400 transition-colors">
+                    <Link href="/faq" className="hover:text-gold-bright transition-colors">
                         FAQ
                     </Link>
-                    <Link href="/privacy" className="hover:text-indigo-400 transition-colors">
+                    <Link href="/privacy" className="hover:text-gold-bright transition-colors">
                         Privacy
                     </Link>
 
                     {isHosted && (
-                        <Link href="/legal" className="hover:text-indigo-400 transition-colors">
+                        <Link href="/legal" className="hover:text-gold-bright transition-colors">
                             Legal
                         </Link>
                     )}
@@ -60,7 +60,7 @@ export function Footer() {
                         href="https://github.com/mels0n/tabletop_scheduler"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:text-slate-200 transition-colors"
+                        className="flex items-center gap-1 hover:text-parchment transition-colors"
                         aria-label="GitHub Repository"
                     >
                         <GithubIcon className="w-4 h-4" />
@@ -72,7 +72,7 @@ export function Footer() {
                             href="https://ko-fi.com/N4N11VDWCU"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 hover:text-slate-200 transition-colors"
+                            className="flex items-center gap-1 hover:text-parchment transition-colors"
                             aria-label="Support on Ko-fi"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -91,7 +91,7 @@ export function Footer() {
                 <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center gap-1 text-center">
                         {isHosted ? (
-                            <span>&copy; {new Date().getFullYear()} <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer author me" className="hover:text-indigo-400 transition-colors">Christopher Melson</a>. All rights reserved.</span>
+                            <span>&copy; {new Date().getFullYear()} <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer author me" className="hover:text-gold-bright transition-colors">Christopher Melson</a>. All rights reserved.</span>
                         ) : (
                             <span>&copy; {new Date().getFullYear()} Tabletop Time</span>
                         )}
