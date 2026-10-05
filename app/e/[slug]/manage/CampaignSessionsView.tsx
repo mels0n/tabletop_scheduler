@@ -181,11 +181,11 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                         key={i}
                         className={`rounded-card border overflow-hidden transition-all duration-150 ${
                             group.noVotes
-                                ? 'border-line bg-surface opacity-40'
+                                ? 'border-line border-dashed bg-surface'
                                 : isActive
                                     ? 'border-gold bg-surface ring-1 ring-gold'
                                     : isDimmed
-                                        ? 'border-line bg-surface opacity-40'
+                                        ? 'border-line border-dashed bg-surface'
                                         : 'border-line-strong bg-surface hover:border-gold cursor-pointer'
                         }`}
                     >
@@ -215,20 +215,20 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                             </div>
                             <div className="flex items-center gap-2 shrink-0 pt-0.5">
                                 {isActive && (
-                                    <span className="text-[10px] font-bold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    <span className="text-xs font-bold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded uppercase tracking-wider">
                                         Selecting
                                     </span>
                                 )}
                                 {!group.noVotes && !isActive && (group.meetsQuorum
-                                    ? <span className="text-[10px] font-bold text-yes bg-yes-bg border border-yes px-1.5 py-0.5 rounded uppercase tracking-wider">Quorum</span>
-                                    : <span className="text-[10px] font-bold text-mist bg-surface-2 border border-line-strong px-1.5 py-0.5 rounded uppercase tracking-wider">Low T/O</span>
+                                    ? <span className="text-xs font-bold text-yes bg-yes-bg border border-yes px-1.5 py-0.5 rounded uppercase tracking-wider">Quorum</span>
+                                    : <span className="text-xs font-bold text-mist bg-surface-2 border border-line-strong px-1.5 py-0.5 rounded uppercase tracking-wider">Low T/O</span>
                                 )}
                                 <span className="text-xs text-mist tabular-nums">
                                     {group.noVotes ? '' : `${group.attendees.length}/${minPlayers} · `}
                                     {isActive ? `${checkedSlots.length} of ${group.slots.length} dates` : `${group.slots.length} date${group.slots.length !== 1 ? 's' : ''}`}
                                 </span>
                                 {!group.noVotes && !isActive && (
-                                    <span className="text-[10px] font-semibold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded ml-1 transition-colors">
+                                    <span className="text-xs font-semibold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded ml-1 transition-colors">
                                         Select →
                                     </span>
                                 )}
@@ -265,7 +265,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                     <div
                                         key={slot.id}
                                         className={`px-4 py-2 transition-colors ${
-                                            isActive && !isChecked ? 'opacity-40' : ''
+                                            isActive && !isChecked ? 'text-mist' : ''
                                         }`}
                                     >
                                         {/* Row 1: checkbox (if active) + date/time + core players + badges */}
@@ -304,15 +304,15 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                             </div>
                                             {/* Per-date badges */}
                                             {slot.hasHost
-                                                ? <span className="text-[10px] font-bold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Host ✓</span>
-                                                : <span className="text-[10px] font-bold text-maybe bg-maybe-bg border border-maybe px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">No Host</span>
+                                                ? <span className="text-xs font-bold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Host ✓</span>
+                                                : <span className="text-xs font-bold text-maybe bg-maybe-bg border border-maybe px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">No Host</span>
                                             }
                                         </div>
 
                                         {/* Row 2: extra players available this date only — click to add */}
                                         {extraVoters.length > 0 && (
                                             <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-                                                <span className="text-[10px] text-mist mr-0.5 shrink-0">also free:</span>
+                                                <span className="text-xs text-mist mr-0.5 shrink-0">also free:</span>
                                                 {extraVoters.map(v => {
                                                     const isOn = addedIds.includes(v.participantId);
                                                     return (
@@ -326,7 +326,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                                                     ? v.preference === 'YES'
                                                                         ? 'bg-yes-bg border-yes text-yes'
                                                                         : 'bg-maybe-bg border-maybe text-maybe'
-                                                                    : 'opacity-35 border-line-strong text-mist hover:opacity-60 hover:border-gold'
+                                                                    : 'border-dashed border-line-strong text-mist hover:border-gold hover:text-parchment'
                                                             }`}
                                                         >
                                                             {isOn ? '' : '+'}{v.participant.name}

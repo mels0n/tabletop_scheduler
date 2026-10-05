@@ -277,7 +277,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                         className="rounded-control border-line-strong bg-field text-gold focus:ring-gold/50"
                                     />
                                     <span className={clsx(
-                                        "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-control border flex items-center gap-1",
+                                        "text-xs uppercase font-bold tracking-wide px-2 py-0.5 rounded-control border flex items-center gap-1",
                                         linkTelegram
                                             ? "bg-yes-bg text-yes border-yes"
                                             : "bg-surface-2 text-mist border-line-strong"
@@ -296,7 +296,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                         className="rounded-control border-line-strong bg-field text-gold focus:ring-gold/50"
                                     />
                                     <span className={clsx(
-                                        "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-control border flex items-center gap-1",
+                                        "text-xs uppercase font-bold tracking-wide px-2 py-0.5 rounded-control border flex items-center gap-1",
                                         linkDiscord
                                             ? "bg-yes-bg text-yes border-yes"
                                             : "bg-surface-2 text-mist border-line-strong"
@@ -406,7 +406,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-[10px] text-mist px-1">
+                        <div className="flex items-center gap-2 text-xs text-mist px-1">
                             <Loader2 className="w-3 h-3" aria-hidden="true" />
                             <span>Prioritization applies at Finalization. Confirmed spots are locked.</span>
                         </div>
@@ -421,7 +421,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                 <div key={slot.id} className={clsx(
                                     "relative p-4 rounded-card border transition-colors",
                                     myVote === 'YES' ? "bg-yes-bg border-yes" :
-                                        myVote === 'NO' ? "bg-surface border-line opacity-60" :
+                                        myVote === 'NO' ? "bg-no-bg border-no border-dashed" :
                                             myVote === 'MAYBE' ? "bg-maybe-bg border-maybe" :
                                                 "bg-surface border-line"
                                 )}>
@@ -566,7 +566,7 @@ function VoteButton({ active, onClick, color, icon, label, title }: any) {
             title={title || label}
         >
             {icon}
-            <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
+            <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
         </button>
     );
 }

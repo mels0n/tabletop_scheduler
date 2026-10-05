@@ -33,7 +33,7 @@ interface ServerEvent {
  */
 function ManagerBadge() {
     return (
-        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-gold-bright rounded-control border border-line-strong flex items-center gap-1">
+        <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-gold-bright rounded-control border border-line-strong flex items-center gap-1">
             <span data-dot className="w-1.5 h-1.5 rounded-full bg-gold" />
             Manager
         </span>
@@ -58,7 +58,7 @@ function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram
             onClick={onClick}
             target={newTab ? "_blank" : undefined}
             rel={newTab ? "noopener noreferrer" : undefined}
-            className={`text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent text-mist rounded-control border border-dashed border-line-strong flex items-center gap-1 cursor-pointer transition-colors ${hoverClass}`}
+            className={`text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent text-mist rounded-control border border-dashed border-line-strong flex items-center gap-1 cursor-pointer transition-colors ${hoverClass}`}
         >
             <span data-dot className="w-1.5 h-1.5 rounded-full border border-mist" />
             Connect {platform === 'telegram' ? 'Telegram' : 'Discord'}
@@ -113,7 +113,7 @@ function HeaderSyncPill({ platform, onResult }: { platform: 'telegram' | 'discor
             {open && (
                 <LinkPopover onClose={() => setOpen(false)}>
                     <PopoverItem label="Disconnect this browser" onClick={handleDisconnect} />
-                    <p className="px-3 pb-2 text-[10px] leading-snug text-mist">
+                    <p className="px-3 pb-2 text-xs leading-snug text-mist">
                         Signs this browser out of {label} sync. Your events and votes are kept, and you can reconnect anytime.
                     </p>
                     <Link
@@ -148,7 +148,7 @@ function NotLinkedBadge({ platform, disabled, hint, onClick }: { platform: 'tele
             tabIndex={disabled ? undefined : 0}
             onClick={disabled ? undefined : onClick}
             title={disabled ? hint : undefined}
-            className={`text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent rounded-control border border-dashed flex items-center gap-1 transition-colors ${disabled ? 'text-mist border-line opacity-60 cursor-not-allowed' : `text-mist border-line-strong cursor-pointer ${hoverClass}`}`}
+            className={`text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent rounded-control border border-dashed flex items-center gap-1 transition-colors ${disabled ? 'text-mist border-line opacity-60 cursor-not-allowed' : `text-mist border-line-strong cursor-pointer ${hoverClass}`}`}
         >
             <span data-dot className="w-1.5 h-1.5 rounded-full border border-mist" />
             {platform === 'telegram' ? 'Telegram' : 'Discord'} Not Linked
@@ -283,7 +283,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
                     <h3 className="font-semibold text-lg group-hover:text-gold-bright transition-colors flex items-center gap-2">
                         {event.title}
                         {event.status === 'CANCELLED' && (
-                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-no-bg text-no rounded-control border border-no">
+                            <span className="text-xs uppercase font-bold px-2 py-0.5 bg-no-bg text-no rounded-control border border-no">
                                 Cancelled
                             </span>
                         )}

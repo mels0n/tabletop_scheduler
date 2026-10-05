@@ -437,8 +437,8 @@ export function FinalizedEventView({ event, finalizedSlot, participants, serverP
                             </h3>
                             <ul className="space-y-3">
                                 {waitlistDetails.map((p: any) => (
-                                    <li key={p.id} className="flex items-center gap-3 opacity-60">
-                                        <div className="size-7 shrink-0 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-maybe">
+                                    <li key={p.id} className="flex items-center gap-3">
+                                        <div className="size-7 shrink-0 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-dashed border-maybe">
                                             {p.name.substring(0, 2).toUpperCase()}
                                         </div>
                                         <div>

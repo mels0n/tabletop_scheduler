@@ -152,7 +152,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 {expanded && (
                     <div className="mt-1 p-3 bg-surface rounded-control border border-line space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-semibold text-mist uppercase tracking-widest">Manager Recovery</p>
+                            <p className="text-xs font-semibold text-mist uppercase tracking-widest">Manager Recovery</p>
                             <button
                                 onClick={() => { setHasChannel(false); setStep('initial'); setExpanded(false); }}
                                 className="text-xs text-mist hover:text-parchment-2 transition-colors"
@@ -276,7 +276,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                                 </button>
                             </div>
                         )}
-                        <p className="text-[10px] text-mist">
+                        <p className="text-xs text-mist">
                             Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-gold-bright hover:underline">Re-invite it</a>.
                         </p>
                     </div>
