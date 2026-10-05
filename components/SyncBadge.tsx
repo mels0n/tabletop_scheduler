@@ -12,8 +12,8 @@ interface SyncBadgeProps {
 export function SyncBadge({ variant }: SyncBadgeProps) {
     if (variant === 'telegram') {
         return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-green-900/40 text-green-400 rounded-full border border-green-800 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-telegram rounded-control border border-telegram flex items-center gap-1">
+                <span data-dot className="w-1.5 h-1.5 rounded-full bg-telegram" />
                 Telegram Synced
             </span>
         );
@@ -21,16 +21,16 @@ export function SyncBadge({ variant }: SyncBadgeProps) {
 
     if (variant === 'discord') {
         return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-[#5865F2]/20 text-[#5865F2] rounded-full border border-[#5865F2]/50 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2] animate-pulse" />
+            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-discord rounded-control border border-discord flex items-center gap-1">
+                <span data-dot className="w-1.5 h-1.5 rounded-full bg-discord" />
                 Discord Synced
             </span>
         );
     }
 
     return (
-        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-mist rounded-control border border-line flex items-center gap-1">
+            <span data-dot className="w-1.5 h-1.5 rounded-full bg-mist" />
             This Device Only
         </span>
     );
