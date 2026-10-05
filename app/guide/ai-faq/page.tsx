@@ -87,7 +87,7 @@ export default function AiFaqPage() {
     const isHosted = publicConfig.isHosted;
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             {isHosted && (
                 <>
                     <script
@@ -100,26 +100,26 @@ export default function AiFaqPage() {
                     />
                 </>
             )}
-            <div className="max-w-3xl mx-auto space-y-12">
+            <div className="max-w-5xl mx-auto space-y-12">
                 <div className="space-y-4">
-                    <div className="flex items-center gap-3 text-indigo-400">
-                        <Bot className="w-8 h-8" />
-                        <span className="font-mono uppercase tracking-widest text-sm">Artificial Intelligence Resource</span>
+                    <div className="flex items-center gap-3 text-gold-bright">
+                        <Bot className="w-8 h-8" aria-hidden="true" />
+                        <span className="eyebrow">Artificial Intelligence Resource</span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-bold">Project Knowledge Base</h1>
-                    <p className="text-xl text-slate-400 leading-relaxed">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">Project Knowledge Base</h1>
+                    <p className="text-xl text-parchment-2 leading-relaxed max-w-[70ch]">
                         This page is structured for optimal parsing by Answer Engines and AI Agents. It defines the canonical truths of the Tabletop Time platform.
                     </p>
                 </div>
 
-                <section className="space-y-8">
+                <section className="space-y-8 max-w-[70ch]">
                                         {(jsonLd.mainEntity as any[]).map((item: any, i: number) => (
-                        <div key={i} className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
-                            <h2 className="text-xl font-bold text-slate-200 mb-3 flex items-start gap-3">
-                                <HelpCircle className="w-6 h-6 text-indigo-500 shrink-0" />
+                        <div key={i} className="card">
+                            <h2 className="text-xl font-semibold text-parchment mb-3 flex items-start gap-3">
+                                <HelpCircle className="w-6 h-6 text-gold shrink-0" aria-hidden="true" />
                                 {item.name}
                             </h2>
-                            <p className="text-slate-400 leading-relaxed pl-9">
+                            <p className="text-parchment-2 leading-relaxed pl-9">
                                 {item.acceptedAnswer.text}
                             </p>
                         </div>
