@@ -39,7 +39,7 @@ export async function refreshDiscordDashboard(
     const channelId = event.discordChannelId;
     const oldMessageId = event.discordMessageId;
     if (!channelId || !token) return;
-    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage, unpinDiscordMessage } = await import("@/features/integrations/discord/model/discord");
+    const { sendDiscordMessage, editDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } = await import("@/features/integrations/discord/model/discord");
     const content = htmlToDiscordMarkdown(html);
 
     if (oldMessageId) {
@@ -53,7 +53,16 @@ export async function refreshDiscordDashboard(
             await bestEffort(() => unpinDiscordMessage(channelId, oldMessageId, token));
         }
         await pinDiscordMessage(channelId, res.id, token);
-        await prisma.event.update({ where: { id: eventId }, data: { discordMessageId: res.id } });
+        // Guarded swap: if another writer (e.g. a finalize announcement) moved the id meanwhile, theirs wins.
+        const { count } = await prisma.event.updateMany({
+            where: { id: eventId, discordMessageId: oldMessageId },
+            data: { discordMessageId: res.id },
+        });
+        if (count === 0) {
+            log.warn("Discord dashboard id changed during repost; removing the stray message", { eventId });
+            await bestEffort(() => unpinDiscordMessage(channelId, res.id!, token));
+            await bestEffort(() => deleteDiscordMessage(channelId, res.id!, token));
+        }
     }
 }
 
@@ -72,7 +81,7 @@ export async function refreshTelegramDashboard(
     const chatId = event.telegramChatId;
     const oldMessageId = event.pinnedMessageId;
     if (!chatId || !token) return;
-    const { sendTelegramMessage, editMessageText, pinChatMessage, unpinChatMessage } = await import("@/features/telegram");
+    const { sendTelegramMessage, editMessageText, pinChatMessage, unpinChatMessage, deleteMessage } = await import("@/features/telegram");
 
     if (oldMessageId) {
         const edit = await editMessageText(chatId, oldMessageId, html, token);
@@ -85,7 +94,16 @@ export async function refreshTelegramDashboard(
             await bestEffort(() => unpinChatMessage(chatId, oldMessageId, token));
         }
         await pinChatMessage(chatId, newMsgId, token);
-        await prisma.event.update({ where: { id: eventId }, data: { pinnedMessageId: newMsgId } });
+        // Guarded swap: if another writer (e.g. a finalize announcement) moved the id meanwhile, theirs wins.
+        const { count } = await prisma.event.updateMany({
+            where: { id: eventId, pinnedMessageId: oldMessageId },
+            data: { pinnedMessageId: newMsgId },
+        });
+        if (count === 0) {
+            log.warn("Telegram dashboard id changed during repost; removing the stray message", { eventId });
+            await bestEffort(() => unpinChatMessage(chatId, newMsgId, token));
+            await bestEffort(() => deleteMessage(chatId, newMsgId, token));
+        }
     }
 }
 
