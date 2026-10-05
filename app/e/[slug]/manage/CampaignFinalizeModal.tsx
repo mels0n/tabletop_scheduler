@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { DialogBackdrop, reloadOnStaleChunk } from './dialogChunk';
 import { Calendar } from 'lucide-react';
 import type { Slot } from './CampaignFinalizeDialog';
 
@@ -12,9 +13,9 @@ interface CampaignFinalizeModalProps {
 }
 
 // Intent: load the dialog body on demand; prefetch it when the trigger is hovered or focused.
-const loadDialog = () => import('./CampaignFinalizeDialog').then(m => m.CampaignFinalizeDialog);
-const CampaignFinalizeDialog = dynamic(loadDialog, { ssr: false });
-const preload = () => { void loadDialog(); };
+const importDialog = () => import('./CampaignFinalizeDialog').then(m => m.CampaignFinalizeDialog);
+const CampaignFinalizeDialog = dynamic(() => reloadOnStaleChunk(importDialog()), { ssr: false, loading: () => <DialogBackdrop /> });
+const preload = () => { importDialog().catch(() => {}); };
 
 export function CampaignFinalizeModal({ slug, minSessions, slots }: CampaignFinalizeModalProps) {
     const [isOpen, setIsOpen] = useState(false);

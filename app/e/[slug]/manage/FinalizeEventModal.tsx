@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { DialogBackdrop, reloadOnStaleChunk } from './dialogChunk';
 
 interface Participant {
     id: number;
@@ -17,9 +18,9 @@ interface FinalizeEventModalProps {
 
 // Intent: the dialog body is only needed once the manager opens it, so it lives in
 // its own chunk, loaded on demand and prefetched when the trigger is hovered or focused.
-const loadDialog = () => import('./FinalizeEventDialog').then(m => m.FinalizeEventDialog);
-const FinalizeEventDialog = dynamic(loadDialog, { ssr: false });
-const preload = () => { void loadDialog(); };
+const importDialog = () => import('./FinalizeEventDialog').then(m => m.FinalizeEventDialog);
+const FinalizeEventDialog = dynamic(() => reloadOnStaleChunk(importDialog()), { ssr: false, loading: () => <DialogBackdrop /> });
+const preload = () => { importDialog().catch(() => {}); };
 
 /**
  * @component FinalizeEventModal

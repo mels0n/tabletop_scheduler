@@ -16,12 +16,15 @@ describe('EditLocationModal: dialog body loads on demand', () => {
 
         const input = await screen.findByPlaceholderText('e.g. 123 Main St');
         expect((input as HTMLInputElement).value).toBe('Old Place');
+        expect(document.activeElement).toBe(input);
         fireEvent.change(input, { target: { value: 'New Place' } });
 
         fireEvent.click(screen.getByText('Cancel'));
         expect(screen.queryByPlaceholderText('e.g. 123 Main St')).toBeNull();
 
         fireEvent.click(screen.getByTitle('Edit Location'));
-        expect((await screen.findByPlaceholderText('e.g. 123 Main St') as HTMLInputElement).value).toBe('New Place');
+        const reopened = await screen.findByPlaceholderText('e.g. 123 Main St') as HTMLInputElement;
+        expect(reopened.value).toBe('New Place');
+        expect(document.activeElement).toBe(reopened);
     });
 });

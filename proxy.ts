@@ -16,7 +16,7 @@ const IDENTITY_PAIRS = [
 
 /**
  * @function proxy
- * @description Request proxy that tags every request with a correlation id, enforces
+ * @description Request proxy that tags every matched page request with a correlation id, enforces
  * administrative access, and implements Sliding Sessions.
  *
  * Request ids: the incoming `x-request-id` is reused when well formed, otherwise a UUID is
