@@ -5,20 +5,17 @@ import Logger from "@/shared/lib/logger";
 import { cookies } from "next/headers";
 import { getBaseUrl } from "@/shared/lib/url";
 import { escapeDiscordMarkdown } from "@/shared/lib/escape";
-import { hashToken } from "@/shared/lib/token";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 
 import {
     getDiscordUser,
     sendDiscordMessage,
     pinDiscordMessage,
-    getGuildChannels,
-    createDMChannel
+    getGuildChannels
 } from "@/features/integrations/discord/model/discord";
 import { dmManagerLink, recoverManagerLink } from "@/features/event-management/server/recovery";
 import { generateStatusMessage } from "@/shared/lib/status";
-import { readIdentity, verifyValue } from "@/shared/lib/session";
+import { verifyValue } from "@/shared/lib/session";
 import { AppError, ForbiddenError, ValidationError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
 import { guildCookieName, guildGrantPurpose, isDiscordSnowflake } from "@/features/integrations/discord/model/oauth-state";
@@ -202,149 +199,11 @@ export async function listDiscordChannels(slug: string, guildId: string): Promis
  * Admin only: sends a Magic Link to the manager via Discord DM.
  *
  * Thin alias of the platform-neutral `dmManagerLink` (recovery.ts), kept for the
- * Discord UI. The link goes to every platform the manager has linked.
+ * Discord UI. The link goes only to the manager's Discord DMs.
  *
  * @param {string} slug - The event slug.
  */
 export async function dmDiscordManagerLink(slug: string) {
-    // Delegates to the platform-neutral sender: DMs every linked platform.
-    return dmManagerLink(slug);
-}
-
-
-
-/**
- * Generates a global magic link for Discord users to access "My Events".
- * @param username The Discord username (or handle) to link.
- */
-export async function sendDiscordMagicLogin(username: string): Promise<{ success: boolean; message?: string; error?: string; deepLink?: string }> {
-    // Validate first: a non-string or oversized value must not reach the string handling below.
-    if (!handleParam.safeParse(username).success) return { success: false, error: "Invalid username" };
-    username = username.replace('@', '').trim();
-    const botToken = getServerConfig().discord.botToken ?? undefined;
-
-    if (!botToken) return { success: false, error: "Server Configuration Error: Discord Token missing" };
-    if (!username) return { success: false, error: "Please enter a username" };
-
-    const normalizedUsername = username.toLowerCase().replace('@', '');
-
-    let targetDiscordId: string | null = null;
-    let targetDiscordUsername: string | null = null;
-
-    try {
-        const cookieStore = await cookies();
-        // Signed identity only: a raw cookie value would let anyone aim the DM at any ID.
-        const cookieDiscordId = readIdentity(cookieStore).discordId;
-
-        // 1. Fast-path: Prioritize the verified Discord ID from the session cookie
-        if (cookieDiscordId) {
-            // Check if they are a participant
-            const participantById = await prisma.participant.findFirst({
-                where: { discordId: cookieDiscordId },
-                select: { discordId: true, discordUsername: true }
-            });
-            if (participantById) {
-                targetDiscordId = participantById.discordId;
-                targetDiscordUsername = participantById.discordUsername;
-            } else {
-                // Check if they are an event manager
-                const managerById = await prisma.event.findFirst({
-                    where: { managerDiscordId: cookieDiscordId },
-                    select: { managerDiscordId: true, managerDiscordUsername: true }
-                });
-                if (managerById) {
-                    targetDiscordId = managerById.managerDiscordId;
-                    targetDiscordUsername = managerById.managerDiscordUsername;
-                }
-            }
-        }
-
-        // 2. Fallback: Find User by Username (if cookie ID didn't yield a match)
-        // Security: EXACT match only. Substring matching (`contains`, and matching against
-        // the free-text display name) let a stranger typing a fragment trigger a bot DM to
-        // whichever user happened to match — unsolicited contact under Discord's Developer
-        // Policy. Exact compare happens in JS because Prisma's case-insensitive mode isn't
-        // portable across our sqlite/postgres dual targets; linked rows are few (24h purge).
-        if (!targetDiscordId) {
-            const matchesInput = (stored: string | null) =>
-                !!stored && stored.toLowerCase().replace('@', '') === normalizedUsername;
-
-            const linkedParticipants = await prisma.participant.findMany({
-                where: { discordId: { not: null }, discordUsername: { not: null } },
-                select: { discordId: true, discordUsername: true }
-            });
-            const participantMatch = linkedParticipants.find(p => matchesInput(p.discordUsername));
-
-            if (participantMatch) {
-                targetDiscordId = participantMatch.discordId;
-                targetDiscordUsername = participantMatch.discordUsername;
-            } else {
-                const linkedManagers = await prisma.event.findMany({
-                    where: { managerDiscordId: { not: null }, managerDiscordUsername: { not: null } },
-                    select: { managerDiscordId: true, managerDiscordUsername: true }
-                });
-                const managerMatch = linkedManagers.find(e => matchesInput(e.managerDiscordUsername));
-
-                if (managerMatch) {
-                    targetDiscordId = managerMatch.managerDiscordId;
-                    targetDiscordUsername = managerMatch.managerDiscordUsername;
-                }
-            }
-        }
-
-        // 3. If no user found after all attempts
-        if (!targetDiscordId) {
-            return { success: false, error: "We couldn't find a record for this username. Have you voted on an event using the 'Log in with Discord' button before?" };
-        }
-
-        // 3b. Cooldown: one unexpired link per minute per Discord account, so the form
-        // can't be scripted into a DM-spam vector against a known username.
-        const recentToken = await prisma.loginToken.findFirst({
-            where: {
-                discordId: targetDiscordId,
-                createdAt: { gt: new Date(Date.now() - 60_000) }
-            }
-        });
-        if (recentToken) {
-            return { success: false, error: "A login link was just sent to this account. Please wait a minute before requesting another." };
-        }
-
-        // 4. Generate Token
-        const rawToken = randomUUID();
-        const tokenHash = hashToken(rawToken);
-
-        const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 15); // Valid for 15 minutes
-
-        await prisma.loginToken.create({
-            data: {
-                token: tokenHash,
-                discordId: targetDiscordId,
-                discordUsername: targetDiscordUsername || username, // Use found username or original input
-                expiresAt
-            }
-        });
-
-        const baseUrl = getBaseUrl();
-        const magicLink = `${baseUrl}/auth/login?token=${rawToken}`;
-
-        // 5. Create DM & Send
-        const channel = await createDMChannel(targetDiscordId, botToken);
-        if (channel.error || !channel.id) {
-            return { success: false, error: "Could not open a DM. Please check your privacy settings or ensure the bot is not blocked." };
-        }
-
-        const msg = `🔐 **Magic Login**\n\nClick here to access **My Events**:\n${magicLink}\n\n(Valid for 15 minutes)`;
-        const sent = await sendDiscordMessage(channel.id, msg, botToken);
-
-        if (sent.error) {
-            return { success: false, error: "Failed to send DM. Check privacy settings." };
-        }
-
-        return { success: true, message: "Link sent! Check your Discord DMs." };
-
-    } catch (e) {
-        log.error("Discord Magic Link Error", e as Error);
-        return { success: false, error: "Internal Server Error" };
-    }
+    // Delegates to the platform-neutral sender, limited to the Discord DM.
+    return dmManagerLink(slug, "discord");
 }
