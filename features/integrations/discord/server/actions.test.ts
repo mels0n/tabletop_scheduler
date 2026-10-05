@@ -203,7 +203,7 @@ describe('recoverDiscordManagerLink', () => {
         expect(result).toEqual({ success: true });
         expect(mockRecoverManagerLink).toHaveBeenCalledTimes(1);
         // The public path re-matches the typed handle; the admin-only dmManagerLink is not used.
-        expect(mockRecoverManagerLink).toHaveBeenCalledWith('abc', input.replace('@', '').trim());
+        expect(mockRecoverManagerLink).toHaveBeenCalledWith('abc', input.replace('@', '').trim(), 'discord');
         expect(mockGetUser).not.toHaveBeenCalled();
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
     });
@@ -219,7 +219,7 @@ describe('recoverDiscordManagerLink', () => {
         expect(result).toEqual({ success: true });
         expect(mockGetUser).toHaveBeenCalledWith('123456789012345678', 'test-bot-token');
         expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 7 }, data: { managerDiscordUsername: 'NewName' } });
-        expect(mockRecoverManagerLink).toHaveBeenCalledWith('abc', 'newname');
+        expect(mockRecoverManagerLink).toHaveBeenCalledWith('abc', 'newname', 'discord');
         expect(mockPrisma.event.update.mock.invocationCallOrder[0]).toBeLessThan(mockRecoverManagerLink.mock.invocationCallOrder[0]);
     });
 

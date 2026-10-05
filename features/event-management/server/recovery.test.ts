@@ -57,6 +57,15 @@ const discordOnlyEvent = {
     managerDiscordUsername: 'GmSteve',
 };
 
+// Both platforms linked, with the same handle on each, so a recovery call without a tab
+// (a page loaded before tabs were passed) matches and DMs both.
+const bothEvent = {
+    ...discordOnlyEvent,
+    managerTelegram: '@steve',
+    managerChatId: '555',
+    managerDiscordUsername: 'Steve',
+};
+
 describe('manager recovery (platform-neutral, login-token based)', () => {
     beforeEach(() => {
         vi.resetAllMocks();
@@ -74,7 +83,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         mockAdmin.mockResolvedValue(false);
         mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
 
-        expect(await dmManagerLink('abc')).toMatchObject({ code: 'forbidden', error: expect.any(String) });
+        expect(await dmManagerLink('abc', 'discord')).toMatchObject({ code: 'forbidden', error: expect.any(String) });
         expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
         expect(mockSend).not.toHaveBeenCalled();
     });
@@ -95,7 +104,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
     it('DMs a Discord-only manager a /auth/login link and never rotates the admin token', async () => {
         mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
 
-        const res = await dmManagerLink('abc');
+        const res = await dmManagerLink('abc', 'discord');
 
         expect(res).toMatchObject({ success: true });
         expect(mockSend).toHaveBeenCalledWith(
@@ -112,7 +121,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
         const before = Date.now();
 
-        await dmManagerLink('abc');
+        await dmManagerLink('abc', 'discord');
 
         const data = mockPrisma.loginToken.create.mock.calls[0][0].data;
         expect(data).toMatchObject({
@@ -130,12 +139,12 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
     });
 
     it('mints one token per platform so neither DM can log in as the other identity', async () => {
-        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
+        mockPrisma.event.findUnique.mockResolvedValue(bothEvent);
         mockSend
             .mockResolvedValueOnce({ telegram: sent, discord: skipped })
             .mockResolvedValueOnce({ telegram: skipped, discord: sent });
 
-        const res = await dmManagerLink('abc');
+        const res = await recoverManagerLink('abc', 'steve');
 
         expect(res).toMatchObject({ success: true, message: expect.stringContaining('Telegram and Discord') });
         expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(2);
@@ -146,10 +155,10 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
 
         // Telegram DM: Telegram-only token.
         expect(tgCall[0]).toEqual({ telegramChatId: '555', discordUserId: null });
-        expect(tgRow).toMatchObject({ chatId: '555', telegramUsername: 'steve_tg', discordId: null, discordUsername: null });
+        expect(tgRow).toMatchObject({ chatId: '555', telegramUsername: 'steve', discordId: null, discordUsername: null });
         // Discord DM: Discord-only token.
         expect(dcCall[0]).toEqual({ telegramChatId: null, discordUserId: '123456789012345678' });
-        expect(dcRow).toMatchObject({ chatId: null, telegramUsername: null, discordId: '123456789012345678', discordUsername: 'GmSteve' });
+        expect(dcRow).toMatchObject({ chatId: null, telegramUsername: null, discordId: '123456789012345678', discordUsername: 'Steve' });
 
         // Each DM carries a different raw token.
         const tokenOf = (html: string) => html.match(/token=([0-9a-f-]+)/)![1];
@@ -159,7 +168,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
     it('escapes the event title in the HTML DM', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, title: '<a href="https://evil">x</a>' });
 
-        await dmManagerLink('abc');
+        await dmManagerLink('abc', 'discord');
 
         const html = mockSend.mock.calls[0][1].html as string;
         expect(html).not.toContain('<a href="https://evil">');
@@ -187,14 +196,12 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
     });
 
     it('sends to both platforms when the manager linked both, reporting partial delivery', async () => {
-        mockPrisma.event.findUnique.mockResolvedValue({
-            ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555',
-        });
+        mockPrisma.event.findUnique.mockResolvedValue(bothEvent);
         mockSend
             .mockResolvedValueOnce({ telegram: { status: 'failed', error: 'blocked' }, discord: skipped })
             .mockResolvedValueOnce({ telegram: skipped, discord: sent });
 
-        const res = await dmManagerLink('abc');
+        const res = await recoverManagerLink('abc', 'steve');
 
         expect(mockSend).toHaveBeenNthCalledWith(1, { telegramChatId: '555', discordUserId: null }, expect.anything(), expect.anything(), { respectOptOut: false });
         expect(mockSend).toHaveBeenNthCalledWith(2, { telegramChatId: null, discordUserId: '123456789012345678' }, expect.anything(), expect.anything(), { respectOptOut: false });
@@ -235,7 +242,41 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(mockPrisma.event.findUnique).not.toHaveBeenCalled();
     });
 
-    it('recoverManagerLink sends only to the platform whose handle matched', async () => {
+    it('dmManagerLink(slug, telegram) errors when only Discord is linked', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
+
+        expect(await dmManagerLink('abc', 'telegram')).toEqual({ error: 'No linked manager to notify' });
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+    });
+
+    // Catches: ignoring the tab (a handle shared by both platforms would DM both), or swapping
+    // the Telegram and Discord branches.
+    it.each([
+        ['telegram', { telegramChatId: '555', discordUserId: null }, { chatId: '555' }, 'Telegram'],
+        ['discord', { telegramChatId: null, discordUserId: '123456789012345678' }, { discordId: '123456789012345678' }, 'Discord'],
+    ] as const)('recoverManagerLink on the %s tab DMs only that platform, even when the handle matches both', async (tab, recipient, identity, name) => {
+        mockPrisma.event.findUnique.mockResolvedValue(bothEvent);
+        mockSend.mockResolvedValue(tab === 'telegram' ? { telegram: sent, discord: skipped } : { telegram: skipped, discord: sent });
+
+        const res = await recoverManagerLink('abc', 'steve', tab);
+
+        expect(res).toMatchObject({ success: true, message: `Login link sent to your ${name} DMs!` });
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual(recipient);
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
+        expect(mockPrisma.loginToken.findFirst.mock.calls[0][0].where.OR).toEqual([identity]);
+    });
+
+    it('recoverManagerLink on a tab only matches that platform handle', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
+
+        // The Discord username typed on the Telegram tab does not match.
+        expect(await recoverManagerLink('abc', 'gmsteve', 'telegram')).toEqual({ error: 'Handle does not match our records.' });
+        expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('recoverManagerLink without a tab DMs only the platform whose handle matched', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
         mockSend.mockResolvedValue({ telegram: sent, discord: skipped });
 
@@ -246,11 +287,32 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: '555', discordUserId: null });
     });
 
+    // Catches: falling back to the other platform's account, which may belong to someone else.
+    it.each([
+        ['telegram', 'steve_tg', { managerTelegram: '@steve_tg', managerChatId: null }, 'Telegram', 'Discord'],
+        ['discord', 'gmsteve', { managerTelegram: '@steve_tg', managerChatId: '555', managerDiscordId: null }, 'Discord', 'Telegram'],
+    ] as const)('recoverManagerLink on the %s tab refuses when that account is not registered, pointing to the other', async (tab, handle, overrides, name, other) => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, ...overrides });
+
+        const res = await recoverManagerLink('abc', handle, tab);
+
+        expect(res).toEqual({
+            error: `Handle matched, but that ${name} account is not registered for login links yet. Try the ${other} option instead.`,
+        });
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
+    });
+
+    it('recoverManagerLink rejects an unknown tab before any lookup', async () => {
+        expect(await recoverManagerLink('abc', 'steve', 'email' as never)).toHaveProperty('error');
+        expect(mockPrisma.event.findUnique).not.toHaveBeenCalled();
+    });
+
     it('reports an error when no platform delivered', async () => {
         mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
         mockSend.mockResolvedValue({ telegram: skipped, discord: { status: 'failed', error: 'blocked' } });
 
-        const res = await dmManagerLink('abc');
+        const res = await dmManagerLink('abc', 'discord');
 
         expect(res).toHaveProperty('error');
     });
@@ -260,7 +322,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
             ...discordOnlyEvent, managerDiscordId: null, managerDiscordUsername: null,
         });
 
-        expect(await dmManagerLink('abc')).toEqual({ error: 'No linked manager to notify' });
+        expect(await dmManagerLink('abc', 'discord')).toEqual({ error: 'No linked manager to notify' });
         expect(mockPrisma.event.update).not.toHaveBeenCalled();
         expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
         expect(mockSend).not.toHaveBeenCalled();
@@ -271,17 +333,17 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
             mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
             mockPrisma.loginToken.findFirst.mockResolvedValue({ token: 'x'.repeat(64) });
 
-            expect(await dmManagerLink('abc')).toMatchObject({ code: 'rate_limited' });
+            expect(await dmManagerLink('abc', 'discord')).toMatchObject({ code: 'rate_limited' });
             expect(await recoverManagerLink('abc', 'gmsteve')).toMatchObject({ code: 'rate_limited' });
             expect(mockPrisma.loginToken.create).not.toHaveBeenCalled();
             expect(mockSend).not.toHaveBeenCalled();
         });
 
         it('queries by the manager identity (chat id or discord id) within the last 60 s', async () => {
-            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerChatId: '555', managerTelegram: 'steve_tg' });
+            mockPrisma.event.findUnique.mockResolvedValue(bothEvent);
             const before = Date.now();
 
-            expect(await dmManagerLink('abc')).toMatchObject({ success: true });
+            expect(await recoverManagerLink('abc', 'steve')).toMatchObject({ success: true });
 
             const where = mockPrisma.loginToken.findFirst.mock.calls[0][0].where;
             expect(where.OR).toEqual([{ chatId: '555' }, { discordId: '123456789012345678' }]);
@@ -291,11 +353,11 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         });
 
         it('closes the check-then-create race: refuses and deletes its tokens when another link landed in the window', async () => {
-            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerChatId: '555', managerTelegram: 'steve_tg' });
+            mockPrisma.event.findUnique.mockResolvedValue(bothEvent);
             // The pre-check saw nothing, but a concurrent request created a Discord token meanwhile.
             mockPrisma.loginToken.count.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
 
-            expect(await dmManagerLink('abc')).toMatchObject({ code: 'rate_limited' });
+            expect(await recoverManagerLink('abc', 'steve')).toMatchObject({ code: 'rate_limited' });
 
             expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(2);
             const hashes = mockPrisma.loginToken.create.mock.calls.map((c) => c[0].data.token);
@@ -304,10 +366,10 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         });
 
         it('counts tokens for each identity inside the cooldown window after creating', async () => {
-            mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerChatId: '555', managerTelegram: 'steve_tg' });
+            mockPrisma.event.findUnique.mockResolvedValue(bothEvent);
             mockSend.mockResolvedValue({ telegram: sent, discord: sent });
 
-            expect(await dmManagerLink('abc')).toMatchObject({ success: true });
+            expect(await recoverManagerLink('abc', 'steve')).toMatchObject({ success: true });
 
             const wheres = mockPrisma.loginToken.count.mock.calls.map((c) => c[0].where);
             expect(wheres[0]).toMatchObject({ chatId: '555' });
@@ -320,7 +382,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         it('only includes the platforms the manager linked', async () => {
             mockPrisma.event.findUnique.mockResolvedValue(discordOnlyEvent);
 
-            await dmManagerLink('abc');
+            await dmManagerLink('abc', 'discord');
 
             expect(mockPrisma.loginToken.findFirst.mock.calls[0][0].where.OR).toEqual([{ discordId: '123456789012345678' }]);
         });

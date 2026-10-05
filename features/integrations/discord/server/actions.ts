@@ -61,8 +61,8 @@ export async function recoverDiscordManagerLink(slug: string, username: string) 
 
     if (storedName === inputName) {
         // The public path: re-matches the typed handle against the stored manager and DMs
-        // only that identity. dmManagerLink is admin only and would refuse this caller.
-        return await recoverManagerLink(slug, username);
+        // only that Discord identity. dmManagerLink is admin only and would refuse this caller.
+        return await recoverManagerLink(slug, username, "discord");
     }
 
     log.warn("Manager Discord recovery failed: Username mismatch", { slug, input: username, stored: storedName });
