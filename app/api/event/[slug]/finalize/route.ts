@@ -234,7 +234,6 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         const detailsLink = origin ? `\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
         const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-        const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === slot.id)!;
         const { sendDirectMessage } = await import("@/features/notifications");
         const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
         const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
@@ -243,7 +242,10 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
         runAfterResponse(async () => {
             try {
-                await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
+                await announceFinalized(finalizedEvent.id, slug, (fresh) => {
+                    const freshSlot = fresh.timeSlots.find((s) => s.id === fresh.finalizedSlotId);
+                    return freshSlot ? buildFinalizedMessage(fresh, freshSlot, origin, fresh.acceptedNames, fresh.waitlistNames) : null;
+                });
                 await Promise.all([
                     ...acceptedParticipants.map(p => sendDirectMessage(
                         { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
@@ -461,7 +463,10 @@ async function handleCampaignFinalize(
     // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
     runAfterResponse(async () => {
         try {
-            await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
+            await announceFinalized(finalizedEvent.id, slug, (fresh) => {
+                const sessions = fresh.finalizedSessions.map((fs) => fs.timeSlot).sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+                return sessions.length ? buildCampaignFinalizedMessage(fresh, sessions, origin, fresh.acceptedNames, fresh.waitlistNames) : null;
+            });
             await Promise.all([
                 ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
                     { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
@@ -500,14 +505,51 @@ async function bestEffort(fn: () => Promise<unknown>): Promise<void> {
 }
 
 /**
+ * Reads the event as it is now, with everything the group message needs. The announcement
+ * runs after the response, so the admin may have edited the location or roster since the
+ * finalize transaction; the pinned post must reflect that, not the transaction's snapshot.
+ */
+async function loadAnnouncementEvent(eventId: number) {
+    const event = await prisma.event.findUnique({
+        where: { id: eventId },
+        include: {
+            timeSlots: true,
+            finalizedHost: true,
+            finalizedSessions: { include: { timeSlot: true } },
+            participants: { where: { status: { in: ["ACCEPTED", "WAITLIST"] } }, orderBy: { id: "asc" }, select: { name: true, status: true } },
+        },
+    });
+    if (!event) return null;
+    return {
+        ...event,
+        acceptedNames: event.participants.filter((p) => p.status === "ACCEPTED").map((p) => p.name),
+        waitlistNames: event.participants.filter((p) => p.status === "WAITLIST").map((p) => p.name),
+    };
+}
+
+type AnnouncementEvent = NonNullable<Awaited<ReturnType<typeof loadAnnouncementEvent>>>;
+
+/**
  * Replaces the event's pinned status message on each linked platform with the finalized
- * announcement. Telegram and Discord are independent: each runs in its own try/catch so
+ * announcement, built from a fresh read of the event. Skipped when the event is gone or no
+ * longer FINALIZED. Telegram and Discord are independent: each runs in its own try/catch so
  * a failure (or absence) on one never blocks the other.
  */
 async function announceFinalized(
-    event: { id: number; slug: string; telegramChatId: string | null; pinnedMessageId: number | null; discordChannelId: string | null; discordMessageId: string | null },
-    htmlMsg: string
+    eventId: number,
+    slug: string,
+    buildMessage: (fresh: AnnouncementEvent) => string | null
 ) {
+    const event = await loadAnnouncementEvent(eventId);
+    if (!event || event.status !== "FINALIZED") {
+        log.info("Skipping finalize announcement: event is gone or no longer finalized", { slug });
+        return;
+    }
+    const htmlMsg = buildMessage(event);
+    if (!htmlMsg) {
+        log.warn("Skipping finalize announcement: no message could be built", { slug });
+        return;
+    }
     const telegramToken = getServerConfig().telegram.token ?? undefined;
     if (event.telegramChatId && telegramToken) {
         try {
@@ -525,13 +567,13 @@ async function announceFinalized(
                     data: { pinnedMessageId: msgId },
                 });
                 if (count === 0) {
-                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Telegram message", { slug: event.slug });
+                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Telegram message", { slug });
                     await bestEffort(() => unpinChatMessage(event.telegramChatId!, msgId, telegramToken));
                     await bestEffort(() => deleteMessage(event.telegramChatId!, msgId, telegramToken));
                 }
             }
         } catch (e) {
-            log.warn("Telegram finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+            log.warn("Telegram finalize announcement failed", { slug, error: (e as Error)?.message });
         }
     }
 
@@ -553,7 +595,7 @@ async function announceFinalized(
                     data: { discordMessageId: res.id },
                 });
                 if (count === 0) {
-                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Discord message", { slug: event.slug });
+                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Discord message", { slug });
                     await bestEffort(() => unpinDiscordMessage(event.discordChannelId!, res.id!, discordToken));
                     await bestEffort(() => deleteDiscordMessage(event.discordChannelId!, res.id!, discordToken));
                 }
@@ -561,7 +603,7 @@ async function announceFinalized(
                 log.warn("Failed to send Discord finalize message", { error: res.error });
             }
         } catch (e) {
-            log.warn("Discord finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+            log.warn("Discord finalize announcement failed", { slug, error: (e as Error)?.message });
         }
     }
 }
