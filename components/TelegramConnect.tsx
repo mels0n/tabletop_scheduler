@@ -43,7 +43,8 @@ export function TelegramConnect({
         if (!isPolling) return;
         if (hasChatId && hasManagerChatId) return;
 
-        const interval = setInterval(async () => {
+        async function checkOnce(): Promise<void> {
+            if (document.visibilityState === "hidden") return;
             try {
                 if (!hasChatId) {
                     const status = await checkEventStatus(slug);
@@ -62,9 +63,17 @@ export function TelegramConnect({
                     }
                 }
             } catch { /* polling is best-effort; retry on next tick */ }
-        }, 3000);
+        }
 
-        return () => clearInterval(interval);
+        const interval = setInterval(checkOnce, 3000);
+        // A hidden tab skips its ticks; check right away when it comes back.
+        const onVisibility = () => { void checkOnce(); };
+        document.addEventListener("visibilitychange", onVisibility);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener("visibilitychange", onVisibility);
+        };
     }, [isPolling, hasChatId, hasManagerChatId, slug, router]);
 
     const handleSaveLink = async () => {

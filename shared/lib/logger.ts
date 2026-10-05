@@ -94,8 +94,9 @@ class Logger {
     }
 
     /**
-     * Child logger tagged with the request's id: the `x-request-id` header set by the proxy
-     * (or by an upstream load balancer), or a freshly minted UUID when there is none.
+     * Child logger tagged with the request's id: the `x-request-id` header when present (the
+     * proxy tags page requests; an upstream load balancer may too), otherwise route handlers
+     * mint or reuse their own id through `resolveRequestId`.
      */
     static fromRequest(req: Request, context: string = 'App'): Logger {
         return new Logger(context).withRequestId(resolveRequestId(req?.headers));
