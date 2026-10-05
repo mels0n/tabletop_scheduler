@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { TriangleAlert } from "lucide-react";
 
 /**
  * @component GlobalError
@@ -37,12 +38,12 @@ export default function GlobalError({
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center p-6">
-            <div className="max-w-md w-full bg-slate-900 border border-slate-700 rounded-2xl p-8 space-y-6 text-center">
-                <div className="text-5xl">⚠️</div>
+        <div className="min-h-screen bg-ink text-parchment flex items-center justify-center p-6">
+            <div className="max-w-md w-full bg-surface border border-line rounded-card p-8 space-y-6 text-center">
+                <TriangleAlert className="w-12 h-12 mx-auto text-maybe" aria-hidden="true" />
                 <div className="space-y-2">
-                    <h1 className="text-xl font-bold text-slate-100">Something went wrong</h1>
-                    <p className="text-slate-400 text-sm">
+                    <h1 className="text-xl font-bold text-parchment">Something went wrong</h1>
+                    <p className="text-mist text-sm">
                         This is usually caused by a stale session. Clearing your session
                         and reloading should fix it.
                     </p>
@@ -51,20 +52,20 @@ export default function GlobalError({
                 <div className="flex flex-col gap-3">
                     <button
                         onClick={handleClearAndReload}
-                        className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-colors"
+                        className="btn-primary w-full text-sm"
                     >
                         Clear Session &amp; Reload
                     </button>
                     <button
                         onClick={reset}
-                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm transition-colors"
+                        className="btn-secondary w-full py-2 text-sm font-normal"
                     >
                         Try Again Without Clearing
                     </button>
                 </div>
 
                 {process.env.NODE_ENV === "development" && error?.message && (
-                    <p className="text-xs text-red-400 font-mono bg-red-950/30 p-3 rounded text-left break-all">
+                    <p className="text-xs text-no font-mono bg-no-bg p-3 rounded-control text-left break-all">
                         {error.message}
                     </p>
                 )}

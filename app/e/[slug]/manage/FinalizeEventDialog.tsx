@@ -70,13 +70,13 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                    <h3 className="font-semibold text-slate-100">Finalize Event</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/85 animate-in fade-in duration-200">
+            <div className="bg-surface border border-line rounded-card w-full max-w-md shadow-modal overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-4 border-b border-line flex justify-between items-center bg-surface">
+                    <h3 className="font-semibold text-parchment">Finalize Event</h3>
                     <button
                         onClick={() => onClose()}
-                        className="text-slate-400 hover:text-slate-200 p-1 rounded-full hover:bg-slate-800 transition-colors"
+                        className="text-mist hover:text-parchment p-1 rounded-control hover:bg-surface-2 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -85,8 +85,8 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                                <User className="w-4 h-4 text-indigo-400" />
+                            <label className="text-sm font-medium text-parchment-2 flex items-center gap-2">
+                                <User className="w-4 h-4 text-gold-bright" />
                                 Who is hosting?
                             </label>
 
@@ -95,9 +95,9 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                                     {potentialHosts.map(host => (
                                         <label
                                             key={host.id}
-                                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedHostId === host.id.toString()
-                                                ? 'bg-indigo-600/20 border-indigo-500 text-slate-100'
-                                                : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
+                                            className={`flex items-center gap-3 p-3 rounded-control border cursor-pointer transition-all ${selectedHostId === host.id.toString()
+                                                ? 'bg-surface-2 border-gold text-parchment'
+                                                : 'bg-field border-line-strong text-mist hover:border-gold'
                                                 }`}
                                         >
                                             <input
@@ -108,15 +108,15 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                                                 onChange={(e) => setSelectedHostId(e.target.value)}
                                                 className="hidden"
                                             />
-                                            {selectedHostId === host.id.toString() && <Check className="w-4 h-4 text-indigo-400" />}
+                                            {selectedHostId === host.id.toString() && <Check className="w-4 h-4 text-gold-bright" />}
                                             <span className="font-medium">{host.name}</span>
                                         </label>
                                     ))}
                                     {potentialHosts.length === 0 && (
                                         <label
-                                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedHostId === ''
-                                                ? 'bg-indigo-600/20 border-indigo-500 text-slate-100'
-                                                : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:border-slate-600'
+                                            className={`flex items-center gap-3 p-3 rounded-control border cursor-pointer transition-all ${selectedHostId === ''
+                                                ? 'bg-surface-2 border-gold text-parchment'
+                                                : 'bg-field border-line-strong text-mist hover:border-gold'
                                                 }`}
                                         >
                                             <input
@@ -127,21 +127,21 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                                                 onChange={() => setSelectedHostId('')}
                                                 className="hidden"
                                             />
-                                            {selectedHostId === '' && <Check className="w-4 h-4 text-indigo-400" />}
+                                            {selectedHostId === '' && <Check className="w-4 h-4 text-gold-bright" />}
                                             <span className="font-medium">No one / TBD</span>
                                         </label>
                                     )}
                                 </div>
                             ) : (
-                                <div className="p-3 bg-yellow-900/20 border border-yellow-800 rounded-lg text-yellow-500 text-sm">
+                                <div className="p-3 bg-maybe-bg border border-maybe rounded-control text-maybe text-sm">
                                     No participants marked &quot;I can host&quot; for this slot.
                                 </div>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-indigo-400" />
+                            <label className="text-sm font-medium text-parchment-2 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-gold-bright" />
                                 Location / Address
                             </label>
                             <input
@@ -149,9 +149,9 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                                 value={address}
                                 onChange={(e) => setAddress(e.target.value)}
                                 placeholder="e.g. 123 Main St, Apt 4B"
-                                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                                className="field w-full"
                             />
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-mist">
                                 This will be sent to attendees and added to calendar invites.
                             </p>
                         </div>
@@ -161,7 +161,7 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                         <button
                             type="button"
                             onClick={() => onClose()}
-                            className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                            className="px-4 py-2 text-sm font-medium text-mist hover:text-parchment transition-colors"
                             disabled={isSubmitting}
                         >
                             Cancel
@@ -169,7 +169,7 @@ export function FinalizeEventDialog({ open, onClose, slug, slotId, potentialHost
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm shadow-lg shadow-indigo-900/20 transition-all flex items-center gap-2"
+                            className="px-6 py-2 bg-gold hover:bg-gold-bright text-on-gold rounded-control font-medium text-sm transition-all flex items-center gap-2"
                         >
                             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                             Confirm & Finalize

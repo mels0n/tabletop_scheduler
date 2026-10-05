@@ -12,7 +12,7 @@ interface DialogProps {
 /** Same full-screen backdrop the dialogs render, shown while their chunk is still loading. */
 export function DialogBackdrop({ children }: { children?: ReactNode }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/85 animate-in fade-in duration-200">
             {children}
         </div>
     );
@@ -24,21 +24,21 @@ function DialogLoadFailed({ onClose }: { onClose: () => void }) {
         <DialogBackdrop>
             <div
                 role="alert"
-                className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm shadow-2xl p-4 space-y-4 animate-in zoom-in-95 duration-200"
+                className="bg-surface border border-line rounded-card w-full max-w-sm shadow-modal p-4 space-y-4 animate-in zoom-in-95 duration-200"
             >
-                <p className="text-sm text-slate-200">This page was updated or your connection dropped.</p>
+                <p className="text-sm text-parchment">This page was updated or your connection dropped.</p>
                 <div className="flex justify-end gap-2">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium text-mist hover:text-parchment transition-colors"
                     >
                         Close
                     </button>
                     <button
                         type="button"
                         onClick={() => window.location.reload()}
-                        className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-xs shadow-lg shadow-indigo-900/20 transition-all"
+                        className="px-4 py-1.5 bg-gold hover:bg-gold-bright text-on-gold rounded-control font-medium text-xs transition-all"
                     >
                         Reload
                     </button>

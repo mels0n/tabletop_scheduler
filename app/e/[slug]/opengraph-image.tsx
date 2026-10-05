@@ -1,4 +1,6 @@
 import { ImageResponse } from 'next/og';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import prisma from "@/shared/lib/prisma";
 
 export const size = {
@@ -10,6 +12,19 @@ export const contentType = 'image/png';
 export const alt = 'Tabletop Time Event';
 export const revalidate = 86400; // Cache for 24 hours
 
+// Read the bundled fonts once per server instance; a failed read is retried on the next request.
+let fontsPromise: Promise<[Buffer, Buffer]> | undefined;
+function loadFonts() {
+    fontsPromise ??= Promise.all([
+        readFile(join(process.cwd(), 'app/_fonts/CormorantSC-Bold.ttf')),
+        readFile(join(process.cwd(), 'app/_fonts/Spectral-Regular.ttf')),
+    ]).catch((error) => {
+        fontsPromise = undefined;
+        throw error;
+    });
+    return fontsPromise;
+}
+
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const event = await prisma.event.findUnique({
@@ -19,6 +34,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
 
     const title = event?.title || 'Tabletop Event';
     const description = event?.description || 'Join this game session on Tabletop Time!';
+
+    const [cormorant, spectral] = await loadFonts();
 
     return new ImageResponse(
         (
@@ -30,45 +47,19 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#020617', // Slate-950
-                    fontFamily: 'sans-serif',
+                    backgroundColor: '#0F1626',
+                    fontFamily: 'Spectral',
                     padding: '40px',
                     textAlign: 'center',
                 }}
             >
-                {/* Background Gradients */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '-20%',
-                        left: '20%',
-                        width: '600px',
-                        height: '600px',
-                        background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(0,0,0,0) 70%)',
-                        filter: 'blur(40px)',
-                    }}
-                />
-                <div
-                    style={{
-                        position: 'absolute',
-                        bottom: '-20%',
-                        right: '20%',
-                        width: '600px',
-                        height: '600px',
-                        background: 'radial-gradient(circle, rgba(34, 211, 238, 0.15) 0%, rgba(0,0,0,0) 70%)',
-                        filter: 'blur(40px)',
-                    }}
-                />
-
                 {/* Brand Title Small */}
                 <div
                     style={{
                         display: 'flex',
-                        color: '#94a3b8', // Slate-400
+                        color: '#93A0BA',
                         fontSize: 24,
-                        fontWeight: 600,
                         marginBottom: '20px',
-                        zIndex: 10,
                     }}
                 >
                     Tabletop Time Event
@@ -78,28 +69,47 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                 <div
                     style={{
                         display: 'flex',
-                        background: 'linear-gradient(to right, #818cf8, #22d3ee)', // Indigo-400 to Cyan-400
-                        backgroundClip: 'text',
-                        color: 'transparent',
-                        fontSize: 72,
-                        fontWeight: 800,
-                        letterSpacing: '-0.025em',
-                        marginBottom: '30px',
-                        zIndex: 10,
+                        color: '#D4AF5A',
+                        fontFamily: 'Cormorant SC',
+                        fontSize: 80,
+                        fontWeight: 700,
+                        letterSpacing: '0.01em',
+                        marginBottom: '24px',
                         lineHeight: 1.1,
-                        textShadow: '0 0 40px rgba(129, 140, 248, 0.3)',
                     }}
                 >
                     {title}
                 </div>
 
+                {/* Ornament */}
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '28px',
+                    }}
+                >
+                    <div style={{ display: 'flex', width: '160px', height: '1px', backgroundColor: '#56709F' }} />
+                    <div
+                        style={{
+                            display: 'flex',
+                            width: '14px',
+                            height: '14px',
+                            margin: '0 20px',
+                            backgroundColor: '#D4AF5A',
+                            transform: 'rotate(45deg)',
+                        }}
+                    />
+                    <div style={{ display: 'flex', width: '160px', height: '1px', backgroundColor: '#56709F' }} />
+                </div>
+
                 {/* Description */}
                 <div
                     style={{
-                        color: '#cbd5e1', // Slate-300
+                        color: '#CFC6B2',
                         fontSize: 32,
                         maxWidth: '80%',
-                        zIndex: 10,
                         lineHeight: 1.4,
                     }}
                 >
@@ -109,6 +119,10 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         ),
         {
             ...size,
+            fonts: [
+                { name: 'Cormorant SC', data: cormorant, weight: 700, style: 'normal' },
+                { name: 'Spectral', data: spectral, weight: 400, style: 'normal' },
+            ],
         }
     );
 }

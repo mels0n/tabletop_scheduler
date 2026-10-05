@@ -18,33 +18,33 @@ export default function DiscordSetupGuide() {
         notFound();
     }
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
-            <div className="max-w-3xl mx-auto space-y-12">
+        <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
+            <div className="max-w-screen-2xl mx-auto space-y-12">
 
                 {/* Header */}
                 <div className="space-y-4">
-                    <div className="flex items-center gap-3 text-indigo-400">
-                        <Bot className="w-8 h-8" />
-                        <span className="font-mono uppercase tracking-widest text-sm">Feature Guide</span>
+                    <div className="flex items-center gap-3 text-gold-bright">
+                        <Bot className="w-8 h-8" aria-hidden="true" />
+                        <span className="eyebrow">Feature Guide</span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-bold">Discord Integration Setup</h1>
-                    <p className="text-xl text-slate-400 leading-relaxed">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">Discord Integration Setup</h1>
+                    <p className="text-xl text-parchment-2 leading-relaxed">
                         Step-by-step instructions to creating a Discord Bot and connecting it to your self-hosted TabletopTime instance.
                     </p>
                 </div>
 
                 {/* Step 1 */}
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                        <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                    <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
+                        <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">1</span>
                         Create a Discord Application
                     </h2>
-                    <div className="pl-11 space-y-4 text-slate-400">
+                    <div className="pl-11 space-y-4 text-parchment-2">
                         <p>
                             To get started, you need to create an application in the Discord Developer Portal.
                         </p>
                         <ul className="list-disc space-y-2 pl-4">
-                            <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" className="text-indigo-400 hover:underline inline-flex items-center gap-1">Developer Portal <ExternalLink className="w-3 h-3" /></a>.</li>
+                            <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" className="text-gold hover:text-gold-bright underline underline-offset-[3px] inline-flex items-center gap-1">Developer Portal <ExternalLink className="w-3 h-3" aria-hidden="true" /></a>.</li>
                             <li>Click <strong>New Application</strong> and give it a name (e.g., &quot;TabletopScheduler&quot;).</li>
                             <li>Copy the <strong>Application ID</strong>. You will need this for the <code>DISCORD_APP_ID</code> variable.</li>
                         </ul>
@@ -53,11 +53,11 @@ export default function DiscordSetupGuide() {
 
                 {/* Step 2 */}
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                        <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                    <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
+                        <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">2</span>
                         Configure the Bot
                     </h2>
-                    <div className="pl-11 space-y-4 text-slate-400">
+                    <div className="pl-11 space-y-4 text-parchment-2">
                         <p>Navigate to the <strong>Bot</strong> tab in the sidebar menu.</p>
                         <ul className="list-disc space-y-2 pl-4">
                             <li>Click <strong>Reset Token</strong> to generate your <code>DISCORD_BOT_TOKEN</code>. Copy it immediately.</li>
@@ -69,16 +69,16 @@ export default function DiscordSetupGuide() {
 
                 {/* Step 3 */}
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                        <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+                    <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
+                        <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">3</span>
                         Setup OAuth2 (Login)
                     </h2>
-                    <div className="pl-11 space-y-4 text-slate-400">
+                    <div className="pl-11 space-y-4 text-parchment-2">
                         <p>This allows the <strong>&quot;Recover with Discord&quot;</strong> feature to work, letting you log in as the manager instantly.</p>
                         <ul className="list-disc space-y-2 pl-4">
                             <li>Go to the <strong>OAuth2</strong> tab.</li>
                             <li>Under &quot;Redirects&quot;, add your app&apos;s callback URL:
-                                <code className="block mt-2 bg-slate-900 p-2 rounded text-slate-300">https://your-domain.com/api/auth/discord/callback</code>
+                                <code className="block mt-2 bg-field border border-line p-2 rounded-control text-parchment-2">https://your-domain.com/api/auth/discord/callback</code>
                             </li>
                             <li>Copy the <strong>Client Secret</strong>. This is your <code>DISCORD_CLIENT_SECRET</code>.</li>
                         </ul>
@@ -87,13 +87,13 @@ export default function DiscordSetupGuide() {
 
                     {/* Step 4 */}
                     <section className="space-y-4">
-                        <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                            <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
+                        <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
+                            <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">4</span>
                             Configure Your Environment
                         </h2>
-                        <div className="pl-11 space-y-4 text-slate-400">
+                        <div className="pl-11 space-y-4 text-parchment-2">
                             <p>Add the three values to your <code>docker-compose.yml</code> or <code>.env</code> file:</p>
-                            <pre className="bg-slate-900 p-4 rounded-lg text-slate-300 text-sm overflow-x-auto"><code>{`DISCORD_BOT_TOKEN=your_bot_token
+                            <pre className="bg-field border border-line p-4 rounded-card text-parchment-2 text-sm overflow-x-auto"><code>{`DISCORD_BOT_TOKEN=your_bot_token
 DISCORD_APP_ID=your_application_id
 DISCORD_CLIENT_SECRET=your_client_secret
 NEXT_PUBLIC_BASE_URL=https://your-domain.com`}</code></pre>
@@ -103,11 +103,11 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com`}</code></pre>
 
                     {/* Step 5 */}
                     <section className="space-y-4">
-                        <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                            <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                        <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
+                            <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">5</span>
                             Connect an Event
                         </h2>
-                        <div className="pl-11 space-y-4 text-slate-400">
+                        <div className="pl-11 space-y-4 text-parchment-2">
                             <ul className="list-disc space-y-2 pl-4">
                                 <li>Open the event&apos;s <strong>Manage</strong> page and click <strong>Connect Discord Server</strong>.</li>
                                 <li>Discord asks you to pick a server and approve the bot. It requests View Channel, Send Messages, Manage Messages (to pin the dashboard), Embed Links and Read Message History.</li>
@@ -119,11 +119,11 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com`}</code></pre>
 
                     {/* Step 6 */}
                     <section className="space-y-4">
-                        <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
-                            <span className="bg-slate-800 text-slate-400 w-8 h-8 rounded-full flex items-center justify-center text-sm">6</span>
+                        <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
+                            <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">6</span>
                             What the Bot Sends
                         </h2>
-                        <div className="pl-11 space-y-4 text-slate-400">
+                        <div className="pl-11 space-y-4 text-parchment-2">
                             <p>In the connected channel: the live dashboard, new or changed time slots, a short &quot;updated their availability&quot; post (at most once per person per hour), voting and session reminders if the organizer turns them on, the finalize announcement, and cancel or delete notices.</p>
                             <p>By direct message: login links you ask for, finalize results and waitlist or removal notices for events you joined with a linked Discord account, and quorum alerts to the organizer. Anyone can turn these direct messages off from <strong>My Events</strong>; login links you ask for are still sent.</p>
                         </div>
