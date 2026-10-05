@@ -371,7 +371,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
  * 3. Recovery:
  *    - Provides a "Magic Link" request form to elevate a session from Anonymous -> Authenticated.
  */
-export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl, discordLoginEnabled = false, dmPreferences }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null, discordLoginEnabled?: boolean, dmPreferences?: DmPreferenceState }) {
+export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl, discordLoginEnabled, dmPreferences }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null, discordLoginEnabled: boolean, dmPreferences?: DmPreferenceState }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
     const [telegramConnectClicked, setTelegramConnectClicked] = useState(false);

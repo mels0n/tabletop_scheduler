@@ -28,10 +28,42 @@ describe('DiscordConnect: OAuth links', () => {
         expect(oauthLinks()).toHaveLength(0);
     });
 
-    it('keeps a bound channel visible but offers no reconnect or recover link without OAuth', () => {
+    it('keeps a bound channel visible but offers no reconnect or empty manage panel without OAuth', () => {
         render(<DiscordConnect slug="evt" hasChannel guildId="1" channelId="2" hasManagerDiscordId={false} oauthEnabled={false} />);
+        expect(screen.getByText('connected')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /manage/ })).toBeNull();
+        expect(oauthLinks()).toHaveLength(0);
+    });
+
+    it('keeps DM recovery for a linked manager on a bound channel without OAuth', () => {
+        render(<DiscordConnect slug="evt" hasChannel guildId="1" channelId="2" hasManagerDiscordId oauthEnabled={false} />);
         fireEvent.click(screen.getByRole('button', { name: /manage/ }));
         expect(screen.queryByRole('button', { name: 'reconnect channel' })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Send Magic Link (Discord DM)' })).toBeTruthy();
+        expect(oauthLinks()).toHaveLength(0);
+    });
+
+    it('offers reconnect on a bound channel with OAuth', () => {
+        render(<DiscordConnect slug="evt" hasChannel guildId="1" channelId="2" hasManagerDiscordId={false} oauthEnabled />);
+        fireEvent.click(screen.getByRole('button', { name: /manage/ }));
+        expect(screen.getByRole('button', { name: 'reconnect channel' })).toBeTruthy();
+        expect(screen.getByRole('link', { name: /Recover with Discord/ })).toBeTruthy();
+    });
+
+    it('keeps DM recovery for a linked manager with no channel and no OAuth, without the setup box', () => {
+        render(<DiscordConnect slug="evt" hasChannel={false} hasManagerDiscordId oauthEnabled={false} />);
+        expect(screen.queryByText('Connect Discord Notifications')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Send Magic Link (Discord DM)' })).toBeTruthy();
+        expect(oauthLinks()).toHaveLength(0);
+    });
+
+    it('shows the re-invite link while picking a channel only with OAuth', async () => {
+        const { unmount } = render(<DiscordConnect slug="evt" hasChannel={false} guildId="1" hasManagerDiscordId={false} oauthEnabled />);
+        expect((await screen.findByRole('link', { name: 'Re-invite it' })).getAttribute('href')).toBe('/api/auth/discord?flow=connect&returnTo=%2Fe%2Fevt%2Fmanage');
+        unmount();
+
+        render(<DiscordConnect slug="evt" hasChannel={false} guildId="1" hasManagerDiscordId={false} oauthEnabled={false} />);
+        await screen.findAllByRole('heading');
         expect(oauthLinks()).toHaveLength(0);
     });
 });

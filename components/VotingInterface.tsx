@@ -29,12 +29,12 @@ interface VotingInterfaceProps {
     isTelegramSynced?: boolean;
     isDiscordSynced?: boolean;
     /** Discord OAuth is configured on the server; without it the "Log in" link is hidden. */
-    discordLoginEnabled?: boolean;
+    discordLoginEnabled: boolean;
 }
 
 type ViewMode = "detailed" | "quick";
 
-export function VotingInterface({ eventId, initialSlots, participants, slug, serverParticipantId, discordIdentity, telegramIdentity, myTelegramHandle, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced, discordLoginEnabled = false }: VotingInterfaceProps) {
+export function VotingInterface({ eventId, initialSlots, participants, slug, serverParticipantId, discordIdentity, telegramIdentity, myTelegramHandle, eventType = "ONE_SHOT", isTelegramSynced, isDiscordSynced, discordLoginEnabled }: VotingInterfaceProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 

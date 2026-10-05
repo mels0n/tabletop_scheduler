@@ -20,11 +20,6 @@ describe('ProfileDashboard: Connect Discord pill', () => {
         expect(screen.queryByRole('link', { name: /Connect Discord/i })).toBeNull();
     });
 
-    it('is hidden when the prop is omitted', () => {
-        render(<ProfileDashboard />);
-        expect(screen.queryByRole('link', { name: /Connect Discord/i })).toBeNull();
-    });
-
     it('links to the Discord login flow when Discord login is configured', () => {
         render(<ProfileDashboard discordLoginEnabled />);
         const pill = screen.getByRole('link', { name: /Connect Discord/i });
