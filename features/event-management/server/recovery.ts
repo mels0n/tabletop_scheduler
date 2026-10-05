@@ -15,6 +15,7 @@ import {
     createManagerLoginLinks,
     generateShortRecoveryToken,
     getConnectCommand,
+    ALL_PLATFORMS,
     type LoginPlatform,
 } from "./recovery-tokens";
 
@@ -39,8 +40,10 @@ function toActionError(e: unknown, fallback: string): ActionFailure {
     return { error: fallback };
 }
 
-const recoverArgs = z.object({ slug: slugParam, handle: handleParam });
-const platformParam = z.enum(["telegram", "discord"]).optional();
+const platformParam = z.enum(["telegram", "discord"]);
+const recoverArgs = z.object({ slug: slugParam, handle: handleParam, platform: platformParam.optional() });
+
+const PLATFORM_NAME: Record<LoginPlatform, string> = { telegram: "Telegram", discord: "Discord" };
 
 /** Throws `ValidationError` unless `slug` is a well-formed slug; `toActionError` maps it. */
 function parseSlug(slug: unknown): string {
@@ -68,14 +71,14 @@ type ManagerEvent = {
 };
 
 /**
- * DMs a 15-minute login link to each of `targets` the manager has linked (default: every
- * linked platform), one token per platform. The link logs the
+ * DMs a 15-minute login link to each of `targets` the manager has linked, one token per
+ * platform. The link logs the
  * browser in as the stored manager identity, which grants admin on the manage page. The
  * admin token is never rotated, so nobody can lock the manager out by calling this.
  */
 async function deliverManagerLink(
     event: ManagerEvent,
-    targets: readonly LoginPlatform[] = ["telegram", "discord"]
+    targets: readonly LoginPlatform[]
 ): Promise<ManagerLinkResult> {
     const wantsTelegram = targets.includes("telegram") && !!event.managerChatId;
     const wantsDiscord = targets.includes("discord") && !!event.managerDiscordId;
@@ -138,10 +141,12 @@ async function deliverManagerLink(
 /**
  * Lost-link recovery from the public event page. The typed handle (Telegram handle or
  * Discord username) must match the stored manager; the link still only goes to the stored
- * manager's DMs.
+ * manager's DMs. `platform` is the tab the user picked: only that platform's handle is
+ * matched and only that platform is DMed. Omitted (a page loaded before this argument
+ * existed), any platform whose handle matches is DMed.
  */
-export async function recoverManagerLink(slug: string, handle: string): Promise<ManagerLinkResult> {
-    if (!recoverArgs.safeParse({ slug, handle }).success) {
+export async function recoverManagerLink(slug: string, handle: string, platform?: LoginPlatform): Promise<ManagerLinkResult> {
+    if (!recoverArgs.safeParse({ slug, handle, platform }).success) {
         return toActionError(new ValidationError(), "Could not send the link. Please try again.");
     }
     const event = await prisma.event.findUnique({ where: { slug }, select: managerSelect });
@@ -151,10 +156,13 @@ export async function recoverManagerLink(slug: string, handle: string): Promise<
     }
 
     const input = normalizeHandle(handle);
-    const matchesTelegram = !!input && normalizeHandle(event.managerTelegram) === input;
-    const matchesDiscord = !!input && normalizeHandle(event.managerDiscordUsername) === input;
+    const matches = (p: LoginPlatform) =>
+        (!platform || platform === p) &&
+        !!input &&
+        normalizeHandle(p === "telegram" ? event.managerTelegram : event.managerDiscordUsername) === input;
+    const matched = ALL_PLATFORMS.filter(matches);
 
-    if (!matchesTelegram && !matchesDiscord) {
+    if (matched.length === 0) {
         log.warn("Manager recovery failed: Handle mismatch", { slug });
         return { error: "Handle does not match our records." };
     }
@@ -163,22 +171,27 @@ export async function recoverManagerLink(slug: string, handle: string): Promise<
         return { error: "Handle matched, but no Telegram or Discord account has been linked as this event's manager yet, so there is nowhere to send a link." };
     }
 
-    // Send only to the platform whose handle was named (both, if one handle matches both).
-    const matched: LoginPlatform[] = [
-        ...(matchesTelegram ? ["telegram" as const] : []),
-        ...(matchesDiscord ? ["discord" as const] : []),
-    ];
-    return deliverManagerLink(event, matched);
+    // Never fall back to the other platform: its account may belong to someone else.
+    const isLinked = (p: LoginPlatform) => !!(p === "telegram" ? event.managerChatId : event.managerDiscordId);
+    const targets = matched.filter(isLinked);
+    if (targets.length === 0) {
+        const other: LoginPlatform = matched[0] === "telegram" ? "discord" : "telegram";
+        return {
+            error: `Handle matched, but that ${PLATFORM_NAME[matched[0]]} account is not registered for login links yet.` +
+                (isLinked(other) ? ` Try the ${PLATFORM_NAME[other]} option instead.` : ""),
+        };
+    }
+    return deliverManagerLink(event, targets);
 }
 
 /**
  * Admin only: one-click "send me a login link" from the manage page. No handle check is
  * needed: the caller already proved admin, and the link can only reach the manager
  * identity stored on the event. Anyone without admin uses `recoverManagerLink`, which
- * makes them name the stored handle first. `platform` limits delivery to the button's own
- * platform; omitted, the link goes to every linked platform.
+ * makes them name the stored handle first. `platform` is the button's own platform; the
+ * link goes only there.
  */
-export async function dmManagerLink(slug: string, platform?: LoginPlatform): Promise<ManagerLinkResult> {
+export async function dmManagerLink(slug: string, platform: LoginPlatform): Promise<ManagerLinkResult> {
     try {
         parseSlug(slug);
         if (!platformParam.safeParse(platform).success) throw new ValidationError();
@@ -188,7 +201,7 @@ export async function dmManagerLink(slug: string, platform?: LoginPlatform): Pro
     }
     const event = await prisma.event.findUnique({ where: { slug }, select: managerSelect });
     if (!event) return { error: NO_MANAGER };
-    return deliverManagerLink(event, platform ? [platform] : undefined);
+    return deliverManagerLink(event, [platform]);
 }
 
 /**

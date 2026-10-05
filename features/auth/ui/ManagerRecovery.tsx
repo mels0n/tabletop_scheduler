@@ -41,7 +41,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
 
         try {
             const res = platform === 'telegram'
-                ? await recoverManagerLink(slug, handle)
+                ? await recoverManagerLink(slug, handle, "telegram")
                 : await recoverDiscordManagerLink(slug, handle);
 
             if (res.error) {
