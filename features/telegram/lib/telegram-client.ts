@@ -332,11 +332,14 @@ export async function deleteMessage(chatId: string | number, messageId: number, 
  * @function getBotUsername
  * @description Retrieves the Bot's username from the API.
  * Uses 'next.revalidate' to cache the result for 1 hour, reducing API load.
+ * Without a token (Telegram not configured) it returns null without contacting
+ * Telegram, so self-hosted installs make no outbound request.
  *
- * @param {string} token - Bot Token.
+ * @param {string | null | undefined} token - Bot Token.
  * @returns {Promise<string | null>} The username (without @), or null.
  */
-export async function getBotUsername(token: string): Promise<string | null> {
+export async function getBotUsername(token: string | null | undefined): Promise<string | null> {
+    if (!token) return null;
     const url = `https://api.telegram.org/bot${token}/getMe`;
     try {
         const res = await reliableFetch(url, {
