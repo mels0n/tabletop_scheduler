@@ -63,3 +63,15 @@ describe('VotingInterface: vote refused for a participant this browser does not 
         await waitFor(() => expect(localStorage.getItem('tabletop_participant_1')).toBe('9'));
     });
 });
+
+describe('VotingInterface: Discord log in link', () => {
+    it('is hidden when Discord login is not configured', () => {
+        render(<VotingInterface eventId={1} slug="evt" minPlayers={1} initialSlots={[slot]} participants={[]} />);
+        expect(screen.queryByRole('link', { name: /Log in/i })).toBeNull();
+    });
+
+    it('starts the Discord login flow when Discord login is configured', () => {
+        render(<VotingInterface eventId={1} slug="evt" minPlayers={1} initialSlots={[slot]} participants={[]} discordLoginEnabled />);
+        expect(screen.getByRole('link', { name: /Log in/i }).getAttribute('href')).toBe('/api/auth/discord?flow=login&returnTo=%2Fe%2Fevt');
+    });
+});

@@ -4,6 +4,7 @@ import type { Metadata, ResolvingMetadata } from "next";
 import { HistoryTracker } from "@/components/HistoryTracker";
 import { Calendar, Users } from "lucide-react";
 import { ManagerRecovery } from "@/features/auth";
+import { isDiscordOAuthConfigured } from "@/features/integrations/discord";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
 import { CampaignStatusBanner } from "@/components/CampaignStatusBanner";
@@ -81,6 +82,7 @@ export default async function EventPage(props: PageProps) {
     const userTelegramName = cookieStore.get("tabletop_user_telegram_name")?.value;
     const isTelegramSynced = !!userChatId;
     const isDiscordSynced = !!userDiscordId;
+    const discordLoginEnabled = isDiscordOAuthConfigured();
     const discordIdentity = userDiscordId
         ? { username: cookieStore.get("tabletop_user_discord_name")?.value || "Discord User" }
         : undefined;
@@ -302,6 +304,7 @@ export default async function EventPage(props: PageProps) {
                         participants={publicParticipants}
                         serverParticipantId={serverParticipantId}
                         discordIdentity={discordIdentity}
+                        discordLoginEnabled={discordLoginEnabled}
                     />
                 ) : (
                     <VotingInterface
@@ -317,6 +320,7 @@ export default async function EventPage(props: PageProps) {
                         myTelegramHandle={myTelegramHandle}
                         isTelegramSynced={isTelegramSynced}
                         isDiscordSynced={isDiscordSynced}
+                        discordLoginEnabled={discordLoginEnabled}
                     />
                 )}
 

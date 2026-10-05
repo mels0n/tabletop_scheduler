@@ -32,6 +32,7 @@ export {
     guildGrantPurpose,
 } from "./model/oauth-state";
 export type { OAuthFlow, OAuthState } from "./model/oauth-state";
+export { isDiscordOAuthConfigured } from "./model/oauth-config";
 export {
     recoverDiscordManagerLink,
     connectDiscordChannel,

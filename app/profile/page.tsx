@@ -7,6 +7,7 @@ import Logger from "@/shared/lib/logger";
 import { ProfileDashboard } from "./ProfileDashboard";
 import { getServerConfig } from "@/shared/config/server";
 import { getDmPreferences, type DmPreferences } from "@/features/auth";
+import { isDiscordOAuthConfigured } from "@/features/integrations/discord";
 
 export const dynamic = "force-dynamic";
 
@@ -270,6 +271,7 @@ export default async function ProfilePage() {
             isDiscordSynced={!!discordUserId}
             serverUserName={serverUserName || undefined}
             telegramConnectUrl={telegramConnectUrl}
+            discordLoginEnabled={isDiscordOAuthConfigured()}
             dmPreferences={dmPreferences}
         />
     );
