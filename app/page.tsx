@@ -155,26 +155,26 @@ export default async function Home() {
       {/* Live Event Stats Badges: social proof for hosted version */}
       {isHosted && eventStats && (
         <div className="mt-16 flex flex-col items-center gap-4 w-full max-w-5xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-line border border-line rounded-card bg-surface w-full">
-            <div className="flex flex-col items-center gap-1 px-6 py-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-line border border-line rounded-card overflow-hidden w-full">
+            <div className="flex flex-col items-center gap-1 px-6 py-5 bg-surface">
               <span className="font-display text-3xl font-bold text-parchment tabular-nums">
                 {eventStats.totalEvents.toLocaleString()}
               </span>
               <span className="text-mist text-sm font-medium">Events Active</span>
             </div>
-            <div className="flex flex-col items-center gap-1 px-6 py-5">
+            <div className="flex flex-col items-center gap-1 px-6 py-5 bg-surface">
               <span className="font-display text-3xl font-bold text-parchment tabular-nums">
                 {eventStats.activeEvents}
               </span>
               <span className="text-mist text-sm font-medium">Voting Open</span>
             </div>
-            <div className="flex flex-col items-center gap-1 px-6 py-5">
+            <div className="flex flex-col items-center gap-1 px-6 py-5 bg-surface">
               <span className="font-display text-3xl font-bold text-parchment tabular-nums">
                 {eventStats.totalParticipants.toLocaleString()}
               </span>
               <span className="text-mist text-sm font-medium">Players Active</span>
             </div>
-            <div className="flex flex-col items-center gap-1 px-6 py-5">
+            <div className="flex flex-col items-center gap-1 px-6 py-5 bg-surface">
               <span className="font-display text-3xl font-bold text-parchment tabular-nums">
                 {eventStats.finalizedEvents}
               </span>

@@ -228,7 +228,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                     {isActive ? `${checkedSlots.length} of ${group.slots.length} dates` : `${group.slots.length} date${group.slots.length !== 1 ? 's' : ''}`}
                                 </span>
                                 {!group.noVotes && !isActive && (
-                                    <span className="text-[10px] font-semibold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded ml-1 group-hover:text-gold-bright transition-colors">
+                                    <span className="text-[10px] font-semibold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded ml-1 transition-colors">
                                         Select →
                                     </span>
                                 )}

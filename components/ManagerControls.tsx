@@ -306,7 +306,7 @@ export function ManagerControls({
                     {!showDeleteConfirm && (
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
-                            className={`text-xs ${isFinalized ? 'text-maybe hover:text-maybe' : 'text-no hover:text-no'} underline`}
+                            className={`text-xs ${isFinalized ? 'text-maybe hover:text-gold-bright' : 'text-no hover:text-parchment'} underline`}
                         >
                             {isFinalized ? "Cancel Event..." : (isCancelled ? "Delete Event..." : "Delete Event...")}
                         </button>

@@ -21,7 +21,7 @@ export function SyncBadge({ variant }: SyncBadgeProps) {
 
     if (variant === 'discord') {
         return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-discord rounded-control border border-discord flex items-center gap-1">
+            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-discord-text rounded-control border border-discord flex items-center gap-1">
                 <span data-dot className="w-1.5 h-1.5 rounded-full bg-discord" />
                 Discord Synced
             </span>

@@ -26,7 +26,7 @@ function contrast(a: string, b: string): number {
 }
 
 describe("Tome token contrast", () => {
-    it.each(["parchment", "parchment-2", "mist", "gold", "gold-bright", "yes", "no"])(
+    it.each(["parchment", "parchment-2", "mist", "gold", "gold-bright", "yes", "no", "discord-text"])(
         "%s text meets 4.5:1 on ink and surface",
         (fg) => {
             expect(contrast(fg, "ink")).toBeGreaterThanOrEqual(4.5);

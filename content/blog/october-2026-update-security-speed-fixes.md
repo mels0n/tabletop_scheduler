@@ -1,6 +1,6 @@
 ---
 title: "October Update: Tighter Security, Faster Pages and a Pile of Fixes"
-description: "One weekend, ten merged changes. Signed sessions, hashed admin links, reminders that never miss, faster vote and manage pages, and a cleaner self-host upgrade path."
+description: "One weekend, eleven merged changes. Signed sessions, hashed admin links, reminders that never miss, faster vote and manage pages, and a cleaner self-host upgrade path."
 date: "2026-10-05"
 tags: ["Product Update", "Security", "Performance", "Self-Hosting", "Telegram", "Discord"]
 listTitle: "What Changed in the October 2026 Update"
