@@ -82,7 +82,7 @@ export async function loadManagePage(slug: string): Promise<ManagePageData> {
     const [isAdmin, event, botName] = await Promise.all([
         verifyEventAdmin(slug),
         prisma.event.findUnique({ where: { slug }, select: manageEventSelect }),
-        getBotUsername(getServerConfig().telegram.token || ''),
+        getBotUsername(getServerConfig().telegram.token),
     ]);
     if (!isAdmin) return { isAdmin: false };
     return { isAdmin: true, event, botUsername: botName || 'TabletopSchedulerBot' };

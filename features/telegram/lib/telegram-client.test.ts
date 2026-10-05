@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendTelegramMessage, sendTelegramMessageResult, editMessageTextResult, pinChatMessageResult, syncWebhook, webhookUrlFor, pinChatMessage } from './telegram-client';
+import { sendTelegramMessage, sendTelegramMessageResult, editMessageTextResult, pinChatMessageResult, syncWebhook, webhookUrlFor, pinChatMessage, getBotUsername } from './telegram-client';
 import prisma from '@/shared/lib/prisma';
 
 vi.mock('@/shared/lib/prisma');
@@ -123,6 +123,20 @@ describe('telegram-client', () => {
         const text = JSON.parse(fetchMock.mock.calls[1][1].body).text as string;
         expect(text).toContain('<b>Admin</b>');
         expect(text).not.toContain('**');
+    });
+
+    describe('getBotUsername', () => {
+        it.each([[''], [null], [undefined]])('returns null without calling Telegram for token %j', async (token) => {
+            await expect(getBotUsername(token)).resolves.toBeNull();
+            expect(fetchMock).not.toHaveBeenCalled();
+        });
+
+        it('fetches the username when a token is set', async () => {
+            fetchMock.mockResolvedValueOnce(reply(200, { ok: true, result: { username: 'SomeBot' } }));
+
+            await expect(getBotUsername('tok')).resolves.toBe('SomeBot');
+            expect(fetchMock.mock.calls[0][0]).toBe('https://api.telegram.org/bottok/getMe');
+        });
     });
 
     describe('syncWebhook', () => {
