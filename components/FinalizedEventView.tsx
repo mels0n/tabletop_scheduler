@@ -23,7 +23,7 @@ interface FinalizedEventViewProps {
     serverParticipantId?: number;
     discordIdentity?: { username: string };
     /** Discord OAuth is configured on the server; without it the "Log in" link is hidden. */
-    discordLoginEnabled?: boolean;
+    discordLoginEnabled: boolean;
 }
 
 /**
@@ -35,7 +35,7 @@ interface FinalizedEventViewProps {
  * @param {FinalizedEventViewProps} props - Component props.
  * @returns {JSX.Element} The finalized event dashboard.
  */
-export function FinalizedEventView({ event, finalizedSlot, participants, serverParticipantId, discordIdentity, discordLoginEnabled = false }: FinalizedEventViewProps) {
+export function FinalizedEventView({ event, finalizedSlot, participants, serverParticipantId, discordIdentity, discordLoginEnabled }: FinalizedEventViewProps) {
     // Intent: State for handling the "Join" form inputs and submission status.
     const [userName, setUserName] = useState("");
     const [userTelegram, setUserTelegram] = useState("");

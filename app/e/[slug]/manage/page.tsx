@@ -285,8 +285,9 @@ export default async function ManageEventPage(props: PageProps) {
                                 hasManagerChatId={!!event.managerChatId}
                             />
                             {/* Every way into the Discord setup starts the OAuth flow, so the card is
-                                hidden when Discord isn't configured, unless a channel is already bound. */}
-                            {(discordOAuthEnabled || event.discordChannelId) && (
+                                hidden when Discord isn't configured, unless a channel is already bound or
+                                the manager has a linked Discord account (DM recovery needs only the bot). */}
+                            {(discordOAuthEnabled || event.discordChannelId || event.managerDiscordId) && (
                                 <DiscordConnect
                                     slug={event.slug}
                                     hasChannel={!!event.discordChannelId}

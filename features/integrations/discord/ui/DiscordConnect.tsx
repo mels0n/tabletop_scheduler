@@ -145,12 +145,15 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                         {channelName && (
                             <span className="text-xs text-slate-500 font-mono">#{channelName}</span>
                         )}
-                        <button
-                            onClick={() => setExpanded(e => !e)}
-                            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                        >
-                            {expanded ? 'hide' : 'manage →'}
-                        </button>
+                        {/* Without OAuth and a linked manager the panel would be empty. */}
+                        {(oauthEnabled || hasManagerDiscordId) && (
+                            <button
+                                onClick={() => setExpanded(e => !e)}
+                                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                            >
+                                {expanded ? 'hide' : 'manage →'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -205,7 +208,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     // Setup state — channel not yet connected
     return (
         <div className="space-y-4">
-            <div className="p-4 bg-indigo-900/10 border border-indigo-800/50 rounded-xl space-y-4">
+            {oauthEnabled && <div className="p-4 bg-indigo-900/10 border border-indigo-800/50 rounded-xl space-y-4">
                 <div className="flex items-start gap-3 text-indigo-300">
                     <div className="p-2 bg-indigo-500/10 rounded-lg shrink-0">
                         <DiscordIcon className="w-5 h-5" />
@@ -288,7 +291,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                         </p>}
                     </div>
                 )}
-            </div>
+            </div>}
 
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
                 <h3 className="font-semibold text-slate-300 text-sm flex items-center gap-2">
