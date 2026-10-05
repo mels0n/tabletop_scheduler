@@ -72,29 +72,21 @@ Check these settings when you move to a new release with a bot connected:
 
 All configuration is through environment variables, validated once at boot. A missing or invalid value stops the server with a message that lists every problem. See [EnvVariables.md](docs/reference/EnvVariables.md) for the full reference.
 
-| Variable | Required | Description | Default / Example |
-|----------|----------|-------------|-------------------|
-| `DATABASE_URL` | **Yes** | SQLite path (Docker) or pooled Postgres URL (hosted). | `file:/app/data/scheduler.db` |
-| `DIRECT_URL` | Hosted only | Direct (non-pooled) Postgres URL used for migrations. | `postgresql://...:5432/postgres` |
-| `NEXT_PUBLIC_IS_HOSTED` | No | `true` enables hosted behavior (indexing, sitemap). | `false` |
-| `NEXT_PUBLIC_BASE_URL` | When a bot token is set | URL of the app, used for every link the bots send. Hosted and Vercel refuse to start without it when a bot token is set; a self-hosted install starts, logs an error and sends broken bot links until it is set (a LAN address works behind NAT). | `https://scheduler.example.com` |
-| `NEXT_PUBLIC_BOT_NAME` | No | Display name of your Discord bot, shown in the channel-permission instructions on the manage page. Telegram links use the bot username reported by Telegram. | `TabletopTime` |
-| `SESSION_SECRET` | Production (Vercel production, or `NODE_ENV=production` off Vercel) | Signs identity and participant cookies and Telegram connect codes, and derives the outbound webhook signing keys. Docker generates one if unset. | 32+ random bytes, base64 |
-| `CRON_SECRET` | Hosted, or Vercel production | Bearer token for `/api/cron/*`. Docker generates one if unset. Outbound webhooks are signed with a key derived from `SESSION_SECRET`, not this value. | 32+ random bytes, base64 |
-| `TELEGRAM_BOT_TOKEN` | No | Token from @BotFather. | `123456:ABC...` |
-| `TELEGRAM_MODE` | No | `webhook`, `polling`, or `off`. When unset with a token: `polling` on a self-hosted install, `webhook` when hosted or on Vercel. Without a token: `off`. | derived |
-| `DISCORD_BOT_TOKEN` | No | Discord bot token. | |
-| `DISCORD_APP_ID` | No | Discord application ID. | |
-| `DISCORD_CLIENT_SECRET` | No | Discord OAuth client secret. | |
-| `KOFI_VERIFICATION_TOKEN` | No | Verification token for the Ko-fi donation webhook. | |
-| `LOG_LEVEL` | No | `debug`, `info`, `warn`, or `error`. | `info` |
-| `VOTE_ANNOUNCE_COOLDOWN_MINUTES` | No | Minutes between "updated their availability" group posts for the same person (0 to 1440; `0` posts every vote). The pinned dashboard updates on every vote. | `60` |
-| `WEBHOOK_ALLOW_PRIVATE` | No | Self-host only. `true` lets an event's webhook `fromUrl` use plain `http` and private or LAN addresses. Ignored when hosted or on Vercel. | `false` |
-| `CLEANUP_RETENTION_DAYS_FINALIZED` | No | Days to keep a finalized event after its chosen slot (or a campaign's last session) ends. | `1` |
-| `CLEANUP_RETENTION_DAYS_DRAFT` | No | Days to keep a draft after its last proposed time ends. | `1` |
-| `CLEANUP_RETENTION_DAYS_CANCELLED` | No | Days to keep a cancelled event after cancellation. | `1` |
-| `PRISMA_ACCEPT_DATA_LOSS` | No | Self-host only, recovery only. Set to `1` for one start to apply a schema change that drops data; releases never need it. | unset |
-| `IS_DOCKER_BUILD` | No | Build-time flag set by the Dockerfile (standalone output). | `false` |
+The variables most installs touch:
+
+| Variable | When you need it |
+|----------|------------------|
+| `DATABASE_URL` | Always. SQLite path for Docker (`file:/app/data/scheduler.db`), pooled Postgres URL when hosted. |
+| `DIRECT_URL` | Hosted only. Direct Postgres URL for migrations. |
+| `NEXT_PUBLIC_BASE_URL` | Whenever a bot token is set. Every link the bots send is built from it. |
+| `SESSION_SECRET` | Production. Docker generates one if unset. |
+| `CRON_SECRET` | Hosted or Vercel production. Docker generates one if unset. |
+| `TELEGRAM_BOT_TOKEN` | To enable the Telegram bot. |
+| `TELEGRAM_MODE` | Optional. `polling`, `webhook` or `off`; derived when unset. |
+| `DISCORD_BOT_TOKEN`, `DISCORD_APP_ID`, `DISCORD_CLIENT_SECRET` | To enable the Discord bot. |
+| `LOG_LEVEL` | Optional. `debug`, `info` (default), `warn` or `error`. |
+
+Retention windows, vote announcement cooldown, private webhook sources, Ko-fi, recovery flags and every default are in [EnvVariables.md](docs/reference/EnvVariables.md).
 
 ## Documentation
 
