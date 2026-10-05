@@ -115,7 +115,7 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                             className={[
                                 "min-h-[44px] flex items-center justify-center text-sm tabular-nums transition-colors",
                                 isPast
-                                    ? "bg-surface text-mist/40 cursor-not-allowed"
+                                    ? "bg-ink text-mist cursor-not-allowed"
                                     : "cursor-pointer",
                                 isSelected
                                     ? "bg-gold text-on-gold font-semibold"

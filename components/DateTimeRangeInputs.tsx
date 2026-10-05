@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useId } from "react";
 
 interface DateTimeRangeInputsProps {
     date: string;
@@ -12,11 +12,13 @@ interface DateTimeRangeInputsProps {
 }
 
 export function DateTimeRangeInputs({ date, setDate, start, setStart, end, setEnd }: DateTimeRangeInputsProps) {
+    const fieldId = useId();
     return (
         <>
             <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
-                <label className="text-xs text-mist">Date</label>
+                <label htmlFor={`${fieldId}-date`} className="text-xs text-mist">Date</label>
                 <input
+                    id={`${fieldId}-date`}
                     type="date"
                     data-testid="slot-date-input"
                     className="field w-full"
@@ -25,8 +27,9 @@ export function DateTimeRangeInputs({ date, setDate, start, setStart, end, setEn
                 />
             </div>
             <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                <label className="text-xs text-mist">Start</label>
+                <label htmlFor={`${fieldId}-start`} className="text-xs text-mist">Start</label>
                 <input
+                    id={`${fieldId}-start`}
                     type="time"
                     data-testid="slot-start-input"
                     className="field w-full"
@@ -35,8 +38,9 @@ export function DateTimeRangeInputs({ date, setDate, start, setStart, end, setEn
                 />
             </div>
             <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                <label className="text-xs text-mist">End</label>
+                <label htmlFor={`${fieldId}-end`} className="text-xs text-mist">End</label>
                 <input
+                    id={`${fieldId}-end`}
                     type="time"
                     data-testid="slot-end-input"
                     className="field w-full"

@@ -73,7 +73,7 @@ export function Footer() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 hover:text-parchment transition-colors"
-                            aria-label="Support on Ko-fi"
+                            aria-label="Buy Me a Coffee on Ko-fi"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>

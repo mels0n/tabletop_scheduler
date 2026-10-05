@@ -359,7 +359,7 @@ export function QuickSelectionCalendar({
                                 {/* Day number */}
                                 <span className={clsx(
                                     "text-xs leading-none px-1 pt-0.5 shrink-0",
-                                    hasSlots ? "text-parchment-2" : "text-mist/50"
+                                    hasSlots ? "text-parchment-2" : "text-mist"
                                 )}>
                                     {format(day, "d")}
                                 </span>

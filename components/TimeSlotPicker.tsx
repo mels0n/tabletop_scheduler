@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Plus, X, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ClientTimezone } from "./ClientDate";
@@ -18,6 +18,7 @@ interface TimeSlotPickerProps {
 }
 
 export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
+    const fieldId = useId();
     const [selectedDates, setSelectedDates] = useState<string[]>([]);
     const [showCalendar, setShowCalendar] = useState(false);
     const [start, setStart] = useState("18:00");
@@ -141,8 +142,9 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
 
                 {/* Time inputs: unchanged */}
                 <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                    <label className="text-xs text-mist">Start</label>
+                    <label htmlFor={`${fieldId}-start`} className="text-xs text-mist">Start</label>
                     <input
+                        id={`${fieldId}-start`}
                         type="time"
                         data-testid="slot-start-input"
                         className="field px-3 py-3 min-h-[44px] w-full"
@@ -151,8 +153,9 @@ export function TimeSlotPicker({ value, onChange }: TimeSlotPickerProps) {
                     />
                 </div>
                 <div className="flex flex-col gap-1 flex-1 min-w-[100px]">
-                    <label className="text-xs text-mist">End</label>
+                    <label htmlFor={`${fieldId}-end`} className="text-xs text-mist">End</label>
                     <input
+                        id={`${fieldId}-end`}
                         type="time"
                         data-testid="slot-end-input"
                         className="field px-3 py-3 min-h-[44px] w-full"

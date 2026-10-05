@@ -19,7 +19,7 @@ export default function DiscordSetupGuide() {
     }
     return (
         <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
-            <div className="max-w-5xl mx-auto space-y-12">
+            <div className="max-w-screen-2xl mx-auto space-y-12">
 
                 {/* Header */}
                 <div className="space-y-4">
@@ -28,13 +28,13 @@ export default function DiscordSetupGuide() {
                         <span className="eyebrow">Feature Guide</span>
                     </div>
                     <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">Discord Integration Setup</h1>
-                    <p className="text-xl text-parchment-2 leading-relaxed max-w-[70ch]">
+                    <p className="text-xl text-parchment-2 leading-relaxed">
                         Step-by-step instructions to creating a Discord Bot and connecting it to your self-hosted TabletopTime instance.
                     </p>
                 </div>
 
                 {/* Step 1 */}
-                <section className="space-y-4 max-w-[70ch]">
+                <section className="space-y-4">
                     <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
                         <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">1</span>
                         Create a Discord Application
@@ -52,7 +52,7 @@ export default function DiscordSetupGuide() {
                 </section>
 
                 {/* Step 2 */}
-                <section className="space-y-4 max-w-[70ch]">
+                <section className="space-y-4">
                     <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
                         <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">2</span>
                         Configure the Bot
@@ -68,7 +68,7 @@ export default function DiscordSetupGuide() {
                 </section>
 
                 {/* Step 3 */}
-                <section className="space-y-4 max-w-[70ch]">
+                <section className="space-y-4">
                     <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
                         <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">3</span>
                         Setup OAuth2 (Login)
@@ -86,7 +86,7 @@ export default function DiscordSetupGuide() {
                 </section>
 
                     {/* Step 4 */}
-                    <section className="space-y-4 max-w-[70ch]">
+                    <section className="space-y-4">
                         <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
                             <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">4</span>
                             Configure Your Environment
@@ -102,7 +102,7 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com`}</code></pre>
                     </section>
 
                     {/* Step 5 */}
-                    <section className="space-y-4 max-w-[70ch]">
+                    <section className="space-y-4">
                         <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
                             <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">5</span>
                             Connect an Event
@@ -118,7 +118,7 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.com`}</code></pre>
                     </section>
 
                     {/* Step 6 */}
-                    <section className="space-y-4 max-w-[70ch]">
+                    <section className="space-y-4">
                         <h2 className="heading-display text-2xl font-bold text-parchment flex items-center gap-3">
                             <span className="border border-gold text-gold w-8 h-8 rounded-control flex items-center justify-center text-sm tabular-nums shrink-0">6</span>
                             What the Bot Sends

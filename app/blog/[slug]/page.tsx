@@ -83,7 +83,7 @@ export default async function BlogPost(props: Props) {
                     ])
                 }}
             />
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-screen-2xl mx-auto">
                 <Link href="/blog" className="text-gold hover:text-gold-bright mb-8 inline-block font-medium">
                     &larr; Back to Blog
                 </Link>
@@ -116,7 +116,7 @@ export default async function BlogPost(props: Props) {
                     </div>
                 </header>
 
-                <div className="prose prose-lg max-w-[70ch]">
+                <div className="prose prose-lg max-w-none">
                     <Markdown
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeRaw]}
