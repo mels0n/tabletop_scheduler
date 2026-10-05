@@ -42,7 +42,7 @@ const schema = SchemaGenerator.faq([
 
 export default function PrivacyPage() {
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
@@ -51,50 +51,50 @@ export default function PrivacyPage() {
 
                 {/* Header */}
                 <div className="space-y-6 text-center">
-                    <div className="inline-flex items-center justify-center p-4 bg-emerald-500/10 rounded-full mb-4">
-                        <Shield className="w-12 h-12 text-emerald-400" />
+                    <div className="inline-flex items-center justify-center p-4 bg-surface-2 rounded-card mb-4">
+                        <Shield className="w-12 h-12 text-gold-bright" aria-hidden="true" />
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">
                         The &quot;Zero Tracking&quot; Promise
                     </h1>
-                    <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+                    <p className="text-xl text-parchment-2 max-w-2xl mx-auto">
                         We believe that scheduling a board game night shouldn&apos;t require surrendering your personal data or sitting through ads.
                     </p>
                 </div>
 
                 {/* Core Pillars */}
                 <div className="grid md:grid-cols-2 gap-8">
-                    <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                        <EyeOff className="w-8 h-8 text-rose-400" />
-                        <h2 className="text-2xl font-bold text-slate-200">No Analytics</h2>
-                        <p className="text-slate-400 leading-relaxed">
+                    <div className="card p-8 space-y-4">
+                        <EyeOff className="w-8 h-8 text-gold-bright" aria-hidden="true" />
+                        <h2 className="heading-display text-2xl font-bold text-parchment">No Analytics</h2>
+                        <p className="text-parchment-2 leading-relaxed">
                             We do not use Google Analytics, Facebook Pixels, or any third-party trackers on any version of Tabletop Scheduler. We simply do not know who you are.
                         </p>
                     </div>
 
-                    <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                        <Ban className="w-8 h-8 text-amber-400" />
-                        <h2 className="text-2xl font-bold text-slate-200">No Ads. Ever.</h2>
-                        <p className="text-slate-400 leading-relaxed">
+                    <div className="card p-8 space-y-4">
+                        <Ban className="w-8 h-8 text-gold-bright" aria-hidden="true" />
+                        <h2 className="heading-display text-2xl font-bold text-parchment">No Ads. Ever.</h2>
+                        <p className="text-parchment-2 leading-relaxed">
                             There are no ads on any page of Tabletop Time: no banners, no sponsored results, no promoted listings. Scheduling a board game, D&amp;D session, or MTG draft night should not come with an ad tax.
                         </p>
                     </div>
 
-                    <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                        <GithubIcon className="w-8 h-8 text-slate-100" />
-                        <h2 className="text-2xl font-bold text-slate-200">The Code IS the Audit</h2>
-                        <p className="text-slate-400 leading-relaxed">
+                    <div className="card p-8 space-y-4">
+                        <GithubIcon className="w-8 h-8 text-gold-bright" />
+                        <h2 className="heading-display text-2xl font-bold text-parchment">The Code IS the Audit</h2>
+                        <p className="text-parchment-2 leading-relaxed">
                             Don&apos;t just take our word for it. Our entire codebase is Open Source on GitHub. You can inspect every line of code to verify that we are not harvesting your data.
                         </p>
-                        <a href="https://github.com/mels0n/tabletop_scheduler" className="inline-flex items-center text-emerald-400 hover:text-emerald-300 font-medium">
+                        <a href="https://github.com/mels0n/tabletop_scheduler" className="inline-flex items-center text-gold hover:text-gold-bright font-medium">
                             Audit the Code &rarr;
                         </a>
                     </div>
 
-                    <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                        <Server className="w-8 h-8 text-indigo-400" />
-                        <h2 className="text-2xl font-bold text-slate-200">Self-Hostable</h2>
-                        <p className="text-slate-400 leading-relaxed">
+                    <div className="card p-8 space-y-4">
+                        <Server className="w-8 h-8 text-gold-bright" aria-hidden="true" />
+                        <h2 className="heading-display text-2xl font-bold text-parchment">Self-Hostable</h2>
+                        <p className="text-parchment-2 leading-relaxed">
                             Want 100% control? Host Tabletop Scheduler on your own server using our Docker image. In self-hosted mode, no data ever leaves your network, not even anonymized telemetry.
                         </p>
                     </div>
@@ -102,12 +102,12 @@ export default function PrivacyPage() {
 
                 {/* FAQ Section */}
                 <div className="space-y-8">
-                    <h2 className="text-3xl font-bold text-center">Data Architecture</h2>
+                    <h2 className="heading-display text-3xl font-bold text-center text-parchment">Data Architecture</h2>
 
-                    <div className="space-y-4 divide-y divide-slate-800">
+                    <div className="space-y-4 divide-y divide-line max-w-[70ch] mx-auto">
                         <div className="pt-4">
-                            <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: Do I need an account?</h3>
-                            <p className="text-slate-300">
+                            <h3 className="font-bold text-lg text-gold-bright mb-2">Q: Do I need an account?</h3>
+                            <p className="text-parchment-2">
                                 <strong>Absolutely not.</strong> You can schedule, vote, and manage events purely as a &quot;Guest&quot; using your browser&apos;s local storage. We do not require an email or password.
                                 <br /><br />
                                 <em>Optional:</em> You can link Telegram/Discord for cross-device recovery.
@@ -115,11 +115,11 @@ export default function PrivacyPage() {
                         </div>
 
                         <div className="pt-8">
-                            <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: What about cookies?</h3>
-                            <p className="text-slate-300">
+                            <h3 className="font-bold text-lg text-gold-bright mb-2">Q: What about cookies?</h3>
+                            <p className="text-parchment-2">
                                 We use cookies strictly for <strong>Persistence</strong>, not tracking.
                                 <br /><br />
-                                <span className="text-slate-400 pl-4 border-l-2 border-slate-700 block">
+                                <span className="text-parchment-2 pl-4 border-l-2 border-line block">
                                     &quot;I want to close my browser and come back exactly as I left it.&quot;
                                 </span>
                                 <br />
@@ -128,32 +128,32 @@ export default function PrivacyPage() {
                         </div>
 
                         <div className="pt-8">
-                            <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: How is my data deleted?</h3>
-                            <p className="text-slate-300">
-                                <strong className="text-white">Automatically.</strong> On the hosted version, a cleanup job runs daily. Events are deleted one day after they end: a one-shot one day after its chosen slot ends, and a campaign one day after its last session. Drafts are deleted one day after their last proposed time, and cancelled events one day after cancellation. These are the defaults, and self-hosters can change them with the CLEANUP_RETENTION_DAYS_* variables. There is no manual step required, since old events, votes, and participant names are wiped from our database on that schedule. No third-party analytics run on the hosted site. If you want immediate deletion, the host can delete the event from its Manage page (a finalized event is cancelled first, then deleted), or you can self-host and control the data lifecycle yourself. Linked a Discord or Telegram account? You can remove that identity from all of your data instantly via &quot;Linked Accounts&quot; on your <Link href="/profile/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy &amp; Data page</Link>.
+                            <h3 className="font-bold text-lg text-gold-bright mb-2">Q: How is my data deleted?</h3>
+                            <p className="text-parchment-2">
+                                <strong className="text-parchment">Automatically.</strong> On the hosted version, a cleanup job runs daily. Events are deleted one day after they end: a one-shot one day after its chosen slot ends, and a campaign one day after its last session. Drafts are deleted one day after their last proposed time, and cancelled events one day after cancellation. These are the defaults, and self-hosters can change them with the CLEANUP_RETENTION_DAYS_* variables. There is no manual step required, since old events, votes, and participant names are wiped from our database on that schedule. No third-party analytics run on the hosted site. If you want immediate deletion, the host can delete the event from its Manage page (a finalized event is cancelled first, then deleted), or you can self-host and control the data lifecycle yourself. Linked a Discord or Telegram account? You can remove that identity from all of your data instantly via &quot;Linked Accounts&quot; on your <Link href="/profile/privacy" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">Privacy &amp; Data page</Link>.
                             </p>
                         </div>
 
                         <div className="pt-8">
-                            <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: Is it Self-Hostable?</h3>
-                            <p className="text-slate-300">
-                                <strong className="text-white">Yes.</strong> If you want 100% control, you can host Tabletop Scheduler on your own server using our Docker image. In this mode, no data ever leaves your network.
+                            <h3 className="font-bold text-lg text-gold-bright mb-2">Q: Is it Self-Hostable?</h3>
+                            <p className="text-parchment-2">
+                                <strong className="text-parchment">Yes.</strong> If you want 100% control, you can host Tabletop Scheduler on your own server using our Docker image. In this mode, no data ever leaves your network.
                             </p>
                         </div>
 
                         {publicConfig.isHosted && (
                             <div className="pt-8">
-                                <h3 className="font-bold text-lg text-emerald-400 mb-2">Q: To comply with various global privacy laws, does TableTop Time have a Formal Privacy Policy?</h3>
-                                <p className="text-slate-300">
-                                    <strong className="text-white">Yes.</strong> For detailed legal compliance information, please see our <Link href="/legal" className="text-emerald-400 hover:text-emerald-300 underline">Legal page</Link>.
+                                <h3 className="font-bold text-lg text-gold-bright mb-2">Q: To comply with various global privacy laws, does TableTop Time have a Formal Privacy Policy?</h3>
+                                <p className="text-parchment-2">
+                                    <strong className="text-parchment">Yes.</strong> For detailed legal compliance information, please see our <Link href="/legal" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">Legal page</Link>.
                                 </p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="text-center pt-12 border-t border-slate-800">
-                    <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors">
+                <div className="text-center pt-12 border-t border-line">
+                    <Link href="/" className="text-mist hover:text-gold-bright transition-colors">
                         &larr; Back to Scheduler
                     </Link>
                 </div>

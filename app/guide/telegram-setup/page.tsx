@@ -2,7 +2,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, TriangleAlert } from 'lucide-react';
 import { SchemaGenerator } from '@/shared/lib/aeo';
 import { publicConfig } from "@/shared/config/public";
 
@@ -43,7 +43,7 @@ export default function TelegramSetupPage() {
     });
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 py-12 px-4 md:px-8">
+        <main className="min-h-screen bg-ink text-parchment py-12 px-4 md:px-8">
             {isHosted && (
                 <script
                     type="application/ld+json"
@@ -51,27 +51,27 @@ export default function TelegramSetupPage() {
                 />
             )}
 
-            <div className="max-w-3xl mx-auto">
-                <Link href="/" className="inline-flex items-center text-indigo-400 hover:text-indigo-300 mb-8 transition-colors group">
-                    <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+            <div className="max-w-5xl mx-auto">
+                <Link href="/" className="inline-flex items-center text-gold hover:text-gold-bright mb-8 transition-colors group">
+                    <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
                     Back to Home
                 </Link>
 
-                <article className="prose prose-invert prose-lg max-w-none prose-headings:text-indigo-100 prose-a:text-indigo-400 hover:prose-a:text-indigo-300 prose-strong:text-slate-100">
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-6">
+                <article className="prose prose-lg max-w-[70ch]">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment mb-6">
                         Telegram Bot Setup Guide
                     </h1>
 
-                    <p className="lead text-xl text-slate-400 mb-8">
+                    <p className="lead text-xl text-parchment-2 mb-8">
                         Since Tabletop Time is privacy-first and self-hosted, you need to provide your own Telegram Bot for group notifications to work.
                         Don&apos;t worry, it takes about 2 minutes.
                     </p>
 
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-10 not-prose">
-                        <h3 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
-                            ⚠️ Critical Requirement
+                    <div className="bg-surface border-l-2 border-maybe rounded-none p-6 mb-10 not-prose">
+                        <h3 className="text-lg font-semibold text-maybe mb-2 flex items-center gap-2">
+                            <TriangleAlert className="w-5 h-5" aria-hidden="true" /> Critical Requirement
                         </h3>
-                        <p className="text-slate-300">
+                        <p className="text-parchment-2">
                             For the bot to <strong>Pin Messages</strong> (like the live event dashboard), it must be an <strong>Administrator</strong> in your group with the &quot;Pin Messages&quot; permission enabled.
                         </p>
                     </div>
@@ -86,26 +86,26 @@ export default function TelegramSetupPage() {
 
                     <h2>2. Configure Your Environment</h2>
                     <p>Add this token to your <code>docker-compose.yml</code> or <code>.env</code> file:</p>
-                    <pre className="bg-slate-900 p-4 rounded-lg"><code>TELEGRAM_BOT_TOKEN=your_token_here</code></pre>
+                    <pre className="bg-field border border-line p-4 rounded-card"><code>TELEGRAM_BOT_TOKEN=your_token_here</code></pre>
 
                     <h2>3. Deployment Modes</h2>
                     <p>Tabletop Time supports two modes for the Telegram Bot, chosen with <code>TELEGRAM_MODE</code> (<code>webhook</code>, <code>polling</code>, or <code>off</code>). When a token and a base URL are both set, the default is webhook. Both modes need <code>NEXT_PUBLIC_BASE_URL</code> set whenever a bot token is configured, because every link the bot sends points at it, and the app will not start without it.</p>
 
                     <div className="grid md:grid-cols-2 gap-6 not-prose my-8">
-                        <div className="bg-slate-900/30 p-5 rounded-lg border border-slate-800">
-                            <h3 className="text-lg font-semibold text-indigo-300 mb-2">Polling</h3>
-                            <p className="text-sm text-slate-400 mb-3">Best for Home Servers (Docker)</p>
-                            <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4">
+                        <div className="card">
+                            <h3 className="text-lg font-semibold text-gold-bright mb-2">Polling</h3>
+                            <p className="text-sm text-parchment-2 mb-3">Best for Home Servers (Docker)</p>
+                            <ul className="text-sm text-parchment-2 space-y-2 list-disc pl-4">
                                 <li>No public domain required, so it works behind NAT</li>
                                 <li>Set <code>TELEGRAM_MODE=polling</code></li>
                                 <li>Still set <code>NEXT_PUBLIC_BASE_URL</code> to an address your players can open (it does not need to be public)</li>
                             </ul>
                         </div>
 
-                        <div className="bg-slate-900/30 p-5 rounded-lg border border-slate-800">
-                            <h3 className="text-lg font-semibold text-indigo-300 mb-2">Webhook (Default)</h3>
-                            <p className="text-sm text-slate-400 mb-3">Best for Cloud / Vercel</p>
-                            <ul className="text-sm text-slate-300 space-y-2 list-disc pl-4">
+                        <div className="card">
+                            <h3 className="text-lg font-semibold text-gold-bright mb-2">Webhook (Default)</h3>
+                            <p className="text-sm text-parchment-2 mb-3">Best for Cloud / Vercel</p>
+                            <ul className="text-sm text-parchment-2 space-y-2 list-disc pl-4">
                                 <li>Requires HTTPS public domain</li>
                                 <li>Set <code>NEXT_PUBLIC_BASE_URL</code> to your app URL</li>
                                 <li>The webhook is registered automatically when the app starts</li>

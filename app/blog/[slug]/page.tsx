@@ -63,7 +63,7 @@ export default async function BlogPost(props: Props) {
     }
 
     return (
-        <article className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+        <article className="min-h-screen bg-ink text-parchment py-20 px-6">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
@@ -83,23 +83,23 @@ export default async function BlogPost(props: Props) {
                     ])
                 }}
             />
-            <div className="max-w-3xl mx-auto">
-                <Link href="/blog" className="text-indigo-400 hover:text-indigo-300 mb-8 inline-block font-medium">
+            <div className="max-w-5xl mx-auto">
+                <Link href="/blog" className="text-gold hover:text-gold-bright mb-8 inline-block font-medium">
                     &larr; Back to Blog
                 </Link>
 
                 <header className="mb-10">
-                    <h1 className="text-3xl md:text-5xl font-bold mb-6 text-slate-100 leading-tight">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold mb-6 text-parchment leading-tight">
                         {post.title}
                     </h1>
-                    <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-mono">
+                    <div className="flex flex-wrap items-center gap-4 text-mist text-sm tabular-nums">
                         <span className="flex items-center gap-2">
                             By{' '}
                             <a
                                 href="https://chris.melson.us/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-indigo-400 hover:text-indigo-300 not-italic"
+                                className="text-gold hover:text-gold-bright not-italic"
                             >
                                 Christopher Melson
                             </a>
@@ -110,13 +110,13 @@ export default async function BlogPost(props: Props) {
                         </time>
                         <div className="flex gap-2">
                             {post.tags.map(tag => (
-                                <span key={tag} className="text-indigo-400">#{tag}</span>
+                                <span key={tag} className="text-gold-bright">#{tag}</span>
                             ))}
                         </div>
                     </div>
                 </header>
 
-                <div className="prose prose-invert prose-lg max-w-none prose-headings:text-indigo-100 prose-a:text-indigo-400 hover:prose-a:text-indigo-300 prose-strong:text-slate-100">
+                <div className="prose prose-lg max-w-[70ch]">
                     <Markdown
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeRaw]}
@@ -124,7 +124,7 @@ export default async function BlogPost(props: Props) {
                             h1: ({ children }) => <h2>{children}</h2>,
                             img: ({ src, alt }) => (
                                 // eslint-disable-next-line @next/next/no-img-element -- markdown images of unknown size; images.unoptimized is on
-                                <img src={src} alt={alt ?? ''} className="w-full rounded-lg my-6" />
+                                <img src={src} alt={alt ?? ''} className="w-full rounded-card my-6" />
                             ),
                         }}
                     >{post.content}</Markdown>
