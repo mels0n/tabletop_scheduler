@@ -42,8 +42,9 @@ export const manageEventSelect = {
             votes: {
                 select: {
                     preference: true,
+                    participantId: true,
                     canHost: true,
-                    participant: { select: { id: true, name: true, status: true } },
+                    participant: { select: { id: true, name: true, status: true, telegramId: true } },
                 },
             },
         },
