@@ -490,6 +490,15 @@ async function handleCampaignFinalize(
 
 // ─── GROUP ANNOUNCEMENT ────────────────────────────────────────────────────────
 
+/** Runs a cleanup call whose failure must not stop the caller. */
+async function bestEffort(fn: () => Promise<unknown>): Promise<void> {
+    try {
+        await fn();
+    } catch (error) {
+        log.debug("Best-effort announcement cleanup failed", { error: String(error) });
+    }
+}
+
 /**
  * Replaces the event's pinned status message on each linked platform with the finalized
  * announcement. Telegram and Discord are independent: each runs in its own try/catch so
@@ -502,14 +511,24 @@ async function announceFinalized(
     const telegramToken = getServerConfig().telegram.token ?? undefined;
     if (event.telegramChatId && telegramToken) {
         try {
-            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
+            const { sendTelegramMessage, deleteMessage, pinChatMessage, unpinChatMessage } = await import("@/features/telegram");
             if (event.pinnedMessageId) {
                 await deleteMessage(event.telegramChatId, event.pinnedMessageId, telegramToken);
             }
             const msgId = await sendTelegramMessage(event.telegramChatId, htmlMsg, telegramToken);
             if (msgId) {
                 await pinChatMessage(event.telegramChatId, msgId, telegramToken);
-                await prisma.event.update({ where: { id: event.id }, data: { pinnedMessageId: msgId } });
+                // Swap the stored id only if nobody moved it since this announcement started
+                // (a location edit, cancel or delete can run meanwhile, as this runs in after()).
+                const { count } = await prisma.event.updateMany({
+                    where: { id: event.id, status: "FINALIZED", pinnedMessageId: event.pinnedMessageId },
+                    data: { pinnedMessageId: msgId },
+                });
+                if (count === 0) {
+                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Telegram message", { slug: event.slug });
+                    await bestEffort(() => unpinChatMessage(event.telegramChatId!, msgId, telegramToken));
+                    await bestEffort(() => deleteMessage(event.telegramChatId!, msgId, telegramToken));
+                }
             }
         } catch (e) {
             log.warn("Telegram finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
@@ -529,7 +548,15 @@ async function announceFinalized(
             const res = await sendDiscordMessage(event.discordChannelId, htmlToDiscordMarkdown(htmlMsg), discordToken);
             if (res.id) {
                 await pinDiscordMessage(event.discordChannelId, res.id, discordToken);
-                await prisma.event.update({ where: { id: event.id }, data: { discordMessageId: res.id } });
+                const { count } = await prisma.event.updateMany({
+                    where: { id: event.id, status: "FINALIZED", discordMessageId: event.discordMessageId },
+                    data: { discordMessageId: res.id },
+                });
+                if (count === 0) {
+                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Discord message", { slug: event.slug });
+                    await bestEffort(() => unpinDiscordMessage(event.discordChannelId!, res.id!, discordToken));
+                    await bestEffort(() => deleteDiscordMessage(event.discordChannelId!, res.id!, discordToken));
+                }
             } else {
                 log.warn("Failed to send Discord finalize message", { error: res.error });
             }

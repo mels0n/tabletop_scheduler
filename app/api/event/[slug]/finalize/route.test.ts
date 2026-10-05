@@ -38,6 +38,7 @@ vi.mock('@/features/telegram', () => ({
     sendTelegramMessage: vi.fn(),
     deleteMessage: vi.fn(),
     pinChatMessage: vi.fn(),
+    unpinChatMessage: vi.fn(),
 }));
 vi.mock('@/features/integrations/discord/model/discord', () => ({
     sendDiscordMessage: vi.fn(),
@@ -127,7 +128,31 @@ describe('POST /api/event/[slug]/finalize', () => {
         expect(discord.unpinDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
         expect(discord.deleteDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
         expect(discord.pinDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
-        expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { discordMessageId: 'new-msg' } });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', discordMessageId: 'old-msg' }, data: { discordMessageId: 'new-msg' } });
+    });
+
+    it('guard holds: swaps the stored ids and removes nothing extra', async () => {
+        await POST(oneShotRequest(), params);
+        await flushAfter();
+
+        expect(telegram.unpinChatMessage).not.toHaveBeenCalled();
+        expect(discord.unpinDiscordMessage).toHaveBeenCalledTimes(1); // only the old message
+        expect(discord.deleteDiscordMessage).toHaveBeenCalledTimes(1);
+        expect(telegram.deleteMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('guard fails (id moved meanwhile): unpins and deletes its own new messages and does not throw', async () => {
+        // Only the two guarded id swaps report no match.
+        mockPrisma.event.updateMany.mockImplementation(async (args: any) =>
+            ('pinnedMessageId' in args.where || 'discordMessageId' in args.where) ? { count: 0 } : { count: 1 });
+
+        await POST(oneShotRequest(), params);
+        await expect(flushAfter()).resolves.toBeUndefined();
+
+        expect(telegram.unpinChatMessage).toHaveBeenCalledWith('-100', 99, 'tg-token');
+        expect(telegram.deleteMessage).toHaveBeenCalledWith('-100', 99, 'tg-token');
+        expect(discord.unpinDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
+        expect(discord.deleteDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
     });
 
     it('still announces on Discord when Telegram throws', async () => {
@@ -137,7 +162,7 @@ describe('POST /api/event/[slug]/finalize', () => {
         await flushAfter();
 
         expect(discord.sendDiscordMessage).toHaveBeenCalled();
-        expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { discordMessageId: 'new-msg' } });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', discordMessageId: 'old-msg' }, data: { discordMessageId: 'new-msg' } });
     });
 
     it('still announces on Telegram when Discord throws', async () => {
@@ -147,7 +172,7 @@ describe('POST /api/event/[slug]/finalize', () => {
         await flushAfter();
 
         expect(telegram.sendTelegramMessage).toHaveBeenCalled();
-        expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pinnedMessageId: 99 } });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', pinnedMessageId: 5 }, data: { pinnedMessageId: 99 } });
     });
 
     it('responds before announcing: no Telegram or Discord call until after() runs', async () => {
