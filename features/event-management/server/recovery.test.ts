@@ -194,11 +194,56 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
             .mockResolvedValueOnce({ telegram: { status: 'failed', error: 'blocked' }, discord: skipped })
             .mockResolvedValueOnce({ telegram: skipped, discord: sent });
 
-        const res = await recoverManagerLink('abc', 'steve_tg');
+        const res = await dmManagerLink('abc');
 
         expect(mockSend).toHaveBeenNthCalledWith(1, { telegramChatId: '555', discordUserId: null }, expect.anything(), expect.anything(), { respectOptOut: false });
         expect(mockSend).toHaveBeenNthCalledWith(2, { telegramChatId: null, discordUserId: '123456789012345678' }, expect.anything(), expect.anything(), { respectOptOut: false });
         expect(res).toMatchObject({ success: true, message: 'Login link sent to your Discord DMs!' });
+    });
+
+    it.each([
+        ['telegram', { telegramChatId: '555', discordUserId: null }, { chatId: '555', discordId: null }],
+        ['discord', { telegramChatId: null, discordUserId: '123456789012345678' }, { chatId: null, discordId: '123456789012345678' }],
+    ] as const)('dmManagerLink(slug, %s) mints and sends only that platform', async (platform, recipient, row) => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
+        mockSend.mockResolvedValue(platform === 'telegram' ? { telegram: sent, discord: skipped } : { telegram: skipped, discord: sent });
+
+        const res = await dmManagerLink('abc', platform);
+
+        expect(res).toMatchObject({ success: true });
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual(recipient);
+        expect(mockPrisma.loginToken.create).toHaveBeenCalledTimes(1);
+        expect(mockPrisma.loginToken.create.mock.calls[0][0].data).toMatchObject(row);
+        // The cooldown only checks the targeted identity, so the other button is not blocked.
+        expect(mockPrisma.loginToken.findFirst.mock.calls[0][0].where.OR).toEqual([
+            platform === 'telegram' ? { chatId: '555' } : { discordId: '123456789012345678' },
+        ]);
+    });
+
+    it('dmManagerLink(slug, discord) errors when only Telegram is linked', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({
+            ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555', managerDiscordId: null, managerDiscordUsername: null,
+        });
+
+        expect(await dmManagerLink('abc', 'discord')).toEqual({ error: 'No linked manager to notify' });
+        expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('dmManagerLink rejects an unknown platform before any lookup', async () => {
+        expect(await dmManagerLink('abc', 'email' as never)).toHaveProperty('error');
+        expect(mockPrisma.event.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('recoverManagerLink sends only to the platform whose handle matched', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...discordOnlyEvent, managerTelegram: '@steve_tg', managerChatId: '555' });
+        mockSend.mockResolvedValue({ telegram: sent, discord: skipped });
+
+        const res = await recoverManagerLink('abc', 'steve_tg');
+
+        expect(res).toMatchObject({ success: true, message: 'Login link sent to your Telegram DMs!' });
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: '555', discordUserId: null });
     });
 
     it('reports an error when no platform delivered', async () => {
