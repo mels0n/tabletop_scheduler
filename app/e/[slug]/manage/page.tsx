@@ -11,7 +11,7 @@ import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
-import { DiscordConnect } from "@/features/integrations/discord";
+import { DiscordConnect, isDiscordOAuthConfigured } from "@/features/integrations/discord";
 import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
@@ -53,6 +53,7 @@ export default async function ManageEventPage(props: PageProps) {
     }
 
     const { event, botUsername } = data;
+    const discordOAuthEnabled = isDiscordOAuthConfigured();
     if (!event) {
         notFound();
     }
@@ -283,13 +284,18 @@ export default async function ManageEventPage(props: PageProps) {
                                 initialHandle={event.managerTelegram}
                                 hasManagerChatId={!!event.managerChatId}
                             />
-                            <DiscordConnect
-                                slug={event.slug}
-                                hasChannel={!!event.discordChannelId}
-                                guildId={event.discordGuildId}
-                                channelId={event.discordChannelId}
-                                hasManagerDiscordId={!!event.managerDiscordId}
-                            />
+                            {/* Every way into the Discord setup starts the OAuth flow, so the card is
+                                hidden when Discord isn't configured, unless a channel is already bound. */}
+                            {(discordOAuthEnabled || event.discordChannelId) && (
+                                <DiscordConnect
+                                    slug={event.slug}
+                                    hasChannel={!!event.discordChannelId}
+                                    guildId={event.discordGuildId}
+                                    channelId={event.discordChannelId}
+                                    hasManagerDiscordId={!!event.managerDiscordId}
+                                    oauthEnabled={discordOAuthEnabled}
+                                />
+                            )}
                         </div>
 
                         {/* Event Settings */}

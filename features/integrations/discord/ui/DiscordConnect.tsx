@@ -23,9 +23,14 @@ interface DiscordConnectProps {
     guildId?: string | null;
     channelId?: string | null;
     hasManagerDiscordId: boolean;
+    /**
+     * Discord OAuth is configured on the server. Without it the connect, re-invite and
+     * recover links are hidden, since each one starts the OAuth flow.
+     */
+    oauthEnabled: boolean;
 }
 
-export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: initialGuildId, channelId: initialChannelId, hasManagerDiscordId }: DiscordConnectProps) {
+export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: initialGuildId, channelId: initialChannelId, hasManagerDiscordId, oauthEnabled }: DiscordConnectProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -153,12 +158,14 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                     <div className="mt-1 p-3 bg-slate-900/40 rounded-lg border border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
                             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Manager Recovery</p>
-                            <button
-                                onClick={() => { setHasChannel(false); setStep('initial'); setExpanded(false); }}
-                                className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
-                            >
-                                reconnect channel
-                            </button>
+                            {oauthEnabled && (
+                                <button
+                                    onClick={() => { setHasChannel(false); setStep('initial'); setExpanded(false); }}
+                                    className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
+                                >
+                                    reconnect channel
+                                </button>
+                            )}
                         </div>
                         {hasManagerDiscordId ? (
                             <div className="space-y-2">
@@ -175,7 +182,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                                     {dmLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Send Magic Link (Discord DM)"}
                                 </button>
                             </div>
-                        ) : (
+                        ) : oauthEnabled ? (
                             <div className="space-y-2">
                                 <p className="text-xs text-slate-400">
                                     Associate your Discord account to recover managing rights if you lose access.
@@ -188,7 +195,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                                     Recover with Discord
                                 </a>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 )}
             </div>
@@ -238,7 +245,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                     </div>
                 )}
 
-                {step === 'initial' && (
+                {step === 'initial' && oauthEnabled && (
                     <a
                         href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
                         className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20"
@@ -276,9 +283,9 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                                 </button>
                             </div>
                         )}
-                        <p className="text-[10px] text-slate-500">
+                        {oauthEnabled && <p className="text-[10px] text-slate-500">
                             Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-indigo-400 hover:underline">Re-invite it</a>.
-                        </p>
+                        </p>}
                     </div>
                 )}
             </div>
@@ -303,7 +310,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                             {dmLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Send Magic Link (Discord DM)"}
                         </button>
                     </div>
-                ) : (
+                ) : oauthEnabled ? (
                     <div className="space-y-3">
                         <p className="text-xs text-slate-400">
                             Associate your Discord account to recover managing rights if you lose access.
@@ -316,7 +323,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                             Recover with Discord (Magic Link)
                         </a>
                     </div>
-                )}
+                ) : null}
             </div>
         </div>
     );
