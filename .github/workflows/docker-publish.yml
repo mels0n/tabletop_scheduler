@@ -15,6 +15,12 @@ name: Docker Build & Push
 # most of an hour. Each leg is scanned and pushed by digest only; the `merge`
 # job then publishes one multi-arch manifest under the real tags, so a tag
 # never points at a half-built image.
+#
+# Only the newest run per ref publishes: a new push to main cancels the run
+# still in progress for the previous commit, so an older image can never
+# finish last and take `latest`. The `build` gate also requires ci to have
+# succeeded, not merely "not failed", because ci.yml's own concurrency group
+# can cancel an older ci run, and a cancelled ci must not publish.
 
 on:
   push:
@@ -33,6 +39,10 @@ on:
       - 'content/**'
       - '.claude/**'
 
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
@@ -48,8 +58,9 @@ jobs:
 
   build:
     needs: ci
-    # Run when ci passed, or was skipped (pull_request); never when it failed.
-    if: ${{ !failure() && !cancelled() }}
+    # Run when ci passed, or was skipped (pull_request); never when it failed
+    # or was cancelled.
+    if: ${{ !cancelled() && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
     strategy:
       fail-fast: true
       matrix:
