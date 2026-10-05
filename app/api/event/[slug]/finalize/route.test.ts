@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
+import { redirect } from 'next/navigation';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
+import Logger from '@/shared/lib/logger';
 import { createTxStub } from '@/shared/lib/__mocks__/prisma';
 
 vi.mock('@/shared/lib/prisma');
@@ -36,6 +38,7 @@ vi.mock('@/features/telegram', () => ({
     sendTelegramMessage: vi.fn(),
     deleteMessage: vi.fn(),
     pinChatMessage: vi.fn(),
+    unpinChatMessage: vi.fn(),
 }));
 vi.mock('@/features/integrations/discord/model/discord', () => ({
     sendDiscordMessage: vi.fn(),
@@ -76,6 +79,19 @@ const finalizedEvent = {
     finalizedSlotId: 3,
 };
 
+// What the after() task reads when it runs: the event as it is then.
+const freshEvent = (over: Record<string, unknown> = {}) => ({
+    ...finalizedEvent,
+    status: 'FINALIZED',
+    description: null,
+    finalizedHost: null,
+    location: 'Old Place',
+    timezone: 'UTC',
+    finalizedSessions: [{ timeSlot: { id: 3, startTime: createdAt, endTime: createdAt } }],
+    participants: [{ name: 'Dee', status: 'ACCEPTED' }],
+    ...over,
+});
+
 const eventMeta = { id: 1, status: 'DRAFT', maxPlayers: 4, minPlayers: 1, title: 'Game Night', eventType: 'ONE_SHOT', minSessions: null, timezone: 'UTC' };
 
 function oneShotRequest(fields: Record<string, string> = { slotId: '3' }) {
@@ -93,11 +109,12 @@ const params = { params: Promise.resolve({ slug: 'evt' }) };
 describe('POST /api/event/[slug]/finalize', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        afterQueue.length = 0;
         (verifyEventAdmin as any).mockResolvedValue(true);
         process.env.TELEGRAM_BOT_TOKEN = 'tg-token';
         process.env.DISCORD_BOT_TOKEN = 'dc-token';
         // First read: event metadata; second read (inside the transaction): the finalized event.
-        mockPrisma.event.findUnique.mockResolvedValueOnce(eventMeta).mockResolvedValueOnce(finalizedEvent);
+        mockPrisma.event.findUnique.mockResolvedValueOnce(eventMeta).mockResolvedValueOnce(finalizedEvent).mockResolvedValue(freshEvent());
         mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockPrisma.timeSlot.findFirst.mockResolvedValue({ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt });
         mockPrisma.vote.findMany.mockResolvedValue([discordOnlyVote]);
@@ -110,6 +127,7 @@ describe('POST /api/event/[slug]/finalize', () => {
 
     it('DMs a Discord-only accepted participant', async () => {
         await POST(oneShotRequest(), params);
+        await flushAfter();
 
         expect(mockSend).toHaveBeenCalledTimes(1);
         expect(mockSend.mock.calls[0][0]).toEqual({ telegramChatId: null, discordUserId: 'd-7' });
@@ -118,29 +136,123 @@ describe('POST /api/event/[slug]/finalize', () => {
 
     it('deletes the old Discord dashboard message after unpinning, then posts and stores the new one', async () => {
         await POST(oneShotRequest(), params);
+        await flushAfter();
 
         expect(discord.unpinDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
         expect(discord.deleteDiscordMessage).toHaveBeenCalledWith('chan-1', 'old-msg', 'dc-token');
         expect(discord.pinDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
-        expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { discordMessageId: 'new-msg' } });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', discordMessageId: 'old-msg' }, data: { discordMessageId: 'new-msg' } });
+    });
+
+    it('builds the group message from the event as it is when the announcement runs', async () => {
+        realMessages.on = true;
+        try {
+            await POST(oneShotRequest(), params);
+            // The admin edits the location after the response, before the after() task runs.
+            mockPrisma.event.findUnique.mockResolvedValue(freshEvent({ location: 'New Place' }));
+            await flushAfter();
+
+            expect((telegram.sendTelegramMessage as any).mock.calls[0][1]).toContain('New Place');
+            expect((telegram.sendTelegramMessage as any).mock.calls[0][1]).not.toContain('Old Place');
+        } finally {
+            realMessages.on = false;
+        }
+    });
+
+    it.each([
+        ['deleted', null],
+        ['cancelled', { status: 'CANCELLED' }],
+    ])('posts nothing when the event was %s before the announcement runs', async (_n, change) => {
+        await POST(oneShotRequest(), params);
+        mockPrisma.event.findUnique.mockResolvedValue(change ? freshEvent(change) : null);
+        await flushAfter();
+
+        expect(telegram.sendTelegramMessage).not.toHaveBeenCalled();
+        expect(discord.sendDiscordMessage).not.toHaveBeenCalled();
+        expect(telegram.deleteMessage).not.toHaveBeenCalled();
+        expect(discord.deleteDiscordMessage).not.toHaveBeenCalled();
+    });
+
+    it('guard holds: swaps the stored ids and removes nothing extra', async () => {
+        await POST(oneShotRequest(), params);
+        await flushAfter();
+
+        expect(telegram.unpinChatMessage).not.toHaveBeenCalled();
+        expect(discord.unpinDiscordMessage).toHaveBeenCalledTimes(1); // only the old message
+        expect(discord.deleteDiscordMessage).toHaveBeenCalledTimes(1);
+        expect(telegram.deleteMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('guard fails (id moved meanwhile): unpins and deletes its own new messages and does not throw', async () => {
+        // Only the two guarded id swaps report no match.
+        mockPrisma.event.updateMany.mockImplementation(async (args: any) =>
+            ('pinnedMessageId' in args.where || 'discordMessageId' in args.where) ? { count: 0 } : { count: 1 });
+
+        await POST(oneShotRequest(), params);
+        await expect(flushAfter()).resolves.toBeUndefined();
+
+        expect(telegram.unpinChatMessage).toHaveBeenCalledWith('-100', 99, 'tg-token');
+        expect(telegram.deleteMessage).toHaveBeenCalledWith('-100', 99, 'tg-token');
+        expect(discord.unpinDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
+        expect(discord.deleteDiscordMessage).toHaveBeenCalledWith('chan-1', 'new-msg', 'dc-token');
     });
 
     it('still announces on Discord when Telegram throws', async () => {
         (telegram.deleteMessage as any).mockRejectedValue(new Error('telegram down'));
 
         await POST(oneShotRequest(), params);
+        await flushAfter();
 
         expect(discord.sendDiscordMessage).toHaveBeenCalled();
-        expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { discordMessageId: 'new-msg' } });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', discordMessageId: 'old-msg' }, data: { discordMessageId: 'new-msg' } });
     });
 
     it('still announces on Telegram when Discord throws', async () => {
         (discord.unpinDiscordMessage as any).mockRejectedValue(new Error('discord down'));
 
         await POST(oneShotRequest(), params);
+        await flushAfter();
 
         expect(telegram.sendTelegramMessage).toHaveBeenCalled();
-        expect(mockPrisma.event.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { pinnedMessageId: 99 } });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({ where: { id: 1, status: 'FINALIZED', pinnedMessageId: 5 }, data: { pinnedMessageId: 99 } });
+    });
+
+    it('responds before announcing: no Telegram or Discord call until after() runs', async () => {
+        afterQueue.length = 0;
+        await POST(oneShotRequest(), params);
+
+        expect(telegram.sendTelegramMessage).not.toHaveBeenCalled();
+        expect(discord.sendDiscordMessage).not.toHaveBeenCalled();
+        expect(mockSend).not.toHaveBeenCalled();
+        await flushAfter();
+        expect(telegram.sendTelegramMessage).toHaveBeenCalledTimes(1);
+        expect(discord.sendDiscordMessage).toHaveBeenCalledTimes(1);
+        expect(mockSend).toHaveBeenCalled();
+    });
+
+    it('still finalizes and redirects when the Telegram announcement throws inside after()', async () => {
+        afterQueue.length = 0;
+        (telegram.sendTelegramMessage as any).mockRejectedValueOnce(new Error('boom'));
+        await POST(oneShotRequest(), params);
+
+        expect(redirect).toHaveBeenCalledWith('/e/evt/manage');
+        await expect(flushAfter()).resolves.toBeUndefined();
+        expect(discord.sendDiscordMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs and swallows a failure of the announce and DM task inside after()', async () => {
+        afterQueue.length = 0;
+        const logError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+        mockSend.mockRejectedValue(new Error('dm down'));
+        try {
+            await POST(oneShotRequest(), params);
+
+            expect(redirect).toHaveBeenCalledWith('/e/evt/manage');
+            await expect(flushAfter()).resolves.toBeUndefined();
+            expect(logError).toHaveBeenCalledWith('Finalize announcement failed', expect.objectContaining({ message: 'dm down' }));
+        } finally {
+            logError.mockRestore();
+        }
     });
 
     it('scopes the slot, vote lookup and participant updates to the event, with a DRAFT precondition', async () => {
@@ -218,11 +330,13 @@ describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        afterQueue.length = 0;
         realMessages.on = true;
         (verifyEventAdmin as any).mockResolvedValue(true);
         process.env.TELEGRAM_BOT_TOKEN = 'tg-token';
         process.env.DISCORD_BOT_TOKEN = 'dc-token';
-        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, title: hostile }).mockResolvedValueOnce(event);
+        mockPrisma.event.findUnique.mockResolvedValueOnce({ ...eventMeta, title: hostile }).mockResolvedValueOnce(event)
+            .mockResolvedValue(freshEvent({ ...event, status: 'FINALIZED', participants: [{ name: hostile, status: 'ACCEPTED' }] }));
         mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockPrisma.timeSlot.findFirst.mockResolvedValue({ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt });
         mockPrisma.vote.findMany.mockResolvedValue([hostileVote]);
@@ -240,6 +354,7 @@ describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
 
     it('escapes a hostile participant name and title in the group announcement and the DM', async () => {
         await POST(oneShotRequest(), params);
+        await flushAfter();
 
         const escaped = '&lt;a href=&quot;https://evil&quot;&gt;x&lt;/a&gt;';
         const groupHtml = (telegram.sendTelegramMessage as any).mock.calls[0][1] as string;
@@ -283,7 +398,8 @@ describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
 
         await POST(oneShotRequest(), params);
 
-        expect(afterQueue).toHaveLength(1);
+        // The webhook attempt and the announce/DM task are both queued.
+        expect(afterQueue).toHaveLength(2);
         expect(processWebhookRow).not.toHaveBeenCalled();
         await flushAfter();
         expect(processWebhookRow).toHaveBeenCalledWith('wh-final');
@@ -293,8 +409,9 @@ describe('POST /api/event/[slug]/finalize - user text and webhooks', () => {
         afterQueue.length = 0;
 
         await POST(oneShotRequest(), params);
+        await flushAfter();
 
-        expect(afterQueue).toHaveLength(0);
+        expect(processWebhookRow).not.toHaveBeenCalled();
     });
 });
 
@@ -303,8 +420,10 @@ describe('POST /api/event/[slug]/finalize (campaign)', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        afterQueue.length = 0;
         (verifyEventAdmin as any).mockResolvedValue(true);
-        mockPrisma.event.findUnique.mockResolvedValueOnce(campaignMeta).mockResolvedValueOnce({ ...finalizedEvent, finalizedSlotId: null });
+        mockPrisma.event.findUnique.mockResolvedValueOnce(campaignMeta).mockResolvedValueOnce({ ...finalizedEvent, finalizedSlotId: null })
+            .mockResolvedValue(freshEvent({ finalizedSlotId: null }));
         mockPrisma.event.updateMany.mockResolvedValue({ count: 1 });
         mockPrisma.vote.findMany.mockResolvedValue([discordOnlyVote]);
         mockPrisma.participant.updateMany.mockResolvedValue({ count: 1 });
@@ -353,10 +472,42 @@ describe('POST /api/event/[slug]/finalize (campaign)', () => {
         const res = await POST(campaignRequest({ slotIds: [3] }), params);
 
         expect(res!.status).toBe(200);
-        expect(afterQueue).toHaveLength(1);
+        expect(afterQueue).toHaveLength(2);
         // A failed attempt is logged, never thrown: the cron retries the row.
         await expect(flushAfter()).resolves.toBeUndefined();
         expect(processWebhookRow).toHaveBeenCalledWith('wh-camp');
+    });
+
+    it('responds before announcing: no group or DM send until after() runs', async () => {
+        afterQueue.length = 0;
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt }]);
+
+        const res = await POST(campaignRequest({ slotIds: [3] }), params);
+
+        expect(res!.status).toBe(200);
+        expect(await res!.json()).toEqual({ success: true, warning: 'Only 1 of 2 target sessions selected', sessionCount: 1 });
+        expect(discord.sendDiscordMessage).not.toHaveBeenCalled();
+        expect(mockSend).not.toHaveBeenCalled();
+        await flushAfter();
+        expect(discord.sendDiscordMessage).toHaveBeenCalledTimes(1);
+        expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs and swallows a failure of the announce and DM task inside after()', async () => {
+        afterQueue.length = 0;
+        const logError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+        mockSend.mockRejectedValue(new Error('dm down'));
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt }]);
+        try {
+            const res = await POST(campaignRequest({ slotIds: [3] }), params);
+
+            expect(res!.status).toBe(200);
+            expect(await res!.json()).toEqual({ success: true, warning: 'Only 1 of 2 target sessions selected', sessionCount: 1 });
+            await expect(flushAfter()).resolves.toBeUndefined();
+            expect(logError).toHaveBeenCalledWith('Finalize announcement failed', expect.objectContaining({ message: 'dm down' }));
+        } finally {
+            logError.mockRestore();
+        }
     });
 
     it('returns 409 when the campaign was already finalized', async () => {

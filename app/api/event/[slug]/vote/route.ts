@@ -323,12 +323,31 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
             // 6. Quorum: record the first time it is reached, in the same transaction as the vote.
             const event = await tx.event.findUnique({
                 where: { id: eventId },
-                include: { timeSlots: { include: { votes: true } } }
+                select: {
+                    id: true,
+                    slug: true,
+                    title: true,
+                    status: true,
+                    maxPlayers: true,
+                    minPlayers: true,
+                    telegramChatId: true,
+                    discordChannelId: true,
+                    managerChatId: true,
+                    managerDiscordId: true,
+                    quorumReachedAt: true,
+                    quorumPerfectNotified: true,
+                    quorumViableNotified: true,
+                }
             });
             let quorum = { viable: false, perfect: false };
             if (event && !(event.quorumReachedAt && event.quorumPerfectNotified && event.quorumViableNotified)) {
                 const participantsCount = await tx.participant.count({ where: { eventId } });
-                quorum = checkEventQuorum(event, participantsCount);
+                // Slots and votes are only needed to evaluate quorum, so load them here.
+                const timeSlots = await tx.timeSlot.findMany({
+                    where: { eventId },
+                    select: { id: true, votes: { select: { preference: true, canHost: true } } }
+                });
+                quorum = checkEventQuorum({ minPlayers: event.minPlayers, timeSlots }, participantsCount);
                 if ((quorum.viable || quorum.perfect) && !event.quorumReachedAt) {
                     await tx.event.updateMany({
                         where: { id: eventId, quorumReachedAt: null },

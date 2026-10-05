@@ -10,7 +10,7 @@ Empty values count as unset. `NODE_ENV`, `VERCEL` and `VERCEL_ENV` are set by No
 
 | Variable | Required | Default | Description |
 |----------|:--------:|:-------:|-------------|
-| `DATABASE_URL` | **Yes** | Docker: `file:/app/data/scheduler.db` when unset. Otherwise none. | Connection string. Local development: `file:./dev.db` (the file is created at `prisma/dev.db`). Self-host: a SQLite file URL; the container refuses to start with anything else, so a Postgres URL is not supported there. Hosted: the pooled Supabase URL on port 6543, ending in `?pgbouncer=true&connection_limit=1`. |
+| `DATABASE_URL` | **Yes** | Docker: `file:/app/data/scheduler.db` when unset. Otherwise none. | Connection string. Local development: `file:./dev.db` (the file is created at `prisma/dev.db`). Self-host: a SQLite file URL; the container refuses to start with anything else, so a Postgres URL is not supported there. Hosted: the pooled Supabase URL on port 6543, ending in `?pgbouncer=true&connection_limit=3`. |
 | `DIRECT_URL` | Hosted only | - | Direct (non-pooled) Postgres URL on port 5432. Prisma Migrate cannot run through the transaction pooler, so migrations use this. Not read on self-host. |
 | `PRISMA_ACCEPT_DATA_LOSS` | No | unset | Self-host only, and for recovery only. `1` or `true` lets container startup apply a schema change that would drop data. Releases never need it (every release upgrades with a plain `db push`); it exists to repair a database that is already in a broken state, such as one edited by hand. Without it, startup stops and logs why. Back up `/app/data` first, and remove the variable after the one start that needs it. |
 
