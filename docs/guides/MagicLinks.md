@@ -50,7 +50,7 @@ If you vote *before* syncing, or you opted out and change your mind later, the e
 The manage page has a **Manager Recovery** box for each platform.
 
 1.  **Register first.** Click **"Register for Magic Links"** (Telegram) or **"Recover with Discord (Magic Link)"** (Discord). This saves your Telegram or Discord account as the event's manager. Only the event's admin can do this: Telegram registration uses a one-time code that is valid for 15 minutes, and Discord registration only happens while your browser holds the event's admin link.
-2.  **Send a link.** Click **"Send Magic Link (Telegram DM)"** or **"Send Magic Link (Discord DM)"**. The bot DMs a login link to every platform the manager has linked, one link per platform, each sent only on its own platform.
+2.  **Send a link.** Click **"Send Magic Link (Telegram DM)"** or **"Send Magic Link (Discord DM)"**. Each button sends a login link only to the manager account on its own platform: the Telegram button DMs the linked Telegram account, and the Discord button DMs the linked Discord account.
 3.  Opening the link signs that browser in as the manager's account, which gives it admin access to every event that account manages.
 
 The admin token itself is never changed or re-sent, so asking for a link can never lock the organizer out. Links can be requested once a minute per manager account.
@@ -61,7 +61,7 @@ The admin token itself is never changed or re-sent, so asking for a link can nev
 1.  Scroll to the bottom of the event page and find **"Are you the organizer?"**.
 2.  Click **"Lost Manager Link?"**.
 3.  Choose **Telegram** or **Discord**, and enter the Telegram handle or Discord username linked to the event.
-4.  If it matches the event's stored manager, the bot sends a login link to **that stored account's** DMs. Typing someone else's handle cannot send a link anywhere else.
+4.  If it matches the event's stored manager, the bot sends a login link to **that stored account's** DMs, on the platform you chose only. Typing someone else's handle cannot send a link anywhere else.
 
 This only works if a Telegram or Discord account was registered as the manager (step 1 of the previous section, or creating the event while your browser was already synced). Without one there is nowhere to send a link, and the event can only be managed through its original manage link.
 

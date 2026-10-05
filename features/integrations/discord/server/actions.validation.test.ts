@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-    sendDiscordMagicLogin,
     connectDiscordChannel,
     listDiscordChannels,
     recoverDiscordManagerLink,
     dmDiscordManagerLink,
 } from './actions';
 import prisma from '@/shared/lib/prisma';
-import { createDMChannel, getGuildChannels } from '@/features/integrations/discord/model/discord';
+import { getGuildChannels } from '@/features/integrations/discord/model/discord';
 import { dmManagerLink, recoverManagerLink } from '@/features/event-management/server/recovery';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { cookies } from 'next/headers';
@@ -18,7 +17,6 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
     sendDiscordMessage: vi.fn(),
     pinDiscordMessage: vi.fn(),
     getGuildChannels: vi.fn(),
-    createDMChannel: vi.fn(),
 }));
 vi.mock('@/features/event-management/server/recovery', () => ({
     dmManagerLink: vi.fn(),
@@ -44,7 +42,6 @@ const mockPrisma = prisma as unknown as {
 const mockAdmin = verifyEventAdmin as unknown as ReturnType<typeof vi.fn>;
 const mockCookies = cookies as unknown as ReturnType<typeof vi.fn>;
 const mockGuildChannels = getGuildChannels as unknown as ReturnType<typeof vi.fn>;
-const mockCreateDM = createDMChannel as unknown as ReturnType<typeof vi.fn>;
 const mockRecover = recoverManagerLink as unknown as ReturnType<typeof vi.fn>;
 const mockDmLink = dmManagerLink as unknown as ReturnType<typeof vi.fn>;
 
@@ -120,28 +117,10 @@ describe('Discord actions validate their arguments before any lookup', () => {
     });
 
     describe('dmDiscordManagerLink', () => {
-        it('delegates to the validated dmManagerLink unchanged', async () => {
+        it('delegates to the validated dmManagerLink, limited to Discord', async () => {
             mockDmLink.mockResolvedValue({ error: 'Invalid request', code: 'validation' });
             expect(await dmDiscordManagerLink('a b')).toEqual({ error: 'Invalid request', code: 'validation' });
-            expect(mockDmLink).toHaveBeenCalledWith('a b');
-        });
-    });
-
-    describe('sendDiscordMagicLogin', () => {
-        it.each(badHandles.map((h) => [String(h), h]))('returns a typed failure for %s instead of throwing', async (_l, username) => {
-            expect(await sendDiscordMagicLogin(username as string)).toEqual({ success: false, error: 'Invalid username' });
-            expect(mockCreateDM).not.toHaveBeenCalled();
-            expectNoDatabaseAccess();
-        });
-
-        it('still asks for a username when the value is blank', async () => {
-            expect(await sendDiscordMagicLogin('  ')).toEqual({ success: false, error: 'Please enter a username' });
-            expectNoDatabaseAccess();
-        });
-
-        it('still reaches the lookup for a valid username', async () => {
-            expect(await sendDiscordMagicLogin('@daniel')).toMatchObject({ success: false });
-            expect(mockPrisma.participant.findMany).toHaveBeenCalledTimes(1);
+            expect(mockDmLink).toHaveBeenCalledWith('a b', 'discord');
         });
     });
 });

@@ -92,6 +92,9 @@ export async function getConnectCommand(slug: string): Promise<string> {
     return `/connect ${slug} ${connectCodeFor(slug, event.adminToken, chatId, nonce)}`;
 }
 
+export type LoginPlatform = "telegram" | "discord";
+export const ALL_PLATFORMS: readonly LoginPlatform[] = ["telegram", "discord"];
+
 export type ManagerIdentity = {
     managerChatId: string | null;
     managerTelegram: string | null;
@@ -100,15 +103,19 @@ export type ManagerIdentity = {
 };
 
 /**
- * Throws RateLimitError when a LoginToken for this manager identity (its Telegram chat id
- * or Discord id) was created in the last 60 s. The check reads the database, so the limit
- * holds across serverless instances, and it covers every link-minting path for that
- * identity (manager recovery, `/start login`, the Discord magic login).
+ * Throws RateLimitError when a LoginToken for one of the targeted manager identities (the
+ * Telegram chat id and/or Discord id named by `platforms`) was created in the last 60 s.
+ * The check reads the database, so the limit holds across serverless instances, and it
+ * sees tokens from every link-minting path for that identity (manager recovery and
+ * `/start login`).
  */
-export async function assertManagerLinkCooldown(manager: ManagerIdentity): Promise<void> {
+export async function assertManagerLinkCooldown(
+    manager: ManagerIdentity,
+    platforms: readonly LoginPlatform[]
+): Promise<void> {
     const identities = [
-        ...(manager.managerChatId ? [{ chatId: manager.managerChatId }] : []),
-        ...(manager.managerDiscordId ? [{ discordId: manager.managerDiscordId }] : []),
+        ...(platforms.includes("telegram") && manager.managerChatId ? [{ chatId: manager.managerChatId }] : []),
+        ...(platforms.includes("discord") && manager.managerDiscordId ? [{ discordId: manager.managerDiscordId }] : []),
     ];
     if (identities.length === 0) return;
 
@@ -120,8 +127,6 @@ export async function assertManagerLinkCooldown(manager: ManagerIdentity): Promi
         throw new RateLimitError(RATE_LIMITED);
     }
 }
-
-export type LoginPlatform = "telegram" | "discord";
 
 /** The LoginToken identity columns for one platform, or null when it is not linked. */
 function identityFor(manager: ManagerIdentity, platform: LoginPlatform) {
@@ -146,7 +151,7 @@ function identityFor(manager: ManagerIdentity, platform: LoginPlatform) {
 }
 
 /**
- * Creates 15-minute LoginTokens for every platform the manager linked, one token per
+ * Creates 15-minute LoginTokens for each requested platform the manager linked, one token per
  * platform carrying ONLY that platform's identity, and returns the `/auth/login` URL for
  * each. Separate tokens mean the link DMed to one identity can never mint the other
  * identity's cookie: an event's two manager identities may belong to different people.
@@ -158,9 +163,10 @@ function identityFor(manager: ManagerIdentity, platform: LoginPlatform) {
  * is thrown. Two concurrent requests can both refuse; neither can both succeed.
  */
 export async function createManagerLoginLinks(
-    manager: ManagerIdentity
+    manager: ManagerIdentity,
+    requested: readonly LoginPlatform[]
 ): Promise<Partial<Record<LoginPlatform, string>>> {
-    const platforms = (["telegram", "discord"] as const).filter((p) => identityFor(manager, p));
+    const platforms = ALL_PLATFORMS.filter((p) => requested.includes(p) && identityFor(manager, p));
     if (platforms.length === 0) throw new ForbiddenError("No linked manager to notify");
 
     const created: string[] = [];

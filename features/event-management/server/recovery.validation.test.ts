@@ -65,13 +65,13 @@ describe('recovery actions validate their arguments before any lookup', () => {
 
     describe('dmManagerLink', () => {
         it.each(badSlugs.map((s) => [String(s), s]))('rejects slug %s', async (_l, slug) => {
-            expect(await dmManagerLink(slug as string)).toEqual(rejected);
+            expect(await dmManagerLink(slug as string, 'discord')).toEqual(rejected);
             expect(mockAdmin).not.toHaveBeenCalled();
             expect(mockPrisma.event.findUnique).not.toHaveBeenCalled();
         });
 
         it('still reaches the lookup for a valid slug', async () => {
-            expect(await dmManagerLink('abc')).toEqual({ error: 'No linked manager to notify' });
+            expect(await dmManagerLink('abc', 'discord')).toEqual({ error: 'No linked manager to notify' });
             expect(mockAdmin).toHaveBeenCalledWith('abc');
             expect(mockPrisma.event.findUnique).toHaveBeenCalledTimes(1);
         });
