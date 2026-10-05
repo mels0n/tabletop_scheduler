@@ -1,4 +1,6 @@
 import { ImageResponse } from 'next/og';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 // Image metadata
 export const alt = 'Tabletop Time Scheduler';
@@ -10,6 +12,11 @@ export const size = {
 export const contentType = 'image/png';
 
 export default async function Image() {
+    const [cormorant, spectral] = await Promise.all([
+        readFile(join(process.cwd(), 'app/_fonts/CormorantSC-Bold.ttf')),
+        readFile(join(process.cwd(), 'app/_fonts/Spectral-Regular.ttf')),
+    ]);
+
     return new ImageResponse(
         (
             <div
@@ -20,49 +27,56 @@ export default async function Image() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#020617', // Slate-950
-                    fontFamily: 'sans-serif',
+                    backgroundColor: '#0F1626',
+                    fontFamily: 'Spectral',
                 }}
             >
-                {/* Background Gradients */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '-20%',
-                        left: '20%',
-                        width: '600px',
-                        height: '600px',
-                        background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(0,0,0,0) 70%)',
-                        filter: 'blur(40px)',
-                    }}
-                />
-
                 {/* Brand Title */}
                 <div
                     style={{
                         display: 'flex',
-                        background: 'linear-gradient(to right, #818cf8, #22d3ee)', // Indigo-400 to Cyan-400
-                        backgroundClip: 'text',
-                        color: 'transparent',
-                        fontSize: 84,
-                        fontWeight: 800,
-                        letterSpacing: '-0.05em',
-                        marginBottom: '40px',
-                        zIndex: 10,
+                        color: '#D4AF5A',
+                        fontFamily: 'Cormorant SC',
+                        fontSize: 96,
+                        fontWeight: 700,
+                        letterSpacing: '0.02em',
+                        marginBottom: '28px',
                     }}
                 >
                     Tabletop Time
                 </div>
 
+                {/* Ornament */}
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '32px',
+                    }}
+                >
+                    <div style={{ display: 'flex', width: '160px', height: '1px', backgroundColor: '#56709F' }} />
+                    <div
+                        style={{
+                            display: 'flex',
+                            width: '14px',
+                            height: '14px',
+                            margin: '0 20px',
+                            backgroundColor: '#D4AF5A',
+                            transform: 'rotate(45deg)',
+                        }}
+                    />
+                    <div style={{ display: 'flex', width: '160px', height: '1px', backgroundColor: '#56709F' }} />
+                </div>
+
                 {/* Subtitle */}
                 <div
                     style={{
-                        color: '#94a3b8', // Slate-400
+                        color: '#CFC6B2',
                         fontSize: 32,
-                        marginBottom: '80px',
+                        marginBottom: '64px',
                         maxWidth: '80%',
                         textAlign: 'center',
-                        zIndex: 10,
                     }}
                 >
                     Coordinate D&D and board game sessions without the chaos.
@@ -74,14 +88,12 @@ export default async function Image() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: '#4f46e5', // Indigo-600
-                        color: 'white',
+                        backgroundColor: '#D4AF5A',
+                        color: '#1A1404',
                         padding: '20px 48px',
-                        borderRadius: '16px',
+                        borderRadius: '4px',
                         fontSize: 36,
-                        fontWeight: 600,
-                        boxShadow: '0 20px 25px -5px rgba(79, 70, 229, 0.3)',
-                        zIndex: 10,
+                        fontWeight: 400,
                     }}
                 >
                     Schedule Now
@@ -90,6 +102,10 @@ export default async function Image() {
         ),
         {
             ...size,
+            fonts: [
+                { name: 'Cormorant SC', data: cormorant, weight: 700, style: 'normal' },
+                { name: 'Spectral', data: spectral, weight: 400, style: 'normal' },
+            ],
         }
     );
 }
