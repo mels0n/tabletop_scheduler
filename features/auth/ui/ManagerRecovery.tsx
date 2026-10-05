@@ -114,6 +114,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                     <div className="segmented p-1 gap-1">
                         <button
                             type="button"
+                            aria-pressed={platform === "telegram"}
                             onClick={() => setPlatform("telegram")}
                             className={`py-1.5 text-xs font-medium rounded-control transition-colors ${platform === "telegram" ? "is-active text-telegram" : "text-mist hover:text-parchment"}`}
                         >
@@ -121,6 +122,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                         </button>
                         <button
                             type="button"
+                            aria-pressed={platform === "discord"}
                             onClick={() => setPlatform("discord")}
                             className={`py-1.5 text-xs font-medium rounded-control transition-colors ${platform === "discord" ? "is-active text-discord-text" : "text-mist hover:text-parchment"}`}
                         >

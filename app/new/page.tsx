@@ -151,6 +151,7 @@ function NewEventForm() {
                             {/* One-Shot Card */}
                             <button
                                 type="button"
+                                aria-pressed={eventType === "ONE_SHOT"}
                                 onClick={() => setEventType("ONE_SHOT")}
                                 className={`text-left p-4 rounded-card border transition-colors bg-surface ${
                                     eventType === "ONE_SHOT"
@@ -186,6 +187,7 @@ function NewEventForm() {
                             {/* Campaign Card */}
                             <button
                                 type="button"
+                                aria-pressed={eventType === "CAMPAIGN"}
                                 onClick={() => setEventType("CAMPAIGN")}
                                 className={`text-left p-4 rounded-card border transition-colors bg-surface ${
                                     eventType === "CAMPAIGN"

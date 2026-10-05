@@ -340,6 +340,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 <div className="segmented">
                     <button
                         type="button"
+                        aria-pressed={viewMode === "quick"}
                         onClick={() => setViewMode("quick")}
                         className={clsx(
                             "flex items-center gap-2 px-4 py-2.5 justify-center text-sm font-medium transition-colors",
@@ -353,6 +354,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                     </button>
                     <button
                         type="button"
+                        aria-pressed={viewMode === "detailed"}
                         onClick={() => setViewMode("detailed")}
                         className={clsx(
                             "flex items-center gap-2 px-4 py-2.5 justify-center text-sm font-medium transition-colors",
@@ -555,6 +557,7 @@ function VoteButton({ active, onClick, color, icon, label, title }: any) {
     return (
         <button
             onClick={onClick}
+            aria-pressed={active}
             aria-label={`Vote ${label}`}
             className={clsx(
                 "p-3 rounded-control border transition-colors flex flex-col items-center gap-1 sm:w-20",
