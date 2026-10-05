@@ -47,7 +47,7 @@ export default function PrivacyPage() {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
-            <div className="max-w-4xl mx-auto space-y-16">
+            <div className="max-w-7xl mx-auto space-y-16">
 
                 {/* Header */}
                 <div className="space-y-6 text-center">
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
                 </div>
 
                 {/* Core Pillars */}
-                <div className="grid md:grid-cols-2 gap-8">
+                <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
                     <div className="card p-8 space-y-4">
                         <EyeOff className="w-8 h-8 text-gold-bright" aria-hidden="true" />
                         <h2 className="heading-display text-2xl font-bold text-parchment">No Analytics</h2>
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
                 <div className="space-y-8">
                     <h2 className="heading-display text-3xl font-bold text-center text-parchment">Data Architecture</h2>
 
-                    <div className="space-y-4 divide-y divide-line max-w-[70ch] mx-auto">
+                    <div className="lg:columns-2 gap-x-12 [&>*]:break-inside-avoid [&>*]:border-t [&>*]:border-line [&>*]:mb-6">
                         <div className="pt-4">
                             <h3 className="font-bold text-lg text-gold-bright mb-2">Q: Do I need an account?</h3>
                             <p className="text-parchment-2">
