@@ -675,16 +675,16 @@ export default async function ManageEventPage(props: PageProps) {
                                                             </div>
                                                             <div className="flex items-center gap-1 flex-wrap">
                                                                 {yesVoters.map((v) => (
-                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-yes cursor-help shrink-0" />
+                                                                    <span key={v.participant.id} title={v.participant.name} data-dot className="w-3 h-3 rounded-full bg-yes cursor-help shrink-0" />
                                                                 ))}
                                                                 {maybeVoters.map((v) => (
-                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-maybe cursor-help shrink-0" />
+                                                                    <span key={v.participant.id} title={v.participant.name} data-dot className="w-3 h-3 rounded-full bg-maybe cursor-help shrink-0" />
                                                                 ))}
                                                                 {noVoters.map((v) => (
-                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-no cursor-help shrink-0" />
+                                                                    <span key={v.participant.id} title={v.participant.name} data-dot className="w-3 h-3 rounded-full bg-no cursor-help shrink-0" />
                                                                 ))}
                                                                 {Array.from({ length: unvotedCount }).map((_, i) => (
-                                                                    <span key={`u-${i}`} className="w-3 h-3 rounded-full bg-line-strong shrink-0" />
+                                                                    <span key={`u-${i}`} data-dot className="w-3 h-3 rounded-full bg-line-strong shrink-0" />
                                                                 ))}
                                                                 <span className="ml-2 text-xs text-mist">
                                                                     {slot.yesCount} yes

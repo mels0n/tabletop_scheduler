@@ -51,4 +51,27 @@ describe("Tome token contrast", () => {
     it.each(["yes", "maybe", "no"])("selected %s vote fill meets 3:1 against an unselected button", (fill) => {
         expect(contrast(fill, "field")).toBeGreaterThanOrEqual(3);
     });
+
+    it.each([
+        ["parchment", "surface-2"],
+        ["gold-bright", "surface-2"],
+        ["mist", "surface-2"],
+        ["telegram", "surface-2"],
+        ["discord-text", "surface-2"],
+        ["no", "surface-2"],
+        ["yes", "yes-bg"],
+        ["maybe", "maybe-bg"],
+        ["no", "no-bg"],
+    ])("%s text meets 4.5:1 on %s", (fg, bg) => {
+        expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("every Tailwind color token has a --c- declaration and vice versa", () => {
+        const config = readFileSync(join(__dirname, "..", "..", "tailwind.config.ts"), "utf8");
+        const list = config.match(/const TOKENS = \[([\s\S]*?)\] as const/);
+        if (!list) throw new Error("TOKENS list not found in tailwind.config.ts");
+        const configured = [...list[1].matchAll(/"([a-z0-9-]+)"/g)].map((m) => m[1]).sort();
+        const declared = [...css.matchAll(/--c-([a-z0-9-]+):/g)].map((m) => m[1]).sort();
+        expect(configured).toEqual(declared);
+    });
 });
