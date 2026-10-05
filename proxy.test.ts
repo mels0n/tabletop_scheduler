@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
-import { proxy } from './proxy';
+import { proxy, config } from './proxy';
 import { signValue } from '@/shared/lib/session';
 
 function req(path: string, cookies: Record<string, string>) {
@@ -78,15 +78,14 @@ describe('proxy request ids', () => {
     });
 
     it('reuses a well-formed incoming id', () => {
-        const request = new NextRequest('http://localhost:3000/api/health', { headers: { 'x-request-id': 'lb-42' } });
+        const request = new NextRequest('http://localhost:3000/e/abc', { headers: { 'x-request-id': 'lb-42' } });
         const res = proxy(request);
         expect(res.headers.get('x-request-id')).toBe('lb-42');
     });
 
-    it('tags API routes without touching cookies', () => {
-        const res = proxy(req('/api/event/abc/vote', { tabletop_admin_abc: 'raw-token' }));
-        expect(res.headers.get('x-request-id')).toBeTruthy();
-        expect(res.headers.getSetCookie()).toEqual([]);
+    it('does not match API routes', () => {
+        expect(config.matcher).not.toContain('/api/:path*');
+        expect(config.matcher).toEqual(['/e/:slug*', '/profile']);
     });
 
     it('tags the manage redirect too', () => {

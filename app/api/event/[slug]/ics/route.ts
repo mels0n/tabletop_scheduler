@@ -61,30 +61,28 @@ export async function GET(req: Request, props: { params: Promise<{ slug: string 
                 return newResponse("Session not found", 404);
             }
 
-            const sessions = await prisma.finalizedSession.findMany({
-                where: {
-                    eventId: event.id,
-                    ...(slotId ? { timeSlotId: slotId } : {})
-                },
-                include: { timeSlot: true },
-                orderBy: { timeSlot: { startTime: 'asc' } }
-            });
+            const [allSessions, participants] = await Promise.all([
+                prisma.finalizedSession.findMany({
+                    where: { eventId: event.id },
+                    include: { timeSlot: true },
+                    orderBy: { timeSlot: { startTime: 'asc' } }
+                }),
+                prisma.participant.findMany({
+                    where: { eventId: event.id, status: 'ACCEPTED' },
+                    select: { name: true }
+                })
+            ]);
+            const sessions = slotId ? allSessions.filter((s: any) => s.timeSlotId === slotId) : allSessions;
 
             if (sessions.length === 0) {
                 return newResponse("Session not found", 404);
             }
 
-            const participants = await prisma.participant.findMany({
-                where: { eventId: event.id, status: 'ACCEPTED' },
-                select: { name: true }
-            });
             const playerPrefix = participants.length > 0
                 ? [`Players: ${participants.map((p: { name: string }) => escapeIcsText(p.name)).join(', ')}`, ""]
                 : [];
 
             const baseDesc = descriptionParts(playerPrefix);
-
-            const allSessions = await prisma.finalizedSession.findMany({ where: { eventId: event.id }, orderBy: { timeSlot: { startTime: 'asc' } }, include: { timeSlot: true } });
 
             const vevents = sessions.map((session: any) => {
                 const sessionNumber = allSessions.findIndex((s: any) => s.id === session.id) + 1;
