@@ -374,6 +374,30 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
         expect(order).toEqual(['tx-start', 'quorum', 'tx-end']);
     });
 
+    it('skips loading slots when every quorum flag is already set', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night',
+            quorumReachedAt: new Date('2026-10-01T00:00:00Z'), quorumPerfectNotified: true, quorumViableNotified: true });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+
+        expect(mockPrisma.timeSlot.findMany).not.toHaveBeenCalledWith(
+            expect.objectContaining({ select: expect.objectContaining({ votes: expect.anything() }) }));
+        expect(mockQuorum).not.toHaveBeenCalled();
+    });
+
+    it('loads slots with their votes and records quorum when quorumReachedAt is null', async () => {
+        mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', quorumReachedAt: null });
+        mockQuorum.mockReturnValue({ viable: true, perfect: false });
+
+        await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
+
+        expect(mockPrisma.timeSlot.findMany).toHaveBeenCalledWith({
+            where: { eventId: 1 },
+            select: { id: true, votes: { select: { preference: true, canHost: true } } },
+        });
+        expect(mockPrisma.event.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { quorumReachedAt: expect.any(Date) } }));
+    });
+
     it('sets quorumReachedAt even when the manager DM fails, but not the notified flag', async () => {
         mockPrisma.event.findUnique.mockResolvedValue({ ...baseEvent, title: 'Game Night', managerDiscordId: 'd-mgr', quorumReachedAt: null });
         mockSend.mockResolvedValue({ telegram: notLinked, discord: failed });
