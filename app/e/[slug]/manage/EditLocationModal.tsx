@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { DialogBackdrop, reloadOnStaleChunk } from './dialogChunk';
 import { Pencil } from 'lucide-react';
 
 interface EditLocationModalProps {
@@ -10,9 +11,9 @@ interface EditLocationModalProps {
 }
 
 // Intent: load the dialog body on demand; prefetch it when the trigger is hovered or focused.
-const loadDialog = () => import('./EditLocationDialog').then(m => m.EditLocationDialog);
-const EditLocationDialog = dynamic(loadDialog, { ssr: false });
-const preload = () => { void loadDialog(); };
+const importDialog = () => import('./EditLocationDialog').then(m => m.EditLocationDialog);
+const EditLocationDialog = dynamic(() => reloadOnStaleChunk(importDialog()), { ssr: false, loading: () => <DialogBackdrop /> });
+const preload = () => { importDialog().catch(() => {}); };
 
 /**
  * @component EditLocationModal
