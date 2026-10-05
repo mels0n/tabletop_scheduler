@@ -30,6 +30,18 @@ function attemptWebhookAfterResponse(webhookId: string | null): void {
     }
 }
 
+/**
+ * Runs the announce + DM task after the response. Never throws: the finalize has committed,
+ * so a scheduling failure is only logged.
+ */
+function runAfterResponse(task: () => Promise<void>): void {
+    try {
+        after(task);
+    } catch (e) {
+        log.error("Could not schedule the finalize announcement", e as Error);
+    }
+}
+
 /** The one-shot modal posts FormData; campaign clients post JSON. Both become a plain object. */
 async function readBody(req: Request): Promise<unknown> {
     const contentType = req.headers.get("content-type") ?? "";
@@ -229,7 +241,7 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
 
         // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
         // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
-        after(async () => {
+        runAfterResponse(async () => {
             try {
                 await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
                 await Promise.all([
@@ -447,7 +459,7 @@ async function handleCampaignFinalize(
     // ── GROUP CHANNEL NOTIFICATIONS + DMs ────────────────────────────────────────
     // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
     // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
-    after(async () => {
+    runAfterResponse(async () => {
         try {
             await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
             await Promise.all([

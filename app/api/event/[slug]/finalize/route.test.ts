@@ -4,6 +4,7 @@ import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { redirect } from 'next/navigation';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
+import Logger from '@/shared/lib/logger';
 import { createTxStub } from '@/shared/lib/__mocks__/prisma';
 
 vi.mock('@/shared/lib/prisma');
@@ -170,6 +171,21 @@ describe('POST /api/event/[slug]/finalize', () => {
         expect(redirect).toHaveBeenCalledWith('/e/evt/manage');
         await expect(flushAfter()).resolves.toBeUndefined();
         expect(discord.sendDiscordMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs and swallows a failure of the announce and DM task inside after()', async () => {
+        afterQueue.length = 0;
+        const logError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+        mockSend.mockRejectedValue(new Error('dm down'));
+        try {
+            await POST(oneShotRequest(), params);
+
+            expect(redirect).toHaveBeenCalledWith('/e/evt/manage');
+            await expect(flushAfter()).resolves.toBeUndefined();
+            expect(logError).toHaveBeenCalledWith('Finalize announcement failed', expect.objectContaining({ message: 'dm down' }));
+        } finally {
+            logError.mockRestore();
+        }
     });
 
     it('scopes the slot, vote lookup and participant updates to the event, with a DRAFT precondition', async () => {
@@ -407,6 +423,24 @@ describe('POST /api/event/[slug]/finalize (campaign)', () => {
         expect(discord.sendDiscordMessage).toHaveBeenCalledTimes(1);
         expect(mockSend).toHaveBeenCalledTimes(1);
     });
+
+    it('logs and swallows a failure of the announce and DM task inside after()', async () => {
+        afterQueue.length = 0;
+        const logError = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+        mockSend.mockRejectedValue(new Error('dm down'));
+        mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt }]);
+        try {
+            const res = await POST(campaignRequest({ slotIds: [3] }), params);
+
+            expect(res!.status).toBe(200);
+            expect(await res!.json()).toEqual({ success: true, warning: 'Only 1 of 2 target sessions selected', sessionCount: 1 });
+            await expect(flushAfter()).resolves.toBeUndefined();
+            expect(logError).toHaveBeenCalledWith('Finalize announcement failed', expect.objectContaining({ message: 'dm down' }));
+        } finally {
+            logError.mockRestore();
+        }
+    });
+
     it('returns 409 when the campaign was already finalized', async () => {
         mockPrisma.timeSlot.findMany.mockResolvedValue([{ id: 3, eventId: 1, startTime: createdAt, endTime: createdAt }]);
         mockPrisma.event.updateMany.mockResolvedValue({ count: 0 });
