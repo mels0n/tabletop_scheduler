@@ -380,8 +380,21 @@ describe('POST /api/event/[slug]/vote - manager quorum alerts', () => {
 
         await POST(mockRequest(body), { params: Promise.resolve({ slug: '1' }) });
 
-        expect(mockPrisma.timeSlot.findMany).not.toHaveBeenCalledWith(
-            expect.objectContaining({ select: expect.objectContaining({ votes: expect.anything() }) }));
+        // The transaction's event read is a scalar select: no include, no timeSlots.
+        // The route's earlier pre-transaction read selects only status fields; the
+        // transaction read is the one that asks for timeSlots or quorumReachedAt.
+        const txRead = mockPrisma.event.findUnique.mock.calls
+            .map(c => c[0])
+            .find(arg => arg?.where?.id === 1 && (arg.include?.timeSlots || arg.select?.quorumReachedAt));
+        expect(txRead).toBeDefined();
+        expect(txRead.include).toBeUndefined();
+        expect(txRead.select).toBeDefined();
+        expect(txRead.select.timeSlots).toBeUndefined();
+
+        const slotVoteReads = mockPrisma.timeSlot.findMany.mock.calls
+            .map(c => c[0])
+            .filter(arg => arg?.where?.eventId === 1 && arg?.select?.votes);
+        expect(slotVoteReads).toHaveLength(0);
         expect(mockQuorum).not.toHaveBeenCalled();
     });
 
