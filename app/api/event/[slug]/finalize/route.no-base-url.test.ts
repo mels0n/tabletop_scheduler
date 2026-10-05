@@ -4,6 +4,7 @@ import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { stubConfigEnv } from '@/shared/config/test-env';
 import { resetServerConfigForTests } from '@/shared/config/server';
 
@@ -13,7 +14,8 @@ vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth/server/verify', () => ({ verifyEventAdmin: vi.fn() }));
 vi.mock('@/features/notifications', () => ({ sendDirectMessage: vi.fn(), broadcastToEvent: vi.fn() }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
-// The immediate webhook attempt is scheduled with after(); here it is only recorded.
+// after() callbacks are only recorded; the announce/DM task is the last one registered and
+// is run by the test that asserts on DMs.
 vi.mock('next/server', async (importOriginal) => ({
     ...(await importOriginal<typeof import('next/server')>()),
     after: vi.fn(),
@@ -64,6 +66,8 @@ describe('POST /api/event/[slug]/finalize without NEXT_PUBLIC_BASE_URL', () => {
         const payload = JSON.parse(mockPrisma.webhookEvent.create.mock.calls[0][0].data.payload);
         expect(payload.type).toBe('FINALIZED');
         expect(payload).not.toHaveProperty('link');
+        const announceTask = vi.mocked(after).mock.calls.at(-1)![0] as () => Promise<void>;
+        await announceTask();
         const dm = (sendDirectMessage as any).mock.calls[0][1].html as string;
         expect(dm).toContain('You made the cut!');
         expect(dm).not.toContain('href');

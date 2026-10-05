@@ -221,26 +221,33 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         const origin = getBaseUrlOrNull();
         const detailsLink = origin ? `\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
-        // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
         const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
         const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === slot.id)!;
-        await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
-
         const { sendDirectMessage } = await import("@/features/notifications");
         const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
         const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
-        await Promise.all([
-            ...acceptedParticipants.map(p => sendDirectMessage(
-                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.${detailsLink}` },
-                { slug, kind: "finalize-accepted" }
-            )),
-            ...waitlistedParticipants.map(p => sendDirectMessage(
-                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nWe'll let you know if a spot opens up!` },
-                { slug, kind: "finalize-waitlist" }
-            )),
-        ]);
+
+        // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+        // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
+        after(async () => {
+            try {
+                await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
+                await Promise.all([
+                    ...acceptedParticipants.map(p => sendDirectMessage(
+                        { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                        { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.${detailsLink}` },
+                        { slug, kind: "finalize-accepted" }
+                    )),
+                    ...waitlistedParticipants.map(p => sendDirectMessage(
+                        { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                        { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nWe'll let you know if a spot opens up!` },
+                        { slug, kind: "finalize-waitlist" }
+                    )),
+                ]);
+            } catch (e) {
+                log.error("Finalize announcement failed", e as Error);
+            }
+        });
 
         log.info("One-shot event finalized successfully", { slug });
 
@@ -420,12 +427,7 @@ async function handleCampaignFinalize(
     const origin = getBaseUrlOrNull();
     const detailsLink = origin ? `\n\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
-    // ── GROUP CHANNEL NOTIFICATIONS ───────────────────────────────────────────────
-    // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
     const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
-    await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
-
-    // ── DM NOTIFICATIONS ─────────────────────────────────────────────────────────
     const { sendDirectMessage } = await import("@/features/notifications");
 
     const sessionList = validSlots
@@ -442,18 +444,28 @@ async function handleCampaignFinalize(
         });
     };
 
-    await Promise.all([
-        ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
-            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}${detailsLink}` },
-            { slug, kind: "finalize-campaign-accepted" }
-        )),
-        ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
-            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
-            { slug, kind: "finalize-campaign-waitlist" }
-        )),
-    ]);
+    // ── GROUP CHANNEL NOTIFICATIONS + DMs ────────────────────────────────────────
+    // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+    // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
+    after(async () => {
+        try {
+            await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
+            await Promise.all([
+                ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
+                    { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+                    { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}${detailsLink}` },
+                    { slug, kind: "finalize-campaign-accepted" }
+                )),
+                ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
+                    { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+                    { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
+                    { slug, kind: "finalize-campaign-waitlist" }
+                )),
+            ]);
+        } catch (e) {
+            log.error("Finalize announcement failed", e as Error);
+        }
+    });
 
     log.info("Campaign finalized successfully", { slug, sessionCount: slotIds.length });
 
