@@ -14,6 +14,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     const { slug } = await params;
     const event = await prisma.event.findUnique({
         where: { slug },
+        select: { title: true, description: true },
     });
 
     const title = event?.title || 'Tabletop Event';
