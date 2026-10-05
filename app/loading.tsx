@@ -9,8 +9,8 @@ import { Loader2 } from "lucide-react";
  */
 export default function RootLoading() {
     return (
-        <div className="min-h-[60vh] bg-slate-950 flex flex-col items-center justify-center gap-3 text-slate-400" role="status" aria-label="Loading page">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <div className="min-h-[60vh] bg-ink flex flex-col items-center justify-center gap-3 text-mist" role="status" aria-label="Loading page">
+            <Loader2 className="w-8 h-8 animate-spin text-gold" />
             <p className="text-sm">Loading&hellip;</p>
         </div>
     );

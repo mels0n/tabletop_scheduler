@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata, ResolvingMetadata } from "next";
 import { HistoryTracker } from "@/components/HistoryTracker";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, Ban, Download } from "lucide-react";
 import { ManagerRecovery } from "@/features/auth";
 import { VotingInterface } from "@/components/VotingInterface";
 import { FinalizedEventView } from "@/components/FinalizedEventView";
@@ -124,31 +124,31 @@ export default async function EventPage(props: PageProps) {
     const finalizedSlot = isOneShotFinalized ? publicSlots.find(s => s.id === event.finalizedSlotId) : null;
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
+        <main className="min-h-screen bg-ink text-parchment p-4 md:p-8">
             <HistoryTracker slug={event.slug} title={event.title} />
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-6xl mx-auto space-y-8">
 
                 {/* Header Section */}
-                <div className="space-y-4 border-b border-slate-800 pb-6">
-                    <div className="flex items-center gap-3 text-indigo-400 mb-2">
-                        <Calendar className="w-5 h-5" />
-                        <span className="font-mono text-sm uppercase tracking-wider">Scheduling Event</span>
+                <div className="space-y-4 border-b border-line pb-6">
+                    <div className="flex items-center gap-3 text-gold-bright mb-2">
+                        <Calendar className="w-5 h-5" aria-hidden="true" />
+                        <span className="eyebrow">Scheduling Event</span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                        <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                        <h1 className="heading-display text-3xl md:text-5xl font-bold text-parchment">
                             {event.title}
                         </h1>
                         {event.eventType === "CAMPAIGN" && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950 border border-indigo-700/60 text-indigo-300 text-xs font-semibold uppercase tracking-wider shrink-0">
-                                <Calendar className="w-3 h-3" />
+                            <span className="chip gap-1.5 px-2.5 py-1 border border-line-strong text-gold-bright font-semibold uppercase tracking-wider shrink-0">
+                                <Calendar className="w-3 h-3" aria-hidden="true" />
                                 Campaign
                             </span>
                         )}
                     </div>
 
                     {event.description && (
-                        <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">
+                        <p className="text-lg text-parchment-2 max-w-2xl leading-relaxed">
                             {event.description}
                         </p>
                     )}
@@ -159,16 +159,16 @@ export default async function EventPage(props: PageProps) {
                                 href={event.telegramLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-400 rounded-lg border border-sky-600/50 transition-colors font-medium text-sm"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-surface-2 hover:bg-surface text-telegram rounded-control border border-telegram/50 transition-colors font-medium text-sm"
                             >
-                                <Users className="w-4 h-4" />
+                                <Users className="w-4 h-4" aria-hidden="true" />
                                 Join Telegram Chat
                             </a>
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 text-slate-500 text-sm mt-4">
-                        <Users className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-mist text-sm mt-4">
+                        <Users className="w-4 h-4" aria-hidden="true" />
                         <span>Target: {event.minPlayers} players needed</span>
                     </div>
                 </div>
@@ -176,20 +176,20 @@ export default async function EventPage(props: PageProps) {
                 {/* Voting or Finalized View */}
                 {/* Status Views Routing */}
                 {event.status === 'CANCELLED' ? (
-                    <div className="p-8 rounded-2xl bg-slate-900 border border-red-900/50 text-center space-y-6">
-                        <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-3xl">🚫</span>
+                    <div className="p-8 rounded-card bg-surface border border-no text-center space-y-6">
+                        <div className="w-16 h-16 bg-no-bg rounded-card flex items-center justify-center mx-auto mb-4">
+                            <Ban className="w-8 h-8 text-no" aria-hidden="true" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-red-500 mb-2">Event Cancelled</h2>
-                            <p className="text-slate-400 text-lg max-w-lg mx-auto">
+                            <h2 className="text-2xl font-bold text-no mb-2">Event Cancelled</h2>
+                            <p className="text-parchment-2 text-lg max-w-lg mx-auto">
                                 The organizer has cancelled this event.
                                 <br />
                                 No further voting or actions are allowed.
                             </p>
                         </div>
-                        <div className="pt-4 border-t border-slate-800/50">
-                            <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-sm underline">
+                        <div className="pt-4 border-t border-line">
+                            <Link href="/" className="text-mist hover:text-parchment transition-colors text-sm underline">
                                 Return to Home
                             </Link>
                         </div>
@@ -206,41 +206,42 @@ export default async function EventPage(props: PageProps) {
                                     serverParticipantId={serverParticipantId}
                                 />
 
-                                <div className="bg-gradient-to-br from-indigo-900/20 to-slate-900 border border-indigo-800/50 rounded-2xl p-6 md:p-8 space-y-4">
+                                <div className="bg-surface border border-line border-t-2 border-t-yes rounded-card p-6 md:p-8 space-y-4">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white mb-1">Campaign Sessions Locked In!</h2>
-                                        <p className="text-indigo-300 text-sm">{event.finalizedSessions.length} session{event.finalizedSessions.length !== 1 ? 's' : ''} scheduled</p>
+                                        <h2 className="text-2xl font-bold text-parchment mb-1">Campaign Sessions Locked In!</h2>
+                                        <p className="text-yes text-sm">{event.finalizedSessions.length} session{event.finalizedSessions.length !== 1 ? 's' : ''} scheduled</p>
                                     </div>
                                     <div className="space-y-2">
                                         {event.finalizedSessions.map((session, index) => {
                                             return (
-                                                <div key={session.id} className="bg-slate-950/50 rounded-xl p-3 flex items-center gap-3 border border-slate-800">
-                                                    <div className="w-7 h-7 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
+                                                <div key={session.id} className="bg-field rounded-control p-3 flex items-center gap-3 border border-line">
+                                                    <div className="size-7 rounded-control bg-surface-2 flex items-center justify-center text-gold-bright font-bold text-xs shrink-0">
                                                         {index + 1}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="font-semibold text-slate-200 text-sm">
+                                                        <div className="font-semibold text-parchment text-sm">
                                                             <ClientDate date={session.timeSlot.startTime} formatStr="EEEE, MMMM do, yyyy" />
                                                         </div>
-                                                        <div className="text-xs text-indigo-300">
+                                                        <div className="text-xs text-mist">
                                                             <ClientDate date={session.timeSlot.startTime} formatStr="h:mm a" /> – <ClientDate date={session.timeSlot.endTime} formatStr="h:mm a" />
-                                                            <ClientTimezone className="ml-1 text-indigo-300/70" />
+                                                            <ClientTimezone className="ml-1 text-mist" />
                                                         </div>
                                                     </div>
                                                     <a
                                                         href={`/api/event/${event.slug}/ics?slot=${session.timeSlot.id}`}
                                                         title="Download this session (.ics)"
-                                                        className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors shrink-0"
+                                                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control bg-surface-2 hover:bg-line border border-line-strong text-parchment-2 hover:text-parchment transition-colors shrink-0"
                                                     >
-                                                        📎 .ics
+                                                        <Download className="w-3 h-3" aria-hidden="true" />
+                                                        .ics
                                                     </a>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                     {event.location && (
-                                        <div className="flex items-center gap-2 text-slate-400 text-sm border-t border-slate-700/50 pt-4">
-                                            <Calendar className="w-4 h-4 text-indigo-400" />
+                                        <div className="flex items-center gap-2 text-parchment-2 text-sm border-t border-line pt-4">
+                                            <Calendar className="w-4 h-4 text-gold-bright" aria-hidden="true" />
                                             <span>{event.location}</span>
                                         </div>
                                     )}
@@ -252,17 +253,17 @@ export default async function EventPage(props: PageProps) {
                                     const waitlistPlayers = event.participants.filter((p: any) => p.status === 'WAITLIST');
                                     if (acceptedPlayers.length === 0) return null;
                                     return (
-                                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-5 space-y-4">
+                                        <div className="bg-surface rounded-card border border-line p-5 space-y-4">
                                             <div>
-                                                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Campaign Group</h3>
+                                                <h3 className="text-sm font-semibold text-mist uppercase tracking-wider mb-3">Campaign Group</h3>
                                                 <div className="flex flex-wrap gap-2">
                                                     {acceptedPlayers.map((p: any) => (
                                                         <span
                                                             key={p.id}
-                                                            className={`text-sm px-3 py-1 rounded-full border font-medium ${
+                                                            className={`text-sm px-3 py-1 rounded-control border font-medium ${
                                                                 p.id === serverParticipantId
-                                                                    ? 'bg-indigo-600/20 border-indigo-500/60 text-indigo-200'
-                                                                    : 'bg-slate-800 border-slate-700 text-slate-300'
+                                                                    ? 'bg-surface-2 border-gold text-gold-bright'
+                                                                    : 'bg-surface-2 border-line-strong text-parchment-2'
                                                             }`}
                                                         >
                                                             {p.id === serverParticipantId ? `${p.name} (you)` : p.name}
@@ -271,16 +272,16 @@ export default async function EventPage(props: PageProps) {
                                                 </div>
                                             </div>
                                             {waitlistPlayers.length > 0 && (
-                                                <div className="border-t border-slate-800 pt-4">
-                                                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Subs / Waitlist</h3>
+                                                <div className="border-t border-line pt-4">
+                                                    <h3 className="text-sm font-semibold text-mist uppercase tracking-wider mb-3">Subs / Waitlist</h3>
                                                     <div className="flex flex-wrap gap-2">
                                                         {waitlistPlayers.map((p: any) => (
                                                             <span
                                                                 key={p.id}
-                                                                className={`text-sm px-3 py-1 rounded-full border font-medium opacity-60 ${
+                                                                className={`text-sm px-3 py-1 rounded-control border font-medium opacity-60 ${
                                                                     p.id === serverParticipantId
-                                                                        ? 'bg-yellow-900/20 border-yellow-700/50 text-yellow-300'
-                                                                        : 'bg-slate-800/50 border-slate-700 text-slate-400'
+                                                                        ? 'bg-maybe-bg border-maybe text-maybe'
+                                                                        : 'bg-surface border-line text-mist'
                                                                 }`}
                                                             >
                                                                 {p.id === serverParticipantId ? `${p.name} (you)` : p.name}
@@ -320,11 +321,11 @@ export default async function EventPage(props: PageProps) {
                     />
                 )}
 
-                <div className="text-center pt-8 border-t border-slate-800">
-                    <p className="text-slate-500 text-sm mb-2">Are you the organizer?</p>
+                <div className="text-center pt-8 border-t border-line">
+                    <p className="text-mist text-sm mb-2">Are you the organizer?</p>
                     <Link
                         href={`/e/${event.slug}/manage`}
-                        className="text-indigo-400 hover:text-indigo-300 underline text-sm transition-colors"
+                        className="text-gold hover:text-gold-bright underline underline-offset-4 text-sm transition-colors"
                     >
                         Manage Event & Finalize Time
                     </Link>
