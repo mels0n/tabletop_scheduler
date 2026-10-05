@@ -29,6 +29,10 @@ const config: Config = {
         display: ["var(--font-display, Georgia)", "serif"],
         sans: ["var(--font-text, Georgia)", "serif"],
       },
+      // 13px floor for small text: the serif body face thins out at 12px.
+      fontSize: {
+        xs: ["0.8125rem", { lineHeight: "1.25rem" }],
+      },
       borderRadius: {
         control: "4px",
         card: "6px",

@@ -12,7 +12,7 @@
   --c-line-strong: 86 112 159;  /* #56709F control borders */
   --c-parchment: 238 230 211;   /* #EEE6D3 text */
   --c-parchment-2: 207 198 178; /* #CFC6B2 secondary text */
-  --c-mist: 147 160 186;        /* #93A0BA muted text */
+  --c-mist: 166 177 198;        /* #A6B1C6 muted text (7:1+ on ink and surface) */
   --c-gold: 212 175 90;         /* #D4AF5A accent */
   --c-gold-bright: 224 192 122; /* #E0C07A accent hover, eyebrows */
   --c-on-gold: 26 20 4;         /* #1A1404 */
