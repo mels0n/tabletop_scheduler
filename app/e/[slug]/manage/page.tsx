@@ -1,6 +1,5 @@
 
 import { notFound, redirect } from "next/navigation";
-import prisma from "@/shared/lib/prisma";
 import Link from "next/link";
 import { checkSlotQuorum } from "@/shared/lib/quorum";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
@@ -10,7 +9,6 @@ import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
 import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
-import { getBotUsername } from "@/features/telegram";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
 import { DiscordConnect } from "@/features/integrations/discord";
@@ -18,10 +16,9 @@ import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
 import { SyncBadge } from "@/components/SyncBadge";
-import { verifyEventAdmin } from "@/features/auth";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 import { toManageParticipant } from "@/features/event-management";
-import { getServerConfig } from "@/shared/config/server";
+import { loadManagePage } from "./load";
 
 /**
  * @interface PageProps
@@ -29,43 +26,6 @@ import { getServerConfig } from "@/shared/config/server";
  */
 interface PageProps {
     params: Promise<{ slug: string }>;
-}
-
-/**
- * @function getEventWithVotes
- * @description Fetches the event and deep-nested relations required for the Management Dashboard.
- *
- * Data Requirements:
- * - TimeSlots: Sorted by creation/time.
- * - Votes: Includes 'participant' relation to identify potential hosts.
- * - Participants: To calculate total turnout percentage.
- * - FinalizedHost: Relation for the display block.
- *
- * @param {string} slug - The event slug.
- */
-async function getEventWithVotes(slug: string) {
-    const event = await prisma.event.findUnique({
-        where: { slug },
-        include: {
-            timeSlots: {
-                include: {
-                    votes: {
-                        include: {
-                            participant: true
-                        }
-                    }
-                },
-                orderBy: { startTime: 'asc' }
-            },
-            participants: true,
-            finalizedHost: true,
-            finalizedSessions: {
-                include: { timeSlot: true },
-                orderBy: { timeSlot: { startTime: 'asc' } }
-            }
-        },
-    });
-    return event;
 }
 
 /**
@@ -87,18 +47,15 @@ export default async function ManageEventPage(props: PageProps) {
     const params = await props.params;
     // Security: Verify Admin Access Server-Side
     // Middleware only checks for cookie presence, not validity.
-    const isAdmin = await verifyEventAdmin(params.slug);
-    if (!isAdmin) {
+    const data = await loadManagePage(params.slug);
+    if (!data.isAdmin) {
         redirect(`/e/${params.slug}?action=login`);
     }
 
-    const event = await getEventWithVotes(params.slug);
-
+    const { event, botUsername } = data;
     if (!event) {
         notFound();
     }
-
-    const botUsername = (await getBotUsername(getServerConfig().telegram.token || '')) || 'TabletopSchedulerBot';
 
     // Algorithm: Score and Sort Slots
     const slots = event.timeSlots.map(slot => {
