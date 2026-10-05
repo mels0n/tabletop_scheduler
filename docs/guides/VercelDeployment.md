@@ -4,14 +4,14 @@ This is how the hosted version runs: Vercel for the app, Supabase Postgres for t
 
 ## 1. Prerequisites
 - A [Vercel Account](https://vercel.com).
-- A **PostgreSQL Database**. The setup below assumes Supabase, which also schedules the reminders (see step 5).
+- A **PostgreSQL Database**. The setup below assumes Supabase, which also schedules the reminders (see step 6).
   - *Note: SQLite (file:./dev.db) does NOT work on Vercel's Serverless environment.*
 
 ## 2. Environment Variables
 Configure the following in your Vercel Project Settings. [EnvVariables.md](../reference/EnvVariables.md) has the full reference.
 
 ### Core
-- `DATABASE_URL`: Connection string to your Postgres DB. On Supabase this is the **pooled** string (port 6543, with `?pgbouncer=true&connection_limit=1`).
+- `DATABASE_URL`: Connection string to your Postgres DB. On Supabase this is the **pooled** string (port 6543, with `?pgbouncer=true&connection_limit=3`).
 - `DIRECT_URL`: The **direct** connection string (port 5432). Required: Prisma Migrate cannot run DDL through a transaction pooler, and the build applies migrations.
 - `NEXT_PUBLIC_BASE_URL`: The production URL (e.g., `https://your-project.vercel.app`). Required whenever a bot token is set.
 - `SESSION_SECRET`: 32 or more random bytes. Required on production deployments; the server will not start without it.
@@ -28,7 +28,11 @@ Configure the following in your Vercel Project Settings. [EnvVariables.md](../re
 Only set these if running the public hosted version (tabletoptime.us):
 - `NEXT_PUBLIC_IS_HOSTED`: Set to `true` to enable hosted-specific behavior (public sitemap, SEO/AEO indexing).
 
-## 3. Database Migrations
+## 3. Function Region
+
+On a Hobby plan, Vercel runs your functions in a single region. Every database query is a network round trip, so you want to minimize latency by running functions in the region closest to your database. Find your Supabase region in Project Settings > General, or check your pooler hostname (it looks like `aws-0-<region>.pooler.supabase.com`). Then set your Vercel function region in your project's Settings > Functions to the nearest Vercel region. For example: if Supabase is in `us-west-2`, use Vercel `pdx1` (Portland); if it is in `us-east-1`, use `iad1` (Virginia). The new region takes effect on your next deployment. This setting is deliberately not pinned in `vercel.json`, so each deployment can use the region that matches its own database.
+
+## 4. Database Migrations
 
 Migrations are applied automatically. `vercel.json` sets the Build Command to
 `scripts/vercel-build.sh`, which runs:
@@ -54,18 +58,18 @@ migration history in `prisma/hosted/migrations/`. The SQLite schema at
 `prisma db push` and keeps no migration history. It is not used here. See [HostedMaintenance.md](./HostedMaintenance.md) for the day-to-day
 workflow.
 
-## 4. Discord Configuration
+## 5. Discord Configuration
 1. Go to Discord Developer Portal -> OAuth2.
 2. Add your **Production Redirect URI**:
    `https://your-project.vercel.app/api/auth/discord/callback`
 
-## 5. Scheduled Jobs
+## 6. Scheduled Jobs
 
 - **Cleanup** runs once a day from Vercel Cron (`vercel.json`, 00:00 UTC).
 - **Reminders and the outbound webhook queue** need to run every few minutes, which Vercel's free cron cannot do. They run from Supabase `pg_cron`; the one-time setup (Vault secrets, then `scripts/sql/pg-cron-reminders.sql`) is in [HostedMaintenance.md](./HostedMaintenance.md#scheduling-reminders-with-pg_cron).
 - **Reminder backstop.** `.github/workflows/cron.yml` calls the reminders route every two hours. It needs the repository secrets `DEPLOYMENT_URL` and `CRON_SECRET`.
 - **Fortnightly rebuild.** `.github/workflows/fortnightly-deploy.yml` calls a Vercel deploy hook every other Thursday so blog posts scheduled for a future date get published. Create a deploy hook for `main` in the Vercel project settings and store its URL as the repository secret `VERCEL_DEPLOY_HOOK_URL`. The workflow pushes no commits.
 
-## 6. Shipping Changes
+## 7. Shipping Changes
 
 `main` is protected: every change goes through a pull request, and the CI checks (typecheck, lint, tests, production build, dependency direction, the self-host upgrade check and the hosted migration check) must pass before it can merge. Merging to `main` triggers the production deployment, which applies any new migrations.

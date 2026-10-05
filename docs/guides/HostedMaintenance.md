@@ -111,13 +111,15 @@ policy.
 The two database URLs differ in host port and query string:
 
 ```text
-DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=3
 DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 ```
 
 `pgbouncer=true` tells Prisma the connection is transaction-pooled (it must not use
-prepared statements), and `connection_limit=1` keeps each serverless instance from
-holding more than one pooled connection. Prisma Migrate cannot run through the
+prepared statements), and `connection_limit=3` lets the independent queries the app
+issues with `Promise.all` overlap, while bounding pooler clients per function instance
+under fluid compute. Do not use 1 (it serializes them) and do not leave it unset
+(Prisma then opens `2 x CPUs + 1` per instance). Prisma Migrate cannot run through the
 transaction pooler, which is why `prisma/hosted/schema.prisma` declares
 `directUrl`.
 

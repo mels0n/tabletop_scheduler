@@ -1,6 +1,5 @@
 
 import { notFound, redirect } from "next/navigation";
-import prisma from "@/shared/lib/prisma";
 import Link from "next/link";
 import { checkSlotQuorum } from "@/shared/lib/quorum";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
@@ -10,7 +9,6 @@ import { ClientDate, ClientTimezone } from "@/components/ClientDate";
 import { FinalizeEventModal } from "./FinalizeEventModal";
 import { CampaignSessionsView } from "./CampaignSessionsView";
 import { EditLocationModal } from "./EditLocationModal";
-import { getBotUsername } from "@/features/telegram";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { TelegramConnect } from "@/components/TelegramConnect";
 import { DiscordConnect } from "@/features/integrations/discord";
@@ -18,10 +16,9 @@ import { ManagerVoteWarning } from "@/components/ManagerVoteWarning";
 import { ManageParticipants } from "@/components/ManageParticipants";
 import { ManageSlots } from "@/components/ManageSlots";
 import { SyncBadge } from "@/components/SyncBadge";
-import { verifyEventAdmin } from "@/features/auth";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 import { toManageParticipant } from "@/features/event-management";
-import { getServerConfig } from "@/shared/config/server";
+import { loadManagePage } from "./load";
 
 /**
  * @interface PageProps
@@ -29,43 +26,6 @@ import { getServerConfig } from "@/shared/config/server";
  */
 interface PageProps {
     params: Promise<{ slug: string }>;
-}
-
-/**
- * @function getEventWithVotes
- * @description Fetches the event and deep-nested relations required for the Management Dashboard.
- *
- * Data Requirements:
- * - TimeSlots: Sorted by creation/time.
- * - Votes: Includes 'participant' relation to identify potential hosts.
- * - Participants: To calculate total turnout percentage.
- * - FinalizedHost: Relation for the display block.
- *
- * @param {string} slug - The event slug.
- */
-async function getEventWithVotes(slug: string) {
-    const event = await prisma.event.findUnique({
-        where: { slug },
-        include: {
-            timeSlots: {
-                include: {
-                    votes: {
-                        include: {
-                            participant: true
-                        }
-                    }
-                },
-                orderBy: { startTime: 'asc' }
-            },
-            participants: true,
-            finalizedHost: true,
-            finalizedSessions: {
-                include: { timeSlot: true },
-                orderBy: { timeSlot: { startTime: 'asc' } }
-            }
-        },
-    });
-    return event;
 }
 
 /**
@@ -87,18 +47,15 @@ export default async function ManageEventPage(props: PageProps) {
     const params = await props.params;
     // Security: Verify Admin Access Server-Side
     // Middleware only checks for cookie presence, not validity.
-    const isAdmin = await verifyEventAdmin(params.slug);
-    if (!isAdmin) {
+    const data = await loadManagePage(params.slug);
+    if (!data.isAdmin) {
         redirect(`/e/${params.slug}?action=login`);
     }
 
-    const event = await getEventWithVotes(params.slug);
-
+    const { event, botUsername } = data;
     if (!event) {
         notFound();
     }
-
-    const botUsername = (await getBotUsername(getServerConfig().telegram.token || '')) || 'TabletopSchedulerBot';
 
     // Algorithm: Score and Sort Slots
     const slots = event.timeSlots.map(slot => {
@@ -554,8 +511,8 @@ export default async function ManageEventPage(props: PageProps) {
                                         <div className="flex items-center gap-2">
                                             <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">
                                                 {event.maxPlayers
-                                                    ? `${finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}/${event.maxPlayers}`
-                                                    : finalizedSlot.votes.filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length
+                                                    ? `${finalizedSlot.votes.filter((v) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}/${event.maxPlayers}`
+                                                    : finalizedSlot.votes.filter((v) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length
                                                 }
                                             </span>
                                         </div>
@@ -563,8 +520,8 @@ export default async function ManageEventPage(props: PageProps) {
 
                                     <ul className="space-y-3 mb-8">
                                         {finalizedSlot.votes
-                                            .filter((v: any) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED'))
-                                            .map((v: any) => (
+                                            .filter((v) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED'))
+                                            .map((v) => (
                                                 <li key={v.participant.id} className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs ring-2 ring-slate-900">
                                                         {v.participant.name.substring(0, 2).toUpperCase()}
@@ -579,18 +536,18 @@ export default async function ManageEventPage(props: PageProps) {
                                             ))}
                                     </ul>
 
-                                    {finalizedSlot.votes.some((v: any) => v.participant.status === 'WAITLIST') && (
+                                    {finalizedSlot.votes.some((v) => v.participant.status === 'WAITLIST') && (
                                         <div className="border-t border-slate-800 pt-6">
                                             <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
                                                 <span>Waitlist</span>
                                                 <span className="bg-yellow-900/30 text-yellow-500 px-2 py-1 rounded text-xs border border-yellow-900/50">
-                                                    {finalizedSlot.votes.filter((v: any) => v.participant.status === 'WAITLIST').length}
+                                                    {finalizedSlot.votes.filter((v) => v.participant.status === 'WAITLIST').length}
                                                 </span>
                                             </h3>
                                             <ul className="space-y-3">
                                                 {finalizedSlot.votes
-                                                    .filter((v: any) => v.participant.status === 'WAITLIST')
-                                                    .map((v: any) => (
+                                                    .filter((v) => v.participant.status === 'WAITLIST')
+                                                    .map((v) => (
                                                         <li key={v.participant.id} className="flex items-center gap-3 opacity-60">
                                                             <div className="w-8 h-8 rounded-full bg-yellow-900/20 flex items-center justify-center text-yellow-600 font-bold text-xs ring-1 ring-yellow-900/50">
                                                                 {v.participant.name.substring(0, 2).toUpperCase()}
@@ -652,8 +609,8 @@ export default async function ManageEventPage(props: PageProps) {
                                                 startTime: new Date(s.startTime).toISOString(),
                                                 hasHost: s.hasHost,
                                                 votes: s.votes
-                                                    .filter((v: any) => v.preference === 'YES' || v.preference === 'MAYBE')
-                                                    .map((v: any) => ({
+                                                    .filter((v) => v.preference === 'YES' || v.preference === 'MAYBE')
+                                                    .map((v) => ({
                                                         participantId: v.participantId,
                                                         preference: v.preference,
                                                         canHost: v.canHost ?? false,
@@ -686,9 +643,9 @@ export default async function ManageEventPage(props: PageProps) {
                                             </div>
                                         ) : slots.map((slot, index) => {
                                             const totalParticipants = event.participants.length;
-                                            const yesVoters = slot.votes.filter((v: any) => v.preference === 'YES');
-                                            const maybeVoters = slot.votes.filter((v: any) => v.preference === 'MAYBE');
-                                            const noVoters = slot.votes.filter((v: any) => v.preference === 'NO');
+                                            const yesVoters = slot.votes.filter((v) => v.preference === 'YES');
+                                            const maybeVoters = slot.votes.filter((v) => v.preference === 'MAYBE');
+                                            const noVoters = slot.votes.filter((v) => v.preference === 'NO');
                                             const unvotedCount = Math.max(0, totalParticipants - yesVoters.length - maybeVoters.length - noVoters.length);
 
                                             const cardClass = slot.perfect
@@ -716,13 +673,13 @@ export default async function ManageEventPage(props: PageProps) {
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-1 flex-wrap">
-                                                                {yesVoters.map((v: any) => (
+                                                                {yesVoters.map((v) => (
                                                                     <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-green-500/80 cursor-help shrink-0" />
                                                                 ))}
-                                                                {maybeVoters.map((v: any) => (
+                                                                {maybeVoters.map((v) => (
                                                                     <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-amber-500/70 cursor-help shrink-0" />
                                                                 ))}
-                                                                {noVoters.map((v: any) => (
+                                                                {noVoters.map((v) => (
                                                                     <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-red-800/50 cursor-help shrink-0" />
                                                                 ))}
                                                                 {Array.from({ length: unvotedCount }).map((_, i) => (

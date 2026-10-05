@@ -6,6 +6,7 @@ vi.mock('@/features/telegram', () => ({
     sendTelegramMessage: vi.fn(),
     pinChatMessage: vi.fn(),
     unpinChatMessage: vi.fn(),
+    deleteMessage: vi.fn(),
 }));
 vi.mock('@/features/notifications', () => ({ broadcastToEvent: vi.fn() }));
 const { getBaseUrlMock } = vi.hoisted(() => ({ getBaseUrlMock: vi.fn(() => 'https://example.test') }));
@@ -16,16 +17,17 @@ vi.mock('@/features/integrations/discord/model/discord', () => ({
     sendDiscordMessage: vi.fn(),
     pinDiscordMessage: vi.fn(),
     unpinDiscordMessage: vi.fn(),
+    deleteDiscordMessage: vi.fn(),
 }));
 
 import prisma from '@/shared/lib/prisma';
 import { refreshTelegramDashboard, refreshDiscordDashboard, pushSlotUpdates, syncDashboard } from './dashboard-sync';
 import { broadcastToEvent } from '@/features/notifications';
-import { editMessageText, sendTelegramMessage, pinChatMessage, unpinChatMessage } from '@/features/telegram';
-import { editDiscordMessage, sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage } from '@/features/integrations/discord/model/discord';
+import { editMessageText, sendTelegramMessage, pinChatMessage, unpinChatMessage, deleteMessage } from '@/features/telegram';
+import { editDiscordMessage, sendDiscordMessage, pinDiscordMessage, unpinDiscordMessage, deleteDiscordMessage } from '@/features/integrations/discord/model/discord';
 
 const m = (fn: unknown) => fn as ReturnType<typeof vi.fn>;
-const update = (prisma as any).event.update as ReturnType<typeof vi.fn>;
+const update = (prisma as any).event.updateMany as ReturnType<typeof vi.fn>;
 
 describe('refreshTelegramDashboard: EditResult matrix', () => {
     const event = { telegramChatId: 'tg1', pinnedMessageId: 11 };
@@ -34,6 +36,7 @@ describe('refreshTelegramDashboard: EditResult matrix', () => {
         vi.resetAllMocks();
         vi.stubEnv('TELEGRAM_BOT_TOKEN', 'tg-token');
         m(sendTelegramMessage).mockResolvedValue(12);
+        update.mockResolvedValue({ count: 1 });
     });
 
     it('edited: no repost', async () => {
@@ -58,7 +61,16 @@ describe('refreshTelegramDashboard: EditResult matrix', () => {
         expect(unpinChatMessage).toHaveBeenCalledWith('tg1', 11, 'tg-token');
         expect(pinChatMessage).toHaveBeenCalledWith('tg1', 12, 'tg-token');
         expect(m(unpinChatMessage).mock.invocationCallOrder[0]).toBeLessThan(m(pinChatMessage).mock.invocationCallOrder[0]);
-        expect(update).toHaveBeenCalledWith({ where: { id: 7 }, data: { pinnedMessageId: 12 } });
+        expect(update).toHaveBeenCalledWith({ where: { id: 7, pinnedMessageId: 11 }, data: { pinnedMessageId: 12 } });
+        expect(deleteMessage).not.toHaveBeenCalled();
+    });
+
+    it('gone: if the stored id changed meanwhile, removes its own new message instead', async () => {
+        m(editMessageText).mockResolvedValue('gone');
+        update.mockResolvedValue({ count: 0 });
+        await refreshTelegramDashboard(event, 7, '<b>x</b>');
+        expect(unpinChatMessage).toHaveBeenCalledWith('tg1', 12, 'tg-token');
+        expect(deleteMessage).toHaveBeenCalledWith('tg1', 12, 'tg-token');
     });
 
     it('gone: an unpin failure does not stop the new pin', async () => {
@@ -84,6 +96,7 @@ describe('refreshDiscordDashboard: EditResult matrix', () => {
         vi.resetAllMocks();
         vi.stubEnv('DISCORD_BOT_TOKEN', 'dc-token');
         m(sendDiscordMessage).mockResolvedValue({ id: 'dm2' });
+        update.mockResolvedValue({ count: 1 });
     });
 
     it('edited: no repost', async () => {
@@ -107,7 +120,16 @@ describe('refreshDiscordDashboard: EditResult matrix', () => {
         expect(unpinDiscordMessage).toHaveBeenCalledWith('dc1', 'dm1', 'dc-token');
         expect(pinDiscordMessage).toHaveBeenCalledWith('dc1', 'dm2', 'dc-token');
         expect(m(unpinDiscordMessage).mock.invocationCallOrder[0]).toBeLessThan(m(pinDiscordMessage).mock.invocationCallOrder[0]);
-        expect(update).toHaveBeenCalledWith({ where: { id: 7 }, data: { discordMessageId: 'dm2' } });
+        expect(update).toHaveBeenCalledWith({ where: { id: 7, discordMessageId: 'dm1' }, data: { discordMessageId: 'dm2' } });
+        expect(deleteDiscordMessage).not.toHaveBeenCalled();
+    });
+
+    it('gone: if the stored id changed meanwhile, removes its own new message instead', async () => {
+        m(editDiscordMessage).mockResolvedValue('gone');
+        update.mockResolvedValue({ count: 0 });
+        await refreshDiscordDashboard(event, 7, '<b>x</b>');
+        expect(unpinDiscordMessage).toHaveBeenCalledWith('dc1', 'dm2', 'dc-token');
+        expect(deleteDiscordMessage).toHaveBeenCalledWith('dc1', 'dm2', 'dc-token');
     });
 
     it('gone: an unpin failure does not stop the new pin', async () => {

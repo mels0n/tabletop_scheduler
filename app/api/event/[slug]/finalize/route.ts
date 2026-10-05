@@ -30,6 +30,18 @@ function attemptWebhookAfterResponse(webhookId: string | null): void {
     }
 }
 
+/**
+ * Runs the announce + DM task after the response. Never throws: the finalize has committed,
+ * so a scheduling failure is only logged.
+ */
+function runAfterResponse(task: () => Promise<void>): void {
+    try {
+        after(task);
+    } catch (e) {
+        log.error("Could not schedule the finalize announcement", e as Error);
+    }
+}
+
 /** The one-shot modal posts FormData; campaign clients post JSON. Both become a plain object. */
 async function readBody(req: Request): Promise<unknown> {
     const contentType = req.headers.get("content-type") ?? "";
@@ -221,26 +233,35 @@ export async function POST(req: Request, props: { params: Promise<{ slug: string
         const origin = getBaseUrlOrNull();
         const detailsLink = origin ? `\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
-        // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
         const { buildFinalizedMessage } = await import("@/shared/lib/eventMessage");
-        const slotTime = finalizedEvent.timeSlots.find((s: any) => s.id === slot.id)!;
-        await announceFinalized(finalizedEvent, buildFinalizedMessage(finalizedEvent, slotTime, origin, acceptedNames, waitlistNames));
-
         const { sendDirectMessage } = await import("@/features/notifications");
         const acceptedParticipants = votes.filter(v => acceptedIds.includes(v.participantId));
         const waitlistedParticipants = votes.filter(v => waitlistIds.includes(v.participantId));
-        await Promise.all([
-            ...acceptedParticipants.map(p => sendDirectMessage(
-                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.${detailsLink}` },
-                { slug, kind: "finalize-accepted" }
-            )),
-            ...waitlistedParticipants.map(p => sendDirectMessage(
-                { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
-                { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nWe'll let you know if a spot opens up!` },
-                { slug, kind: "finalize-waitlist" }
-            )),
-        ]);
+
+        // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+        // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
+        runAfterResponse(async () => {
+            try {
+                await announceFinalized(finalizedEvent.id, slug, (fresh) => {
+                    const freshSlot = fresh.timeSlots.find((s) => s.id === fresh.finalizedSlotId);
+                    return freshSlot ? buildFinalizedMessage(fresh, freshSlot, origin, fresh.acceptedNames, fresh.waitlistNames) : null;
+                });
+                await Promise.all([
+                    ...acceptedParticipants.map(p => sendDirectMessage(
+                        { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                        { html: `🎟️ <b>You made the cut!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.${detailsLink}` },
+                        { slug, kind: "finalize-accepted" }
+                    )),
+                    ...waitlistedParticipants.map(p => sendDirectMessage(
+                        { telegramChatId: p.participant.chatId, discordUserId: p.participant.discordId },
+                        { html: `⚠️ <b>Event Full</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nWe'll let you know if a spot opens up!` },
+                        { slug, kind: "finalize-waitlist" }
+                    )),
+                ]);
+            } catch (e) {
+                log.error("Finalize announcement failed", e as Error);
+            }
+        });
 
         log.info("One-shot event finalized successfully", { slug });
 
@@ -420,12 +441,7 @@ async function handleCampaignFinalize(
     const origin = getBaseUrlOrNull();
     const detailsLink = origin ? `\n\n<a href="${origin}/e/${slug}">View Details</a>` : "";
 
-    // ── GROUP CHANNEL NOTIFICATIONS ───────────────────────────────────────────────
-    // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
     const { buildCampaignFinalizedMessage } = await import("@/shared/lib/eventMessage");
-    await announceFinalized(finalizedEvent, buildCampaignFinalizedMessage(finalizedEvent, validSlots, origin, acceptedNames, waitlistNames));
-
-    // ── DM NOTIFICATIONS ─────────────────────────────────────────────────────────
     const { sendDirectMessage } = await import("@/features/notifications");
 
     const sessionList = validSlots
@@ -442,18 +458,31 @@ async function handleCampaignFinalize(
         });
     };
 
-    await Promise.all([
-        ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
-            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}${detailsLink}` },
-            { slug, kind: "finalize-campaign-accepted" }
-        )),
-        ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
-            { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
-            { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
-            { slug, kind: "finalize-campaign-waitlist" }
-        )),
-    ]);
+    // ── GROUP CHANNEL NOTIFICATIONS + DMs ────────────────────────────────────────
+    // Intent: Announce to the group first so a slow run of DMs can never cost the announcement.
+    // Both run after the response so the admin is not held up by the Telegram/Discord round trips.
+    runAfterResponse(async () => {
+        try {
+            await announceFinalized(finalizedEvent.id, slug, (fresh) => {
+                const sessions = fresh.finalizedSessions.map((fs) => fs.timeSlot).sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+                return sessions.length ? buildCampaignFinalizedMessage(fresh, sessions, origin, fresh.acceptedNames, fresh.waitlistNames) : null;
+            });
+            await Promise.all([
+                ...uniqueParticipants(acceptedIds).map(vote => sendDirectMessage(
+                    { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+                    { html: `🎟️ <b>You're in the campaign!</b>\n\nYou are confirmed for <b>${escapeHtml(currentEvent.title)}</b>.\n\nSessions locked in:\n${sessionList}${detailsLink}` },
+                    { slug, kind: "finalize-campaign-accepted" }
+                )),
+                ...uniqueParticipants(waitlistIds).map(vote => sendDirectMessage(
+                    { telegramChatId: vote.participant.chatId, discordUserId: vote.participant.discordId },
+                    { html: `⚠️ <b>Campaign Waitlist</b>\n\nYou are on the <b>Waitlist</b> for <b>${escapeHtml(currentEvent.title)}</b>.\nYou may be called in as a substitute if a regular player can't make a session.` },
+                    { slug, kind: "finalize-campaign-waitlist" }
+                )),
+            ]);
+        } catch (e) {
+            log.error("Finalize announcement failed", e as Error);
+        }
+    });
 
     log.info("Campaign finalized successfully", { slug, sessionCount: slotIds.length });
 
@@ -466,29 +495,85 @@ async function handleCampaignFinalize(
 
 // ─── GROUP ANNOUNCEMENT ────────────────────────────────────────────────────────
 
+/** Runs a cleanup call whose failure must not stop the caller. */
+async function bestEffort(fn: () => Promise<unknown>): Promise<void> {
+    try {
+        await fn();
+    } catch (error) {
+        log.debug("Best-effort announcement cleanup failed", { error: String(error) });
+    }
+}
+
+/**
+ * Reads the event as it is now, with everything the group message needs. The announcement
+ * runs after the response, so the admin may have edited the location or roster since the
+ * finalize transaction; the pinned post must reflect that, not the transaction's snapshot.
+ */
+async function loadAnnouncementEvent(eventId: number) {
+    const event = await prisma.event.findUnique({
+        where: { id: eventId },
+        include: {
+            timeSlots: true,
+            finalizedHost: true,
+            finalizedSessions: { include: { timeSlot: true } },
+            participants: { where: { status: { in: ["ACCEPTED", "WAITLIST"] } }, orderBy: { id: "asc" }, select: { name: true, status: true } },
+        },
+    });
+    if (!event) return null;
+    return {
+        ...event,
+        acceptedNames: event.participants.filter((p) => p.status === "ACCEPTED").map((p) => p.name),
+        waitlistNames: event.participants.filter((p) => p.status === "WAITLIST").map((p) => p.name),
+    };
+}
+
+type AnnouncementEvent = NonNullable<Awaited<ReturnType<typeof loadAnnouncementEvent>>>;
+
 /**
  * Replaces the event's pinned status message on each linked platform with the finalized
- * announcement. Telegram and Discord are independent: each runs in its own try/catch so
+ * announcement, built from a fresh read of the event. Skipped when the event is gone or no
+ * longer FINALIZED. Telegram and Discord are independent: each runs in its own try/catch so
  * a failure (or absence) on one never blocks the other.
  */
 async function announceFinalized(
-    event: { id: number; slug: string; telegramChatId: string | null; pinnedMessageId: number | null; discordChannelId: string | null; discordMessageId: string | null },
-    htmlMsg: string
+    eventId: number,
+    slug: string,
+    buildMessage: (fresh: AnnouncementEvent) => string | null
 ) {
+    const event = await loadAnnouncementEvent(eventId);
+    if (!event || event.status !== "FINALIZED") {
+        log.info("Skipping finalize announcement: event is gone or no longer finalized", { slug });
+        return;
+    }
+    const htmlMsg = buildMessage(event);
+    if (!htmlMsg) {
+        log.warn("Skipping finalize announcement: no message could be built", { slug });
+        return;
+    }
     const telegramToken = getServerConfig().telegram.token ?? undefined;
     if (event.telegramChatId && telegramToken) {
         try {
-            const { sendTelegramMessage, deleteMessage, pinChatMessage } = await import("@/features/telegram");
+            const { sendTelegramMessage, deleteMessage, pinChatMessage, unpinChatMessage } = await import("@/features/telegram");
             if (event.pinnedMessageId) {
                 await deleteMessage(event.telegramChatId, event.pinnedMessageId, telegramToken);
             }
             const msgId = await sendTelegramMessage(event.telegramChatId, htmlMsg, telegramToken);
             if (msgId) {
                 await pinChatMessage(event.telegramChatId, msgId, telegramToken);
-                await prisma.event.update({ where: { id: event.id }, data: { pinnedMessageId: msgId } });
+                // Swap the stored id only if nobody moved it since this announcement started
+                // (a location edit, cancel or delete can run meanwhile, as this runs in after()).
+                const { count } = await prisma.event.updateMany({
+                    where: { id: event.id, status: "FINALIZED", pinnedMessageId: event.pinnedMessageId },
+                    data: { pinnedMessageId: msgId },
+                });
+                if (count === 0) {
+                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Telegram message", { slug });
+                    await bestEffort(() => unpinChatMessage(event.telegramChatId!, msgId, telegramToken));
+                    await bestEffort(() => deleteMessage(event.telegramChatId!, msgId, telegramToken));
+                }
             }
         } catch (e) {
-            log.warn("Telegram finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+            log.warn("Telegram finalize announcement failed", { slug, error: (e as Error)?.message });
         }
     }
 
@@ -505,12 +590,20 @@ async function announceFinalized(
             const res = await sendDiscordMessage(event.discordChannelId, htmlToDiscordMarkdown(htmlMsg), discordToken);
             if (res.id) {
                 await pinDiscordMessage(event.discordChannelId, res.id, discordToken);
-                await prisma.event.update({ where: { id: event.id }, data: { discordMessageId: res.id } });
+                const { count } = await prisma.event.updateMany({
+                    where: { id: event.id, status: "FINALIZED", discordMessageId: event.discordMessageId },
+                    data: { discordMessageId: res.id },
+                });
+                if (count === 0) {
+                    log.warn("Pinned dashboard changed during the finalize announcement; removing the stray Discord message", { slug });
+                    await bestEffort(() => unpinDiscordMessage(event.discordChannelId!, res.id!, discordToken));
+                    await bestEffort(() => deleteDiscordMessage(event.discordChannelId!, res.id!, discordToken));
+                }
             } else {
                 log.warn("Failed to send Discord finalize message", { error: res.error });
             }
         } catch (e) {
-            log.warn("Discord finalize announcement failed", { slug: event.slug, error: (e as Error)?.message });
+            log.warn("Discord finalize announcement failed", { slug, error: (e as Error)?.message });
         }
     }
 }
