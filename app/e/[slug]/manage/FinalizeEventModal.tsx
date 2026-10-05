@@ -45,8 +45,8 @@ export function FinalizeEventModal({ slug, slotId, potentialHosts, prominent = f
                     onPointerEnter={preload}
                     onFocus={preload}
                     className={prominent
-                        ? "shrink-0 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all shadow-lg shadow-indigo-900/40 hover:shadow-indigo-900/60"
-                        : "shrink-0 px-4 py-1.5 rounded-lg border border-slate-700 hover:border-indigo-500/50 hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 text-xs font-medium transition-all"
+                        ? "shrink-0 px-5 py-2 rounded-control bg-gold hover:bg-gold-bright text-on-gold font-semibold text-sm transition-all "
+                        : "shrink-0 px-4 py-1.5 rounded-control border border-line-strong hover:border-gold hover:bg-surface-2 text-mist hover:text-parchment text-xs font-medium transition-all"
                     }
                 >
                     Finalize

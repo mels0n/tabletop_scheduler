@@ -37,7 +37,7 @@ export function EditLocationModal({ slug, initialLocation }: EditLocationModalPr
                     onClick={open}
                     onPointerEnter={preload}
                     onFocus={preload}
-                    className="ml-2 p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                    className="ml-2 p-1 text-mist hover:text-parchment hover:bg-surface-2 rounded transition-colors"
                     title="Edit Location"
                 >
                     <Pencil className="w-3 h-3" />
