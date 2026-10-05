@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { CalendarPlus, Mail, Download } from "lucide-react";
 import { googleCalendarUrl, outlookCalendarUrl } from "@/shared/lib/calendar";
 
 /**
@@ -50,26 +51,26 @@ export function AddToCalendar({ event, slot, className }: AddToCalendarProps) {
                 href={googleUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-slate-950/40 hover:bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-col items-center gap-2 transition-colors group"
+                className="bg-field hover:bg-surface-2 border border-line-strong rounded-control p-3 flex flex-col items-center gap-2 transition-colors group"
             >
-                <span className="text-xl group-hover:scale-110 transition-transform">📅</span>
-                <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-200">Google Calendar</span>
+                <CalendarPlus className="w-5 h-5 text-gold-bright" aria-hidden="true" />
+                <span className="text-xs font-semibold text-parchment-2 group-hover:text-parchment">Google Calendar</span>
             </a>
             <a
                 href={outlookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-slate-950/40 hover:bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-col items-center gap-2 transition-colors group"
+                className="bg-field hover:bg-surface-2 border border-line-strong rounded-control p-3 flex flex-col items-center gap-2 transition-colors group"
             >
-                <span className="text-xl group-hover:scale-110 transition-transform">📧</span>
-                <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-200">Outlook</span>
+                <Mail className="w-5 h-5 text-gold-bright" aria-hidden="true" />
+                <span className="text-xs font-semibold text-parchment-2 group-hover:text-parchment">Outlook</span>
             </a>
             <a
                 href={`/api/event/${event.slug}/ics`}
-                className="bg-slate-950/40 hover:bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-col items-center gap-2 transition-colors group"
+                className="bg-field hover:bg-surface-2 border border-line-strong rounded-control p-3 flex flex-col items-center gap-2 transition-colors group"
             >
-                <span className="text-xl group-hover:scale-110 transition-transform">📎</span>
-                <span className="text-xs font-semibold text-slate-400 group-hover:text-slate-200">Apple/ICS Download</span>
+                <Download className="w-5 h-5 text-gold-bright" aria-hidden="true" />
+                <span className="text-xs font-semibold text-parchment-2 group-hover:text-parchment">Apple/ICS Download</span>
             </a>
         </div>
     );

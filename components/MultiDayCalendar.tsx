@@ -64,18 +64,18 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                 <button
                     type="button"
                     onClick={() => setViewDate((d) => subMonths(d, 1))}
-                    className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-control hover:bg-surface-2 text-mist hover:text-parchment transition-colors"
                     aria-label="Previous month"
                 >
                     <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-sm font-semibold text-slate-200">
+                <span className="text-sm font-semibold text-parchment">
                     {format(viewDate, "MMMM yyyy")}
                 </span>
                 <button
                     type="button"
                     onClick={() => setViewDate((d) => addMonths(d, 1))}
-                    className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-control hover:bg-surface-2 text-mist hover:text-parchment transition-colors"
                     aria-label="Next month"
                 >
                     <ChevronRight className="w-4 h-4" />
@@ -85,7 +85,7 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
             {/* Day-of-week header */}
             <div className="grid grid-cols-7 mb-1">
                 {DAY_LABELS.map((d) => (
-                    <div key={d} className="text-center text-xs text-slate-500 font-medium py-1">
+                    <div key={d} className="text-center text-xs text-mist font-medium py-1">
                         {d}
                     </div>
                 ))}
@@ -93,12 +93,12 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
 
             {/* Day grid — touch-action:none prevents scroll from fighting drag */}
             <div
-                className="grid grid-cols-7 gap-0.5"
+                className="grid grid-cols-7 gap-px bg-line border border-line"
                 style={{ touchAction: "none" }}
                 onPointerMove={handlePointerMove}
             >
                 {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                    <div key={`empty-${i}`} />
+                    <div key={`empty-${i}`} className="bg-ink" />
                 ))}
 
                 {days.map((day) => {
@@ -113,17 +113,17 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
                             data-date={isPast ? undefined : dateStr}
                             onPointerDown={isPast ? undefined : (e) => handlePointerDown(e, dateStr)}
                             className={[
-                                "min-h-[44px] flex items-center justify-center rounded-md text-sm transition-colors",
+                                "min-h-[44px] flex items-center justify-center text-sm tabular-nums transition-colors",
                                 isPast
-                                    ? "text-slate-700 cursor-not-allowed"
+                                    ? "bg-ink text-mist cursor-not-allowed"
                                     : "cursor-pointer",
                                 isSelected
-                                    ? "bg-indigo-600 text-white"
+                                    ? "bg-gold text-on-gold font-semibold"
                                     : isPast
                                         ? ""
                                         : isTodayDate
-                                            ? "border border-indigo-500/50 text-indigo-300 hover:bg-slate-700"
-                                            : "text-slate-300 hover:bg-slate-700",
+                                            ? "bg-surface text-gold-bright underline underline-offset-4 decoration-gold hover:bg-surface-2"
+                                            : "bg-surface text-parchment-2 hover:bg-surface-2",
                             ].join(" ")}
                         >
                             {format(day, "d")}
@@ -134,12 +134,12 @@ export function MultiDayCalendar({ selectedDates, onDatesChange }: MultiDayCalen
 
             {/* Selection status / clear */}
             <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="text-slate-500">Tap or drag to select days</span>
+                <span className="text-mist">Tap or drag to select days</span>
                 {selectedDates.length > 0 && (
                     <button
                         type="button"
                         onClick={() => onDatesChange([])}
-                        className="text-slate-400 hover:text-red-400 transition-colors"
+                        className="text-mist hover:text-no transition-colors"
                     >
                         Clear ({selectedDates.length} selected)
                     </button>

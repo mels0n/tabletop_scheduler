@@ -50,8 +50,8 @@ function DmToggleRow({ platform, initialOptOut }: { platform: Platform; initialO
         <div className="py-3 first:pt-0 last:pb-0">
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-sm font-medium text-slate-200">{label}</p>
-                    <p className="text-xs text-slate-500">Direct messages from the bot</p>
+                    <p className="text-sm font-medium text-parchment">{label}</p>
+                    <p className="text-xs text-mist">Direct messages from the bot</p>
                 </div>
                 <button
                     type="button"
@@ -60,17 +60,17 @@ function DmToggleRow({ platform, initialOptOut }: { platform: Platform; initialO
                     aria-label={`${label} direct messages from the bot`}
                     onClick={handleToggle}
                     disabled={pending}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border disabled:opacity-50 transition-colors ${
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-control border disabled:opacity-50 transition-colors ${
                         enabled
-                            ? 'text-green-300 border-green-900/60 hover:bg-green-950/40 hover:border-green-800'
-                            : 'text-slate-400 border-slate-700 hover:bg-slate-800'
+                            ? 'text-yes border-yes hover:bg-yes-bg'
+                            : 'text-mist border-line-strong hover:bg-surface-2'
                     }`}
                 >
-                    <span className={`w-1.5 h-1.5 rounded-full ${enabled ? 'bg-green-400' : 'border border-slate-500'}`} />
+                    <span data-dot className={`w-1.5 h-1.5 rounded-full ${enabled ? 'bg-yes' : 'border border-mist'}`} />
                     {enabled ? 'On' : 'Off'}
                 </button>
             </div>
-            {error && <p className="text-xs mt-2 text-amber-400">{error}</p>}
+            {error && <p className="text-xs mt-2 text-maybe">{error}</p>}
         </div>
     );
 }
@@ -85,17 +85,17 @@ export function DmPreferencePanel({ preferences }: { preferences: DmPreferenceSt
     if (linked.length === 0) return null;
 
     return (
-        <div className="pt-8 border-t border-slate-800">
-            <h3 className="text-lg font-medium text-slate-200 mb-1 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-slate-400" />
+        <div className="pt-8 border-t border-line">
+            <h3 className="text-lg font-medium text-parchment mb-1 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-gold-bright" />
                 Direct Messages
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-mist mb-4">
                 Turns off results, waitlist and removal notices, and organizer alerts sent to you by
                 direct message. Group and channel posts are not affected. Login links you request
                 are always sent.
             </p>
-            <div className="bg-slate-900 border border-slate-700 rounded-xl px-6 py-3 divide-y divide-slate-800">
+            <div className="bg-surface border border-line rounded-card px-6 py-3 divide-y divide-line">
                 {linked.map(platform => (
                     <DmToggleRow key={platform} platform={platform} initialOptOut={preferences[platform] === true} />
                 ))}

@@ -51,7 +51,7 @@ export default function FAQPage() {
         },
         {
             question: "Can I link an event to my Telegram or Discord after I've already voted?",
-            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. Events you manage also show a separate indigo 'Manager' badge marking your role there, which doesn't by itself mean the event is linked to your identity. You need to have voted on the event from this browser first, and you can only link or unlink your own identity."
+            answer: "Yes. Each event on your 'My Events' page has a badge: a gray 'This Device Only' badge means it's only saved in this browser, and clicking it lets you link it to any platform you're synced with. A colored 'Telegram Synced' or 'Discord Synced' badge means it's already linked, and clicking it lets you unlink it. Events you manage also show a separate gold 'Manager' badge marking your role there, which doesn't by itself mean the event is linked to your identity. You need to have voted on the event from this browser first, and you can only link or unlink your own identity."
         },
         {
             question: "How does the waitlist work?",
@@ -76,21 +76,21 @@ export default function FAQPage() {
     ]);
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <div className="max-w-3xl mx-auto space-y-8">
-                <Link href="/" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4">
+            <div className="max-w-screen-2xl mx-auto space-y-8">
+                <Link href="/" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back Home
                 </Link>
 
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">
                     Frequently Asked Questions
                 </h1>
 
-                <div className="space-y-6">
+                <div>
                     <FAQItem
                         question="Wait, I don't need an account?"
                         answer="That's right! TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."
@@ -122,7 +122,7 @@ export default function FAQPage() {
                         answer={
                             <span>
                                 Yes. Each event on your{" "}
-                                <Link href="/profile" className="text-indigo-400 hover:text-indigo-300 underline">
+                                <Link href="/profile" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                     My Events
                                 </Link>{" "}
                                 page has a badge: a gray &quot;This Device Only&quot; badge means it&apos;s only saved in this browser, and clicking it lets you link it to any platform you&apos;re synced with. A colored &quot;Telegram Synced&quot; or &quot;Discord Synced&quot; badge means it&apos;s already linked, and clicking it lets you unlink it. You need to have voted on the event from this browser first, and you can only link or unlink your own identity.
@@ -134,7 +134,7 @@ export default function FAQPage() {
                         answer={
                             <span>
                                 Yes votes always come first. If Needed votes are only used to help reach the minimum player count. If there are enough &quot;Yes&quot; votes to play, &quot;If Needed&quot; players will remain on the waitlist. Once finalized, the list is locked. However, if an accepted player drops out or is removed by the host, the system will automatically promote the next person on the waitlist, update the group dashboard, and DM the promoted player if they linked Telegram or Discord!{" "}
-                                <Link href="/voting-logic" className="text-indigo-400 hover:text-indigo-300 underline">
+                                <Link href="/voting-logic" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                     See full logic & examples
                                 </Link>.
                             </span>
@@ -149,7 +149,7 @@ export default function FAQPage() {
                         answer={
                             <span>
                                 If you find TabletopTime useful, you can support its development and keep it ad-free by{" "}
-                                <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                                <a href="https://ko-fi.com/N4N11VDWCU" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                     buying me a coffee on Ko-fi
                                 </a>!
                             </span>
@@ -161,8 +161,8 @@ export default function FAQPage() {
                     />
 
                     {isHosted && (
-                        <div className="pt-8 border-t border-slate-800">
-                            <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-4">
+                        <div className="pt-8 mt-2">
+                            <h2 className="heading-display text-2xl font-bold text-parchment mb-4">
                                 Developers & Integration
                             </h2>
                             <FAQItem
@@ -170,7 +170,7 @@ export default function FAQPage() {
                                 answer={
                                     <span>
                                         Absolutely! We have a public API that lets you pre-fill event details, creating voting links from your own community Discord or website.{" "}
-                                        <Link href="/developers" className="text-indigo-400 hover:text-indigo-300 underline">
+                                        <Link href="/developers" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                             Check out the Developer Guide
                                         </Link>.
                                     </span>
@@ -181,7 +181,7 @@ export default function FAQPage() {
                                 answer={
                                     <span>
                                         We are open source! Please report bugs or request features directly on our{" "}
-                                        <a href="https://github.com/mels0n/tabletop_scheduler/issues" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                                        <a href="https://github.com/mels0n/tabletop_scheduler/issues" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                             GitHub Repository
                                         </a>.
                                     </span>

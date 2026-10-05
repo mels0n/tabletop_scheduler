@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Scale, Link2, Radio } from "lucide-react";
 
 export const metadata: Metadata = {
     title: "Developer API",
@@ -10,33 +11,32 @@ export const metadata: Metadata = {
 
 export default function DevelopersPage() {
     return (
-        <div className="max-w-4xl mx-auto px-4 py-12 md:py-20">
+        <div className="max-w-7xl mx-auto px-4 py-12 md:py-20">
             <div className="mb-12">
-                <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6">
-                    Build with <span className="text-indigo-400">Tabletoptime.us</span>
+                <h1 className="font-display text-4xl md:text-5xl font-bold text-parchment mb-6">
+                    Build with <span className="text-gold-bright">Tabletoptime.us</span>
                 </h1>
-                <p className="text-xl text-slate-300 leading-relaxed">
+                <p className="text-xl text-parchment-2 leading-relaxed">
                     Extend the power of our scheduling tools. Whether you are building a custom Discord bot,
                     integrating with your guild&apos;s website, or creating automated workflows, our platform is designed to play nice with others.
                 </p>
             </div>
 
             {/* Attribution Policy */}
-            <div className="bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-8 mb-16 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-32 bg-indigo-500/10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                    ⚖️ Usage & Attribution
+            <div className="card-accent p-8 mb-16">
+                <h2 className="font-display text-2xl font-bold text-parchment mb-4 flex items-center gap-2">
+                    <span className="icon-tile" aria-hidden="true"><Scale className="w-5 h-5" /></span> Usage & Attribution
                 </h2>
-                <p className="text-slate-300 mb-4">
+                <p className="text-parchment-2 mb-4">
                     Our API and integration points are free to use for <strong>non-commercial community projects</strong>.
                     Commercial use is not permitted without prior written agreement. That includes integrations embedded in paid products, SaaS platforms, or services that generate revenue.
                     We also require that any public-facing integration provides clear credit.
                 </p>
-                <div className="bg-slate-900/50 p-4 rounded-lg border border-indigo-500/20">
-                    <p className="text-indigo-200 font-medium">
-                        &quot;Powered by <a href="https://tabletoptime.us" className="underline hover:text-white">Tabletoptime.us</a>&quot;
+                <div className="bg-surface p-4 rounded-control border border-line">
+                    <p className="text-parchment font-medium">
+                        &quot;Powered by <a href="https://tabletoptime.us" className="underline hover:text-parchment">Tabletoptime.us</a>&quot;
                     </p>
-                    <p className="text-xs text-slate-400 mt-2">
+                    <p className="text-xs text-mist mt-2">
                         Must be a clickable backlink to <code>https://tabletoptime.us</code> visible to the end user.
                     </p>
                 </div>
@@ -44,37 +44,37 @@ export default function DevelopersPage() {
 
             {/* Use Cases */}
             <div className="grid md:grid-cols-2 gap-8 mb-20">
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-indigo-500/50 transition-colors">
-                    <h3 className="text-xl font-bold text-white mb-3">🔗 Deep Linking & Pre-fill</h3>
-                    <p className="text-slate-400 mb-4">
+                <div className="card-accent">
+                    <h3 className="font-display text-xl font-bold text-parchment mb-3 flex items-center gap-2"><span className="icon-tile" aria-hidden="true"><Link2 className="w-5 h-5" /></span> Deep Linking & Pre-fill</h3>
+                    <p className="text-mist mb-4">
                         Send users directly to a pre-filled voting page from your app.
                     </p>
-                    <div className="bg-black/50 p-3 rounded font-mono text-xs text-emerald-400 mb-4 overflow-x-auto">
+                    <div className="bg-field p-3 rounded-control font-mono text-xs text-yes mb-4 overflow-x-auto">
                         ?userID=Chris
                     </div>
                     <a
                         href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/guides/ExternalIntegrations.md"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                        className="text-gold hover:text-gold-bright text-sm font-medium"
                     >
                         Read Guide &rarr;
                     </a>
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-indigo-500/50 transition-colors">
-                    <h3 className="text-xl font-bold text-white mb-3">📡 Webhooks</h3>
-                    <p className="text-slate-400 mb-4">
+                <div className="card-accent">
+                    <h3 className="font-display text-xl font-bold text-parchment mb-3 flex items-center gap-2"><span className="icon-tile" aria-hidden="true"><Radio className="w-5 h-5" /></span> Webhooks</h3>
+                    <p className="text-mist mb-4">
                         Get JSON payloads when events are created, finalized, or cancelled. Your <code>fromUrl</code> must be a public <code>https</code> address, and every delivery is signed with an <code>X-Tabletop-Signature</code> header you can verify.
                     </p>
-                    <div className="bg-black/50 p-3 rounded font-mono text-xs text-emerald-400 mb-4">
+                    <div className="bg-field p-3 rounded-control font-mono text-xs text-yes mb-4">
                         POST /your-endpoint {"{ type: 'FINALIZED', ... }"}
                     </div>
                     <a
                         href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/guides/ExternalIntegrations.md"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                        className="text-gold hover:text-gold-bright text-sm font-medium"
                     >
                         View Payloads &rarr;
                     </a>
@@ -82,9 +82,9 @@ export default function DevelopersPage() {
             </div>
 
             {/* Integrator changes */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-16">
-                <h2 className="text-2xl font-bold text-white mb-3">What changed in October 2026</h2>
-                <p className="text-slate-400">
+            <div className="card mb-16">
+                <h2 className="font-display text-2xl font-bold text-parchment mb-3">What changed in October 2026</h2>
+                <p className="text-mist">
                     Webhooks are now sent right after each change, retried automatically, and signed with an{" "}
                     <code>X-Tabletop-Signature</code> header. A <code>fromUrl</code> must be a public <code>https</code> address. Event creation
                     checks every field strictly, and event links now use 14-character codes. Every event admin route accepts your
@@ -94,7 +94,7 @@ export default function DevelopersPage() {
                         href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/reference/ApiReference.md#changes-for-integrators-2026-10"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 underline"
+                        className="text-gold hover:text-gold-bright underline"
                     >
                         changes for integrators
                     </a>{" "}
@@ -103,35 +103,35 @@ export default function DevelopersPage() {
             </div>
 
             {/* Resources */}
-            <div className="border-t border-slate-800 pt-12">
-                <h2 className="text-2xl font-bold text-white mb-8">Developer Resources</h2>
+            <div className="border-t border-line pt-12">
+                <h2 className="font-display text-2xl font-bold text-parchment mb-8">Developer Resources</h2>
 
                 <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-slate-900/30 hover:bg-slate-900/50 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-card border border-line bg-surface">
                         <div>
-                            <h3 className="font-semibold text-white">Found a Bug?</h3>
-                            <p className="text-sm text-slate-500">Report issues directly on our GitHub repository.</p>
+                            <h3 className="font-semibold text-parchment">Found a Bug?</h3>
+                            <p className="text-sm text-mist">Report issues directly on our GitHub repository.</p>
                         </div>
                         <a
                             href="https://github.com/mels0n/tabletop_scheduler/issues"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors text-center"
+                            className="btn-secondary px-4 py-2 text-sm text-center"
                         >
                             Open GitHub Issue
                         </a>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-slate-900/30 hover:bg-slate-900/50 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-card border border-line bg-surface">
                         <div>
-                            <h3 className="font-semibold text-white">Full API Reference</h3>
-                            <p className="text-sm text-slate-500">Technical documentation for all endpoints.</p>
+                            <h3 className="font-semibold text-parchment">Full API Reference</h3>
+                            <p className="text-sm text-mist">Technical documentation for all endpoints.</p>
                         </div>
                         <a
                             href="https://github.com/mels0n/tabletop_scheduler/blob/main/docs/reference/ApiReference.md"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors text-center"
+                            className="btn-secondary px-4 py-2 text-sm text-center"
                         >
                             Read Docs
                         </a>

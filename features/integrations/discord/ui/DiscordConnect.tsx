@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { listDiscordChannels, connectDiscordChannel } from "@/features/integrations/discord/server/actions";
-import { AlertCircle, CheckCircle, Loader2, Save } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, Lock, Save } from "lucide-react";
 import { publicConfig } from "@/shared/config/public";
 
 function CheckIcon({ className }: { className?: string }) {
@@ -135,21 +135,21 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     if (hasChannel) {
         return (
             <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-control bg-surface border border-line">
                     <div className="flex items-center gap-2.5">
-                        <CheckCircle className="w-4 h-4 text-[#5865F2] shrink-0" />
-                        <span className="text-sm font-medium text-slate-200">Discord</span>
-                        <span className="text-xs text-[#5865F2]">connected</span>
+                        <CheckCircle className="w-4 h-4 text-discord shrink-0" />
+                        <span className="text-sm font-medium text-parchment">Discord</span>
+                        <span className="text-xs text-parchment-2">connected</span>
                     </div>
                     <div className="flex items-center gap-3">
                         {channelName && (
-                            <span className="text-xs text-slate-500 font-mono">#{channelName}</span>
+                            <span className="text-xs text-mist font-mono">#{channelName}</span>
                         )}
                         {/* Without OAuth and a linked manager the panel would be empty. */}
                         {(oauthEnabled || hasManagerDiscordId) && (
                             <button
                                 onClick={() => setExpanded(e => !e)}
-                                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                                className="text-xs text-mist hover:text-parchment-2 transition-colors"
                             >
                                 {expanded ? 'hide' : 'manage →'}
                             </button>
@@ -158,13 +158,13 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 </div>
 
                 {expanded && (
-                    <div className="mt-1 p-3 bg-slate-900/40 rounded-lg border border-slate-800 space-y-3">
+                    <div className="mt-1 p-3 bg-surface rounded-control border border-line space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Manager Recovery</p>
+                            <p className="text-xs font-semibold text-mist uppercase tracking-widest">Manager Recovery</p>
                             {oauthEnabled && (
                                 <button
                                     onClick={() => { setHasChannel(false); setStep('initial'); setExpanded(false); }}
-                                    className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
+                                    className="text-xs text-mist hover:text-parchment-2 transition-colors"
                                 >
                                     reconnect channel
                                 </button>
@@ -172,27 +172,27 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                         </div>
                         {hasManagerDiscordId ? (
                             <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-xs text-[#5865F2]">
-                                    <CheckIcon className="w-3 h-3 shrink-0" />
+                                <div className="flex items-center gap-2 text-xs text-parchment-2">
+                                    <CheckIcon className="w-3 h-3 shrink-0 text-discord" />
                                     <span>Identity verified</span>
                                 </div>
-                                {dmMessage && <p className="text-xs text-slate-300">{dmMessage}</p>}
+                                {dmMessage && <p className="text-xs text-parchment-2">{dmMessage}</p>}
                                 <button
                                     onClick={handleDM}
                                     disabled={dmLoading}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                                    className="hover:bg-surface-2 text-parchment-2 w-full py-2 rounded-control text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-line-strong"
                                 >
                                     {dmLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Send Magic Link (Discord DM)"}
                                 </button>
                             </div>
                         ) : oauthEnabled ? (
                             <div className="space-y-2">
-                                <p className="text-xs text-slate-400">
+                                <p className="text-xs text-mist">
                                     Associate your Discord account to recover managing rights if you lose access.
                                 </p>
                                 <a
                                     href={`/api/auth/discord?flow=login&returnTo=/e/${slug}/manage`}
-                                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                                    className="hover:bg-surface-2 text-parchment-2 w-full py-2 rounded-control text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-line-strong"
                                 >
                                     <DiscordIcon className="w-3 h-3" />
                                     Recover with Discord
@@ -208,14 +208,14 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     // Setup state — channel not yet connected
     return (
         <div className="space-y-4">
-            {oauthEnabled && <div className="p-4 bg-indigo-900/10 border border-indigo-800/50 rounded-xl space-y-4">
-                <div className="flex items-start gap-3 text-indigo-300">
-                    <div className="p-2 bg-indigo-500/10 rounded-lg shrink-0">
+            {oauthEnabled && <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-4">
+                <div className="flex items-start gap-3 text-gold-bright">
+                    <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
                         <DiscordIcon className="w-5 h-5" />
                     </div>
                     <div className="space-y-1">
                         <p className="font-bold">Connect Discord Notifications</p>
-                        <p className="opacity-90 text-xs text-slate-400">
+                        <p className="opacity-90 text-xs text-mist">
                             {step === 'initial' && "Invite the bot to your server to start."}
                             {step === 'picking_channel' && "Select the channel for event updates."}
                         </p>
@@ -223,26 +223,26 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 </div>
 
                 {error === "MISSING_PERMISSIONS" ? (
-                    <div className="p-3 bg-amber-900/20 border border-amber-900/50 rounded-lg space-y-3">
-                        <div className="flex items-start gap-2 text-amber-200">
+                    <div className="p-3 bg-maybe-bg border border-maybe rounded-control space-y-3">
+                        <div className="flex items-start gap-2 text-maybe">
                             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                             <div>
                                 <p className="font-bold text-sm">Action Required: Permissions</p>
                                 <p className="text-xs opacity-90 mt-1">Found the channel, but the bot is not allowed to post in it.</p>
                             </div>
                         </div>
-                        <ol className="text-xs text-amber-100/80 list-decimal ml-8 space-y-1">
+                        <ol className="text-xs text-maybe list-decimal ml-8 space-y-1">
                             <li>Go to <b>Discord Channel Settings</b></li>
                             <li>Click <b>Permissions</b></li>
                             <li>Add <b>{publicConfig.botName || "the Bot"}</b></li>
-                            <li>Grant: <b className="text-white">View Channel</b> & <b className="text-white">Send Messages</b></li>
+                            <li>Grant: <b className="text-parchment">View Channel</b> & <b className="text-parchment">Send Messages</b></li>
                         </ol>
-                        <button onClick={handleSave} className="w-full py-2 bg-amber-700 hover:bg-amber-600 text-white rounded text-xs font-bold transition-colors">
+                        <button onClick={handleSave} className="w-full py-2 bg-maybe hover:bg-maybe/90 text-on-maybe rounded-control text-xs font-bold transition-colors">
                             I Fixed It - Try Again
                         </button>
                     </div>
                 ) : error && (
-                    <div className="p-2 bg-red-900/20 border border-red-900/50 rounded text-xs text-red-300 flex items-center gap-2">
+                    <div className="p-2 bg-no-bg border border-no rounded-control text-xs text-no flex items-center gap-2">
                         <AlertCircle className="w-3 h-3" />
                         {error}
                     </div>
@@ -251,7 +251,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 {step === 'initial' && oauthEnabled && (
                     <a
                         href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
-                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20"
+                        className="inline-flex items-center gap-2 bg-gold hover:bg-gold-bright text-on-gold px-4 py-2 rounded-control text-sm font-medium transition-colors "
                     >
                         Connect Discord Server
                     </a>
@@ -260,7 +260,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                 {step === 'picking_channel' && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
                         {loading && channels.length === 0 ? (
-                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <div className="flex items-center gap-2 text-xs text-mist">
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 Fetching channels...
                             </div>
@@ -269,7 +269,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                                 <select
                                     value={selectedChannel}
                                     onChange={(e) => setSelectedChannel(e.target.value)}
-                                    className="flex-1 bg-slate-950 border border-indigo-500/30 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                                    className="flex-1 bg-field border border-line-strong rounded-control px-3 py-2 text-sm text-parchment"
                                 >
                                     <option value="">Select a Channel...</option>
                                     {channels.map(c => (
@@ -279,48 +279,48 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
                                 <button
                                     onClick={handleSave}
                                     disabled={!selectedChannel || loading}
-                                    className="bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                    className="bg-yes hover:bg-yes/90 disabled:opacity-50 disabled:cursor-not-allowed text-on-yes px-4 py-2 rounded-control text-sm font-medium transition-colors flex items-center gap-2"
                                 >
                                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     Save
                                 </button>
                             </div>
                         )}
-                        {oauthEnabled && <p className="text-[10px] text-slate-500">
-                            Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-indigo-400 hover:underline">Re-invite it</a>.
+                        {oauthEnabled && <p className="text-xs text-mist">
+                            Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-gold-bright hover:underline">Re-invite it</a>.
                         </p>}
                     </div>
                 )}
             </div>}
 
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                <h3 className="font-semibold text-slate-300 text-sm flex items-center gap-2">
-                    <span className="text-lg">🔐</span>
+            <div className="p-4 bg-surface border border-line rounded-card space-y-4">
+                <h3 className="font-semibold text-parchment-2 text-sm flex items-center gap-2">
+                    <Lock className="size-4 text-gold-bright" aria-hidden="true" />
                     Discord Manager Recovery
                 </h3>
                 {hasManagerDiscordId ? (
                     <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-xs text-[#5865F2] bg-[#5865F2]/10 px-3 py-2 rounded border border-[#5865F2]/30">
-                            <CheckIcon className="w-3 h-3 shrink-0" />
+                        <div className="flex items-center gap-2 text-xs text-parchment-2 bg-discord/10 px-3 py-2 rounded-control border border-discord/40">
+                            <CheckIcon className="w-3 h-3 shrink-0 text-discord" />
                             <span className="font-medium">Identity Verified</span>
                         </div>
-                        {dmMessage && <p className="text-xs font-medium text-center text-slate-300">{dmMessage}</p>}
+                        {dmMessage && <p className="text-xs font-medium text-center text-parchment-2">{dmMessage}</p>}
                         <button
                             onClick={handleDM}
                             disabled={dmLoading}
-                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                            className="hover:bg-surface-2 text-parchment-2 w-full py-2 rounded-control text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-line-strong"
                         >
                             {dmLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Send Magic Link (Discord DM)"}
                         </button>
                     </div>
                 ) : oauthEnabled ? (
                     <div className="space-y-3">
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-mist">
                             Associate your Discord account to recover managing rights if you lose access.
                         </p>
                         <a
                             href={`/api/auth/discord?flow=login&returnTo=/e/${slug}/manage`}
-                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                            className="hover:bg-surface-2 text-parchment-2 w-full py-2 rounded-control text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-line-strong"
                         >
                             <DiscordIcon className="w-3 h-3" />
                             Recover with Discord (Magic Link)
