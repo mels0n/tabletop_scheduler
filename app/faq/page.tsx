@@ -81,7 +81,7 @@ export default function FAQPage() {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-screen-2xl mx-auto space-y-8">
                 <Link href="/" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back Home
                 </Link>
@@ -90,7 +90,7 @@ export default function FAQPage() {
                     Frequently Asked Questions
                 </h1>
 
-                <div className="lg:columns-2 gap-x-12 [&>*]:break-inside-avoid">
+                <div>
                     <FAQItem
                         question="Wait, I don't need an account?"
                         answer="That's right! TabletopTime is designed for low-friction scheduling. We know it's hard enough to get 5 people to agree on a time, let alone get them all to sign up for a new service."

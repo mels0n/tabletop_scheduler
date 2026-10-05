@@ -31,7 +31,7 @@ export default function LegalPage() {
 
     return (
         <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
-            <div className="max-w-7xl mx-auto space-y-16">
+            <div className="max-w-screen-2xl mx-auto space-y-16">
 
                 {/* Header */}
                 <div className="space-y-6 text-center">
@@ -50,7 +50,7 @@ export default function LegalPage() {
                     </h2>
                     <p className="text-sm text-mist">Last Updated: May 1, 2026</p>
 
-                    <div className="prose max-w-none lg:columns-2 xl:columns-3 gap-x-12 [&>*]:break-inside-avoid [&>*]:mb-8">
+                    <div className="prose max-w-none space-y-6">
                         <p className="text-parchment-2 leading-relaxed">
                             Welcome to Tabletop Time. By using this service, you agree to these basic terms. If you disagree with them, please do not use the site.
                         </p>
@@ -115,7 +115,7 @@ export default function LegalPage() {
                     </h2>
                     <p className="text-sm text-mist">Last Updated: October 3, 2026</p>
 
-                    <div className="prose max-w-none lg:columns-2 xl:columns-3 gap-x-12 [&>*]:break-inside-avoid [&>*]:mb-8">
+                    <div className="prose max-w-none space-y-6">
                         <p className="text-parchment-2 leading-relaxed">
                             Tabletop Time is a free, open-source personal project built by Christopher Melson. While we operate on a &quot;Zero Tracking&quot; philosophy, here are the technical realities of how data is processed:
                         </p>
