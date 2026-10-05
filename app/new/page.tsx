@@ -154,7 +154,7 @@ function NewEventForm() {
                                 onClick={() => setEventType("ONE_SHOT")}
                                 className={`text-left p-4 rounded-card border transition-colors bg-surface ${
                                     eventType === "ONE_SHOT"
-                                        ? "border-gold bg-surface-2"
+                                        ? "border-gold bg-surface-2 ring-1 ring-gold"
                                         : "border-line-strong hover:bg-surface-2"
                                 }`}
                             >
@@ -189,7 +189,7 @@ function NewEventForm() {
                                 onClick={() => setEventType("CAMPAIGN")}
                                 className={`text-left p-4 rounded-card border transition-colors bg-surface ${
                                     eventType === "CAMPAIGN"
-                                        ? "border-gold bg-surface-2"
+                                        ? "border-gold bg-surface-2 ring-1 ring-gold"
                                         : "border-line-strong hover:bg-surface-2"
                                 }`}
                             >

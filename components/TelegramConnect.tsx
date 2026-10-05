@@ -284,7 +284,7 @@ export function TelegramConnect({
                                     placeholder="https://t.me/..."
                                     value={telegramLink}
                                     onChange={(e) => setTelegramLink(e.target.value)}
-                                    className="flex-1 bg-field border border-line-strong rounded-control px-3 py-2 text-sm text-parchment placeholder:text-mist focus:outline-none focus:border-gold"
+                                    className="flex-1 bg-field border border-line-strong rounded-control px-3 py-2 text-sm text-parchment placeholder:text-mist focus:border-gold"
                                 />
                                 <button
                                     onClick={handleSaveLink}

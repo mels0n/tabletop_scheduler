@@ -19,7 +19,7 @@ export default function UntapBadge({ type = 'Designed' }: { type?: 'Designed' | 
         <circle cx="37" cy="20" r="2.5" fill="currentColor" opacity="0.5" />
         <circle cx="7" cy="31" r="3" fill="currentColor" />
         <circle cx="37" cy="31" r="3" fill="currentColor" />
-        <circle cx="22" cy="46" r="4" className="fill-gold" />
+        <circle cx="22" cy="46" r="4" className="fill-untap-accent" />
       </svg>
       <span style={{ lineHeight: 1 }}>{type} by <strong style={{ fontWeight: 700 }}>Untap Web</strong></span>
     </a>

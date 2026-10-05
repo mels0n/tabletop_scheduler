@@ -7,7 +7,7 @@ const TOKENS = [
   "parchment", "parchment-2", "mist",
   "gold", "gold-bright", "on-gold",
   "yes", "yes-bg", "on-yes", "maybe", "maybe-bg", "on-maybe", "no", "no-bg", "on-no",
-  "discord", "telegram", "untap",
+  "discord", "discord-text", "telegram", "untap", "untap-accent",
 ] as const;
 
 const token = (name: string) => `rgb(var(--c-${name}) / <alpha-value>)`;
@@ -26,8 +26,8 @@ const config: Config = {
     extend: {
       colors: Object.fromEntries(TOKENS.map((t) => [t, token(t)])),
       fontFamily: {
-        display: ["var(--font-display)", "Georgia", "serif"],
-        sans: ["var(--font-text)", "Georgia", "serif"],
+        display: ["var(--font-display, Georgia)", "serif"],
+        sans: ["var(--font-text, Georgia)", "serif"],
       },
       borderRadius: {
         control: "4px",
@@ -55,7 +55,7 @@ const config: Config = {
             "--tw-prose-pre-bg": rgb("field"),
             "--tw-prose-th-borders": rgb("line-strong"),
             "--tw-prose-td-borders": rgb("line"),
-            "h1, h2": { fontFamily: "var(--font-display), Georgia, serif", letterSpacing: "0.01em" },
+            "h1, h2": { fontFamily: "var(--font-display, Georgia), serif", letterSpacing: "0.01em" },
             a: { textUnderlineOffset: "3px" },
             "a:hover": { color: rgb("gold-bright") },
             blockquote: { borderLeftWidth: "2px", fontStyle: "normal" },

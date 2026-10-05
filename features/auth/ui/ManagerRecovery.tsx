@@ -122,7 +122,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                         <button
                             type="button"
                             onClick={() => setPlatform("discord")}
-                            className={`py-1.5 text-xs font-medium rounded-control transition-colors ${platform === "discord" ? "is-active text-discord" : "text-mist hover:text-parchment"}`}
+                            className={`py-1.5 text-xs font-medium rounded-control transition-colors ${platform === "discord" ? "is-active text-discord-text" : "text-mist hover:text-parchment"}`}
                         >
                             Discord
                         </button>

@@ -26,8 +26,10 @@
   --c-no-bg: 42 26 30;          /* #2A1A1E */
   --c-on-no: 31 10 8;           /* #1F0A08 */
   --c-discord: 88 101 242;      /* #5865F2 */
+  --c-discord-text: 140 149 246; /* #8C95F6 Discord hue lightened for small text */
   --c-telegram: 34 158 217;     /* #229ED9 */
   --c-untap: 56 178 172;        /* #38B2AC */
+  --c-untap-accent: 246 173 85; /* #F6AD55 */
   color-scheme: dark;
 }
 
@@ -109,10 +111,10 @@ body {
   .segmented {
     @apply grid grid-flow-col auto-cols-fr bg-surface border border-line rounded-control overflow-hidden;
   }
-  .segmented > .is-active,
-  .segmented > [aria-pressed="true"],
-  .segmented > [aria-selected="true"] {
+  /* :where keeps specificity low so a utility text color on the button still wins. */
+  .segmented > :where(.is-active, [aria-pressed="true"], [aria-selected="true"]) {
     @apply bg-surface-2 text-parchment;
+    box-shadow: inset 0 -2px 0 rgb(var(--c-gold));
   }
 }
 
