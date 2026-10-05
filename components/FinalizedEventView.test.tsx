@@ -61,7 +61,7 @@ describe('FinalizedEventView: failed vote responses', () => {
     it('shows the specific message when joining is refused with participant_not_owned', async () => {
         fetchMock.mockResolvedValueOnce(jsonResponse(403, { error: 'Forbidden', code: 'participant_not_owned' }));
 
-        render(<FinalizedEventView event={{ ...event, maxPlayers: 4 }} finalizedSlot={slotWith([])} participants={[]} />);
+        render(<FinalizedEventView event={{ ...event, maxPlayers: 4 }} finalizedSlot={slotWith([])} participants={[]} discordLoginEnabled={false} />);
 
         fireEvent.change(screen.getByPlaceholderText('Your Name (Required)'), { target: { value: 'Dee' } });
         fireEvent.click(screen.getByRole('button', { name: "I'm Coming!" }));
@@ -84,6 +84,7 @@ describe('FinalizedEventView: failed vote responses', () => {
                 finalizedSlot={slotWith(votes)}
                 participants={[participant(5, 'ACCEPTED'), participant(6, 'WAITLIST')]}
                 serverParticipantId={5}
+                discordLoginEnabled={false}
             />
         );
 
@@ -97,11 +98,23 @@ describe('FinalizedEventView: failed vote responses', () => {
     it('falls back to the generic message for a non-JSON failure', async () => {
         fetchMock.mockResolvedValueOnce({ ok: false, status: 500, json: async () => { throw new Error('not json'); } } as unknown as Response);
 
-        render(<FinalizedEventView event={{ ...event, maxPlayers: 4 }} finalizedSlot={slotWith([])} participants={[]} />);
+        render(<FinalizedEventView event={{ ...event, maxPlayers: 4 }} finalizedSlot={slotWith([])} participants={[]} discordLoginEnabled={false} />);
 
         fireEvent.change(screen.getByPlaceholderText('Your Name (Required)'), { target: { value: 'Dee' } });
         fireEvent.click(screen.getByRole('button', { name: "I'm Coming!" }));
 
         await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Failed to save votes'));
+    });
+});
+
+describe('FinalizedEventView: Discord log in link', () => {
+    it('is hidden when Discord login is not configured', () => {
+        render(<FinalizedEventView event={{ ...event, maxPlayers: 4 }} finalizedSlot={slotWith([])} participants={[]} discordLoginEnabled={false} />);
+        expect(screen.queryByRole('link', { name: /Log in/i })).toBeNull();
+    });
+
+    it('starts the Discord login flow when Discord login is configured', () => {
+        render(<FinalizedEventView event={{ ...event, maxPlayers: 4 }} finalizedSlot={slotWith([])} participants={[]} discordLoginEnabled />);
+        expect(screen.getByRole('link', { name: /Log in/i }).getAttribute('href')).toMatch(/^\/api\/auth\/discord\?flow=login&returnTo=/);
     });
 });

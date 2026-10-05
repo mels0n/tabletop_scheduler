@@ -371,7 +371,7 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
  * 3. Recovery:
  *    - Provides a "Magic Link" request form to elevate a session from Anonymous -> Authenticated.
  */
-export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl, dmPreferences }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null, dmPreferences?: DmPreferenceState }) {
+export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscordSynced, serverUserName, telegramConnectUrl, discordLoginEnabled, dmPreferences }: { serverEvents?: ServerEvent[], isTelegramSynced?: boolean, isDiscordSynced?: boolean, serverUserName?: string, telegramConnectUrl?: string | null, discordLoginEnabled: boolean, dmPreferences?: DmPreferenceState }) {
     const { history, validateHistory, bulkMerge } = useEventHistory();
     const [userName, setUserName] = useState("");
     const [telegramConnectClicked, setTelegramConnectClicked] = useState(false);
@@ -455,9 +455,9 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                             ) : null}
                             {isDiscordSynced ? (
                                 <HeaderSyncPill platform="discord" onResult={setSyncActionMsg} />
-                            ) : (
+                            ) : discordLoginEnabled ? (
                                 <ConnectBadge platform="discord" href="/api/auth/discord?flow=login&returnTo=/profile" />
-                            )}
+                            ) : null}
                         </div>
                         <p className="text-xs text-mist mt-2 max-w-md">
                             Syncing ties this browser to your Telegram or Discord identity, so your events
