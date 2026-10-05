@@ -153,10 +153,10 @@ function NewEventForm() {
                                 type="button"
                                 aria-pressed={eventType === "ONE_SHOT"}
                                 onClick={() => setEventType("ONE_SHOT")}
-                                className={`text-left p-4 rounded-card border transition-colors bg-surface ${
+                                className={`text-left p-4 rounded-card border transition-colors ${
                                     eventType === "ONE_SHOT"
                                         ? "border-gold bg-surface-2 ring-1 ring-gold"
-                                        : "border-line-strong hover:bg-surface-2"
+                                        : "bg-surface border-line-strong hover:bg-surface-2"
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
@@ -189,10 +189,10 @@ function NewEventForm() {
                                 type="button"
                                 aria-pressed={eventType === "CAMPAIGN"}
                                 onClick={() => setEventType("CAMPAIGN")}
-                                className={`text-left p-4 rounded-card border transition-colors bg-surface ${
+                                className={`text-left p-4 rounded-card border transition-colors ${
                                     eventType === "CAMPAIGN"
                                         ? "border-gold bg-surface-2 ring-1 ring-gold"
-                                        : "border-line-strong hover:bg-surface-2"
+                                        : "bg-surface border-line-strong hover:bg-surface-2"
                                 }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
