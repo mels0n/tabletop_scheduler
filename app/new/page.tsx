@@ -138,14 +138,14 @@ function NewEventForm() {
 
     return (
         <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-3xl mx-auto">
                 <h1 className="text-3xl font-bold mb-8 font-display text-parchment">
                     Create New Event
                 </h1>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <form onSubmit={handleSubmit} className="space-y-8">
                     {/* Event Type Selector */}
-                    <div className="space-y-3 lg:col-span-2">
+                    <div className="space-y-3">
                         <label className="font-semibold text-parchment">Event Type</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* One-Shot Card */}
@@ -324,7 +324,7 @@ function NewEventForm() {
                         )}
                     </div>
 
-                    <div className="pt-6 border-t border-line lg:col-span-2">
+                    <div className="pt-6 border-t border-line">
                         <button
                             data-testid="create-event-button"
                             type="submit"
