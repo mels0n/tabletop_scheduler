@@ -40,6 +40,7 @@ function toActionError(e: unknown, fallback: string): ActionFailure {
 }
 
 const recoverArgs = z.object({ slug: slugParam, handle: handleParam });
+const platformParam = z.enum(["telegram", "discord"]).optional();
 
 /** Throws `ValidationError` unless `slug` is a well-formed slug; `toActionError` maps it. */
 function parseSlug(slug: unknown): string {
@@ -67,18 +68,23 @@ type ManagerEvent = {
 };
 
 /**
- * DMs a 15-minute login link to every platform the manager has linked, one token per
- * platform. The link logs the
+ * DMs a 15-minute login link to each of `targets` the manager has linked (default: every
+ * linked platform), one token per platform. The link logs the
  * browser in as the stored manager identity, which grants admin on the manage page. The
  * admin token is never rotated, so nobody can lock the manager out by calling this.
  */
-async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResult> {
-    if (!event.managerChatId && !event.managerDiscordId) return { error: NO_MANAGER };
+async function deliverManagerLink(
+    event: ManagerEvent,
+    targets: readonly LoginPlatform[] = ["telegram", "discord"]
+): Promise<ManagerLinkResult> {
+    const wantsTelegram = targets.includes("telegram") && !!event.managerChatId;
+    const wantsDiscord = targets.includes("discord") && !!event.managerDiscordId;
+    if (!wantsTelegram && !wantsDiscord) return { error: NO_MANAGER };
 
     try {
         // Cheap early refusal; createManagerLoginLinks re-checks after creating, race free.
-        await assertManagerLinkCooldown(event);
-        const links = await createManagerLoginLinks(event);
+        await assertManagerLinkCooldown(event, targets);
+        const links = await createManagerLoginLinks(event, targets);
         const manageUrl = `${getBaseUrl()}/e/${event.slug}/manage`;
         const notLinked: DeliveryOutcome = { status: "skipped", reason: "not_linked" };
 
@@ -87,7 +93,7 @@ async function deliverManagerLink(event: ManagerEvent): Promise<ManagerLinkResul
         const sendTo = async (platform: LoginPlatform): Promise<DeliveryOutcome> => {
             const linked = platform === "telegram" ? event.managerChatId : event.managerDiscordId;
             const loginUrl = links[platform];
-            if (!linked || !loginUrl) return notLinked;
+            if (!targets.includes(platform) || !linked || !loginUrl) return notLinked;
             const res = await sendDirectMessage(
                 platform === "telegram"
                     ? { telegramChatId: linked, discordUserId: null }
@@ -157,25 +163,32 @@ export async function recoverManagerLink(slug: string, handle: string): Promise<
         return { error: "Handle matched, but no Telegram or Discord account has been linked as this event's manager yet, so there is nowhere to send a link." };
     }
 
-    return deliverManagerLink(event);
+    // Send only to the platform whose handle was named (both, if one handle matches both).
+    const matched: LoginPlatform[] = [
+        ...(matchesTelegram ? ["telegram" as const] : []),
+        ...(matchesDiscord ? ["discord" as const] : []),
+    ];
+    return deliverManagerLink(event, matched);
 }
 
 /**
  * Admin only: one-click "send me a login link" from the manage page. No handle check is
  * needed: the caller already proved admin, and the link can only reach the manager
  * identity stored on the event. Anyone without admin uses `recoverManagerLink`, which
- * makes them name the stored handle first.
+ * makes them name the stored handle first. `platform` limits delivery to the button's own
+ * platform; omitted, the link goes to every linked platform.
  */
-export async function dmManagerLink(slug: string): Promise<ManagerLinkResult> {
+export async function dmManagerLink(slug: string, platform?: LoginPlatform): Promise<ManagerLinkResult> {
     try {
         parseSlug(slug);
+        if (!platformParam.safeParse(platform).success) throw new ValidationError();
         await requireEventAdmin(slug);
     } catch (e) {
         return toActionError(e, "Could not send the link. Please try again.");
     }
     const event = await prisma.event.findUnique({ where: { slug }, select: managerSelect });
     if (!event) return { error: NO_MANAGER };
-    return deliverManagerLink(event);
+    return deliverManagerLink(event, platform ? [platform] : undefined);
 }
 
 /**
