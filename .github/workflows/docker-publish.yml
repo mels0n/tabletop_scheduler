@@ -215,12 +215,14 @@ jobs:
             # The compare API lists at most 300 files; treat more as unknown.
             if [ "$status" = "ahead" ] && [ "$count" -lt 300 ]; then
               newest=true
+              # Renames are judged by both the old and the new path.
+              files=$(jq -er '.files[] | .filename, (.previous_filename // empty)' <<< "$cmp" || [ "$count" -eq 0 ])
               while IFS= read -r f; do
                 case "$f" in
-                  *.md|docs/*|content/*|.claude/*) ;;
+                  ''|*.md|docs/*|content/*|.claude/*) ;;
                   *) newest=false ;;
                 esac
-              done < <(jq -r '.files[].filename' <<< "$cmp")
+              done <<< "$files"
             fi
           fi
           if [ "$newest" != "true" ]; then
