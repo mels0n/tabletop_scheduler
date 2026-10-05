@@ -15,13 +15,13 @@ export default function LegalPage() {
 
     if (!isHosted) {
         return (
-            <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+            <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
                 <div className="max-w-4xl mx-auto text-center space-y-8">
-                    <h1 className="text-4xl font-bold text-slate-200">Legal Information</h1>
-                    <p className="text-xl text-slate-400">
+                    <h1 className="heading-display text-4xl font-bold text-parchment">Legal Information</h1>
+                    <p className="text-xl text-parchment-2">
                         This page is only available on the hosted version of Tabletop Time.
                     </p>
-                    <Link href="/" className="text-emerald-400 hover:text-emerald-300 transition-colors">
+                    <Link href="/" className="text-gold hover:text-gold-bright transition-colors">
                         &larr; Back to Scheduler
                     </Link>
                 </div>
@@ -30,78 +30,78 @@ export default function LegalPage() {
     }
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
-            <div className="max-w-4xl mx-auto space-y-16">
+        <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
+            <div className="max-w-screen-2xl mx-auto space-y-16">
 
                 {/* Header */}
                 <div className="space-y-6 text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment">
                         Legal
                     </h1>
-                    <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+                    <p className="text-xl text-parchment-2 max-w-2xl mx-auto">
                         Terms of Service and Formal Privacy Disclosures for Tabletop Time.
                     </p>
                 </div>
 
                 {/* Terms of Service */}
                 <section className="space-y-8">
-                    <h2 className="text-3xl font-bold text-slate-200 border-b border-slate-800 pb-4">
+                    <h2 className="heading-display text-3xl font-bold text-parchment border-b border-line pb-4">
                         Terms of Service
                     </h2>
-                    <p className="text-sm text-slate-500">Last Updated: May 1, 2026</p>
+                    <p className="text-sm text-mist">Last Updated: May 1, 2026</p>
 
-                    <div className="prose prose-invert max-w-none space-y-6">
-                        <p className="text-slate-300 leading-relaxed">
+                    <div className="prose max-w-none space-y-6">
+                        <p className="text-parchment-2 leading-relaxed">
                             Welcome to Tabletop Time. By using this service, you agree to these basic terms. If you disagree with them, please do not use the site.
                         </p>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">1. The Service is Provided &quot;As-Is&quot;</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">1. The Service is Provided &quot;As-Is&quot;</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 Tabletop Time is a free, personal project. While we strive to keep the service fast and reliable, we do not guarantee 100% uptime. The service is provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind. We reserve the right to modify, suspend, or shut down the service at any time without notice.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">2. Acceptable Use</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">2. Acceptable Use</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 This tool is built to help people schedule games. You agree not to:
                             </p>
-                            <ul className="list-disc list-inside text-slate-300 space-y-2 ml-4">
+                            <ul className="list-disc list-inside text-parchment-2 space-y-2 ml-4">
                                 <li>Use the service for any illegal purposes.</li>
                                 <li>Spam the system with automated bots or generate a volume of events that degrades server performance for others.</li>
                                 <li>Include malicious links, hateful content, or illegal material in your event titles or descriptions.</li>
                                 <li>Attempt to reverse-engineer or compromise the security of the hosting infrastructure.</li>
                             </ul>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-parchment-2 leading-relaxed">
                                 We reserve the right to block IPs or delete events that violate these rules or threaten the stability of the platform.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">3. Donations</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">3. Donations</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 If you choose to support Tabletop Time via Ko-fi, we are incredibly grateful. Please note that donations are entirely voluntary gifts to help cover server and development costs. They do not constitute a purchase of goods, premium services, or service-level agreements (SLAs), and are non-refundable.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">4. Open Source &amp; Self-Hosting</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">4. Open Source &amp; Self-Hosting</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 The code for Tabletop Time is open source and available on our GitHub repository. If you choose to deploy your own self-hosted instance using our Docker image, you are solely responsible for its operation, security, and legal compliance. We provide no official support or warranties for self-hosted instances.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">5. Limitation of Liability</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">5. Limitation of Liability</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 To the maximum extent permitted by law, Christopher Melson and Tabletop Time shall not be liable for any direct, indirect, incidental, or consequential damages resulting from your use of the service. If a server glitch deletes your event and your group misses out on a game of Root or a Magic draft, we apologize for the inconvenience, but we are not legally or financially liable.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">6. Changes to These Terms</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">6. Changes to These Terms</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 We may update these terms occasionally to reflect changes in the project. Continued use of the site after updates constitutes acceptance of the new terms.
                             </p>
                         </div>
@@ -110,64 +110,64 @@ export default function LegalPage() {
 
                 {/* Formal Privacy Disclosures */}
                 <section className="space-y-8">
-                    <h2 className="text-3xl font-bold text-slate-200 border-b border-slate-800 pb-4">
+                    <h2 className="heading-display text-3xl font-bold text-parchment border-b border-line pb-4">
                         Formal Privacy Disclosures
                     </h2>
-                    <p className="text-sm text-slate-500">Last Updated: October 3, 2026</p>
+                    <p className="text-sm text-mist">Last Updated: October 3, 2026</p>
 
-                    <div className="prose prose-invert max-w-none space-y-6">
-                        <p className="text-slate-300 leading-relaxed">
+                    <div className="prose max-w-none space-y-6">
+                        <p className="text-parchment-2 leading-relaxed">
                             Tabletop Time is a free, open-source personal project built by Christopher Melson. While we operate on a &quot;Zero Tracking&quot; philosophy, here are the technical realities of how data is processed:
                         </p>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">Data We Collect</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">Data We Collect</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 We only store the data you explicitly provide to make the app work: proposed event times, display names, and availability votes.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">Donation Records &amp; Public Shoutouts</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">Donation Records &amp; Public Shoutouts</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 If you generously choose to support the project financially via Ko-fi, you control what is shared. If you make a &quot;public&quot; donation, we store your provided name, transaction ID, amount, and message, and proudly display your name and message on our homepage ticker to thank you. If you mark your donation as &quot;private&quot; on Ko-fi, our system simply drops the webhook data and we do not store your record in our database at all. Unlike event data, public donation records are retained long-term and are not subject to the automated server purge.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">Server Logs</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">Server Logs</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 Like almost all websites, our hosting infrastructure temporarily logs standard request data (such as IP addresses and browser types) solely for security, performance monitoring, and DDOS prevention.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">Optional Integrations (Discord &amp; Telegram)</h3>
-                            <p className="text-slate-300 leading-relaxed">
+                            <h3 className="text-xl font-semibold text-parchment">Optional Integrations (Discord &amp; Telegram)</h3>
+                            <p className="text-parchment-2 leading-relaxed">
                                 If you choose to link Discord or Telegram, here is exactly what we store: your user ID and username on the participant and event records you link, plus the server ID, channel ID, and pinned message ID for any event a host connects to a channel. If you change your direct message setting, we store that choice with your platform user ID (and nothing else) so the bots respect it. We never store your access tokens, and we never read your friend lists, message history, or other profile data.
                             </p>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-parchment-2 leading-relaxed">
                                 Our bots send direct messages for these purposes and nothing else: magic login links you request (including an organizer&apos;s manager login link), waitlist promotion and removal notices, finalize results for events you joined, and quorum alerts to the organizer. If you linked Telegram or Discord, you can turn off these direct messages from your My Events page; login links you request are still sent, and group or channel posts are not affected. Automated posts in a connected group or channel are the live dashboard, a short announcement with the event title and link when a host connects a Discord channel, a notice in a Telegram group asking for the Pin Messages permission if the bot cannot pin the dashboard, a short &quot;updated their availability&quot; post when someone votes (naming that voter, at most once per person per hour), slot changes, dashboard edits for location changes, finalize announcements, cancel and delete announcements, and the voting or session reminders the organizer enabled. We do not send promotional messages, and we never contact you outside of these functions.
                             </p>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-parchment-2 leading-relaxed">
                                 This linked identity data is deleted together with the event by the automated cleanup (see Data Rights below for the schedule), and you can delete it yourself at any time.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-semibold text-slate-200">Data Rights &amp; Contact</h3>
-                            <p className="text-slate-300 leading-relaxed">
-                                If you linked Discord or Telegram, you can delete that data yourself: open the <Link href="/profile/privacy" className="text-emerald-400 hover:text-emerald-300 underline">Privacy &amp; Data page</Link> while logged in with that platform and use &quot;Unlink&quot; under Linked Accounts. This immediately removes your platform identity from every participant record, every event you manage, and any pending login links.
+                            <h3 className="text-xl font-semibold text-parchment">Data Rights &amp; Contact</h3>
+                            <p className="text-parchment-2 leading-relaxed">
+                                If you linked Discord or Telegram, you can delete that data yourself: open the <Link href="/profile/privacy" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">Privacy &amp; Data page</Link> while logged in with that platform and use &quot;Unlink&quot; under Linked Accounts. This immediately removes your platform identity from every participant record, every event you manage, and any pending login links.
                             </p>
-                            <p className="text-slate-300 leading-relaxed">
+                            <p className="text-parchment-2 leading-relaxed">
                                 For anonymous event data (names and votes entered without any linked account), ask your Event Host to delete the event, or wait for the automated cleanup. Events are deleted one day after they end (a one-shot one day after its chosen slot, a campaign one day after its last session), drafts one day after their last proposed time, and cancelled events one day after cancellation. Self-hosters can change these with the CLEANUP_RETENTION_DAYS_* variables. No third-party analytics run on the hosted site. For anything else, including deletion requests we should handle manually, open an issue on our GitHub Repository and we will respond there.
                             </p>
                         </div>
                     </div>
                 </section>
 
-                <div className="text-center pt-12 border-t border-slate-800">
-                    <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors">
+                <div className="text-center pt-12 border-t border-line">
+                    <Link href="/" className="text-mist hover:text-gold-bright transition-colors">
                         &larr; Back to Scheduler
                     </Link>
                 </div>

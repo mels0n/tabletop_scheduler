@@ -25,7 +25,7 @@ export default function MagicLinksPage() {
     ]);
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 py-12 px-4 md:px-8">
+        <main className="min-h-screen bg-ink text-parchment py-12 px-4 md:px-8">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -35,32 +35,32 @@ export default function MagicLinksPage() {
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsLd) }}
             />
 
-            <div className="max-w-3xl mx-auto">
-                <Link href="/" className="inline-flex items-center text-indigo-400 hover:text-indigo-300 mb-8 transition-colors group">
-                    <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+            <div className="max-w-screen-2xl mx-auto">
+                <Link href="/" className="inline-flex items-center text-gold hover:text-gold-bright mb-8 transition-colors group">
+                    <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
                     Back to Home
                 </Link>
 
-                <article className="prose prose-invert prose-lg max-w-none prose-headings:text-indigo-100 prose-a:text-indigo-400 hover:prose-a:text-indigo-300 prose-strong:text-slate-100">
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-6">
+                <article className="prose prose-lg max-w-none">
+                    <h1 className="heading-display text-4xl md:text-5xl font-bold text-parchment mb-6">
                         Understanding Magic Links
                     </h1>
 
-                    <p className="lead text-xl text-slate-400 mb-8">
+                    <p className="lead text-xl text-parchment-2 mb-8">
                         Tabletop Time uses a <strong>passwordless</strong> authentication system. Instead of usernames and passwords, we use secure &quot;Magic Links&quot; sent to your Telegram or Discord to verify your identity.
                     </p>
 
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 mb-10 not-prose">
-                        <h3 className="text-lg font-semibold text-indigo-400 mb-2 flex items-center gap-2">
-                            <Lock className="w-5 h-5" /> Why no passwords?
+                    <div className="bg-surface border border-line rounded-card p-6 mb-10 not-prose">
+                        <h3 className="text-lg font-semibold text-gold-bright mb-2 flex items-center gap-2">
+                            <Lock className="w-5 h-5" aria-hidden="true" /> Why no passwords?
                         </h3>
-                        <p className="text-slate-300">
+                        <p className="text-parchment-2">
                             We believe you shouldn&apos;t need another password for a tool you use once a week. By verifying ownership of your Telegram/Discord account, we can prove it&apos;s you without storing sensitive credentials.
                         </p>
                     </div>
 
                     <h2>Use Case 1: Sync & Recover (My Events)</h2>
-                    <p className="italic text-slate-400">Best for: Logging in to view all your events at once.</p>
+                    <p className="italic text-parchment-2">Best for: Logging in to view all your events at once.</p>
 
                     <p>
                         If you are on a new device or your cookies have been cleared, you can recover access to your entire event history via the <strong>My Events</strong> (Profile) page.
@@ -77,25 +77,25 @@ export default function MagicLinksPage() {
                         This will restore your <strong>Event List</strong> and your <strong>Voting Identity</strong> (allowing you to edit votes you linked to that Telegram or Discord account).
                     </p>
 
-                    <hr className="my-8 border-slate-800" />
+                    <hr className="my-8 border-line" />
 
                     <h2>Use Case 2: Per-Event Sync Badges</h2>
-                    <p className="italic text-slate-400">Best for: seeing at a glance which events follow you across devices, and fixing the ones that don&apos;t.</p>
+                    <p className="italic text-parchment-2">Best for: seeing at a glance which events follow you across devices, and fixing the ones that don&apos;t.</p>
 
                     <p>
                         Every card on <strong>My Events</strong> also carries its own badge, separate from the header pills: a colored <strong>&quot;Telegram Synced&quot;</strong> / <strong>&quot;Discord Synced&quot;</strong> badge means that event&apos;s vote is tied to your verified identity, while a gray <strong>&quot;This Device Only&quot;</strong> badge means it only exists in this browser&apos;s local history.
                     </p>
                     <p>
-                        Events you manage also show a separate indigo <strong>&quot;Manager&quot;</strong> badge alongside any sync badges, marking your role there. It doesn&apos;t by itself mean your identity is linked, a managed event with no linked participant still just shows &quot;Manager&quot; (never &quot;This Device Only&quot;, since it&apos;s already tied to the event on the server).
+                        Events you manage also show a separate gold <strong>&quot;Manager&quot;</strong> badge alongside any sync badges, marking your role there. It doesn&apos;t by itself mean your identity is linked, a managed event with no linked participant still just shows &quot;Manager&quot; (never &quot;This Device Only&quot;, since it&apos;s already tied to the event on the server).
                     </p>
                     <p>
                         Click a badge to act on it: a gray badge opens a menu to <strong>link</strong> the event to whichever platform(s) you&apos;re synced with, and a colored badge opens a menu to <strong>unlink</strong> it. Linking requires you to have already voted on that event from this browser (so there&apos;s a participant row to stamp, and this browser can prove the vote is yours), and you can only unlink your own identity, never someone else&apos;s.
                     </p>
 
-                    <hr className="my-8 border-slate-800" />
+                    <hr className="my-8 border-line" />
 
                     <h2>Use Case 3: Linking While You Vote</h2>
-                    <p className="italic text-slate-400">Best for: getting a new vote linked automatically instead of fixing it afterward.</p>
+                    <p className="italic text-parchment-2">Best for: getting a new vote linked automatically instead of fixing it afterward.</p>
 
                     <p>
                         If your browser is already synced when you vote, the vote form shows a <strong>&quot;Will link to Telegram/Discord&quot;</strong> indicator next to a checkbox, checked by default. Leave it checked and your vote is stamped with your synced identity automatically. Uncheck it if you&apos;d rather that particular vote stay anonymous and device-only.
@@ -104,10 +104,10 @@ export default function MagicLinksPage() {
                         Voted before syncing, or opted out and changed your mind? The event page shows a dismissible banner offering to link that event whenever your browser is synced but your participant row on it isn&apos;t linked yet.
                     </p>
 
-                    <hr className="my-8 border-slate-800" />
+                    <hr className="my-8 border-line" />
 
                     <h2>Use Case 4: Manager Recovery</h2>
-                    <p className="italic text-slate-400">Best for: Quickly switching devices for a specific event.</p>
+                    <p className="italic text-parchment-2">Best for: Quickly switching devices for a specific event.</p>
 
                     <p>
                         Viewing your event&apos;s Manage Page and want to switch to your phone?
@@ -119,10 +119,10 @@ export default function MagicLinksPage() {
                         <li>Opening the login link signs that browser in with your Telegram or Discord identity, which unlocks the Manage Page of the events that identity manages. Nothing is reset: your existing manager access keeps working.</li>
                     </ol>
 
-                    <hr className="my-8 border-slate-800" />
+                    <hr className="my-8 border-line" />
 
                     <h2>Use Case 5: I&apos;m Locked Out</h2>
-                    <p className="italic text-slate-400">Best for: Recovering access when cookies are gone.</p>
+                    <p className="italic text-parchment-2">Best for: Recovering access when cookies are gone.</p>
 
                     <p>
                         If you are viewing an event you created but appear as a <em>Participant</em> (no admin controls):
@@ -134,11 +134,11 @@ export default function MagicLinksPage() {
                         <li>If it matches the manager account linked to this event, the bot sends a login link to that account&apos;s DMs. Typing a handle never links anything by itself: this works only if you linked your Telegram or Discord account as the manager beforehand.</li>
                     </ol>
 
-                    <div className="bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg mt-8 not-prose">
-                        <h4 className="font-bold text-indigo-300 flex items-center gap-2 mb-1">
-                            <RefreshCw className="w-4 h-4" /> Technical Insight
+                    <div className="bg-surface border-l-2 border-gold p-4 rounded-none mt-8 not-prose">
+                        <h4 className="font-bold text-gold-bright flex items-center gap-2 mb-1">
+                            <RefreshCw className="w-4 h-4" aria-hidden="true" /> Technical Insight
                         </h4>
-                        <p className="text-sm text-slate-300">
+                        <p className="text-sm text-parchment-2">
                             We use two layers of storage: <strong>Cookies</strong> (signed, HTTP-only server auth that stays valid for 400 days and refreshes each time you visit) and <strong>LocalStorage</strong> (to auto-fill your name and remember your specific votes on a device). Magic Links restore your signed identity cookie, which brings back your linked events and votes.
                         </p>
                     </div>

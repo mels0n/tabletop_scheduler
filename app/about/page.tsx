@@ -71,29 +71,29 @@ export default function AboutPage() {
     }
 
     return (
-        <main className="min-h-screen pt-24 pb-16 px-4 bg-slate-950 text-slate-50">
+        <main className="min-h-screen pt-24 pb-16 px-4 bg-ink text-parchment">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <div className="max-w-4xl mx-auto space-y-16">
+            <div className="max-w-5xl mx-auto space-y-16">
 
                 {/* Header */}
                 <section className="text-center space-y-6">
-                    <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                    <h1 className="font-display text-4xl md:text-5xl font-bold text-parchment">
                         About Tabletop Time
                     </h1>
-                    <p className="text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto">
+                    <p className="text-xl text-parchment-2 leading-relaxed max-w-2xl mx-auto">
                         To eliminate the &quot;scheduling boss&quot; so you can focus on the actual boss fight.
                     </p>
                 </section>
 
                 {/* Story / Context */}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                    <div className="space-y-6 text-lg text-slate-300">
+                    <div className="space-y-6 text-lg text-parchment-2">
                         <p>
                             <strong>Tabletop Time</strong> was built by{" "}
-                            <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                            <a href="https://chris.melson.us/" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                 Christopher Melson
                             </a>
                             , a technology and operations executive and lifelong tabletop gamer, after his own Magic: The Gathering group started falling apart. Not because of drama, but because adults with jobs and kids can&apos;t coordinate over group chats.
@@ -103,28 +103,28 @@ export default function AboutPage() {
                         </p>
                         <p>
                             So he built it. No venture capital, no data selling, just a tool to help us play more games. Chris supports the project through his web hosting company,{" "}
-                            <a href="https://untapweb.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">
+                            <a href="https://untapweb.com" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-bright underline underline-offset-[3px]">
                                 Untap Web
                             </a>
                             , which keeps it running.
                         </p>
                     </div>
-                    <div className="bg-slate-900/50 p-8 rounded-3xl border border-slate-800">
-                        <h3 className="text-xl font-bold text-white mb-4">The &quot;No Login&quot; Philosophy</h3>
-                        <p className="text-slate-400 mb-6">
+                    <div className="card-accent p-8">
+                        <h3 className="font-display text-xl font-bold text-parchment mb-4">The &quot;No Login&quot; Philosophy</h3>
+                        <p className="text-parchment-2 mb-6">
                             You shouldn&apos;t have to trade your privacy to schedule a game night.
                         </p>
                         <ul className="space-y-3">
-                            <li className="flex gap-3 text-sm text-slate-300">
-                                <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                            <li className="flex gap-3 text-sm text-parchment-2">
+                                <ShieldCheck className="w-5 h-5 text-gold-bright" aria-hidden="true" />
                                 <span>No mining or selling of your data</span>
                             </li>
-                            <li className="flex gap-3 text-sm text-slate-300">
-                                <Users className="w-5 h-5 text-indigo-400" />
+                            <li className="flex gap-3 text-sm text-parchment-2">
+                                <Users className="w-5 h-5 text-gold-bright" aria-hidden="true" />
                                 <span>Identity stored locally on your device</span>
                             </li>
-                            <li className="flex gap-3 text-sm text-slate-300">
-                                <Code2 className="w-5 h-5 text-indigo-400" />
+                            <li className="flex gap-3 text-sm text-parchment-2">
+                                <Code2 className="w-5 h-5 text-gold-bright" aria-hidden="true" />
                                 <span>100% Open Source code</span>
                             </li>
                         </ul>
@@ -132,13 +132,14 @@ export default function AboutPage() {
                 </section>
 
                 {/* CTA */}
-                <section className="text-center pt-8">
+                <div className="ornament" aria-hidden="true">✦</div>
+                <section className="text-center">
                     <Link
                         href="/new"
-                        className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold transition-all shadow-xl shadow-indigo-600/20"
+                        className="btn-primary px-8 py-4"
                     >
                         Start Scheduling
-                        <ArrowRight className="w-5 h-5" />
+                        <ArrowRight className="w-5 h-5" aria-hidden="true" />
                     </Link>
                 </section>
 

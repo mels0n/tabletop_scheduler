@@ -28,24 +28,24 @@ export default async function ProfilePrivacyPage() {
     const isDiscordSynced = !!cookieStore.get("tabletop_user_discord_id")?.value;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <div className="max-w-3xl mx-auto space-y-8">
-                <Link href="/profile" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4">
+                <Link href="/profile" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back to My Events
                 </Link>
 
                 {/* No bottom border here: LinkedAccountsPanel brings its own top border. */}
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-100 flex items-center gap-3">
-                        <ShieldCheck className="w-7 h-7 text-indigo-400" />
+                    <h1 className="text-3xl font-bold text-parchment flex items-center gap-3">
+                        <ShieldCheck className="w-7 h-7 text-gold-bright" />
                         Privacy &amp; Data
                     </h1>
-                    <p className="text-slate-400 mt-2 max-w-xl">
+                    <p className="text-mist mt-2 max-w-xl">
                         Account-level controls for the data Tabletop Time stores about your linked
                         platforms. Looking to just sign this browser out of Telegram or Discord sync,
                         to link and unlink individual events, or to turn off direct messages from the bot? Those
                         live on your{" "}
-                        <Link href="/profile" className="text-indigo-400 hover:text-indigo-300 underline">
+                        <Link href="/profile" className="text-gold hover:text-gold-bright underline">
                             My Events
                         </Link>{" "}
                         page and don&apos;t delete anything.
@@ -54,9 +54,9 @@ export default async function ProfilePrivacyPage() {
 
                 <LinkedAccountsPanel isTelegramSynced={isTelegramSynced} isDiscordSynced={isDiscordSynced} />
 
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-mist">
                     Event data itself is deleted automatically one day after each event ends. See our{" "}
-                    <Link href="/privacy" className="text-slate-500 hover:text-slate-300 underline">
+                    <Link href="/privacy" className="text-mist hover:text-gold-bright underline">
                         privacy overview
                     </Link>{" "}
                     for details on what is stored and for how long.

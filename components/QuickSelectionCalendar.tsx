@@ -35,35 +35,35 @@ const BRUSH_CONFIG: { pref: Preference; label: string; sub: string; icon: React.
         pref: "YES",
         label: "Available",
         sub: "Perfect for me",
-        icon: <Check className="w-3.5 h-3.5" />,
-        active: "bg-green-600 text-white ring-2 ring-green-400 ring-offset-1 ring-offset-slate-900",
-        inactive: "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200",
+        icon: <Check className="w-3.5 h-3.5" aria-hidden="true" />,
+        active: "bg-yes text-on-yes ring-2 ring-yes ring-offset-1 ring-offset-surface",
+        inactive: "bg-field border border-line-strong text-parchment-2 hover:bg-surface-2 hover:text-parchment",
     },
     {
         pref: "MAYBE",
         label: "If Needed",
         sub: "Not a preference",
-        icon: <HelpCircle className="w-3.5 h-3.5" />,
-        active: "bg-yellow-600 text-white ring-2 ring-yellow-400 ring-offset-1 ring-offset-slate-900",
-        inactive: "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200",
+        icon: <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />,
+        active: "bg-maybe text-on-maybe ring-2 ring-maybe ring-offset-1 ring-offset-surface",
+        inactive: "bg-field border border-line-strong text-parchment-2 hover:bg-surface-2 hover:text-parchment",
     },
     {
         pref: "NO",
         label: "No",
         sub: "Can't make it",
-        icon: <X className="w-3.5 h-3.5" />,
-        active: "bg-red-700 text-white ring-2 ring-red-400 ring-offset-1 ring-offset-slate-900",
-        inactive: "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200",
+        icon: <X className="w-3.5 h-3.5" aria-hidden="true" />,
+        active: "bg-no text-on-no ring-2 ring-no ring-offset-1 ring-offset-surface",
+        inactive: "bg-field border border-line-strong text-parchment-2 hover:bg-surface-2 hover:text-parchment",
     },
 ];
 
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function slotColor(pref: string | undefined) {
-    if (pref === "YES") return "bg-green-600 text-green-50";
-    if (pref === "MAYBE") return "bg-yellow-600 text-yellow-50";
-    if (pref === "NO") return "bg-red-900/70 text-red-400";
-    return "bg-slate-700/60 text-slate-500"; // unpainted → will be NO on save
+    if (pref === "YES") return "bg-yes text-on-yes";
+    if (pref === "MAYBE") return "bg-maybe text-on-maybe";
+    if (pref === "NO") return "bg-no-bg text-no";
+    return "bg-surface-2 text-mist"; // unpainted → will be NO on save
 }
 
 export function QuickSelectionCalendar({
@@ -208,8 +208,8 @@ export function QuickSelectionCalendar({
     return (
         <div className="space-y-4">
             {/* Brush selector */}
-            <div className="p-3 bg-slate-900/50 rounded-lg border border-slate-800 space-y-2">
-                <div className="flex items-center gap-1 text-xs text-slate-400">
+            <div className="p-3 bg-surface rounded-card border border-line space-y-2">
+                <div className="flex items-center gap-1 text-xs text-parchment-2">
                     <span className="font-medium">Painting mode: tap or drag days to mark</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -217,40 +217,42 @@ export function QuickSelectionCalendar({
                         <button
                             key={pref}
                             type="button"
+                            aria-pressed={brush === pref}
                             onClick={() => {
                                 setBrush(pref);
                                 if (pref === "NO") setHostBrush(false);
                             }}
                             className={clsx(
-                                "flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all min-h-[44px]",
+                                "flex items-center gap-2 px-4 py-3 rounded-control text-sm font-semibold transition-colors min-h-[44px]",
                                 brush === pref ? active : inactive
                             )}
                         >
                             {icon}
                             <span>{label}</span>
-                            <span className={clsx("font-normal hidden sm:inline", brush === pref ? "opacity-70" : "text-slate-500")}>
+                            <span className={clsx("font-normal hidden sm:inline", brush === pref ? "" : "text-mist")}>
                                 ({sub})
                             </span>
                         </button>
                     ))}
                 </div>
-                <div className="flex items-center gap-3 pt-1 border-t border-slate-800/50">
+                <div className="flex items-center gap-3 pt-1 border-t border-line">
                     <button
                         type="button"
                         disabled={brush === "NO"}
+                        aria-pressed={hostBrush && brush !== "NO"}
                         onClick={() => setHostBrush(h => !h)}
                         className={clsx(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all min-h-[36px]",
+                            "flex items-center gap-2 px-3 py-2 rounded-control text-sm font-medium transition-colors min-h-[36px]",
                             hostBrush && brush !== "NO"
-                                ? "bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900"
-                                : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200",
+                                ? "bg-gold text-on-gold ring-2 ring-gold ring-offset-1 ring-offset-surface"
+                                : "bg-field border border-line-strong text-parchment-2 hover:bg-surface-2 hover:text-parchment",
                             brush === "NO" && "opacity-40 cursor-not-allowed"
                         )}
                     >
-                        <Home className="w-3.5 h-3.5" />
+                        <Home className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>Can Host</span>
                     </button>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-mist">
                         {hostBrush && brush !== "NO"
                             ? "Painted slots include hosting. Tap an already-painted day to toggle just the house"
                             : "Enable to mark you can host as you paint"}
@@ -259,8 +261,8 @@ export function QuickSelectionCalendar({
             </div>
 
             {/* Default-to-No info */}
-            <div className="flex items-start gap-2 px-3 py-2 bg-amber-950/30 border border-amber-800/30 rounded-lg text-xs text-amber-300/80">
-                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 px-3 py-2 bg-maybe-bg border border-maybe rounded-control text-xs text-parchment-2">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-maybe" aria-hidden="true" />
                 <span>
                     Slots you don&apos;t paint will be saved as <strong>No</strong> when you submit.
                     Days without any session are greyed out.
@@ -277,13 +279,13 @@ export function QuickSelectionCalendar({
                         onClick={() => setViewDate((d) => subMonths(d, 1))}
                         aria-label="Previous month"
                         className={clsx(
-                            "flex items-center gap-1.5 px-3 py-2.5 rounded-lg transition-colors min-w-0 shrink min-h-[44px]",
+                            "flex items-center gap-1.5 px-3 py-2.5 rounded-control transition-colors min-w-0 shrink min-h-[44px]",
                             slotsBeforeCount > 0
-                                ? "bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 hover:bg-indigo-600/30"
-                                : "text-slate-600 hover:text-slate-400 hover:bg-slate-800"
+                                ? "bg-surface-2 border border-gold text-gold-bright hover:bg-line"
+                                : "text-mist hover:text-parchment hover:bg-surface-2"
                         )}
                     >
-                        <ChevronLeft className="w-4 h-4 shrink-0" />
+                        <ChevronLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
                         {slotsBeforeCount > 0 && (
                             <span className="text-xs font-medium truncate">
                                 {prevMonthCount > 0
@@ -293,9 +295,9 @@ export function QuickSelectionCalendar({
                         )}
                     </button>
 
-                    <span className="text-sm font-semibold text-slate-200 shrink-0">
+                    <span className="font-display text-lg font-semibold text-parchment shrink-0">
                         {format(viewDate, "MMMM yyyy")}
-                        <ClientTimezone className="ml-1.5 text-[10px] font-normal text-slate-500" />
+                        <ClientTimezone className="ml-1.5 text-xs font-normal text-mist" />
                     </span>
 
                     {/* Next month button */}
@@ -304,10 +306,10 @@ export function QuickSelectionCalendar({
                         onClick={() => setViewDate((d) => addMonths(d, 1))}
                         aria-label="Next month"
                         className={clsx(
-                            "flex items-center gap-1.5 px-3 py-2.5 rounded-lg transition-colors min-w-0 shrink min-h-[44px]",
+                            "flex items-center gap-1.5 px-3 py-2.5 rounded-control transition-colors min-w-0 shrink min-h-[44px]",
                             slotsAfterCount > 0
-                                ? "bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 hover:bg-indigo-600/30"
-                                : "text-slate-600 hover:text-slate-400 hover:bg-slate-800"
+                                ? "bg-surface-2 border border-gold text-gold-bright hover:bg-line"
+                                : "text-mist hover:text-parchment hover:bg-surface-2"
                         )}
                     >
                         {slotsAfterCount > 0 && (
@@ -317,14 +319,14 @@ export function QuickSelectionCalendar({
                                     : `${slotsAfterCount} later`}
                             </span>
                         )}
-                        <ChevronRight className="w-4 h-4 shrink-0" />
+                        <ChevronRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                     </button>
                 </div>
 
                 {/* Weekday headers */}
                 <div className="grid grid-cols-7 mb-1">
                     {DAY_LABELS.map((d) => (
-                        <div key={d} className="text-center text-[10px] text-slate-500 font-medium py-1">
+                        <div key={d} className="text-center text-xs text-mist font-medium py-1">
                             {d}
                         </div>
                     ))}
@@ -349,15 +351,15 @@ export function QuickSelectionCalendar({
                             <div
                                 key={dateStr}
                                 className={clsx(
-                                    "flex flex-col rounded-md border overflow-hidden",
+                                    "flex flex-col rounded-control border overflow-hidden",
                                     "min-h-[72px] sm:min-h-[80px]",
-                                    hasSlots ? "border-slate-600" : "border-slate-800/40"
+                                    hasSlots ? "border-line-strong bg-surface" : "border-line"
                                 )}
                             >
                                 {/* Day number */}
                                 <span className={clsx(
-                                    "text-[10px] leading-none px-1 pt-0.5 shrink-0",
-                                    hasSlots ? "text-slate-300" : "text-slate-700"
+                                    "text-xs leading-none px-1 pt-0.5 shrink-0",
+                                    hasSlots ? "text-parchment-2" : "text-mist"
                                 )}>
                                     {format(day, "d")}
                                 </span>
@@ -372,7 +374,7 @@ export function QuickSelectionCalendar({
                                                 onPointerDown={(e) => handleSlotPointerDown(e, slot.id)}
                                                 className={clsx(
                                                     "relative flex-1 flex items-center justify-center",
-                                                    "rounded text-[9px] sm:text-[10px] font-medium cursor-pointer transition-colors",
+                                                    "rounded-[3px] text-xs sm:text-xs font-medium cursor-pointer transition-colors",
                                                     "min-h-[24px]",
                                                     slotColor(votes[slot.id])
                                                 )}
@@ -397,9 +399,9 @@ export function QuickSelectionCalendar({
                 type="button"
                 onClick={handleSave}
                 disabled={isSubmitting || !userName || totalPainted === 0}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2"
+                className="btn-primary w-full py-3 font-bold text-base"
             >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
                 {saveLabel}
             </button>
         </div>

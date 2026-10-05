@@ -7,7 +7,7 @@ listTitle: "How to Sync an Event Across Your Devices"
 itemList: ["Connect Telegram or Discord from your profile page", "Vote on the event like you normally would", "Click the gray \"This Device Only\" badge to link it", "Click a colored badge any time to unlink it"]
 faq:
   - question: "What do the sync badges on my events mean?"
-    answer: "Every event on your My Events page shows a badge. A green Telegram Synced or Discord Synced pill means the event is tied to your verified identity and will show up on any device where that identity is logged in. A gray This Device Only badge means the event only exists in this browser's local history, nowhere else."
+    answer: "Every event on your My Events page shows a badge. A blue Telegram Synced or Discord Synced pill means the event is tied to your verified identity and will show up on any device where that identity is logged in. A gray This Device Only badge means the event only exists in this browser's local history, nowhere else."
   - question: "How do I link an event to my synced identity?"
     answer: "Click the gray This Device Only badge on the event. If your browser is already synced with Telegram or Discord, a small menu offers Link to Telegram or Link to Discord. You need to have voted on the event from this browser first, since linking attaches your existing vote to your synced identity rather than creating a new one."
   - question: "How do I unlink an event?"
@@ -26,7 +26,7 @@ Tabletop Time has never required an account, and that's on purpose. But without 
 
 ## Sync Badges: Know Where Every Event Lives
 
-Now every event on your My Events page wears a badge that tells you exactly where it's coming from. A green **Telegram Synced** or **Discord Synced** pill, the same colors and style as the badges in your profile header, means that event is tied to your verified identity and will show up wherever that identity is logged in. A gray **This Device Only** badge means the opposite: that event exists solely in this browser's history, and no other device knows about it yet.
+Now every event on your My Events page wears a badge that tells you exactly where it's coming from. A blue **Telegram Synced** or **Discord Synced** pill, the same colors and style as the badges in your profile header, means that event is tied to your verified identity and will show up wherever that identity is logged in. A gray **This Device Only** badge means the opposite: that event exists solely in this browser's history, and no other device knows about it yet.
 
 No more guessing why an event vanished on a different phone. The badge tells you.
 
@@ -40,7 +40,7 @@ There's one requirement: you need to have voted on the event first, from the sam
 
 ## Get Synced First
 
-None of this works until your browser knows who you are. If it doesn't yet, your profile header now shows a **Connect Telegram** or **Connect Discord** pill in place of the green badge. Connect Telegram and the bot DMs you a login link to tap. Connect Discord and you get the standard Discord login flow. Either way, once it's done, your browser is synced, and every gray badge on every event becomes clickable.
+None of this works until your browser knows who you are. If it doesn't yet, your profile header now shows a **Connect Telegram** or **Connect Discord** pill in place of the blue badge. Connect Telegram and the bot DMs you a login link to tap. Connect Discord and you get the standard Discord login flow. Either way, once it's done, your browser is synced, and every gray badge on every event becomes clickable.
 
 ## The Event Page Meets You Halfway
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClientDate, ClientTimezone } from '@/components/ClientDate';
-import { Check, MapPin, User, Loader2, X } from 'lucide-react';
+import { Check, MapPin, User, Loader2, X, Target } from 'lucide-react';
 
 type Voter = {
     participantId: number;
@@ -136,7 +136,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
 
     if (groups.length === 0) {
         return (
-            <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
+            <div className="p-8 text-center text-mist border border-dashed border-line rounded-card">
                 No votes yet. Share the voting link with your players.
             </div>
         );
@@ -146,11 +146,11 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
         <div className="space-y-3">
             {/* Instructions — hidden once a group is selected */}
             {activeGroup === null && (
-                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-sm text-slate-400">
-                    <span className="text-lg leading-none mt-0.5">🎯</span>
+                <div className="flex items-start gap-3 px-4 py-3 rounded-card bg-surface border border-line-strong text-sm text-mist">
+                    <Target className="size-5 mt-0.5 shrink-0 text-gold-bright" aria-hidden="true" />
                     <div className="space-y-1">
-                        <p className="text-slate-300 font-medium">Pick the group you want to run this campaign with</p>
-                        <ol className="list-decimal list-inside space-y-0.5 text-slate-500 text-xs">
+                        <p className="text-parchment-2 font-medium">Pick the group you want to run this campaign with</p>
+                        <ol className="list-decimal list-inside space-y-0.5 text-mist text-xs">
                             <li>Click any group below to select it. All its dates start ticked.</li>
                             <li>Untick any dates you don&apos;t need</li>
                             <li>Toggle any dimmed names on row 2 to add a guest to that session</li>
@@ -179,34 +179,34 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                 return (
                     <div
                         key={i}
-                        className={`rounded-xl border overflow-hidden transition-all duration-150 ${
+                        className={`rounded-card border overflow-hidden transition-all duration-150 ${
                             group.noVotes
-                                ? 'border-slate-800/40 bg-slate-900/20 opacity-40'
+                                ? 'border-line border-dashed bg-surface'
                                 : isActive
-                                    ? 'border-indigo-500/60 bg-slate-900/50 ring-1 ring-indigo-500/20'
+                                    ? 'border-gold bg-surface ring-1 ring-gold'
                                     : isDimmed
-                                        ? 'border-slate-800/40 bg-slate-900/30 opacity-40'
-                                        : 'border-slate-700/60 bg-slate-900/40 hover:border-slate-600 cursor-pointer'
+                                        ? 'border-line border-dashed bg-surface'
+                                        : 'border-line-strong bg-surface hover:border-gold cursor-pointer'
                         }`}
                     >
                         {/* Group header — click to select */}
                         <div
-                            className={`group flex items-start gap-3 px-4 py-3 border-b border-slate-800/50 transition-colors ${
-                                !group.noVotes && !isActive ? 'cursor-pointer select-none hover:bg-slate-800/40' : ''
-                            } ${isActive ? 'bg-indigo-950/30' : 'bg-slate-900/60'}`}
+                            className={`group flex items-start gap-3 px-4 py-3 border-b border-line transition-colors ${
+                                !group.noVotes && !isActive ? 'cursor-pointer select-none hover:bg-surface-2' : ''
+                            } ${isActive ? 'bg-surface-2' : 'bg-surface'}`}
                             onClick={() => !group.noVotes && selectGroup(i)}
                         >
                             <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
                                 {group.noVotes ? (
-                                    <span className="text-xs text-slate-600 italic">No votes yet for these dates</span>
+                                    <span className="text-xs text-mist italic">No votes yet for these dates</span>
                                 ) : group.attendees.map(p => (
                                     <span
                                         key={p.id}
                                         title={p.preference === 'YES' ? 'Available' : 'If Needed'}
-                                        className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                                        className={`text-xs px-2 py-0.5 rounded-[3px] border font-medium ${
                                             p.preference === 'YES'
-                                                ? 'bg-green-900/25 border-green-800/50 text-green-300'
-                                                : 'bg-yellow-900/20 border-yellow-800/40 text-yellow-400'
+                                                ? 'bg-yes-bg border-yes text-yes'
+                                                : 'bg-maybe-bg border-maybe text-maybe'
                                         }`}
                                     >
                                         {p.name}
@@ -215,20 +215,20 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                             </div>
                             <div className="flex items-center gap-2 shrink-0 pt-0.5">
                                 {isActive && (
-                                    <span className="text-[10px] font-bold text-indigo-300 bg-indigo-900/40 border border-indigo-700/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    <span className="text-xs font-bold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded uppercase tracking-wider">
                                         Selecting
                                     </span>
                                 )}
                                 {!group.noVotes && !isActive && (group.meetsQuorum
-                                    ? <span className="text-[10px] font-bold text-green-400 bg-green-900/20 border border-green-900/40 px-1.5 py-0.5 rounded uppercase tracking-wider">Quorum</span>
-                                    : <span className="text-[10px] font-bold text-slate-500 bg-slate-800/50 border border-slate-700/40 px-1.5 py-0.5 rounded uppercase tracking-wider">Low T/O</span>
+                                    ? <span className="text-xs font-bold text-yes bg-yes-bg border border-yes px-1.5 py-0.5 rounded uppercase tracking-wider">Quorum</span>
+                                    : <span className="text-xs font-bold text-mist bg-surface-2 border border-line-strong px-1.5 py-0.5 rounded uppercase tracking-wider">Low T/O</span>
                                 )}
-                                <span className="text-xs text-slate-500 tabular-nums">
+                                <span className="text-xs text-mist tabular-nums">
                                     {group.noVotes ? '' : `${group.attendees.length}/${minPlayers} · `}
                                     {isActive ? `${checkedSlots.length} of ${group.slots.length} dates` : `${group.slots.length} date${group.slots.length !== 1 ? 's' : ''}`}
                                 </span>
                                 {!group.noVotes && !isActive && (
-                                    <span className="text-[10px] font-semibold text-indigo-500/70 bg-indigo-950/40 border border-indigo-800/30 px-1.5 py-0.5 rounded ml-1 group-hover:text-indigo-400 transition-colors">
+                                    <span className="text-xs font-semibold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded ml-1 transition-colors">
                                         Select →
                                     </span>
                                 )}
@@ -236,7 +236,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                     <button
                                         type="button"
                                         onClick={e => { e.stopPropagation(); selectGroup(i); }}
-                                        className="text-slate-500 hover:text-slate-300 transition-colors ml-1"
+                                        className="text-mist hover:text-parchment-2 transition-colors ml-1"
                                         title="Cancel"
                                     >
                                         <X className="w-3.5 h-3.5" />
@@ -246,7 +246,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                         </div>
 
                         {/* Date rows */}
-                        <div className="divide-y divide-slate-800/40">
+                        <div className="divide-y divide-line">
                             {group.slots.map(slot => {
                                 const headerOrder = new Map(group.attendees.map((p, idx) => [p.id, idx]));
                                 const byHeader = (a: Voter, b: Voter) =>
@@ -265,7 +265,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                     <div
                                         key={slot.id}
                                         className={`px-4 py-2 transition-colors ${
-                                            isActive && !isChecked ? 'opacity-40' : ''
+                                            isActive && !isChecked ? 'text-mist' : ''
                                         }`}
                                     >
                                         {/* Row 1: checkbox (if active) + date/time + core players + badges */}
@@ -275,17 +275,17 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                                     type="button"
                                                     onClick={() => toggleSlot(slot.id)}
                                                     className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                                        isChecked ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600 hover:border-slate-400'
+                                                        isChecked ? 'bg-gold border-gold' : 'border-line-strong hover:border-gold'
                                                     }`}
                                                 >
-                                                    {isChecked && <Check className="w-2.5 h-2.5 text-white" />}
+                                                    {isChecked && <Check className="w-2.5 h-2.5 text-on-gold" />}
                                                 </button>
                                             )}
                                             <div className="text-sm shrink-0 mr-1">
-                                                <ClientDate date={slot.startTime} formatStr="EEE, MMM d" className="font-medium text-slate-200" />
-                                                <span className="text-slate-500 mx-1.5">@</span>
-                                                <ClientDate date={slot.startTime} formatStr="h:mm a" className="text-slate-300" />
-                                                <ClientTimezone className="ml-1 text-slate-500" />
+                                                <ClientDate date={slot.startTime} formatStr="EEE, MMM d" className="font-medium text-parchment" />
+                                                <span className="text-mist mx-1.5">@</span>
+                                                <ClientDate date={slot.startTime} formatStr="h:mm a" className="text-parchment-2" />
+                                                <ClientTimezone className="ml-1 text-mist" />
                                             </div>
                                             <div className="flex flex-wrap gap-1 flex-1">
                                                 {coreVoters.map(v => (
@@ -294,8 +294,8 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                                         title={v.preference === 'YES' ? 'Available' : 'If Needed'}
                                                         className={`text-xs px-1.5 py-0.5 rounded border font-medium whitespace-nowrap ${
                                                             v.preference === 'YES'
-                                                                ? 'bg-green-900/25 border-green-800/50 text-green-300'
-                                                                : 'bg-yellow-900/20 border-yellow-800/40 text-yellow-400'
+                                                                ? 'bg-yes-bg border-yes text-yes'
+                                                                : 'bg-maybe-bg border-maybe text-maybe'
                                                         }`}
                                                     >
                                                         {v.participant.name}
@@ -304,15 +304,15 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                             </div>
                                             {/* Per-date badges */}
                                             {slot.hasHost
-                                                ? <span className="text-[10px] font-bold text-indigo-400 bg-indigo-900/20 border border-indigo-900/40 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Host ✓</span>
-                                                : <span className="text-[10px] font-bold text-orange-500/70 bg-orange-900/10 border border-orange-900/30 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">No Host</span>
+                                                ? <span className="text-xs font-bold text-gold-bright bg-surface-2 border border-gold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">Host ✓</span>
+                                                : <span className="text-xs font-bold text-maybe bg-maybe-bg border border-maybe px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">No Host</span>
                                             }
                                         </div>
 
                                         {/* Row 2: extra players available this date only — click to add */}
                                         {extraVoters.length > 0 && (
                                             <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-                                                <span className="text-[10px] text-slate-600 mr-0.5 shrink-0">also free:</span>
+                                                <span className="text-xs text-mist mr-0.5 shrink-0">also free:</span>
                                                 {extraVoters.map(v => {
                                                     const isOn = addedIds.includes(v.participantId);
                                                     return (
@@ -324,9 +324,9 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                                             className={`text-xs px-1.5 py-0.5 rounded border font-medium whitespace-nowrap transition-all ${
                                                                 isOn
                                                                     ? v.preference === 'YES'
-                                                                        ? 'bg-green-900/25 border-green-800/50 text-green-300'
-                                                                        : 'bg-yellow-900/20 border-yellow-800/40 text-yellow-400'
-                                                                    : 'opacity-35 border-slate-700 text-slate-400 hover:opacity-60 hover:border-slate-500'
+                                                                        ? 'bg-yes-bg border-yes text-yes'
+                                                                        : 'bg-maybe-bg border-maybe text-maybe'
+                                                                    : 'border-dashed border-line-strong text-mist hover:border-gold hover:text-parchment'
                                                             }`}
                                                         >
                                                             {isOn ? '' : '+'}{v.participant.name}
@@ -342,24 +342,24 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
 
                         {/* Inline finalize panel — only shown when group is selected */}
                         {isActive && (
-                            <div className="border-t border-indigo-800/40 bg-indigo-950/20 px-4 py-4 space-y-4">
+                            <div className="border-t border-gold bg-surface-2 px-4 py-4 space-y-4">
 
                                 {/* Host selector */}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                                        <User className="w-4 h-4 text-indigo-400" />
+                                    <label className="text-sm font-medium text-parchment-2 flex items-center gap-2">
+                                        <User className="w-4 h-4 text-gold-bright" />
                                         Who is hosting?
-                                        <span className="text-xs text-slate-500 font-normal">(applies to all sessions)</span>
+                                        <span className="text-xs text-mist font-normal">(applies to all sessions)</span>
                                     </label>
                                     {potentialHosts.size > 0 ? (
                                         <div className="flex flex-wrap gap-2">
                                             {Array.from(potentialHosts.entries()).map(([id, name]) => (
                                                 <label
                                                     key={id}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-all ${
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-control border cursor-pointer text-sm transition-all ${
                                                         hostId === String(id)
-                                                            ? 'bg-indigo-600/20 border-indigo-500 text-slate-100'
-                                                            : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                                            ? 'bg-surface-2 border-gold text-parchment'
+                                                            : 'bg-field border-line-strong text-mist hover:border-gold'
                                                     }`}
                                                 >
                                                     <input
@@ -370,24 +370,24 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                                         onChange={() => setHostId(String(id))}
                                                         className="hidden"
                                                     />
-                                                    {hostId === String(id) && <Check className="w-3 h-3 text-indigo-400" />}
+                                                    {hostId === String(id) && <Check className="w-3 h-3 text-gold-bright" />}
                                                     {name}
                                                 </label>
                                             ))}
                                             <label
-                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer text-sm transition-all ${
+                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-control border cursor-pointer text-sm transition-all ${
                                                     hostId === ''
-                                                        ? 'bg-indigo-600/20 border-indigo-500 text-slate-100'
-                                                        : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                                                        ? 'bg-surface-2 border-gold text-parchment'
+                                                        : 'bg-field border-line-strong text-mist hover:border-gold'
                                                 }`}
                                             >
                                                 <input type="radio" name={`host-${i}`} value="" checked={hostId === ''} onChange={() => setHostId('')} className="hidden" />
-                                                {hostId === '' && <Check className="w-3 h-3 text-indigo-400" />}
+                                                {hostId === '' && <Check className="w-3 h-3 text-gold-bright" />}
                                                 TBD
                                             </label>
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-yellow-600/80 bg-yellow-900/10 border border-yellow-900/30 rounded-lg px-3 py-2">
+                                        <p className="text-sm text-maybe bg-maybe-bg border border-maybe rounded-control px-3 py-2">
                                             No one volunteered to host for the selected dates.
                                         </p>
                                     )}
@@ -395,17 +395,17 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
 
                                 {/* Location */}
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                                        <MapPin className="w-4 h-4 text-indigo-400" />
+                                    <label className="text-sm font-medium text-parchment-2 flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-gold-bright" />
                                         Location
-                                        <span className="text-xs text-slate-500 font-normal">(optional)</span>
+                                        <span className="text-xs text-mist font-normal">(optional)</span>
                                     </label>
                                     <input
                                         type="text"
                                         value={location}
                                         onChange={e => setLocation(e.target.value)}
                                         placeholder="e.g. 123 Main St, Game Room B"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm"
+                                        className="field w-full text-sm"
                                     />
                                 </div>
 
@@ -414,7 +414,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                     <button
                                         type="button"
                                         onClick={() => selectGroup(i)}
-                                        className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                                        className="text-sm text-mist hover:text-parchment-2 transition-colors"
                                         disabled={isSubmitting}
                                     >
                                         Cancel
@@ -423,7 +423,7 @@ export function CampaignSessionsView({ slug, groups, minPlayers }: Props) {
                                         type="button"
                                         onClick={handleFinalize}
                                         disabled={isSubmitting || checkedSlots.length === 0}
-                                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm shadow-lg shadow-indigo-900/20 transition-all flex items-center gap-2"
+                                        className="px-5 py-2 bg-gold hover:bg-gold-bright disabled:opacity-50 disabled:cursor-not-allowed text-on-gold rounded-control font-medium text-sm transition-all flex items-center gap-2"
                                     >
                                         {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                                         Confirm {checkedSlots.length} Session{checkedSlots.length !== 1 ? 's' : ''}

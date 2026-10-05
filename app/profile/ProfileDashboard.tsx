@@ -26,15 +26,15 @@ interface ServerEvent {
 /**
  * @component ManagerBadge
  * @description Pill marking an event's `role: 'MANAGER'`, using the same geometry
- * as `SyncBadge` but an indigo palette and a static (non-pulsing) dot, since it
+ * as `SyncBadge` but a gold-tinted palette, since it
  * reflects a role rather than a live sync connection. Distinct from the sync
  * badges: an event can show this alongside Telegram/Discord Synced badges, or
  * alone if the manager record has no linked participant identity yet.
  */
 function ManagerBadge() {
     return (
-        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-indigo-900/40 text-indigo-300 rounded-full border border-indigo-800 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+        <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-gold-bright rounded-control border border-line-strong flex items-center gap-1">
+            <span data-dot className="w-1.5 h-1.5 rounded-full bg-gold" />
             Manager
         </span>
     );
@@ -49,8 +49,8 @@ function ManagerBadge() {
  */
 function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram' | 'discord'; href: string; newTab?: boolean; onClick?: () => void }) {
     const hoverClass = platform === 'telegram'
-        ? 'hover:border-green-700 hover:text-green-400'
-        : 'hover:border-[#5865F2]/70 hover:text-[#5865F2]';
+        ? 'hover:border-telegram hover:text-telegram'
+        : 'hover:border-discord hover:text-discord';
 
     return (
         <a
@@ -58,9 +58,9 @@ function ConnectBadge({ platform, href, newTab, onClick }: { platform: 'telegram
             onClick={onClick}
             target={newTab ? "_blank" : undefined}
             rel={newTab ? "noopener noreferrer" : undefined}
-            className={`text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent text-slate-400 rounded-full border border-dashed border-slate-600 flex items-center gap-1 cursor-pointer transition-colors ${hoverClass}`}
+            className={`text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent text-mist rounded-control border border-dashed border-line-strong flex items-center gap-1 cursor-pointer transition-colors ${hoverClass}`}
         >
-            <span className="w-1.5 h-1.5 rounded-full border border-slate-500" />
+            <span data-dot className="w-1.5 h-1.5 rounded-full border border-mist" />
             Connect {platform === 'telegram' ? 'Telegram' : 'Discord'}
         </a>
     );
@@ -113,13 +113,13 @@ function HeaderSyncPill({ platform, onResult }: { platform: 'telegram' | 'discor
             {open && (
                 <LinkPopover onClose={() => setOpen(false)}>
                     <PopoverItem label="Disconnect this browser" onClick={handleDisconnect} />
-                    <p className="px-3 pb-2 text-[10px] leading-snug text-slate-500">
+                    <p className="px-3 pb-2 text-xs leading-snug text-mist">
                         Signs this browser out of {label} sync. Your events and votes are kept, and you can reconnect anytime.
                     </p>
                     <Link
                         href="/profile/privacy"
                         onClick={(e) => e.stopPropagation()}
-                        className="block px-3 py-2 text-xs text-rose-300/90 hover:bg-slate-800 border-t border-slate-800 transition-colors"
+                        className="block px-3 py-2 text-xs text-no hover:bg-surface-2 border-t border-line transition-colors"
                     >
                         Delete my {label} data…
                     </Link>
@@ -139,8 +139,8 @@ function HeaderSyncPill({ platform, onResult }: { platform: 'telegram' | 'discor
  */
 function NotLinkedBadge({ platform, disabled, hint, onClick }: { platform: 'telegram' | 'discord'; disabled?: boolean; hint?: string; onClick?: (e: React.MouseEvent) => void }) {
     const hoverClass = platform === 'telegram'
-        ? 'hover:border-green-700 hover:text-green-400'
-        : 'hover:border-[#5865F2]/70 hover:text-[#5865F2]';
+        ? 'hover:border-telegram hover:text-telegram'
+        : 'hover:border-discord hover:text-discord';
 
     return (
         <span
@@ -148,9 +148,9 @@ function NotLinkedBadge({ platform, disabled, hint, onClick }: { platform: 'tele
             tabIndex={disabled ? undefined : 0}
             onClick={disabled ? undefined : onClick}
             title={disabled ? hint : undefined}
-            className={`text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent rounded-full border border-dashed flex items-center gap-1 transition-colors ${disabled ? 'text-slate-600 border-slate-700/60 opacity-60 cursor-not-allowed' : `text-slate-400 border-slate-600 cursor-pointer ${hoverClass}`}`}
+            className={`text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-transparent rounded-control border border-dashed flex items-center gap-1 transition-colors ${disabled ? 'text-mist border-line opacity-60 cursor-not-allowed' : `text-mist border-line-strong cursor-pointer ${hoverClass}`}`}
         >
-            <span className="w-1.5 h-1.5 rounded-full border border-slate-500" />
+            <span data-dot className="w-1.5 h-1.5 rounded-full border border-mist" />
             {platform === 'telegram' ? 'Telegram' : 'Discord'} Not Linked
         </span>
     );
@@ -170,7 +170,7 @@ function LinkPopover({ onClose, children }: { onClose: () => void; children: Rea
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
             />
             <div
-                className="absolute z-50 top-full left-0 mt-1 min-w-[190px] bg-slate-900 border border-slate-700 rounded-lg shadow-xl py-1"
+                className="absolute z-50 top-full left-0 mt-1 min-w-[190px] bg-surface border border-line-strong rounded-card shadow-modal py-1"
                 onClick={(e) => e.stopPropagation()}
             >
                 {children}
@@ -187,7 +187,7 @@ function PopoverItem({ label, disabled, hint, onClick }: { label: string; disabl
             disabled={disabled}
             title={disabled ? hint : undefined}
             onClick={onClick}
-            className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+            className="w-full text-left px-3 py-2 text-xs text-parchment hover:bg-surface-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
         >
             {label}
         </button>
@@ -276,19 +276,19 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
     return (
         <Link
             href={`/e/${event.slug}`}
-            className="group block p-4 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-indigo-500/30 transition-all"
+            className="group block p-4 bg-surface border border-line rounded-card hover:border-line-strong transition-colors"
         >
             <div className="flex justify-between items-center">
                 <div>
-                    <h3 className="font-semibold text-lg group-hover:text-indigo-300 transition-colors flex items-center gap-2">
+                    <h3 className="font-semibold text-lg group-hover:text-gold-bright transition-colors flex items-center gap-2">
                         {event.title}
                         {event.status === 'CANCELLED' && (
-                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-red-900/40 text-red-400 rounded-full border border-red-800">
+                            <span className="text-xs uppercase font-bold px-2 py-0.5 bg-no-bg text-no rounded-control border border-no">
                                 Cancelled
                             </span>
                         )}
                     </h3>
-                    <p className="text-xs text-slate-500 font-mono mt-1">
+                    <p className="text-xs text-mist tabular-nums mt-1">
                         {event.scheduledDate
                             ? <ClientDate date={event.scheduledDate} formatStr="MMM d, yyyy" />
                             : (event.status === 'CANCELLED'
@@ -346,12 +346,12 @@ function EventCard({ event, serverEvent, isTelegramSynced, isDiscordSynced }: {
                         )}
                     </div>
                     {actionMsg && (
-                        <p className={`text-xs mt-1.5 ${actionMsg.type === 'success' ? 'text-green-400' : 'text-amber-400'}`}>
+                        <p className={`text-xs mt-1.5 ${actionMsg.type === 'success' ? 'text-yes' : 'text-maybe'}`}>
                             {actionMsg.text}
                         </p>
                     )}
                 </div>
-                <ArrowRightIcon className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+                <ArrowRightIcon className="w-5 h-5 text-mist group-hover:text-gold-bright transition-colors" />
             </div>
         </Link>
     );
@@ -427,21 +427,21 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
     }, [serverEvents, bulkMerge]);
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <div className="max-w-3xl mx-auto space-y-8">
-                <Link href="/" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4">
+                <Link href="/" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back Home
                 </Link>
 
-                <div className="flex items-center gap-4 pb-8 border-b border-slate-800">
-                    <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-indigo-400">
+                <div className="flex items-center gap-4 pb-8 border-b border-line">
+                    <div className="icon-tile w-16 h-16 rounded-card">
                         <UserIcon className="w-8 h-8" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-100">
+                        <h1 className="text-3xl font-bold text-parchment">
                             Hello, {userName}
                         </h1>
-                        <p className="text-slate-400 mb-2">Welcome to your event dashboard.</p>
+                        <p className="text-mist mb-2">Welcome to your event dashboard.</p>
                         <div className="flex flex-wrap gap-2">
                             {isTelegramSynced ? (
                                 <HeaderSyncPill platform="telegram" onResult={setSyncActionMsg} />
@@ -459,16 +459,16 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                                 <ConnectBadge platform="discord" href="/api/auth/discord?flow=login&returnTo=/profile" />
                             )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-2 max-w-md">
+                        <p className="text-xs text-mist mt-2 max-w-md">
                             Syncing ties this browser to your Telegram or Discord identity, so your events
                             and votes follow you across devices. Use a Connect pill to get a magic link,
                             or click a synced pill to disconnect this browser.
                         </p>
                         {telegramConnectClicked && !isTelegramSynced && (
-                            <p className="text-xs text-slate-500 mt-2">Check your Telegram DMs for a login link.</p>
+                            <p className="text-xs text-mist mt-2">Check your Telegram DMs for a login link.</p>
                         )}
                         {syncActionMsg && (
-                            <p className={`text-xs mt-2 ${syncActionMsg.type === 'success' ? 'text-green-400' : 'text-amber-400'}`}>
+                            <p className={`text-xs mt-2 ${syncActionMsg.type === 'success' ? 'text-yes' : 'text-maybe'}`}>
                                 {syncActionMsg.text}
                             </p>
                         )}
@@ -477,16 +477,16 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
 
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-indigo-400" />
+                        <h2 className="text-xl font-semibold text-parchment flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-gold-bright" />
                             Your Events
                         </h2>
                     </div>
 
                     {history.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500 border border-dashed border-slate-800 rounded-lg">
+                        <div className="text-center py-12 text-mist border border-dashed border-line rounded-card">
                             <p>You haven&apos;t visited any events yet.</p>
-                            <Link href="/new" className="mt-4 inline-block px-4 py-2 bg-indigo-600 rounded-lg text-white text-sm font-medium hover:bg-indigo-500 transition-colors">
+                            <Link href="/new" className="btn-primary mt-4 px-4 py-2 text-sm font-medium">
                                 Create an Event
                             </Link>
                         </div>
@@ -511,10 +511,10 @@ export function ProfileDashboard({ serverEvents = [], isTelegramSynced, isDiscor
                     discoverable from the profile because privacy/legal copy (and Discord's
                     self-serve deletion requirement) route users through here. */}
                 {(isTelegramSynced || isDiscordSynced) && (
-                    <div className="pt-8 border-t border-slate-800">
+                    <div className="pt-8 border-t border-line">
                         <Link
                             href="/profile/privacy"
-                            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                            className="inline-flex items-center gap-2 text-sm text-mist hover:text-parchment transition-colors"
                         >
                             <ShieldCheck className="w-4 h-4" />
                             Privacy &amp; data controls

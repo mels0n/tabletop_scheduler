@@ -10,7 +10,7 @@ A typed name or handle is never proof of identity. Nothing on this page links an
 Open **My Events** (the user icon in the top right, `/profile`). The header shows one pill per platform:
 
 *   **Not synced yet**: a dashed **"Connect Telegram"** pill opens the bot with `/start login`, and the bot DMs you a magic login link. A dashed **"Connect Discord"** pill starts Discord sign-in.
-*   **Synced**: a solid green **"Telegram Synced"** or blurple **"Discord Synced"** pill. Click it to **disconnect this browser** from that platform; your events and votes are kept and you can reconnect any time.
+*   **Synced**: a blue **"Telegram Synced"** or blurple **"Discord Synced"** pill. Click it to **disconnect this browser** from that platform; your events and votes are kept and you can reconnect any time.
 
 Once this browser is synced, My Events lists every event you manage or voted on with that account, and restores your voting identity on them so you can edit your votes from this device.
 
@@ -23,7 +23,7 @@ Every card on **My Events** carries its own badge, independent of the header pil
 
 *   **"Telegram Synced" / "Discord Synced"** (colored, same style as the header pills): this event's participant row is stamped with your verified identity, so it will always show up here, on any device.
 *   **"This Device Only"** (gray): this event only exists in this browser's local history. It hasn't been linked to a synced identity yet.
-*   **"Manager"** (indigo, static dot): shown on events you manage, marking your role. It's independent of the sync badges above; a managed event with no linked participant identity yet still shows just "Manager", never "This Device Only", since it's already tied to the event on the server through your manager record.
+*   **"Manager"** (gold, static dot): shown on events you manage, marking your role. It's independent of the sync badges above; a managed event with no linked participant identity yet still shows just "Manager", never "This Device Only", since it's already tied to the event on the server through your manager record.
 
 The badges are clickable:
 *   Click a gray **"This Device Only"** badge to open a small menu offering to link the event to whichever platform(s) your browser is synced with.

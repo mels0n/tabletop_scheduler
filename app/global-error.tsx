@@ -22,11 +22,11 @@ export default function GlobalError({
 
     return (
         <html lang="en">
-            <body className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center p-6">
-                <main className="max-w-md w-full bg-slate-900 border border-slate-700 rounded-2xl p-8 space-y-6 text-center">
+            <body className="min-h-screen bg-ink text-parchment flex items-center justify-center p-6">
+                <main className="max-w-md w-full bg-surface border border-line rounded-card p-8 space-y-6 text-center">
                     <div className="space-y-2">
-                        <h1 className="text-xl font-bold text-slate-100">Something went wrong</h1>
-                        <p className="text-slate-400 text-sm">
+                        <h1 className="text-xl font-bold text-parchment">Something went wrong</h1>
+                        <p className="text-mist text-sm">
                             The page could not be loaded. Try again, or come back in a minute.
                         </p>
                     </div>
@@ -34,7 +34,7 @@ export default function GlobalError({
                         <button
                             type="button"
                             onClick={reset}
-                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition-colors"
+                            className="btn-primary w-full text-sm"
                         >
                             Try again
                         </button>
@@ -42,13 +42,13 @@ export default function GlobalError({
                         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                         <a
                             href="/"
-                            className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm transition-colors"
+                            className="btn-secondary w-full py-2 text-sm font-normal"
                         >
                             Go to the home page
                         </a>
                     </div>
                     {error.digest && (
-                        <p className="text-xs text-slate-500">Reference: {error.digest}</p>
+                        <p className="text-xs text-mist">Reference: {error.digest}</p>
                     )}
                 </main>
             </body>

@@ -70,51 +70,51 @@ export default function VsWhen2MeetPage() {
     if (!isHosted) notFound();
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+        <main className="min-h-screen bg-ink text-parchment py-20 px-6">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
 
-            <div className="max-w-4xl mx-auto space-y-20">
+            <div className="max-w-7xl mx-auto space-y-20">
 
                 {/* Hero */}
                 <div className="space-y-6">
-                    <p className="text-indigo-400 font-mono text-sm uppercase tracking-widest">When2Meet Alternative</p>
-                    <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                    <p className="eyebrow">When2Meet Alternative</p>
+                    <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight">
                         Tabletop Time vs When2Meet
                     </h1>
-                    <p className="text-slate-400 text-2xl md:text-3xl font-normal">
+                    <p className="text-mist text-2xl md:text-3xl font-normal">
                         When2Meet is great. Here&apos;s what it&apos;s missing for game night.
                     </p>
-                    <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+                    <p className="text-lg text-mist leading-relaxed max-w-2xl">
                         When2Meet has a devoted following among gamers for good reason: it&apos;s fast, it&apos;s free, and it requires no account. If you&apos;re using it to schedule your sessions, you&apos;ve already made a better choice than Doodle. But there are a few gaps that matter a lot when you&apos;re the DM trying to hold a group together.
                     </p>
                     <Link
                         href="/new"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all"
+                        className="btn-primary"
                     >
-                        Try It Free <ArrowRight className="w-4 h-4" />
+                        Try It Free <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </Link>
                 </div>
 
                 {/* What When2Meet gets right */}
-                <section className="bg-emerald-950/30 border border-emerald-900/50 rounded-2xl p-8 space-y-4">
-                    <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <section className="bg-yes-bg border border-yes/40 rounded-card p-8 space-y-4">
+                    <div className="flex items-center gap-2 text-yes font-semibold">
                         <ThumbsUp className="w-5 h-5" />
                         What When2Meet Gets Right
                     </div>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-parchment-2 leading-relaxed">
                         When2Meet&apos;s hourly availability grid is genuinely elegant. You drag across time blocks, the overlap heat-map appears instantly, and everyone sees the same picture. No account required on either side. It&apos;s been solving the &ldquo;when is everyone free?&rdquo; problem cleanly since 2006.
                     </p>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-parchment-2 leading-relaxed">
                         If you need to find a two-hour window on a specific day (say, a one-shot on Saturday where start time matters), When2Meet&apos;s grid is hard to beat.
                     </p>
                 </section>
 
                 {/* Where it falls short */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Where It Falls Short for Gaming Groups</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">Where It Falls Short for Gaming Groups</h2>
                     <div className="grid md:grid-cols-2 gap-6">
                         <Problem
                             title="Ads on every poll page"
@@ -145,85 +145,86 @@ export default function VsWhen2MeetPage() {
 
                 {/* Comparison table */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Feature Comparison</h2>
-                    <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                    <h2 className="font-display text-2xl font-bold text-parchment">Feature Comparison</h2>
+                    <div className="overflow-x-auto rounded-card border border-line">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-800 text-left">
-                                    <th className="py-4 pl-6 font-normal text-slate-400 w-1/2">Feature</th>
-                                    <th className="py-4 px-4 font-bold text-indigo-400 bg-indigo-500/10">Tabletop Time</th>
-                                    <th className="py-4 px-4 font-normal text-slate-400">When2Meet</th>
+                                <tr className="border-b border-line text-left">
+                                    <th className="py-4 pl-6 font-normal text-mist w-1/2">Feature</th>
+                                    <th className="py-4 px-4 font-bold text-gold-bright bg-surface-2">Tabletop Time</th>
+                                    <th className="py-4 px-4 font-normal text-mist">When2Meet</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800">
+                            <tbody className="divide-y divide-line">
                                 {rows.map(({ label, tt, w2m, note }) => (
-                                    <tr key={label} className="hover:bg-slate-900/40 transition-colors">
-                                        <td className="py-3 pl-6 text-slate-300">{label}</td>
-                                        <td className="py-3 px-4 bg-indigo-500/5">
+                                    <tr key={label} className="hover:bg-surface transition-colors">
+                                        <td className="py-3 pl-6 text-parchment-2">{label}</td>
+                                        <td className="py-3 px-4 bg-surface-2">
                                             {typeof tt === 'string' ? (
-                                                <span className="text-yellow-400 text-xs font-mono">{tt}</span>
+                                                <span className="text-maybe text-xs font-mono">{tt}</span>
                                             ) : tt ? (
-                                                <Check className="w-5 h-5 text-green-400" />
+                                                <Check className="w-5 h-5 text-yes" aria-hidden="true" />
                                             ) : (
-                                                <X className="w-5 h-5 text-red-400" />
+                                                <X className="w-5 h-5 text-no" aria-hidden="true" />
                                             )}
                                         </td>
                                         <td className="py-3 px-4">
                                             {typeof w2m === 'string' ? (
-                                                <span className="text-yellow-400 text-xs font-mono">{w2m}</span>
+                                                <span className="text-maybe text-xs font-mono">{w2m}</span>
                                             ) : w2m ? (
-                                                <Check className="w-5 h-5 text-green-400" />
+                                                <Check className="w-5 h-5 text-yes" aria-hidden="true" />
                                             ) : (
-                                                <X className="w-5 h-5 text-red-400" />
+                                                <X className="w-5 h-5 text-no" aria-hidden="true" />
                                             )}
-                                            {note && <span className="ml-2 text-xs text-slate-500">{note}</span>}
+                                            {note && <span className="ml-2 text-xs text-mist">{note}</span>}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <p className="text-xs text-slate-500">Comparison based on When2Meet free tier as of 2026.</p>
+                    <p className="text-xs text-mist">Comparison based on When2Meet free tier as of 2026.</p>
                 </section>
 
                 {/* Quorum logic callout */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
-                    <h2 className="text-2xl font-bold text-white">The If-Needed Vote State</h2>
-                    <p className="text-slate-400 leading-relaxed">
+                <section className="bg-surface border border-line rounded-card p-8 space-y-4">
+                    <h2 className="font-display text-2xl font-bold text-parchment">The If-Needed Vote State</h2>
+                    <p className="text-mist leading-relaxed">
                         When2Meet treats availability as binary: you&apos;re free or you&apos;re not. Real group dynamics are messier. The Cleric can make Saturday, but she&apos;d really rather Sunday. The Ranger is technically available but is flying back that morning and will be useless.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
-                        Tabletop Time uses a three-state system: <strong className="text-white">Yes</strong>, <strong className="text-white">If Needed</strong>, and <strong className="text-white">No</strong>. The quorum algorithm counts &ldquo;If Needed&rdquo; as a soft yes, enough to hit quorum if no better option exists, but deprioritized when a date with all hard yeses is available. You get honest availability data, not forced binary answers.
+                    <p className="text-mist leading-relaxed">
+                        Tabletop Time uses a three-state system: <strong className="text-parchment">Yes</strong>, <strong className="text-parchment">If Needed</strong>, and <strong className="text-parchment">No</strong>. The quorum algorithm counts &ldquo;If Needed&rdquo; as a soft yes, enough to hit quorum if no better option exists, but deprioritized when a date with all hard yeses is available. You get honest availability data, not forced binary answers.
                     </p>
                 </section>
 
                 {/* When to still use When2Meet */}
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-white">When to Still Use When2Meet</h2>
-                    <p className="text-slate-400 leading-relaxed">
+                    <h2 className="font-display text-2xl font-bold text-parchment">When to Still Use When2Meet</h2>
+                    <p className="text-mist leading-relaxed">
                         When2Meet&apos;s strength is hourly granularity within a day. If you&apos;re running a one-shot and need to know whether 7pm or 8pm start works better for a specific Saturday, When2Meet&apos;s drag-to-select hour grid is the right tool. Tabletop Time uses date-level slots, not hour-level grids.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         For campaigns and recurring sessions where the question is &ldquo;which of these three Saturdays in June works for everyone,&rdquo; Tabletop Time is the better fit.
                     </p>
                 </section>
 
+                <div className="ornament" aria-hidden="true">✦</div>
                 {/* Migration CTA */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Adding the Missing Pieces Takes Two Minutes</h2>
-                    <p className="text-slate-400 leading-relaxed">
-                        If you&apos;re already in the habit of sharing a When2Meet link, the switch is trivial. Go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, name your event, add candidate dates, and optionally set a quorum. Share the link. Your players get an experience similar to what they&apos;re used to (click a date, mark availability) with the added context of knowing which dates actually have enough players to happen.
+                    <h2 className="font-display text-2xl font-bold text-parchment">Adding the Missing Pieces Takes Two Minutes</h2>
+                    <p className="text-mist leading-relaxed">
+                        If you&apos;re already in the habit of sharing a When2Meet link, the switch is trivial. Go to <Link href="/new" className="text-gold hover:text-gold-bright underline">tabletoptime.us/new</Link>, name your event, add candidate dates, and optionally set a quorum. Share the link. Your players get an experience similar to what they&apos;re used to (click a date, mark availability) with the added context of knowing which dates actually have enough players to happen.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <Link
                             href="/new"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all"
+                            className="btn-primary"
                         >
-                            Create Your First Event <ArrowRight className="w-4 h-4" />
+                            Create Your First Event <ArrowRight className="w-4 h-4" aria-hidden="true" />
                         </Link>
                         <Link
                             href="/voting-logic"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-slate-700 hover:border-indigo-500/50 text-slate-300 hover:text-white transition-all"
+                            className="btn-secondary"
                         >
                             How the Voting Logic Works
                         </Link>
@@ -232,7 +233,7 @@ export default function VsWhen2MeetPage() {
 
                 {/* FAQ */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">Frequently Asked Questions</h2>
                     <div className="space-y-4">
                         <Faq q="Is Tabletop Time as simple as When2Meet?" a="For the voter: yes. Click a date, tap Yes / If-Needed / No, done. For the organizer, there's a bit more setup (quorum, player limit), but you only fill in what you want. Skip the advanced options and it's just as fast." />
                         <Faq q="Can I use Tabletop Time for non-gaming events?" a="Yes. Quorum logic and waitlists are useful for any group activity with a minimum headcount. Sports teams, study groups, movie nights, anything that needs 'do we have enough people before it's worth doing' logic." />
@@ -241,13 +242,13 @@ export default function VsWhen2MeetPage() {
                     </div>
                 </section>
 
-                <div className="border-t border-slate-800 pt-8 flex flex-wrap gap-6 text-sm text-slate-500">
-                    <Link href="/features" className="hover:text-indigo-400 transition-colors">Full Feature List</Link>
-                    <Link href="/vs/doodle" className="hover:text-indigo-400 transition-colors">vs Doodle</Link>
-                    <Link href="/vs/lettucemeet" className="hover:text-indigo-400 transition-colors">vs LettuceMeet</Link>
-                    <Link href="/vs/rallly" className="hover:text-indigo-400 transition-colors">vs Rallly</Link>
-                    <Link href="/pricing" className="hover:text-indigo-400 transition-colors">Pricing (Free)</Link>
-                    <Link href="/new" className="hover:text-indigo-400 transition-colors">Create an Event</Link>
+                <div className="border-t border-line pt-8 flex flex-wrap gap-6 text-sm text-mist">
+                    <Link href="/features" className="hover:text-gold-bright transition-colors">Full Feature List</Link>
+                    <Link href="/vs/doodle" className="hover:text-gold-bright transition-colors">vs Doodle</Link>
+                    <Link href="/vs/lettucemeet" className="hover:text-gold-bright transition-colors">vs LettuceMeet</Link>
+                    <Link href="/vs/rallly" className="hover:text-gold-bright transition-colors">vs Rallly</Link>
+                    <Link href="/pricing" className="hover:text-gold-bright transition-colors">Pricing (Free)</Link>
+                    <Link href="/new" className="hover:text-gold-bright transition-colors">Create an Event</Link>
                 </div>
             </div>
         </main>
@@ -256,21 +257,21 @@ export default function VsWhen2MeetPage() {
 
 function Problem({ title, body }: { title: string; body: string }) {
     return (
-        <div className="p-5 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
+        <div className="p-5 rounded-card bg-surface border border-line space-y-2">
             <div className="flex items-start gap-2">
-                <X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-200">{title}</h3>
+                <X className="w-4 h-4 text-no mt-0.5 flex-shrink-0" aria-hidden="true" />
+                <h3 className="font-display text-lg font-bold text-parchment">{title}</h3>
             </div>
-            <p className="text-slate-400 text-sm leading-relaxed pl-6">{body}</p>
+            <p className="text-mist text-sm leading-relaxed pl-6">{body}</p>
         </div>
     );
 }
 
 function Faq({ q, a }: { q: string; a: string }) {
     return (
-        <div className="border border-slate-800 rounded-xl p-5 space-y-2">
-            <p className="font-semibold text-slate-200">{q}</p>
-            <p className="text-slate-400 text-sm leading-relaxed">{a}</p>
+        <div className="border border-line rounded-card p-5 space-y-2">
+            <p className="font-semibold text-parchment">{q}</p>
+            <p className="text-mist text-sm leading-relaxed">{a}</p>
         </div>
     );
 }

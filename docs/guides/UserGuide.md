@@ -93,7 +93,7 @@ Your personal history of events.
 - **Local History**: This page tracks events you've visited or created on this device.
 - **Connect Pills**: The header shows a solid "Telegram Synced" / "Discord Synced" pill per platform you're already connected to, or a dashed "Connect Telegram" / "Connect Discord" pill (deep-link to the bot / OAuth) when you're not. Once synced, every event you manage or voted on with that account appears here. Click a synced pill to disconnect this browser.
 - **Per-Event Badges**: Each event card carries its own badges: a colored "Telegram Synced" / "Discord Synced" badge means that event's vote is tied to your verified identity, while a gray "This Device Only" badge means it only lives in this browser's local history. Click a gray badge to link the event to a synced platform, or a colored badge to unlink it. Linking requires you to have voted on that event, and you can only unlink your own identity.
-- **Manager Badge**: Events you manage also show a separate indigo "Manager" badge marking your role there. It's independent of the sync badges, a managed event with no linked participant identity shows just "Manager" (not "This Device Only", since it's already tied to the event on the server).
+- **Manager Badge**: Events you manage also show a separate gold "Manager" badge marking your role there. It's independent of the sync badges, a managed event with no linked participant identity shows just "Manager" (not "This Device Only", since it's already tied to the event on the server).
 - **Status**: Quickly see if events are Draft, Finalized, or Cancelled.
 - **Cleanup**: The list automatically removes events that have been deleted from the server.
 
@@ -161,7 +161,7 @@ Each group header shows:
 Each date within a group shows two rows:
 - **Row 1:** Date/time + the core player pills (same players shown in the header).
 - **Row 2:** "also free:" + dimmed pills for extra players who are available on this specific date but are not part of the core group. Click an extra player pill to toggle them into the session.
-- Per-date badges: **Host ✓** (indigo) if a volunteer host is available on that date, or **No Host** (orange) if not.
+- Per-date badges: **Host ✓** (gold outline) if a volunteer host is available on that date, or **No Host** (amber) if not.
 
 A banner above the groups reads: *"Click a group to select it and finalize."*
 
@@ -169,7 +169,7 @@ A banner above the groups reads: *"Click a group to select it and finalize."*
 
 ### Completing Finalization
 
-1. **Click a group header**: the group enters "Selecting" mode with an indigo border. All dates in the group are pre-ticked.
+1. **Click a group header**: the group enters "Selecting" mode with a gold border. All dates in the group are pre-ticked.
 2. **Uncheck any dates** you want to exclude using the checkboxes that appear on each row. Extra players you toggled on remain selected.
 3. A **finalization panel** expands at the bottom of the selected group with:
    - **Host selector**: radio pills listing players who volunteered to host and are available on at least one checked date.

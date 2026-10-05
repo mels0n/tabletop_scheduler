@@ -71,51 +71,51 @@ export default function VsRalllyPage() {
     if (!isHosted) notFound();
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+        <main className="min-h-screen bg-ink text-parchment py-20 px-6">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
 
-            <div className="max-w-4xl mx-auto space-y-20">
+            <div className="max-w-7xl mx-auto space-y-20">
 
                 {/* Hero */}
                 <div className="space-y-6">
-                    <p className="text-indigo-400 font-mono text-sm uppercase tracking-widest">Rallly Alternative</p>
-                    <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                    <p className="eyebrow">Rallly Alternative</p>
+                    <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight">
                         Tabletop Time vs Rallly
                     </h1>
-                    <p className="text-slate-400 text-2xl md:text-3xl font-normal">
+                    <p className="text-mist text-2xl md:text-3xl font-normal">
                         Two open-source schedulers. One is built for game night.
                     </p>
-                    <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+                    <p className="text-lg text-mist leading-relaxed max-w-2xl">
                         Rallly is a well-built, open-source scheduling tool that deserves its reputation. It&apos;s clean, fast, and doesn&apos;t require an account for participants to vote. If you&apos;re looking for a lightweight Doodle replacement for general use, it&apos;s a solid pick. But if you&apos;re scheduling D&amp;D sessions, Commander pods, or any game night with a minimum headcount, Tabletop Time is the scheduler that actually thinks like a player.
                     </p>
                     <Link
                         href="/new"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all"
+                        className="btn-primary"
                     >
-                        Try It Free <ArrowRight className="w-4 h-4" />
+                        Try It Free <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </Link>
                 </div>
 
                 {/* What Rallly gets right */}
-                <section className="bg-emerald-950/30 border border-emerald-900/50 rounded-2xl p-8 space-y-4">
-                    <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <section className="bg-yes-bg border border-yes/40 rounded-card p-8 space-y-4">
+                    <div className="flex items-center gap-2 text-yes font-semibold">
                         <ThumbsUp className="w-5 h-5" />
                         What Rallly Gets Right
                     </div>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-parchment-2 leading-relaxed">
                         Rallly is genuinely good at what it does. The interface is clean, the date poll UI is intuitive, and participants can vote with a Yes, If Needed, or No without creating an account. It&apos;s open source, actively maintained, and can be self-hosted, all of which puts it in a different class from Doodle or LettuceMeet.
                     </p>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-parchment-2 leading-relaxed">
                         Rallly also supports time-of-day slots, not just dates, which is useful when you need to find a specific hour window rather than just picking a night. If you&apos;re scheduling a one-shot or a meeting where start time matters as much as the day, that granularity is valuable.
                     </p>
                 </section>
 
                 {/* Where it falls short */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Where Rallly Falls Short for Gaming Groups</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">Where Rallly Falls Short for Gaming Groups</h2>
                     <div className="grid md:grid-cols-2 gap-6">
                         <Problem
                             title="No minimum player logic"
@@ -146,88 +146,89 @@ export default function VsRalllyPage() {
 
                 {/* Comparison table */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Feature Comparison</h2>
-                    <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                    <h2 className="font-display text-2xl font-bold text-parchment">Feature Comparison</h2>
+                    <div className="overflow-x-auto rounded-card border border-line">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-800 text-left">
-                                    <th className="py-4 pl-6 font-normal text-slate-400 w-1/2">Feature</th>
-                                    <th className="py-4 px-4 font-bold text-indigo-400 bg-indigo-500/10">Tabletop Time</th>
-                                    <th className="py-4 px-4 font-normal text-slate-400">Rallly</th>
+                                <tr className="border-b border-line text-left">
+                                    <th className="py-4 pl-6 font-normal text-mist w-1/2">Feature</th>
+                                    <th className="py-4 px-4 font-bold text-gold-bright bg-surface-2">Tabletop Time</th>
+                                    <th className="py-4 px-4 font-normal text-mist">Rallly</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800">
+                            <tbody className="divide-y divide-line">
                                 {rows.map(({ label, tt, rallly, note }) => (
-                                    <tr key={label} className="hover:bg-slate-900/40 transition-colors">
-                                        <td className="py-3 pl-6 text-slate-300">{label}</td>
-                                        <td className="py-3 px-4 bg-indigo-500/5">
+                                    <tr key={label} className="hover:bg-surface transition-colors">
+                                        <td className="py-3 pl-6 text-parchment-2">{label}</td>
+                                        <td className="py-3 px-4 bg-surface-2">
                                             {typeof tt === 'string' ? (
-                                                <span className="text-yellow-400 text-xs font-mono">{tt}</span>
+                                                <span className="text-maybe text-xs font-mono">{tt}</span>
                                             ) : tt ? (
-                                                <Check className="w-5 h-5 text-green-400" />
+                                                <Check className="w-5 h-5 text-yes" aria-hidden="true" />
                                             ) : (
-                                                <X className="w-5 h-5 text-red-400" />
+                                                <X className="w-5 h-5 text-no" aria-hidden="true" />
                                             )}
                                         </td>
                                         <td className="py-3 px-4">
                                             {typeof rallly === 'string' ? (
-                                                <span className="text-yellow-400 text-xs font-mono">{rallly}</span>
+                                                <span className="text-maybe text-xs font-mono">{rallly}</span>
                                             ) : rallly ? (
-                                                <Check className="w-5 h-5 text-green-400" />
+                                                <Check className="w-5 h-5 text-yes" aria-hidden="true" />
                                             ) : (
-                                                <X className="w-5 h-5 text-red-400" />
+                                                <X className="w-5 h-5 text-no" aria-hidden="true" />
                                             )}
-                                            {note && <span className="ml-2 text-xs text-slate-500">{note}</span>}
+                                            {note && <span className="ml-2 text-xs text-mist">{note}</span>}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <p className="text-xs text-slate-500">Comparison based on Rallly hosted tier (rallly.co) as of 2026.</p>
+                    <p className="text-xs text-mist">Comparison based on Rallly hosted tier (rallly.co) as of 2026.</p>
                 </section>
 
                 {/* The quorum difference */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
-                    <h2 className="text-2xl font-bold text-white">The Feature That Changes How You Schedule</h2>
-                    <p className="text-slate-400 leading-relaxed">
+                <section className="bg-surface border border-line rounded-card p-8 space-y-4">
+                    <h2 className="font-display text-2xl font-bold text-parchment">The Feature That Changes How You Schedule</h2>
+                    <p className="text-mist leading-relaxed">
                         Quorum logic is what separates a general scheduling tool from one built for game night. Rallly can tell you everyone&apos;s availability. It can&apos;t tell you whether a date is actually viable. That requires knowing your minimum headcount.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         Set a minimum player count in Tabletop Time: 3 for a campaign session, 4 for Commander, 8 for a draft night. Dates that hit the threshold are highlighted in green. Dates that fall short are shown in amber. You see the viable windows immediately, without counting names in a column.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         Rallly is a great tool. But it was built for scheduling meetings, not for running campaigns. Tabletop Time treats &ldquo;do we have enough players?&rdquo; as a scheduling question, not an afterthought.
                     </p>
                 </section>
 
                 {/* When to still use Rallly */}
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-white">When to Still Use Rallly</h2>
-                    <p className="text-slate-400 leading-relaxed">
+                    <h2 className="font-display text-2xl font-bold text-parchment">When to Still Use Rallly</h2>
+                    <p className="text-mist leading-relaxed">
                         Rallly&apos;s time-of-day slot support is a genuine advantage for specific use cases. If you need to find the right hour (not just the right day), Rallly&apos;s granularity is useful. Tabletop Time uses date-level candidate slots; it&apos;s designed for &ldquo;which night this week&rdquo; questions, not &ldquo;which two-hour window on Saturday.&rdquo;
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         Rallly is also a reasonable choice for non-gaming scheduling where you want a clean, open-source Doodle alternative with no gaming-specific terminology. Both tools are open source, so if you want to self-host a general-purpose date poller, Rallly&apos;s codebase is actively developed and well-documented.
                     </p>
                 </section>
 
+                <div className="ornament" aria-hidden="true">✦</div>
                 {/* Migration CTA */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Switching Is Instant</h2>
-                    <p className="text-slate-400 leading-relaxed">
-                        If you&apos;re already using Rallly, switching is as simple as going to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link> instead of rallly.co next time. No account to create, nothing to import. Add your candidate dates, set a quorum if you want one, and share the link. Your players get a familiar date-voting experience with the added context of seeing which dates actually have enough players to happen.
+                    <h2 className="font-display text-2xl font-bold text-parchment">Switching Is Instant</h2>
+                    <p className="text-mist leading-relaxed">
+                        If you&apos;re already using Rallly, switching is as simple as going to <Link href="/new" className="text-gold hover:text-gold-bright underline">tabletoptime.us/new</Link> instead of rallly.co next time. No account to create, nothing to import. Add your candidate dates, set a quorum if you want one, and share the link. Your players get a familiar date-voting experience with the added context of seeing which dates actually have enough players to happen.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <Link
                             href="/new"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all"
+                            className="btn-primary"
                         >
-                            Create Your First Event <ArrowRight className="w-4 h-4" />
+                            Create Your First Event <ArrowRight className="w-4 h-4" aria-hidden="true" />
                         </Link>
                         <Link
                             href="/voting-logic"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-slate-700 hover:border-indigo-500/50 text-slate-300 hover:text-white transition-all"
+                            className="btn-secondary"
                         >
                             How the Voting Logic Works
                         </Link>
@@ -236,7 +237,7 @@ export default function VsRalllyPage() {
 
                 {/* FAQ */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">Frequently Asked Questions</h2>
                     <div className="space-y-4">
                         <Faq q="If both are open source, why choose one over the other?" a="Both are open source and self-hostable, which is a meaningful similarity. The difference is what's built into them. Tabletop Time ships with Discord and Telegram bots, quorum logic, waitlists, and campaign mode. Rallly ships with a clean general-purpose date poller. Pick the one whose feature set matches your group's actual workflow." />
                         <Faq q="Does Tabletop Time support time-of-day slots like Rallly?" a="Not currently. Tabletop Time uses date-level slots, not hour-level grids. If you need to find a specific start time within a day, Rallly's time slot support is a real advantage. Tabletop Time is designed for 'which night this week or month' decisions." />
@@ -245,13 +246,13 @@ export default function VsRalllyPage() {
                     </div>
                 </section>
 
-                <div className="border-t border-slate-800 pt-8 flex flex-wrap gap-6 text-sm text-slate-500">
-                    <Link href="/features" className="hover:text-indigo-400 transition-colors">Full Feature List</Link>
-                    <Link href="/vs/doodle" className="hover:text-indigo-400 transition-colors">vs Doodle</Link>
-                    <Link href="/vs/when2meet" className="hover:text-indigo-400 transition-colors">vs When2Meet</Link>
-                    <Link href="/vs/lettucemeet" className="hover:text-indigo-400 transition-colors">vs LettuceMeet</Link>
-                    <Link href="/pricing" className="hover:text-indigo-400 transition-colors">Pricing (Free)</Link>
-                    <Link href="/new" className="hover:text-indigo-400 transition-colors">Create an Event</Link>
+                <div className="border-t border-line pt-8 flex flex-wrap gap-6 text-sm text-mist">
+                    <Link href="/features" className="hover:text-gold-bright transition-colors">Full Feature List</Link>
+                    <Link href="/vs/doodle" className="hover:text-gold-bright transition-colors">vs Doodle</Link>
+                    <Link href="/vs/when2meet" className="hover:text-gold-bright transition-colors">vs When2Meet</Link>
+                    <Link href="/vs/lettucemeet" className="hover:text-gold-bright transition-colors">vs LettuceMeet</Link>
+                    <Link href="/pricing" className="hover:text-gold-bright transition-colors">Pricing (Free)</Link>
+                    <Link href="/new" className="hover:text-gold-bright transition-colors">Create an Event</Link>
                 </div>
             </div>
         </main>
@@ -260,21 +261,21 @@ export default function VsRalllyPage() {
 
 function Problem({ title, body }: { title: string; body: string }) {
     return (
-        <div className="p-5 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
+        <div className="p-5 rounded-card bg-surface border border-line space-y-2">
             <div className="flex items-start gap-2">
-                <X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-200">{title}</h3>
+                <X className="w-4 h-4 text-no mt-0.5 flex-shrink-0" aria-hidden="true" />
+                <h3 className="font-display text-lg font-bold text-parchment">{title}</h3>
             </div>
-            <p className="text-slate-400 text-sm leading-relaxed pl-6">{body}</p>
+            <p className="text-mist text-sm leading-relaxed pl-6">{body}</p>
         </div>
     );
 }
 
 function Faq({ q, a }: { q: string; a: string }) {
     return (
-        <div className="border border-slate-800 rounded-xl p-5 space-y-2">
-            <p className="font-semibold text-slate-200">{q}</p>
-            <p className="text-slate-400 text-sm leading-relaxed">{a}</p>
+        <div className="border border-line rounded-card p-5 space-y-2">
+            <p className="font-semibold text-parchment">{q}</p>
+            <p className="text-mist text-sm leading-relaxed">{a}</p>
         </div>
     );
 }
