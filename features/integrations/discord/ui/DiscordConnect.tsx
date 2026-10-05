@@ -52,6 +52,8 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     const [step, setStep] = useState<'initial' | 'picking_channel' | 'saving'>('initial');
 
     useEffect(() => {
+        // Both ways into the channel picker follow the OAuth bot-add flow.
+        if (!oauthEnabled) return;
         if (discordConnected && newGuildId) {
             setStep('picking_channel');
             fetchChannels(slug, newGuildId);
@@ -59,7 +61,7 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
             setStep('picking_channel');
             fetchChannels(slug, initialGuildId);
         }
-    }, [slug, discordConnected, newGuildId, initialGuildId, hasChannel]);
+    }, [slug, discordConnected, newGuildId, initialGuildId, hasChannel, oauthEnabled]);
 
     useEffect(() => {
         const gId = initialGuildId || newGuildId;
@@ -130,6 +132,11 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
             setDmLoading(false);
         }
     }
+
+    // Every setup and recover link starts the OAuth flow. Without it there is nothing to show
+    // unless a channel is bound or the manager's Discord account is linked (DM recovery needs
+    // only the bot).
+    if (!oauthEnabled && !hasChannel && !hasManagerDiscordId) return null;
 
     // Compact connected state
     if (hasChannel) {
@@ -208,90 +215,92 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
     // Setup state — channel not yet connected
     return (
         <div className="space-y-4">
-            {oauthEnabled && <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-4">
-                <div className="flex items-start gap-3 text-gold-bright">
-                    <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
-                        <DiscordIcon className="w-5 h-5" />
-                    </div>
-                    <div className="space-y-1">
-                        <p className="font-bold">Connect Discord Notifications</p>
-                        <p className="opacity-90 text-xs text-mist">
-                            {step === 'initial' && "Invite the bot to your server to start."}
-                            {step === 'picking_channel' && "Select the channel for event updates."}
-                        </p>
-                    </div>
-                </div>
-
-                {error === "MISSING_PERMISSIONS" ? (
-                    <div className="p-3 bg-maybe-bg border border-maybe rounded-control space-y-3">
-                        <div className="flex items-start gap-2 text-maybe">
-                            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-bold text-sm">Action Required: Permissions</p>
-                                <p className="text-xs opacity-90 mt-1">Found the channel, but the bot is not allowed to post in it.</p>
-                            </div>
+            {oauthEnabled && (
+                <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-4">
+                    <div className="flex items-start gap-3 text-gold-bright">
+                        <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
+                            <DiscordIcon className="w-5 h-5" />
                         </div>
-                        <ol className="text-xs text-maybe list-decimal ml-8 space-y-1">
-                            <li>Go to <b>Discord Channel Settings</b></li>
-                            <li>Click <b>Permissions</b></li>
-                            <li>Add <b>{publicConfig.botName || "the Bot"}</b></li>
-                            <li>Grant: <b className="text-parchment">View Channel</b> & <b className="text-parchment">Send Messages</b></li>
-                        </ol>
-                        <button onClick={handleSave} className="w-full py-2 bg-maybe hover:bg-maybe/90 text-on-maybe rounded-control text-xs font-bold transition-colors">
-                            I Fixed It - Try Again
-                        </button>
+                        <div className="space-y-1">
+                            <p className="font-bold">Connect Discord Notifications</p>
+                            <p className="opacity-90 text-xs text-mist">
+                                {step === 'initial' && "Invite the bot to your server to start."}
+                                {step === 'picking_channel' && "Select the channel for event updates."}
+                            </p>
+                        </div>
                     </div>
-                ) : error && (
-                    <div className="p-2 bg-no-bg border border-no rounded-control text-xs text-no flex items-center gap-2">
-                        <AlertCircle className="w-3 h-3" />
-                        {error}
-                    </div>
-                )}
 
-                {step === 'initial' && oauthEnabled && (
-                    <a
-                        href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
-                        className="inline-flex items-center gap-2 bg-gold hover:bg-gold-bright text-on-gold px-4 py-2 rounded-control text-sm font-medium transition-colors "
-                    >
-                        Connect Discord Server
-                    </a>
-                )}
+                    {error === "MISSING_PERMISSIONS" ? (
+                        <div className="p-3 bg-maybe-bg border border-maybe rounded-control space-y-3">
+                            <div className="flex items-start gap-2 text-maybe">
+                                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-bold text-sm">Action Required: Permissions</p>
+                                    <p className="text-xs opacity-90 mt-1">Found the channel, but the bot is not allowed to post in it.</p>
+                                </div>
+                            </div>
+                            <ol className="text-xs text-maybe list-decimal ml-8 space-y-1">
+                                <li>Go to <b>Discord Channel Settings</b></li>
+                                <li>Click <b>Permissions</b></li>
+                                <li>Add <b>{publicConfig.botName || "the Bot"}</b></li>
+                                <li>Grant: <b className="text-parchment">View Channel</b> & <b className="text-parchment">Send Messages</b></li>
+                            </ol>
+                            <button onClick={handleSave} className="w-full py-2 bg-maybe hover:bg-maybe/90 text-on-maybe rounded-control text-xs font-bold transition-colors">
+                                I Fixed It - Try Again
+                            </button>
+                        </div>
+                    ) : error && (
+                        <div className="p-2 bg-no-bg border border-no rounded-control text-xs text-no flex items-center gap-2">
+                            <AlertCircle className="w-3 h-3" />
+                            {error}
+                        </div>
+                    )}
 
-                {step === 'picking_channel' && (
-                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                        {loading && channels.length === 0 ? (
-                            <div className="flex items-center gap-2 text-xs text-mist">
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                                Fetching channels...
-                            </div>
-                        ) : (
-                            <div className="flex gap-2">
-                                <select
-                                    value={selectedChannel}
-                                    onChange={(e) => setSelectedChannel(e.target.value)}
-                                    className="flex-1 bg-field border border-line-strong rounded-control px-3 py-2 text-sm text-parchment"
-                                >
-                                    <option value="">Select a Channel...</option>
-                                    {channels.map(c => (
-                                        <option key={c.id} value={c.id}>#{c.name}</option>
-                                    ))}
-                                </select>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={!selectedChannel || loading}
-                                    className="bg-yes hover:bg-yes/90 disabled:opacity-50 disabled:cursor-not-allowed text-on-yes px-4 py-2 rounded-control text-sm font-medium transition-colors flex items-center gap-2"
-                                >
-                                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    Save
-                                </button>
-                            </div>
-                        )}
-                        {oauthEnabled && <p className="text-xs text-mist">
-                            Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-gold-bright hover:underline">Re-invite it</a>.
-                        </p>}
-                    </div>
-                )}
-            </div>}
+                    {step === 'initial' && (
+                        <a
+                            href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`}
+                            className="inline-flex items-center gap-2 bg-gold hover:bg-gold-bright text-on-gold px-4 py-2 rounded-control text-sm font-medium transition-colors "
+                        >
+                            Connect Discord Server
+                        </a>
+                    )}
+
+                    {step === 'picking_channel' && (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                            {loading && channels.length === 0 ? (
+                                <div className="flex items-center gap-2 text-xs text-mist">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Fetching channels...
+                                </div>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <select
+                                        value={selectedChannel}
+                                        onChange={(e) => setSelectedChannel(e.target.value)}
+                                        className="flex-1 bg-field border border-line-strong rounded-control px-3 py-2 text-sm text-parchment"
+                                    >
+                                        <option value="">Select a Channel...</option>
+                                        {channels.map(c => (
+                                            <option key={c.id} value={c.id}>#{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={!selectedChannel || loading}
+                                        className="bg-yes hover:bg-yes/90 disabled:opacity-50 disabled:cursor-not-allowed text-on-yes px-4 py-2 rounded-control text-sm font-medium transition-colors flex items-center gap-2"
+                                    >
+                                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                        Save
+                                    </button>
+                                </div>
+                            )}
+                            <p className="text-xs text-mist">
+                                Bot not showing up? <a href={`/api/auth/discord?flow=connect&returnTo=${encodeURIComponent(pathname)}`} className="text-gold-bright hover:underline">Re-invite it</a>.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="p-4 bg-surface border border-line rounded-card space-y-4">
                 <h3 className="font-semibold text-parchment-2 text-sm flex items-center gap-2">
