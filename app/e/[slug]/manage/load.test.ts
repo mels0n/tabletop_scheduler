@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import prisma from '@/shared/lib/prisma';
 import { verifyEventAdmin } from '@/features/auth';
 import { getBotUsername } from '@/features/telegram';
-import { loadManagePage } from './load';
+import { loadManagePage, manageEventSelect } from './load';
 
 vi.mock('@/shared/lib/prisma');
 vi.mock('@/features/auth', () => ({ verifyEventAdmin: vi.fn() }));
@@ -41,5 +41,11 @@ describe('loadManagePage', () => {
         vi.mocked(verifyEventAdmin).mockResolvedValue(true);
         vi.mocked(getBotUsername).mockResolvedValue(null);
         expect(await loadManagePage('evt')).toMatchObject({ isAdmin: true, botUsername: 'TabletopSchedulerBot' });
+    });
+
+    it('selects the vote and participant fields the page forwards to client components', () => {
+        const votes = manageEventSelect.timeSlots.select.votes.select;
+        expect(votes.participantId).toBe(true);
+        expect(votes.participant.select.telegramId).toBe(true);
     });
 });
