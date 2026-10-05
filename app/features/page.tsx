@@ -1,7 +1,7 @@
 import {
     Users, Trophy, CalendarDays, CalendarCheck, Bot, Check, X, UserX, KeyRound, Clock,
     MapPin, Lightbulb, Vote, Home, Globe, LayoutList, Crown, BellRing, Pin, Megaphone,
-    MessageSquare, ShieldCheck, Server, Code, SunMoon, HeartHandshake, UserMinus,
+    MessageSquare, ShieldCheck, Server, Code, Keyboard, HeartHandshake, UserMinus,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -26,7 +26,7 @@ const schema = [
             'Quorum logic: automatically highlights dates that meet minimum player count',
             'Waitlists and player capacity limits with automatic promotion',
             'Campaign mode for multi-session scheduling',
-            'Yes, If Needed and No voting, plus a "can host" flag',
+            'Available, If Needed and No voting, plus a "can host" flag',
             'Participants can suggest new times',
             'Telegram bot integration: pinned live tally, reminders and results in group chat',
             'Discord bot integration: pinned live tally, reminders and results in your server',
@@ -81,7 +81,7 @@ export default function FeaturesPage() {
                     </h1>
                     <p className="text-xl text-mist leading-relaxed">
                         Generic scheduling tools stop at the poll. Tabletop Time follows your game night
-                        from the first proposed date to the reminder an hour before dice hit the table,
+                        from the first proposed date to the reminder a couple of hours before dice hit the table,
                         and nobody has to make an account.
                     </p>
                     <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -155,7 +155,7 @@ export default function FeaturesPage() {
                 >
                     <FeatureCard
                         icon={<Vote className="w-5 h-5" />}
-                        title="Yes, If Needed, No"
+                        title="Available, If Needed, No"
                         description={`Three answers instead of two. "If Needed" means a player can make it but would rather not, so you only lean on it when it helps.`}
                     />
                     <FeatureCard
@@ -295,9 +295,9 @@ export default function FeaturesPage() {
                         description="Run your own copy from the Docker image on a Synology, Unraid box or Raspberry Pi, with the same bots and features."
                     />
                     <FeatureCard
-                        icon={<SunMoon className="w-5 h-5" />}
-                        title="Light and dark"
-                        description="Follows your system theme and is built to work with keyboards and screen readers."
+                        icon={<Keyboard className="w-5 h-5" />}
+                        title="Keyboard and screen reader friendly"
+                        description="Every control works from the keyboard, and buttons, labels and states are announced to screen readers."
                     />
                     <FeatureCard
                         icon={<HeartHandshake className="w-5 h-5" />}

@@ -12,6 +12,19 @@ export const contentType = 'image/png';
 export const alt = 'Tabletop Time Event';
 export const revalidate = 86400; // Cache for 24 hours
 
+// Read the bundled fonts once per server instance; a failed read is retried on the next request.
+let fontsPromise: Promise<[Buffer, Buffer]> | undefined;
+function loadFonts() {
+    fontsPromise ??= Promise.all([
+        readFile(join(process.cwd(), 'app/_fonts/CormorantSC-Bold.ttf')),
+        readFile(join(process.cwd(), 'app/_fonts/Spectral-Regular.ttf')),
+    ]).catch((error) => {
+        fontsPromise = undefined;
+        throw error;
+    });
+    return fontsPromise;
+}
+
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const event = await prisma.event.findUnique({
@@ -22,10 +35,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     const title = event?.title || 'Tabletop Event';
     const description = event?.description || 'Join this game session on Tabletop Time!';
 
-    const [cormorant, spectral] = await Promise.all([
-        readFile(join(process.cwd(), 'app/_fonts/CormorantSC-Bold.ttf')),
-        readFile(join(process.cwd(), 'app/_fonts/Spectral-Regular.ttf')),
-    ]);
+    const [cormorant, spectral] = await loadFonts();
 
     return new ImageResponse(
         (

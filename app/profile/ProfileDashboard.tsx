@@ -26,7 +26,7 @@ interface ServerEvent {
 /**
  * @component ManagerBadge
  * @description Pill marking an event's `role: 'MANAGER'`, using the same geometry
- * as `SyncBadge` but a gold-tinted palette and a static (non-pulsing) dot, since it
+ * as `SyncBadge` but a gold-tinted palette, since it
  * reflects a role rather than a live sync connection. Distinct from the sync
  * badges: an event can show this alongside Telegram/Discord Synced badges, or
  * alone if the manager record has no linked participant identity yet.
