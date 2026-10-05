@@ -199,9 +199,9 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
 
     if (hasVoted) {
         return (
-            <div className="p-8 text-center border border-green-800 bg-green-900/20 rounded-xl">
-                <h3 className="text-2xl font-bold text-green-400 mb-2">Votes Saved!</h3>
-                <p className="text-slate-400">Thanks for helping us schedule this game.</p>
+            <div className="p-8 text-center border border-yes bg-yes-bg rounded-card">
+                <h3 className="text-2xl font-bold text-yes mb-2">Votes Saved!</h3>
+                <p className="text-parchment-2">Thanks for helping us schedule this game.</p>
             </div>
         );
     }
@@ -212,29 +212,29 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
             <div className="lg:col-span-2 space-y-6">
 
                 {/* Identity card */}
-                <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
+                <div className="bg-surface p-6 rounded-card border border-line">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                            <UserIcon className="w-5 h-5 text-indigo-400" />
+                        <h3 className="text-lg font-semibold text-parchment flex items-center gap-2">
+                            <UserIcon className="w-5 h-5 text-gold-bright" aria-hidden="true" />
                             Who are you?
                         </h3>
 
                         <div className="flex items-center gap-2">
                             {telegramIdentity && (
-                                <div className="flex items-center gap-2 text-xs bg-[#229ED9]/20 text-[#229ED9] px-2 py-1 rounded border border-[#229ED9]/50">
+                                <div className="flex items-center gap-2 text-xs bg-surface-2 text-telegram px-2 py-1 rounded-control border border-telegram/50">
                                     <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" /></svg>
                                     <span>@{telegramIdentity.handle}</span>
                                 </div>
                             )}
                             {discordIdentity ? (
-                                <div className="flex items-center gap-2 text-xs bg-[#5865F2]/20 text-[#5865F2] px-2 py-1 rounded border border-[#5865F2]/50">
+                                <div className="flex items-center gap-2 text-xs bg-surface-2 text-discord-text px-2 py-1 rounded-control border border-discord/50">
                                     <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
                                     <span>{discordIdentity.username}</span>
                                 </div>
                             ) : (
                                 <a
                                     href={`/api/auth/discord?flow=login&returnTo=${encodeURIComponent(pathname || '/')}`}
-                                    className="text-xs bg-[#5865F2] hover:bg-[#4752C4] text-white px-3 py-1.5 rounded transition-colors flex items-center gap-2"
+                                    className="text-xs bg-discord hover:bg-discord/90 text-white px-3 py-1.5 rounded-control transition-colors flex items-center gap-2"
                                 >
                                     <svg className="w-3 h-3 fill-current" viewBox="0 0 127 96"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c.63-23.28-18.68-47.5-35.3-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,54,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.23,53,91.1,65.69,84.69,65.69Z" /></svg>
                                     Log in
@@ -247,7 +247,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                         <input
                             type="text"
                             placeholder="Your Name (Required)"
-                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
+                            className="field flex-1 px-4 py-3 text-base"
                             value={userName}
                             onChange={(e) => setUserName(e.target.value)}
                         />
@@ -257,7 +257,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                             <input
                                 type="text"
                                 placeholder="Telegram Handle (Optional)"
-                                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-base"
+                                className="field flex-1 px-4 py-3 text-base"
                                 value={userTelegram}
                                 onChange={(e) => setUserTelegram(e.target.value)}
                             />
@@ -274,15 +274,15 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                         type="checkbox"
                                         checked={linkTelegram}
                                         onChange={(e) => setLinkTelegram(e.target.checked)}
-                                        className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                                        className="rounded-control border-line-strong bg-field text-gold focus:ring-gold/50"
                                     />
                                     <span className={clsx(
-                                        "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-full border flex items-center gap-1",
+                                        "text-xs uppercase font-bold tracking-wide px-2 py-0.5 rounded-control border flex items-center gap-1",
                                         linkTelegram
-                                            ? "bg-green-900/40 text-green-400 border-green-800"
-                                            : "bg-slate-800/60 text-slate-500 border-slate-700"
+                                            ? "bg-yes-bg text-yes border-yes"
+                                            : "bg-surface-2 text-mist border-line-strong"
                                     )}>
-                                        {linkTelegram && <Check className="w-3 h-3" />}
+                                        {linkTelegram && <Check className="w-3 h-3" aria-hidden="true" />}
                                         Link my Telegram{telegramIdentity ? ` @${telegramIdentity.handle}` : ""}
                                     </span>
                                 </label>
@@ -293,15 +293,15 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                         type="checkbox"
                                         checked={linkDiscord}
                                         onChange={(e) => setLinkDiscord(e.target.checked)}
-                                        className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                                        className="rounded-control border-line-strong bg-field text-gold focus:ring-gold/50"
                                     />
                                     <span className={clsx(
-                                        "text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 rounded-full border flex items-center gap-1",
+                                        "text-xs uppercase font-bold tracking-wide px-2 py-0.5 rounded-control border flex items-center gap-1",
                                         linkDiscord
-                                            ? "bg-green-900/40 text-green-400 border-green-800"
-                                            : "bg-slate-800/60 text-slate-500 border-slate-700"
+                                            ? "bg-yes-bg text-yes border-yes"
+                                            : "bg-surface-2 text-mist border-line-strong"
                                     )}>
-                                        {linkDiscord && <Check className="w-3 h-3" />}
+                                        {linkDiscord && <Check className="w-3 h-3" aria-hidden="true" />}
                                         Link my Discord{discordIdentity ? ` ${discordIdentity.username}` : ""}
                                     </span>
                                 </label>
@@ -312,9 +312,9 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
 
                 {/* ── Campaign context banner ── */}
                 {eventType === "CAMPAIGN" && (
-                    <div className="bg-indigo-950/50 border border-indigo-800/50 rounded-lg p-3 flex items-start gap-3">
-                        <CalendarRange className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                        <div className="flex-1 text-sm text-indigo-200">
+                    <div className="bg-surface border border-line rounded-card p-3 flex items-start gap-3">
+                        <CalendarRange className="w-5 h-5 text-gold-bright shrink-0 mt-0.5" aria-hidden="true" />
+                        <div className="flex-1 text-sm text-parchment-2">
                             This is a multi-session campaign. Vote on every date you&apos;re available, and the organizer will lock in multiple sessions.
                         </div>
                         <div className="relative shrink-0">
@@ -323,12 +323,12 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                 aria-label="More info about campaign voting"
                                 onClick={() => setCampaignTooltipOpen(prev => !prev)}
                                 onBlur={() => setCampaignTooltipOpen(false)}
-                                className="text-indigo-400 hover:text-indigo-300 transition-colors focus:outline-none"
+                                className="text-gold-bright hover:text-parchment transition-colors"
                             >
                                 <Info className="w-4 h-4" />
                             </button>
                             {campaignTooltipOpen && (
-                                <div className="absolute right-0 top-6 z-10 w-64 bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 shadow-lg">
+                                <div className="absolute right-0 top-6 z-10 w-64 bg-surface-2 border border-line-strong rounded-card p-3 text-xs text-parchment-2 shadow-modal">
                                     Your votes help the organizer find the best set of dates. Vote YES for any date you can make, even if you can only attend some sessions.
                                 </div>
                             )}
@@ -337,53 +337,54 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 )}
 
                 {/* ── View toggle ── */}
-                <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+                <div className="segmented">
                     <button
                         type="button"
+                        aria-pressed={viewMode === "quick"}
                         onClick={() => setViewMode("quick")}
                         className={clsx(
-                            "flex items-center gap-2 px-4 py-2.5 flex-1 justify-center text-sm font-medium transition-colors",
+                            "flex items-center gap-2 px-4 py-2.5 justify-center text-sm font-medium transition-colors",
                             viewMode === "quick"
-                                ? "bg-slate-700 text-slate-200"
-                                : "bg-slate-900/50 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                                ? "is-active text-parchment"
+                                : "text-mist hover:bg-surface-2 hover:text-parchment"
                         )}
                     >
-                        <CalendarDays className="w-4 h-4" />
+                        <CalendarDays className="w-4 h-4" aria-hidden="true" />
                         Quick Calendar
                     </button>
-                    <div className="w-px bg-slate-700" />
                     <button
                         type="button"
+                        aria-pressed={viewMode === "detailed"}
                         onClick={() => setViewMode("detailed")}
                         className={clsx(
-                            "flex items-center gap-2 px-4 py-2.5 flex-1 justify-center text-sm font-medium transition-colors",
+                            "flex items-center gap-2 px-4 py-2.5 justify-center text-sm font-medium transition-colors",
                             viewMode === "detailed"
-                                ? "bg-slate-700 text-slate-200"
-                                : "bg-slate-900/50 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                                ? "is-active text-parchment"
+                                : "text-mist hover:bg-surface-2 hover:text-parchment"
                         )}
                     >
-                        <LayoutList className="w-4 h-4" />
+                        <LayoutList className="w-4 h-4" aria-hidden="true" />
                         Detailed
                     </button>
                 </div>
 
                 {/* ── Detailed view ── */}
                 {notOwned && (
-                    <div role="alert" className="p-4 rounded-xl border border-amber-700/60 bg-amber-900/20 text-amber-200 space-y-3">
+                    <div role="alert" className="p-4 rounded-card border border-maybe bg-maybe-bg text-parchment space-y-3">
                         <p className="text-sm">{notOwned.message}</p>
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
                                 onClick={voteAsNewParticipant}
                                 disabled={isSubmitting}
-                                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-semibold"
+                                className="px-4 py-2 rounded-control bg-maybe hover:bg-gold-bright disabled:opacity-50 text-on-maybe text-sm font-semibold transition-colors"
                             >
                                 Vote as a new participant
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setNotOwned(null)}
-                                className="px-4 py-2 rounded-lg border border-amber-700/60 text-amber-200 hover:bg-amber-900/30 text-sm"
+                                className="px-4 py-2 rounded-control border border-line-strong text-parchment hover:bg-surface-2 text-sm transition-colors"
                             >
                                 Dismiss
                             </button>
@@ -394,19 +395,19 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                 {viewMode === "detailed" && (
                     <div className="space-y-4">
                         {/* Legend */}
-                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 text-xs text-slate-400 bg-slate-900/30 p-3 rounded-lg border border-slate-800/50">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 text-xs text-parchment-2 bg-surface p-3 rounded-card border border-line">
                             <div className="flex items-center gap-2">
-                                <Check className="w-4 h-4 text-green-500" />
+                                <Check className="w-4 h-4 text-yes" aria-hidden="true" />
                                 <span><b>Available:</b> Perfect for me</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <HelpCircle className="w-4 h-4 text-yellow-500" />
+                                <HelpCircle className="w-4 h-4 text-maybe" aria-hidden="true" />
                                 <span><b>If Needed:</b> Yes, not a preference</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 px-1">
-                            <Loader2 className="w-3 h-3" />
+                        <div className="flex items-center gap-2 text-xs text-mist px-1">
+                            <Loader2 className="w-3 h-3" aria-hidden="true" />
                             <span>Prioritization applies at Finalization. Confirmed spots are locked.</span>
                         </div>
 
@@ -418,39 +419,39 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
 
                             return (
                                 <div key={slot.id} className={clsx(
-                                    "relative p-4 rounded-xl border transition-all",
-                                    myVote === 'YES' ? "bg-green-950/30 border-green-600/50" :
-                                        myVote === 'NO' ? "bg-red-950/10 border-red-900/30 opacity-60" :
-                                            myVote === 'MAYBE' ? "bg-yellow-950/20 border-yellow-700/50" :
-                                                "bg-slate-900/40 border-slate-800"
+                                    "relative p-4 rounded-card border transition-colors",
+                                    myVote === 'YES' ? "bg-yes-bg border-yes" :
+                                        myVote === 'NO' ? "bg-no-bg border-no border-dashed" :
+                                            myVote === 'MAYBE' ? "bg-maybe-bg border-maybe" :
+                                                "bg-surface border-line"
                                 )}>
                                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                         <div className="text-center sm:text-left">
-                                            <div className="font-semibold text-lg text-slate-200">
+                                            <div className="font-display font-semibold text-xl text-parchment">
                                                 <ClientDate date={slot.startTime} formatStr="EEEE, MMMM do" />
                                             </div>
-                                            <p className="text-sm text-indigo-200">
-                                                <ClientDate date={slot.startTime} formatStr="h:mm a" /> - <ClientDate date={slot.endTime} formatStr="h:mm a" /> <ClientTimezone className="text-indigo-300/70 ml-1" />
+                                            <p className="text-sm text-mist tabular-nums">
+                                                <ClientDate date={slot.startTime} formatStr="h:mm a" /> - <ClientDate date={slot.endTime} formatStr="h:mm a" /> <ClientTimezone className="text-mist ml-1" />
                                             </p>
                                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                                <span className="text-green-400">{slot.counts.yes} Yes</span>
-                                                <span className="text-yellow-400">{slot.counts.maybe} If Needed</span>
-                                                <span className="text-red-400">{slot.counts.no} No</span>
+                                                <span className="chip text-yes">{slot.counts.yes} Yes</span>
+                                                <span className="chip text-maybe">{slot.counts.maybe} If Needed</span>
+                                                <span className="chip text-no">{slot.counts.no} No</span>
                                                 {hasHostOffer && (
-                                                    <span className="flex items-center gap-1 text-indigo-400" title="Someone offered to host this time">
-                                                        <Home className="w-3 h-3" />
+                                                    <span className="chip text-gold-bright" title="Someone offered to host this time">
+                                                        <Home className="w-3 h-3" aria-hidden="true" />
                                                         Host offered
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2 p-1 bg-slate-950 rounded-lg border border-slate-800">
+                                        <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto p-1.5 bg-surface rounded-control border border-line">
                                             <VoteButton
                                                 active={myVote === 'YES'}
                                                 onClick={() => handleVote(slot.id, 'YES')}
                                                 color="green"
-                                                icon={<Check className="w-5 h-5" />}
+                                                icon={<Check className="w-5 h-5" aria-hidden="true" />}
                                                 label="Available"
                                                 title="Yes, I can make it"
                                             />
@@ -458,7 +459,7 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                                 active={myVote === 'MAYBE'}
                                                 onClick={() => handleVote(slot.id, 'MAYBE')}
                                                 color="yellow"
-                                                icon={<HelpCircle className="w-5 h-5" />}
+                                                icon={<HelpCircle className="w-5 h-5" aria-hidden="true" />}
                                                 label="If Needed"
                                                 title="I'll be there if you need me."
                                             />
@@ -466,18 +467,18 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                                                 active={myVote === 'NO'}
                                                 onClick={() => handleVote(slot.id, 'NO')}
                                                 color="red"
-                                                icon={<X className="w-5 h-5" />}
+                                                icon={<X className="w-5 h-5" aria-hidden="true" />}
                                                 label="No"
                                             />
                                         </div>
                                     </div>
 
                                     {(myVote === 'YES' || myVote === 'MAYBE') && (
-                                        <div className="mt-3 pt-3 border-t border-slate-800/50 flex items-center justify-end gap-2">
-                                            <label className="text-sm text-slate-400 cursor-pointer select-none flex items-center gap-2 hover:text-indigo-400 transition-colors">
+                                        <div className="mt-3 pt-3 border-t border-line flex items-center justify-end gap-2">
+                                            <label className="text-sm text-parchment-2 cursor-pointer select-none flex items-center gap-2 hover:text-gold-bright transition-colors">
                                                 <input
                                                     type="checkbox"
-                                                    className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/50"
+                                                    className="rounded-control border-line-strong bg-field text-gold focus:ring-gold/50"
                                                     checked={canHost[slot.id] || false}
                                                     onChange={() => toggleHost(slot.id)}
                                                 />
@@ -492,9 +493,9 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
                         <button
                             onClick={() => submitVotes()}
                             disabled={isSubmitting || Object.values(votes).filter(v => v !== undefined).length < slots.length}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-800 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2"
+                            className="btn-primary w-full py-4 text-lg font-bold"
                         >
-                            {isSubmitting ? <Loader2 className="animate-spin" /> :
+                            {isSubmitting ? <Loader2 className="animate-spin" aria-hidden="true" /> :
                                 Object.values(votes).filter(v => v !== undefined).length < slots.length
                                     ? "Select preferences for all times"
                                     : "Submit Votes"}
@@ -524,20 +525,20 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
             </div>
 
             {/* Right Col: Participants List */}
-            <div className="space-y-6">
-                <div className="bg-slate-900/30 p-6 rounded-xl border border-slate-800 sticky top-6">
-                    <h3 className="text-lg font-semibold text-slate-300 mb-4">Participants ({participants.length})</h3>
+            <div className="space-y-6 lg:sticky lg:top-20 self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+                <div className="bg-surface p-6 rounded-card border border-line">
+                    <h3 className="text-lg font-semibold text-parchment mb-4">Participants ({participants.length})</h3>
                     <ul className="space-y-3">
                         {participants.map(p => (
-                            <li key={p.id} className="flex items-center gap-3 text-slate-400">
-                                <div className="w-8 h-8 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-300 font-bold text-xs">
+                            <li key={p.id} className="flex items-center gap-3 text-parchment-2">
+                                <div className="size-7 shrink-0 rounded-control bg-surface-2 flex items-center justify-center text-gold-bright font-bold text-xs">
                                     {p.name.substring(0, 2).toUpperCase()}
                                 </div>
                                 <span>{p.name}</span>
                             </li>
                         ))}
                         {participants.length === 0 && (
-                            <li className="text-slate-600 italic text-sm">Be the first to vote!</li>
+                            <li className="text-mist italic text-sm">Be the first to vote!</li>
                         )}
                     </ul>
                 </div>
@@ -548,23 +549,24 @@ export function VotingInterface({ eventId, initialSlots, participants, slug, ser
 
 function VoteButton({ active, onClick, color, icon, label, title }: any) {
     const activeClasses: any = {
-        green: "bg-green-600 text-white shadow-green-900/20",
-        yellow: "bg-yellow-600 text-white shadow-yellow-900/20",
-        red: "bg-red-600 text-white shadow-red-900/20"
+        green: "bg-yes text-on-yes",
+        yellow: "bg-maybe text-on-maybe",
+        red: "bg-no text-on-no"
     };
 
     return (
         <button
             onClick={onClick}
+            aria-pressed={active}
             aria-label={`Vote ${label}`}
             className={clsx(
-                "p-3 rounded-md transition-all flex flex-col items-center gap-1 w-20",
-                active ? `${activeClasses[color]} shadow-lg` : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                "p-3 rounded-control border transition-colors flex flex-col items-center gap-1 sm:w-20",
+                active ? `${activeClasses[color]} border-transparent` : "bg-field border-line-strong text-parchment-2 hover:bg-surface-2 hover:text-parchment"
             )}
             title={title || label}
         >
             {icon}
-            <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
+            <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
         </button>
     );
 }

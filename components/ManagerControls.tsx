@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteEvent, cancelEvent, updateReminderSettings, updateSessionReminderSettings } from "@/features/event-management/server/actions";
-import { Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, Trash2, AlertTriangle, Bell } from "lucide-react";
 import { SESSION_REMINDER_LEADS, type SessionReminderLead } from "@/features/notifications/model/leads";
 
 /**
@@ -133,27 +133,27 @@ export function ManagerControls({
 
             {/* Reminder Scheduler - Only if Connected */}
             {hasAnyConnection ? (
-                <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-                    <h3 className="font-semibold text-slate-200 flex items-center gap-2">
-                        <span className="text-xl">🔔</span>
+                <div className="p-4 bg-surface border border-line rounded-card space-y-4">
+                    <h3 className="font-semibold text-parchment flex items-center gap-2">
+                        <Bell className="size-5 text-gold-bright" aria-hidden="true" />
                         Reminder Scheduler
                     </h3>
 
                     <div className="space-y-4">
                         <div>
-                            <h4 className="text-sm font-semibold text-slate-300">Voting reminders</h4>
-                            <p className="text-xs text-slate-500">While voting is open, post a nudge in the group/channel on the days and time you pick. Nudges stop once a time has enough players, or when no proposed time is left in the future.</p>
+                            <h4 className="text-sm font-semibold text-parchment-2">Voting reminders</h4>
+                            <p className="text-xs text-mist">While voting is open, post a nudge in the group/channel on the days and time you pick. Nudges stop once a time has enough players, or when no proposed time is left in the future.</p>
                         </div>
-                        <label className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition-colors">
+                        <label className="flex items-center gap-3 p-3 bg-field rounded-control border border-line cursor-pointer hover:border-gold transition-colors">
                             <input
                                 type="checkbox"
                                 checked={reminderEnabled}
                                 onChange={e => setReminderEnabled(e.target.checked)}
-                                className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 bg-slate-900 border-slate-700"
+                                className="w-5 h-5 accent-gold rounded-[3px] bg-field border-line-strong"
                             />
                             <div className="flex-1">
-                                <span className="font-medium text-slate-200 block">Enable voting reminders</span>
-                                <span className="text-xs text-slate-500">Post a reminder in the group/channel automatically.</span>
+                                <span className="font-medium text-parchment block">Enable voting reminders</span>
+                                <span className="text-xs text-mist">Post a reminder in the group/channel automatically.</span>
                             </div>
                         </label>
 
@@ -161,18 +161,18 @@ export function ManagerControls({
                             <div className="space-y-4 animation-in slide-in-from-top-2 fade-in">
                                 {/* Time Picker */}
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-400 mb-1">Time of Day (Event Timezone)</label>
+                                    <label className="block text-xs font-medium text-mist mb-1">Time of Day (Event Timezone)</label>
                                     <input
                                         type="time"
                                         value={reminderTime}
                                         onChange={e => setReminderTime(e.target.value)}
-                                        className="bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg block w-full p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="bg-field border border-line-strong text-parchment text-sm rounded-control block w-full p-2.5 focus:ring-gold focus:border-gold"
                                     />
                                 </div>
 
                                 {/* Day Picker */}
                                 <div>
-                                    <label className="block text-xs font-medium text-slate-400 mb-2">Days of Week</label>
+                                    <label className="block text-xs font-medium text-mist mb-2">Days of Week</label>
                                     <div className="flex gap-2 justify-between">
                                         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
                                             <button
@@ -182,9 +182,9 @@ export function ManagerControls({
                                                         prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
                                                     )
                                                 }}
-                                                className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center transition-all ${reminderDays.includes(i)
-                                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50"
-                                                    : "bg-slate-800 text-slate-500 hover:bg-slate-700"
+                                                className={`w-8 h-8 rounded-control text-xs font-bold flex items-center justify-center transition-all ${reminderDays.includes(i)
+                                                    ? "bg-gold text-on-gold "
+                                                    : "bg-surface-2 text-mist hover:text-parchment"
                                                     }`}
                                             >
                                                 {d}
@@ -194,8 +194,8 @@ export function ManagerControls({
                                 </div>
 
                                 <div className="space-y-2">
-                                    {reminderMessage && <p className="text-green-400 text-sm font-medium text-center">{reminderMessage}</p>}
-                                    {reminderError && <p className="text-red-400 text-sm font-medium text-center">{reminderError}</p>}
+                                    {reminderMessage && <p className="text-yes text-sm font-medium text-center">{reminderMessage}</p>}
+                                    {reminderError && <p className="text-no text-sm font-medium text-center">{reminderError}</p>}
 
                                     <button
                                         onClick={async () => {
@@ -214,7 +214,7 @@ export function ManagerControls({
                                                 setReminderError("Failed to save schedule");
                                             }
                                         }}
-                                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                        className="w-full py-2 bg-gold hover:bg-gold-bright text-on-gold rounded-control text-sm font-medium transition-colors flex items-center justify-center gap-2"
                                     >
                                         {isSavingReminders ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Schedule"}
                                     </button>
@@ -223,33 +223,33 @@ export function ManagerControls({
                         )}
 
                         {/* Session reminders */}
-                        <div className="pt-4 border-t border-slate-800 space-y-4">
+                        <div className="pt-4 border-t border-line space-y-4">
                             <div>
-                                <h4 className="text-sm font-semibold text-slate-300">Session reminders</h4>
-                                <p className="text-xs text-slate-500">Once a session is scheduled, post a heads-up in the group/channel before it starts.</p>
+                                <h4 className="text-sm font-semibold text-parchment-2">Session reminders</h4>
+                                <p className="text-xs text-mist">Once a session is scheduled, post a heads-up in the group/channel before it starts.</p>
                             </div>
 
-                            <label className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500/50 transition-colors">
+                            <label className="flex items-center gap-3 p-3 bg-field rounded-control border border-line cursor-pointer hover:border-gold transition-colors">
                                 <input
                                     type="checkbox"
                                     checked={sessionEnabled}
                                     onChange={e => setSessionEnabled(e.target.checked)}
-                                    className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 bg-slate-900 border-slate-700"
+                                    className="w-5 h-5 accent-gold rounded-[3px] bg-field border-line-strong"
                                 />
                                 <div className="flex-1">
-                                    <span className="font-medium text-slate-200 block">Enable session reminders</span>
-                                    <span className="text-xs text-slate-500">Only sent for scheduled sessions, once per session.</span>
+                                    <span className="font-medium text-parchment block">Enable session reminders</span>
+                                    <span className="text-xs text-mist">Only sent for scheduled sessions, once per session.</span>
                                 </div>
                             </label>
 
                             {sessionEnabled && (
                                 <div className="space-y-4 animation-in slide-in-from-top-2 fade-in">
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-400 mb-1">Send reminder</label>
+                                        <label className="block text-xs font-medium text-mist mb-1">Send reminder</label>
                                         <select
                                             value={sessionLead}
                                             onChange={e => setSessionLead(parseInt(e.target.value))}
-                                            className="bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg block w-full p-2.5 focus:ring-indigo-500 focus:border-indigo-500"
+                                            className="bg-field border border-line-strong text-parchment text-sm rounded-control block w-full p-2.5 focus:ring-gold focus:border-gold"
                                         >
                                             {SESSION_LEAD_OPTIONS.map(o => (
                                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -260,8 +260,8 @@ export function ManagerControls({
                             )}
 
                             <div className="space-y-2">
-                                {sessionMessage && <p className="text-green-400 text-sm font-medium text-center">{sessionMessage}</p>}
-                                {sessionError && <p className="text-red-400 text-sm font-medium text-center">{sessionError}</p>}
+                                {sessionMessage && <p className="text-yes text-sm font-medium text-center">{sessionMessage}</p>}
+                                {sessionError && <p className="text-no text-sm font-medium text-center">{sessionError}</p>}
 
                                 <button
                                     onClick={async () => {
@@ -279,7 +279,7 @@ export function ManagerControls({
                                             setSessionError("Failed to save session reminders");
                                         }
                                     }}
-                                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                    className="w-full py-2 bg-gold hover:bg-gold-bright text-on-gold rounded-control text-sm font-medium transition-colors flex items-center justify-center gap-2"
                                 >
                                     {isSavingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Session Reminders"}
                                 </button>
@@ -288,25 +288,25 @@ export function ManagerControls({
                     </div>
                 </div>
             ) : (
-                <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
-                    <div className="text-sm text-slate-500 flex items-center gap-2">
-                        <span className="text-lg opacity-50">🔔</span>
+                <div className="p-4 bg-surface border border-line rounded-card">
+                    <div className="text-sm text-mist flex items-center gap-2">
+                        <Bell className="size-5 opacity-50" aria-hidden="true" />
                         <span>Connect Telegram or Discord to enable reminders.</span>
                     </div>
                 </div>
             )}
 
             {/* Danger Zone - Always Visible */}
-            <div className={`p-4 rounded-xl border ${isFinalized ? 'border-orange-900/30 bg-orange-950/10' : 'border-red-900/30 bg-red-950/10'} space-y-4`}>
+            <div className={`p-4 rounded-card border ${isFinalized ? 'border-maybe bg-maybe-bg' : 'border-no bg-no-bg'} space-y-4`}>
                 <div className="flex items-center justify-between">
-                    <h3 className={`text-sm font-semibold ${isFinalized ? 'text-orange-400' : 'text-red-400'} flex items-center gap-2`}>
+                    <h3 className={`text-sm font-semibold ${isFinalized ? 'text-maybe' : 'text-no'} flex items-center gap-2`}>
                         <Trash2 className="w-4 h-4" />
                         Danger Zone
                     </h3>
                     {!showDeleteConfirm && (
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
-                            className={`text-xs ${isFinalized ? 'text-orange-400 hover:text-orange-300' : 'text-red-400 hover:text-red-300'} underline`}
+                            className={`text-xs ${isFinalized ? 'text-maybe hover:text-gold-bright' : 'text-no hover:text-parchment'} underline`}
                         >
                             {isFinalized ? "Cancel Event..." : (isCancelled ? "Delete Event..." : "Delete Event...")}
                         </button>
@@ -315,8 +315,8 @@ export function ManagerControls({
 
                 {showDeleteConfirm && (
                     <div className="space-y-3 animation-in fade-in slide-in-from-top-2">
-                        <div className={`p-3 ${isFinalized && !isCancelled ? 'bg-orange-950/40 border border-orange-900/50 text-orange-200' : 'bg-red-950/40 border border-red-900/50 text-red-200'} rounded text-xs flex gap-2`}>
-                            <AlertTriangle className={`w-4 h-4 ${isFinalized && !isCancelled ? 'text-orange-500' : 'text-red-500'} shrink-0`} />
+                        <div className={`p-3 ${isFinalized && !isCancelled ? 'bg-maybe-bg border border-maybe text-maybe' : 'bg-no-bg border border-no text-no'} rounded-control text-xs flex gap-2`}>
+                            <AlertTriangle className={`w-4 h-4 ${isFinalized && !isCancelled ? 'text-maybe' : 'text-no'} shrink-0`} />
                             <p>
                                 <b>Warning:</b> {isFinalized && !isCancelled
                                     ? "This will cancel the event and post a notice in the connected group or channel. The event data is deleted one day after cancellation, or right away if you delete it afterwards."
@@ -330,14 +330,14 @@ export function ManagerControls({
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="flex-1 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+                                className="flex-1 py-2 rounded-control bg-surface-2 hover:bg-line text-parchment-2 text-xs font-medium transition-colors"
                             >
                                 Back
                             </button>
                             <button
                                 onClick={handleAction}
                                 disabled={isDeleting}
-                                className={`flex-1 py-2 rounded ${isFinalized && !isCancelled ? 'bg-orange-600 hover:bg-orange-500' : 'bg-red-600 hover:bg-red-500'} text-white text-xs font-bold shadow-lg ${isFinalized && !isCancelled ? 'shadow-orange-900/20' : 'shadow-red-900/20'} flex items-center justify-center gap-2`}
+                                className="flex-1 btn-danger !py-2 !px-3 text-xs font-bold"
                             >
                                 {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : (
                                     isFinalized && !isCancelled ? "Confirm Cancel" : (isCancelled ? "Confirm Delete" : "Confirm Delete")
@@ -347,7 +347,7 @@ export function ManagerControls({
                     </div>
                 )}
             </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-no text-sm">{error}</p>}
         </div>
     );
 }

@@ -152,13 +152,13 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
     };
 
     return (
-        <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 space-y-4">
+        <div className="bg-surface p-6 rounded-card border border-line space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-300">Manage Times</h3>
+                <h3 className="text-lg font-semibold text-parchment-2">Manage Times</h3>
                 {!isAdding && (
                     <button
                         onClick={() => setIsAdding(true)}
-                        className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded flex items-center gap-1 transition-colors"
+                        className="text-xs bg-gold hover:bg-gold-bright text-on-gold px-3 py-1.5 rounded-control flex items-center gap-1 transition-colors"
                     >
                         <Plus size={14} /> Add
                     </button>
@@ -166,22 +166,22 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
             </div>
 
             {errorMsg && (
-                <div className="p-3 bg-red-900/30 border border-red-900/50 rounded-lg text-sm text-red-400">
+                <div className="p-3 bg-no-bg border border-no rounded-control text-sm text-no">
                     {errorMsg}
                 </div>
             )}
 
             {successMsg && (
-                <div className="p-3 bg-green-900/30 border border-green-900/50 rounded-lg text-sm text-green-400">
+                <div className="p-3 bg-yes-bg border border-yes rounded-control text-sm text-yes">
                     {successMsg}
                 </div>
             )}
 
             {isAdding && (
-                <div className="p-4 bg-slate-800/40 border border-slate-700 rounded-xl space-y-3">
+                <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-3">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-slate-200">New Time Option</span>
-                        <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-200"><X size={16} /></button>
+                        <span className="text-sm font-medium text-parchment">New Time Option</span>
+                        <button onClick={() => setIsAdding(false)} className="text-mist hover:text-parchment"><X size={16} /></button>
                     </div>
                     <div className="flex flex-wrap gap-4">
                         <DateTimeRangeInputs
@@ -193,7 +193,7 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                     <button
                         onClick={handleAdd}
                         disabled={isSaving}
-                        className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm py-2 rounded font-medium disabled:opacity-50"
+                        className="w-full mt-2 bg-gold hover:bg-gold-bright text-on-gold text-sm py-2 rounded-control font-medium disabled:opacity-50"
                     >
                         {isSaving ? <Loader2 size={16} className="animate-spin inline mr-2" /> : "Save New Option"}
                     </button>
@@ -202,7 +202,7 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
 
             <div className="space-y-3 mt-4">
                 {slots.map(slot => (
-                    <div key={slot.id} className="p-3 bg-slate-800/20 border border-slate-800 rounded-lg flex flex-col gap-2">
+                    <div key={slot.id} className="p-3 bg-surface-2 border border-line rounded-control flex flex-col gap-2">
                         {editingSlotId === slot.id ? (
                             <div className="space-y-3">
                                 <div className="flex flex-wrap gap-4">
@@ -216,13 +216,13 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                                     <button
                                         onClick={handleSaveEdit}
                                         disabled={isSaving}
-                                        className="flex-1 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded font-medium disabled:opacity-50"
+                                        className="flex-1 bg-yes hover:bg-yes/90 text-on-yes text-xs py-2 rounded-control font-medium disabled:opacity-50"
                                     >
                                         {isSaving ? <Loader2 size={14} className="animate-spin inline" /> : "Save"}
                                     </button>
                                     <button
                                         onClick={() => setEditingSlotId(null)}
-                                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs py-2 rounded font-medium"
+                                        className="flex-1 border border-line-strong hover:bg-surface text-parchment text-xs py-2 rounded-control font-medium transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -230,11 +230,11 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                             </div>
                         ) : (
                             <div className="flex items-center justify-between">
-                                <div className="text-sm text-slate-300">
+                                <div className="text-sm text-parchment-2">
                                     <ClientDate date={slot.startTime} formatStr="P, p" />
-                                    <span className="text-slate-500 mx-2">to</span>
+                                    <span className="text-mist mx-2">to</span>
                                     <ClientDate date={slot.endTime} formatStr="p" />
-                                    <ClientTimezone className="ml-1 text-slate-500" />
+                                    <ClientTimezone className="ml-1 text-mist" />
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button
@@ -244,7 +244,7 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                                             setEditStart(getTimeString(slot.startTime));
                                             setEditEnd(getTimeString(slot.endTime));
                                         }}
-                                        className="p-1.5 text-slate-400 hover:text-indigo-400 bg-slate-800 hover:bg-indigo-900/30 rounded transition-colors"
+                                        className="p-1.5 text-mist hover:text-gold-bright hover:bg-surface rounded-control transition-colors"
                                         title="Edit Slot"
                                     >
                                         <Edit2 size={14} />
@@ -252,7 +252,7 @@ export function ManageSlots({ slug, slots }: ManageSlotsProps) {
                                     <button
                                         onClick={() => handleDelete(slot.id)}
                                         disabled={loadingId === slot.id}
-                                        className="p-1.5 text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-900/30 rounded transition-colors disabled:opacity-50"
+                                        className="p-1.5 text-mist hover:text-no hover:bg-no-bg rounded-control transition-colors disabled:opacity-50"
                                         title="Delete Slot"
                                     >
                                         {loadingId === slot.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}

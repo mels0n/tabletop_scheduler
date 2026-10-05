@@ -1,6 +1,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { CalendarPlus, Mail, Download, Home, MapPin, Ban } from "lucide-react";
 import { checkSlotQuorum } from "@/shared/lib/quorum";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ManagerControls } from "@/components/ManagerControls";
@@ -233,7 +234,7 @@ export default async function ManageEventPage(props: PageProps) {
     })() : [];
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
@@ -243,16 +244,16 @@ export default async function ManageEventPage(props: PageProps) {
                         {/* Event header */}
                         <div>
                             <div className="flex items-start justify-between gap-4 mb-3">
-                                <h1 className="text-2xl font-bold text-slate-50 break-words leading-snug">{event.title}</h1>
+                                <h1 className="text-2xl font-bold text-parchment break-words leading-snug">{event.title}</h1>
                                 <Link
                                     href={`/e/${event.slug}`}
-                                    className="shrink-0 px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-900 transition-colors text-xs whitespace-nowrap"
+                                    className="shrink-0 px-3 py-1.5 rounded border border-line-strong hover:bg-surface transition-colors text-xs whitespace-nowrap"
                                 >
                                     View as Player
                                 </Link>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500">Share:</span>
+                                <span className="text-xs text-mist">Share:</span>
                                 <CopyLinkButton url={`/e/${event.slug}`} />
                             </div>
                             {/* Manager sync status: which platform(s) this manager record can
@@ -262,8 +263,8 @@ export default async function ManageEventPage(props: PageProps) {
                                 {event.managerChatId && <SyncBadge variant="telegram" />}
                                 {event.managerDiscordId && <SyncBadge variant="discord" />}
                                 {!event.managerChatId && !event.managerDiscordId && (
-                                    <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700 flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                    <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-mist rounded-[3px] border border-line-strong flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-mist" data-dot />
                                         Manager Not Linked
                                     </span>
                                 )}
@@ -315,7 +316,7 @@ export default async function ManageEventPage(props: PageProps) {
                             {event.participants.length > 0 ? (
                                 <ManageParticipants slug={event.slug} participants={manageParticipants} />
                             ) : (
-                                <p className="text-xs text-slate-500 py-1">No players have voted yet.</p>
+                                <p className="text-xs text-mist py-1">No players have voted yet.</p>
                             )}
                         </div>
                     </div>
@@ -325,10 +326,10 @@ export default async function ManageEventPage(props: PageProps) {
                         {isFinalized && isCampaign ? (
                             /* CAMPAIGN FINALIZED STATE */
                             <>
-                                <div className="p-8 rounded-2xl bg-gradient-to-br from-indigo-900/20 to-slate-900/40 border border-indigo-800/50 space-y-6">
+                                <div className="p-8 rounded-card bg-surface border border-line border-t-2 border-t-yes space-y-6">
                                     <div className="text-center">
-                                        <h2 className="text-2xl font-bold text-indigo-300 mb-1">Campaign Finalized!</h2>
-                                        <p className="text-slate-400 text-sm">{finalizedSessions.length} session{finalizedSessions.length !== 1 ? 's' : ''} locked in</p>
+                                        <h2 className="text-2xl font-bold text-yes mb-1">Campaign Finalized!</h2>
+                                        <p className="text-mist text-sm">{finalizedSessions.length} session{finalizedSessions.length !== 1 ? 's' : ''} locked in</p>
                                     </div>
                                     <div className="space-y-2">
                                         {finalizedSessions.map((fs, i) => {
@@ -341,25 +342,25 @@ export default async function ManageEventPage(props: PageProps) {
                                             const gUrl = googleCalendarUrl(calEvent, new Date(fs.timeSlot.startTime), new Date(fs.timeSlot.endTime));
                                             const oUrl = outlookCalendarUrl(calEvent, new Date(fs.timeSlot.startTime), new Date(fs.timeSlot.endTime));
                                             return (
-                                                <div key={fs.id} className="flex items-center gap-3 p-3 bg-slate-900/60 rounded-lg border border-slate-700/50">
-                                                    <span className="text-xs font-bold text-indigo-400 bg-indigo-900/30 rounded px-1.5 py-0.5 min-w-[28px] text-center shrink-0">
+                                                <div key={fs.id} className="flex items-center gap-3 p-3 bg-surface rounded-control border border-line-strong">
+                                                    <span className="text-xs font-bold text-gold-bright bg-surface-2 rounded px-1.5 py-0.5 min-w-[28px] text-center shrink-0">
                                                         {i + 1}
                                                     </span>
                                                     <div className="flex-1 min-w-0">
-                                                        <ClientDate date={fs.timeSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-white text-sm" />
-                                                        <span className="text-slate-400 text-sm"> at </span>
-                                                        <ClientDate date={fs.timeSlot.startTime} formatStr="h:mm a" className="font-semibold text-white text-sm" />
-                                                        <ClientTimezone className="ml-1.5 text-slate-500 font-normal text-xs" />
+                                                        <ClientDate date={fs.timeSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-parchment text-sm" />
+                                                        <span className="text-mist text-sm"> at </span>
+                                                        <ClientDate date={fs.timeSlot.startTime} formatStr="h:mm a" className="font-semibold text-parchment text-sm" />
+                                                        <ClientTimezone className="ml-1.5 text-mist font-normal text-xs" />
                                                     </div>
                                                     <div className="flex items-center gap-1.5 shrink-0">
-                                                        <a href={gUrl} target="_blank" rel="noopener noreferrer" title="Add to Google Calendar" className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors whitespace-nowrap">
-                                                            📅 Google
+                                                        <a href={gUrl} target="_blank" rel="noopener noreferrer" title="Add to Google Calendar" className="text-xs px-2 py-1 rounded-control bg-surface-2 hover:bg-surface border border-line-strong text-mist hover:text-parchment transition-colors whitespace-nowrap inline-flex items-center gap-1">
+                                                            <CalendarPlus className="size-3.5" aria-hidden="true" /> Google
                                                         </a>
-                                                        <a href={oUrl} target="_blank" rel="noopener noreferrer" title="Add to Outlook" className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors whitespace-nowrap">
-                                                            📧 Outlook
+                                                        <a href={oUrl} target="_blank" rel="noopener noreferrer" title="Add to Outlook" className="text-xs px-2 py-1 rounded-control bg-surface-2 hover:bg-surface border border-line-strong text-mist hover:text-parchment transition-colors whitespace-nowrap inline-flex items-center gap-1">
+                                                            <Mail className="size-3.5" aria-hidden="true" /> Outlook
                                                         </a>
-                                                        <a href={`/api/event/${event.slug}/ics?slot=${fs.timeSlot.id}`} title="Download this session as .ics" className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors whitespace-nowrap">
-                                                            📎 .ics
+                                                        <a href={`/api/event/${event.slug}/ics?slot=${fs.timeSlot.id}`} title="Download this session as .ics" className="text-xs px-2 py-1 rounded-control bg-surface-2 hover:bg-surface border border-line-strong text-mist hover:text-parchment transition-colors whitespace-nowrap inline-flex items-center gap-1">
+                                                            <Download className="size-3.5" aria-hidden="true" /> .ics
                                                         </a>
                                                     </div>
                                                 </div>
@@ -367,33 +368,33 @@ export default async function ManageEventPage(props: PageProps) {
                                         })}
                                     </div>
                                     {(event.finalizedHost || event.location) && (
-                                        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 text-sm space-y-2">
+                                        <div className="p-4 bg-surface-2 rounded-card border border-line-strong text-sm space-y-2">
                                             {event.finalizedHost && (
-                                                <div className="flex items-center gap-2 text-slate-300">
-                                                    <span className="text-base">🏠</span>
-                                                    <span>Hosted by <span className="font-semibold text-white">{event.finalizedHost.name}</span></span>
+                                                <div className="flex items-center gap-2 text-parchment-2">
+                                                    <Home className="size-4 text-gold-bright" aria-hidden="true" />
+                                                    <span>Hosted by <span className="font-semibold text-parchment">{event.finalizedHost.name}</span></span>
                                                 </div>
                                             )}
                                             {event.location ? (
-                                                <div className="flex items-start gap-2 text-slate-300">
-                                                    <span className="text-base mt-0.5">📍</span>
+                                                <div className="flex items-start gap-2 text-parchment-2">
+                                                    <MapPin className="size-4 mt-0.5 text-gold-bright" aria-hidden="true" />
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                            <div className="font-medium text-mist text-xs uppercase tracking-wide">Location</div>
                                                             <EditLocationModal slug={event.slug} initialLocation={event.location} />
                                                         </div>
-                                                        <div className="text-white">{event.location}</div>
+                                                        <div className="text-parchment">{event.location}</div>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-start gap-2 text-slate-300">
-                                                    <span className="text-base mt-0.5">📍</span>
+                                                <div className="flex items-start gap-2 text-parchment-2">
+                                                    <MapPin className="size-4 mt-0.5 text-gold-bright" aria-hidden="true" />
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                            <div className="font-medium text-mist text-xs uppercase tracking-wide">Location</div>
                                                             <EditLocationModal slug={event.slug} initialLocation={null} />
                                                         </div>
-                                                        <div className="text-slate-500 italic">TBD</div>
+                                                        <div className="text-mist italic">TBD</div>
                                                     </div>
                                                 </div>
                                             )}
@@ -402,36 +403,36 @@ export default async function ManageEventPage(props: PageProps) {
                                 </div>
 
                                 {/* Campaign Attendees */}
-                                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                                    <h3 className="text-lg font-semibold text-slate-300 mb-4">Campaign Group</h3>
+                                <div className="bg-surface p-6 rounded-card border border-line">
+                                    <h3 className="text-lg font-semibold text-parchment-2 mb-4">Campaign Group</h3>
                                     <ul className="space-y-3 mb-4">
                                         {event.participants.filter(p => p.status === 'ACCEPTED').map(p => (
                                             <li key={p.id} className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs ring-2 ring-slate-900">
+                                                <div className="w-7 h-7 rounded-control bg-surface-2 flex items-center justify-center text-gold-bright font-bold text-xs">
                                                     {p.name.substring(0, 2).toUpperCase()}
                                                 </div>
-                                                <div className="font-medium text-slate-200">
+                                                <div className="font-medium text-parchment">
                                                     {p.name}
-                                                    {p.telegramId && <span className="ml-2 text-xs text-indigo-400 font-normal">{p.telegramId}</span>}
+                                                    {p.telegramId && <span className="ml-2 text-xs text-gold-bright font-normal">{p.telegramId}</span>}
                                                 </div>
                                             </li>
                                         ))}
                                     </ul>
                                     {event.participants.some(p => p.status === 'WAITLIST') && (
-                                        <div className="border-t border-slate-800 pt-4">
-                                            <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
+                                        <div className="border-t border-line pt-4">
+                                            <h3 className="text-sm font-semibold text-mist mb-3 flex items-center gap-2">
                                                 Subs / Waitlist
-                                                <span className="bg-yellow-900/30 text-yellow-500 px-2 py-0.5 rounded text-xs border border-yellow-900/50">
+                                                <span className="bg-maybe-bg text-maybe px-2 py-0.5 rounded text-xs border border-maybe">
                                                     {event.participants.filter(p => p.status === 'WAITLIST').length}
                                                 </span>
                                             </h3>
                                             <ul className="space-y-2">
                                                 {event.participants.filter(p => p.status === 'WAITLIST').map(p => (
-                                                    <li key={p.id} className="flex items-center gap-3 opacity-60">
-                                                        <div className="w-8 h-8 rounded-full bg-yellow-900/20 flex items-center justify-center text-yellow-600 font-bold text-xs ring-1 ring-yellow-900/50">
+                                                    <li key={p.id} className="flex items-center gap-3">
+                                                        <div className="w-7 h-7 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-dashed border-maybe">
                                                             {p.name.substring(0, 2).toUpperCase()}
                                                         </div>
-                                                        <div className="font-medium text-slate-400">{p.name}</div>
+                                                        <div className="font-medium text-mist">{p.name}</div>
                                                     </li>
                                                 ))}
                                             </ul>
@@ -442,47 +443,47 @@ export default async function ManageEventPage(props: PageProps) {
                         ) : isFinalized && finalizedSlot ? (
                             /* ONE-SHOT FINALIZED STATE UI */
                             <>
-                                <div className="p-8 rounded-2xl bg-gradient-to-br from-green-900/20 to-slate-900/40 border border-green-800/50 text-center space-y-6">
+                                <div className="p-8 rounded-card bg-surface border border-line border-t-2 border-t-yes text-center space-y-6">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-green-400 mb-2">Event Finalized!</h2>
-                                        <p className="text-slate-300 text-lg">
+                                        <h2 className="text-2xl font-bold text-yes mb-2">Event Finalized!</h2>
+                                        <p className="text-parchment-2 text-lg">
                                             Playing on <br />
-                                            <ClientDate date={finalizedSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-white" />
-                                            <span className="text-slate-400"> at </span>
-                                            <ClientDate date={finalizedSlot.startTime} formatStr="h:mm a" className="font-semibold text-white" />
-                                            <ClientTimezone className="ml-1.5 text-slate-400 font-normal text-base" />
+                                            <ClientDate date={finalizedSlot.startTime} formatStr="EEEE, MMMM do" className="font-semibold text-parchment" />
+                                            <span className="text-mist"> at </span>
+                                            <ClientDate date={finalizedSlot.startTime} formatStr="h:mm a" className="font-semibold text-parchment" />
+                                            <ClientTimezone className="ml-1.5 text-mist font-normal text-base" />
                                         </p>
 
 
                                         {(event.finalizedHost || event.location) && (
-                                            <div className="mt-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 inline-block text-left text-sm space-y-2 min-w-[250px]">
+                                            <div className="mt-4 p-4 bg-surface-2 rounded-card border border-line-strong inline-block text-left text-sm space-y-2 min-w-[250px]">
                                                 {event.finalizedHost && (
-                                                    <div className="flex items-center gap-2 text-slate-300">
-                                                        <span className="text-lg">🏠</span>
-                                                        <span>Hosted by <span className="font-semibold text-white">{event.finalizedHost.name}</span></span>
+                                                    <div className="flex items-center gap-2 text-parchment-2">
+                                                        <Home className="size-5 text-gold-bright" aria-hidden="true" />
+                                                        <span>Hosted by <span className="font-semibold text-parchment">{event.finalizedHost.name}</span></span>
                                                     </div>
                                                 )}
                                                 {event.location && (
-                                                    <div className="flex items-start gap-2 text-slate-300">
-                                                        <span className="text-lg mt-0.5">📍</span>
+                                                    <div className="flex items-start gap-2 text-parchment-2">
+                                                        <MapPin className="size-5 mt-0.5 text-gold-bright" aria-hidden="true" />
                                                         <div className="flex-1">
                                                             <div className="flex items-center gap-2">
-                                                                <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                                <div className="font-medium text-mist text-xs uppercase tracking-wide">Location</div>
                                                                 <EditLocationModal slug={event.slug} initialLocation={event.location} />
                                                             </div>
-                                                            <div className="text-white">{event.location}</div>
+                                                            <div className="text-parchment">{event.location}</div>
                                                         </div>
                                                     </div>
                                                 )}
                                                 {!event.location && (
-                                                    <div className="flex items-start gap-2 text-slate-300">
-                                                        <span className="text-lg mt-0.5">📍</span>
+                                                    <div className="flex items-start gap-2 text-parchment-2">
+                                                        <MapPin className="size-5 mt-0.5 text-gold-bright" aria-hidden="true" />
                                                         <div className="flex-1">
                                                             <div className="flex items-center gap-2">
-                                                                <div className="font-medium text-slate-400 text-xs uppercase tracking-wide">Location</div>
+                                                                <div className="font-medium text-mist text-xs uppercase tracking-wide">Location</div>
                                                                 <EditLocationModal slug={event.slug} initialLocation={null} />
                                                             </div>
-                                                            <div className="text-slate-500 italic">TBD</div>
+                                                            <div className="text-mist italic">TBD</div>
                                                         </div>
                                                     </div>
                                                 )}
@@ -490,7 +491,7 @@ export default async function ManageEventPage(props: PageProps) {
                                         )}
                                     </div>
 
-                                    <div className="border-t border-slate-700/50 pt-6">
+                                    <div className="border-t border-line-strong pt-6">
                                         <AddToCalendar
                                             event={{
                                                 title: event.title,
@@ -505,11 +506,11 @@ export default async function ManageEventPage(props: PageProps) {
                                 </div>
 
                                 {/* Finalized Attendees List */}
-                                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                                    <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
+                                <div className="bg-surface p-6 rounded-card border border-line">
+                                    <h3 className="text-lg font-semibold text-parchment-2 mb-4 flex items-center justify-between">
                                         <span>Who&apos;s Going</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="bg-slate-800 text-slate-400 px-2 py-1 rounded text-xs">
+                                            <span className="bg-surface-2 text-mist px-2 py-1 rounded text-xs">
                                                 {event.maxPlayers
                                                     ? `${finalizedSlot.votes.filter((v) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length}/${event.maxPlayers}`
                                                     : finalizedSlot.votes.filter((v) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED')).length
@@ -523,13 +524,13 @@ export default async function ManageEventPage(props: PageProps) {
                                             .filter((v) => (v.preference === 'YES' || v.preference === 'MAYBE') && (!v.participant.status || v.participant.status === 'ACCEPTED'))
                                             .map((v) => (
                                                 <li key={v.participant.id} className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs ring-2 ring-slate-900">
+                                                    <div className="w-7 h-7 rounded-control bg-surface-2 flex items-center justify-center text-gold-bright font-bold text-xs">
                                                         {v.participant.name.substring(0, 2).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium text-slate-200">
+                                                        <div className="font-medium text-parchment">
                                                             {v.participant.name}
-                                                            {v.participant.telegramId && <span className="ml-2 text-xs text-indigo-400 font-normal">{v.participant.telegramId}</span>}
+                                                            {v.participant.telegramId && <span className="ml-2 text-xs text-gold-bright font-normal">{v.participant.telegramId}</span>}
                                                         </div>
                                                     </div>
                                                 </li>
@@ -537,10 +538,10 @@ export default async function ManageEventPage(props: PageProps) {
                                     </ul>
 
                                     {finalizedSlot.votes.some((v) => v.participant.status === 'WAITLIST') && (
-                                        <div className="border-t border-slate-800 pt-6">
-                                            <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center justify-between">
+                                        <div className="border-t border-line pt-6">
+                                            <h3 className="text-lg font-semibold text-parchment-2 mb-4 flex items-center justify-between">
                                                 <span>Waitlist</span>
-                                                <span className="bg-yellow-900/30 text-yellow-500 px-2 py-1 rounded text-xs border border-yellow-900/50">
+                                                <span className="bg-maybe-bg text-maybe px-2 py-1 rounded text-xs border border-maybe">
                                                     {finalizedSlot.votes.filter((v) => v.participant.status === 'WAITLIST').length}
                                                 </span>
                                             </h3>
@@ -548,14 +549,14 @@ export default async function ManageEventPage(props: PageProps) {
                                                 {finalizedSlot.votes
                                                     .filter((v) => v.participant.status === 'WAITLIST')
                                                     .map((v) => (
-                                                        <li key={v.participant.id} className="flex items-center gap-3 opacity-60">
-                                                            <div className="w-8 h-8 rounded-full bg-yellow-900/20 flex items-center justify-center text-yellow-600 font-bold text-xs ring-1 ring-yellow-900/50">
+                                                        <li key={v.participant.id} className="flex items-center gap-3">
+                                                            <div className="w-7 h-7 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-dashed border-maybe">
                                                                 {v.participant.name.substring(0, 2).toUpperCase()}
                                                             </div>
                                                             <div>
-                                                                <div className="font-medium text-slate-400">
+                                                                <div className="font-medium text-mist">
                                                                     {v.participant.name}
-                                                                    {v.participant.telegramId && <span className="ml-2 text-xs text-yellow-600/50 font-normal">{v.participant.telegramId}</span>}
+                                                                    {v.participant.telegramId && <span className="ml-2 text-xs text-maybe font-normal">{v.participant.telegramId}</span>}
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -567,16 +568,16 @@ export default async function ManageEventPage(props: PageProps) {
                             </>
                         ) : event.status === 'CANCELLED' ? (
                             /* CANCELLED STATE UI */
-                            <div className="p-8 rounded-2xl bg-slate-900 border border-red-900/50 text-center space-y-6">
-                                <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-3xl">🚫</span>
+                            <div className="p-8 rounded-card bg-surface border border-no text-center space-y-6">
+                                <div className="w-16 h-16 bg-no-bg rounded-card flex items-center justify-center mx-auto mb-4">
+                                    <Ban className="size-8 text-no" aria-hidden="true" />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-red-500 mb-2">Event Cancelled</h2>
-                                    <p className="text-slate-400 text-lg">
+                                    <h2 className="text-2xl font-bold text-no mb-2">Event Cancelled</h2>
+                                    <p className="text-mist text-lg">
                                         You have cancelled this event via the manager controls.
                                     </p>
-                                    <p className="text-slate-500 text-sm mt-2">
+                                    <p className="text-mist text-sm mt-2">
                                         The event is visible to users as &quot;Cancelled&quot; but no actions can be taken.
                                         You can permanently delete it from the database using the &quot;Delete&quot; button.
                                     </p>
@@ -589,8 +590,8 @@ export default async function ManageEventPage(props: PageProps) {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between flex-wrap gap-3">
                                         <div>
-                                            <h2 className="text-xl font-semibold text-slate-200">Candidate Sessions</h2>
-                                            <p className="text-xs text-slate-500 mt-0.5">Click a group to select it and finalize</p>
+                                            <h2 className="text-xl font-semibold text-parchment">Candidate Sessions</h2>
+                                            <p className="text-xs text-mist mt-0.5">Click a group to select it and finalize</p>
                                         </div>
                                     </div>
 
@@ -626,8 +627,8 @@ export default async function ManageEventPage(props: PageProps) {
                                 /* ONE-SHOT VOTING: sorted slot cards */
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h2 className="text-xl font-semibold text-slate-200">Proposed Slots</h2>
-                                        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">Best Options First</span>
+                                        <h2 className="text-xl font-semibold text-parchment">Proposed Slots</h2>
+                                        <span className="text-xs font-mono text-mist uppercase tracking-wider">Best Options First</span>
                                     </div>
 
                                     <ManagerVoteWarning
@@ -638,7 +639,7 @@ export default async function ManageEventPage(props: PageProps) {
 
                                     <div className="grid gap-2">
                                         {slots.length === 0 ? (
-                                            <div className="p-8 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                                            <div className="p-8 text-center text-mist border border-dashed border-line rounded-card">
                                                 No time slots proposed yet.
                                             </div>
                                         ) : slots.map((slot, index) => {
@@ -649,43 +650,43 @@ export default async function ManageEventPage(props: PageProps) {
                                             const unvotedCount = Math.max(0, totalParticipants - yesVoters.length - maybeVoters.length - noVoters.length);
 
                                             const cardClass = slot.perfect
-                                                ? "border-green-800/40 bg-green-950/10"
+                                                ? "border-yes bg-yes-bg"
                                                 : !slot.viable
-                                                ? "border-slate-800/30 bg-slate-900/20 opacity-60"
+                                                ? "border-line border-dashed bg-surface"
                                                 : !slot.hasHost
-                                                ? "border-amber-900/30 bg-slate-900/40"
-                                                : "border-slate-700/60 bg-slate-900/40";
+                                                ? "border-maybe bg-surface"
+                                                : "border-line-strong bg-surface";
 
                                             return (
-                                                <div key={slot.id} className={`rounded-xl border p-4 transition-all ${cardClass}`}>
+                                                <div key={slot.id} className={`rounded-card border p-4 transition-all ${cardClass}`}>
                                                     <div className="flex items-center justify-between gap-3">
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 flex-wrap mb-2">
-                                                                <span className="font-semibold text-slate-100 text-sm">
+                                                                <span className="font-display font-semibold text-parchment text-base">
                                                                     <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
-                                                                    <ClientTimezone className="ml-1 text-slate-500 font-normal" />
+                                                                    <ClientTimezone className="ml-1 text-mist font-normal" />
                                                                 </span>
                                                                 {slot.perfect && (
-                                                                    <span className="text-xs font-medium text-green-400 bg-green-900/20 px-2 py-0.5 rounded-full">Perfect</span>
+                                                                    <span className="text-xs font-medium text-yes bg-yes-bg px-2 py-0.5 rounded-[3px]">Perfect</span>
                                                                 )}
                                                                 {!slot.hasHost && (
-                                                                    <span className="text-xs font-medium text-amber-500/90 bg-amber-900/10 px-2 py-0.5 rounded-full">No host</span>
+                                                                    <span className="text-xs font-medium text-maybe bg-maybe-bg px-2 py-0.5 rounded-[3px]">No host</span>
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-1 flex-wrap">
                                                                 {yesVoters.map((v) => (
-                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-green-500/80 cursor-help shrink-0" />
+                                                                    <span key={v.participant.id} title={v.participant.name} data-dot className="w-3 h-3 rounded-full bg-yes cursor-help shrink-0" />
                                                                 ))}
                                                                 {maybeVoters.map((v) => (
-                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-amber-500/70 cursor-help shrink-0" />
+                                                                    <span key={v.participant.id} title={v.participant.name} data-dot className="w-3 h-3 rounded-full bg-maybe cursor-help shrink-0" />
                                                                 ))}
                                                                 {noVoters.map((v) => (
-                                                                    <span key={v.participant.id} title={v.participant.name} className="w-3 h-3 rounded-full bg-red-800/50 cursor-help shrink-0" />
+                                                                    <span key={v.participant.id} title={v.participant.name} data-dot className="w-3 h-3 rounded-full bg-no cursor-help shrink-0" />
                                                                 ))}
                                                                 {Array.from({ length: unvotedCount }).map((_, i) => (
-                                                                    <span key={`u-${i}`} className="w-3 h-3 rounded-full bg-slate-700/80 shrink-0" />
+                                                                    <span key={`u-${i}`} data-dot className="w-3 h-3 rounded-full bg-line-strong shrink-0" />
                                                                 ))}
-                                                                <span className="ml-2 text-xs text-slate-500">
+                                                                <span className="ml-2 text-xs text-mist">
                                                                     {slot.yesCount} yes
                                                                     {slot.maybeCount > 0 && ` · ${slot.maybeCount} maybe`}
                                                                     {slot.noCount > 0 && ` · ${slot.noCount} no`}
@@ -718,8 +719,8 @@ export default async function ManageEventPage(props: PageProps) {
 function SidebarLabel({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex items-center gap-3">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest whitespace-nowrap">{children}</span>
-            <div className="flex-1 h-px bg-slate-800" />
+            <span className="text-xs font-semibold text-mist uppercase tracking-widest whitespace-nowrap">{children}</span>
+            <div className="flex-1 h-px bg-line" />
         </div>
     );
 }

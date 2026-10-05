@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Cormorant_SC, Spectral } from "next/font/google";
 import "./globals.css";
 
 export const viewport: Viewport = {
     themeColor: [
-        { media: "(prefers-color-scheme: light)", color: "#0f172a" },
-        { media: "(prefers-color-scheme: dark)", color: "#0f172a" }
+        { media: "(prefers-color-scheme: light)", color: "#0F1626" },
+        { media: "(prefers-color-scheme: dark)", color: "#0F1626" }
     ],
     width: "device-width",
     initialScale: 1,
@@ -13,14 +13,21 @@ export const viewport: Viewport = {
 };
 
 /**
- * @constant inter
- * @description Configuration for the Inter font via next/font/google.
- * Automatically optimizes and hosts the font files at build time.
+ * Tome typefaces via next/font/google: downloaded at build time and served
+ * from this origin, so pages make no request to Google at runtime.
  */
-const inter = Inter({
+const display = Cormorant_SC({
+    weight: ["600", "700"],
     subsets: ["latin"],
     display: "swap",
-    variable: "--font-inter",
+    variable: "--font-display",
+});
+
+const text = Spectral({
+    weight: ["400", "500", "600"],
+    subsets: ["latin"],
+    display: "swap",
+    variable: "--font-text",
 });
 
 const isHosted = publicConfig.isHosted;
@@ -101,7 +108,7 @@ export default function RootLayout({
 
     return (
         <html lang="en">
-            <body className={`${inter.className} min-h-screen flex flex-col`}>
+            <body className={`${display.variable} ${text.variable} font-sans min-h-screen flex flex-col bg-ink text-parchment`}>
 
                 <Navbar />
                 <main className="flex-grow">

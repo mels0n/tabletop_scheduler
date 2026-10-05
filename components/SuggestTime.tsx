@@ -89,10 +89,10 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
 
     if (!isExpanded) {
         return (
-            <div className="mt-8 text-center pt-8 border-t border-slate-800">
+            <div className="mt-8 text-center pt-8 border-t border-line">
                 <button
                     onClick={() => setIsExpanded(true)}
-                    className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors text-sm font-medium border border-indigo-900/50 bg-indigo-900/20 px-4 py-2 rounded-lg"
+                    className="inline-flex items-center gap-2 text-gold-bright hover:text-parchment transition-colors text-sm font-medium border border-line-strong bg-surface hover:bg-surface-2 px-4 py-2 rounded-control"
                 >
                     <CalendarPlus size={16} />
                     Propose Another Time
@@ -102,40 +102,40 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
     }
 
     return (
-        <div className="mt-8 pt-8 border-t border-slate-800">
-            <div className="max-w-md mx-auto bg-slate-900/80 p-6 rounded-2xl border border-indigo-900/50 relative shadow-xl">
+        <div className="mt-8 pt-8 border-t border-line">
+            <div className="max-w-md mx-auto bg-surface p-6 rounded-card border border-line relative">
                 <button
                     onClick={() => setIsExpanded(false)}
-                    className="absolute top-4 right-4 text-slate-500 hover:text-slate-300 transition-colors"
+                    className="absolute top-4 right-4 text-mist hover:text-parchment transition-colors"
                 >
                     <X size={18} />
                 </button>
 
-                <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                    <CalendarPlus className="text-indigo-400" size={20} />
+                <h3 className="text-lg font-semibold text-parchment mb-4 flex items-center gap-2">
+                    <CalendarPlus className="text-gold-bright" size={20} />
                     Suggest a Time
                 </h3>
 
                 {errorMsg && (
-                    <div className="mb-4 p-3 bg-red-900/30 border border-red-900/50 rounded-lg text-sm text-red-400">
+                    <div className="mb-4 p-3 bg-no-bg border border-no rounded-control text-sm text-no">
                         {errorMsg}
                     </div>
                 )}
                 {successMsg && (
-                    <div className="mb-4 p-3 bg-green-900/30 border border-green-900/50 rounded-lg text-sm text-green-400">
+                    <div className="mb-4 p-3 bg-yes-bg border border-yes rounded-control text-sm text-yes">
                         {successMsg}
                     </div>
                 )}
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm text-slate-400 mb-1">Your Name</label>
+                        <label className="block text-sm text-parchment-2 mb-1">Your Name</label>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="How should we identify you?"
-                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                            className="field w-full px-4 py-2"
                         />
                     </div>
                     <div className="flex flex-wrap gap-4">
@@ -149,11 +149,11 @@ export function SuggestTime({ slug, serverParticipantId, participants }: Suggest
                     <button
                         onClick={handleSuggest}
                         disabled={isSaving}
-                        className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20"
+                        className="btn-primary w-full mt-2 py-2"
                     >
                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : "Submit Suggestion"}
                     </button>
-                    <p className="text-xs text-slate-500 text-center mt-3">
+                    <p className="text-xs text-mist text-center mt-3">
                         This option will be added to the voting board immediately, and a notification will be sent to the group.
                     </p>
                 </div>

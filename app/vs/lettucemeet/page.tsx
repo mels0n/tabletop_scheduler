@@ -70,51 +70,51 @@ export default function VsLettuceMeetPage() {
     if (!isHosted) notFound();
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+        <main className="min-h-screen bg-ink text-parchment py-20 px-6">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
 
-            <div className="max-w-4xl mx-auto space-y-20">
+            <div className="max-w-7xl mx-auto space-y-20">
 
                 {/* Hero */}
                 <div className="space-y-6">
-                    <p className="text-indigo-400 font-mono text-sm uppercase tracking-widest">LettuceMeet Alternative</p>
-                    <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                    <p className="eyebrow">LettuceMeet Alternative</p>
+                    <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight">
                         Tabletop Time vs LettuceMeet
                     </h1>
-                    <p className="text-slate-400 text-2xl md:text-3xl font-normal">
+                    <p className="text-mist text-2xl md:text-3xl font-normal">
                         No Google account. No friction. Just game night.
                     </p>
-                    <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+                    <p className="text-lg text-mist leading-relaxed max-w-2xl">
                         LettuceMeet is popular with gaming groups for good reason: it&apos;s clean, it&apos;s free, and the grid makes overlapping availability obvious at a glance. But there&apos;s a catch baked into step one: creating a poll requires a Google account. For a D&D group that just wants to nail down next Saturday, that&apos;s friction the DM shouldn&apos;t have to justify.
                     </p>
                     <Link
                         href="/new"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all"
+                        className="btn-primary"
                     >
-                        Try It Free <ArrowRight className="w-4 h-4" />
+                        Try It Free <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </Link>
                 </div>
 
                 {/* What LettuceMeet gets right */}
-                <section className="bg-emerald-950/30 border border-emerald-900/50 rounded-2xl p-8 space-y-4">
-                    <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <section className="bg-yes-bg border border-yes/40 rounded-card p-8 space-y-4">
+                    <div className="flex items-center gap-2 text-yes font-semibold">
                         <ThumbsUp className="w-5 h-5" />
                         What LettuceMeet Gets Right
                     </div>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-parchment-2 leading-relaxed">
                         LettuceMeet&apos;s drag-to-select availability grid is genuinely pleasant to use. You draw across the hours and days you&apos;re free, the group&apos;s overlap fills in with color intensity, and the best window becomes obvious without anyone doing math. It&apos;s faster to fill out than a date-by-date poll when you&apos;re trying to find a specific time window within a week.
                     </p>
-                    <p className="text-slate-300 leading-relaxed">
+                    <p className="text-parchment-2 leading-relaxed">
                         If your group already has Google accounts and you need hourly granularity (say, a one-shot where start time matters as much as the day), LettuceMeet is a solid choice. The interface is well-designed and familiar.
                     </p>
                 </section>
 
                 {/* Where it falls short */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Where It Falls Short for Gaming Groups</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">Where It Falls Short for Gaming Groups</h2>
                     <div className="grid md:grid-cols-2 gap-6">
                         <Problem
                             title="Organizers must have a Google account"
@@ -145,91 +145,92 @@ export default function VsLettuceMeetPage() {
 
                 {/* Comparison table */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Feature Comparison</h2>
-                    <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                    <h2 className="font-display text-2xl font-bold text-parchment">Feature Comparison</h2>
+                    <div className="overflow-x-auto rounded-card border border-line">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-800 text-left">
-                                    <th className="py-4 pl-6 font-normal text-slate-400 w-1/2">Feature</th>
-                                    <th className="py-4 px-4 font-bold text-indigo-400 bg-indigo-500/10">Tabletop Time</th>
-                                    <th className="py-4 px-4 font-normal text-slate-400">LettuceMeet</th>
+                                <tr className="border-b border-line text-left">
+                                    <th className="py-4 pl-6 font-normal text-mist w-1/2">Feature</th>
+                                    <th className="py-4 px-4 font-bold text-gold-bright bg-surface-2">Tabletop Time</th>
+                                    <th className="py-4 px-4 font-normal text-mist">LettuceMeet</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800">
+                            <tbody className="divide-y divide-line">
                                 {rows.map(({ label, tt, lm, note }) => (
-                                    <tr key={label} className="hover:bg-slate-900/40 transition-colors">
-                                        <td className="py-3 pl-6 text-slate-300">{label}</td>
-                                        <td className="py-3 px-4 bg-indigo-500/5">
+                                    <tr key={label} className="hover:bg-surface transition-colors">
+                                        <td className="py-3 pl-6 text-parchment-2">{label}</td>
+                                        <td className="py-3 px-4 bg-surface-2">
                                             {typeof tt === 'string' ? (
-                                                <span className="text-yellow-400 text-xs font-mono">{tt}</span>
+                                                <span className="text-maybe text-xs font-mono">{tt}</span>
                                             ) : tt ? (
-                                                <Check className="w-5 h-5 text-green-400" />
+                                                <Check className="w-5 h-5 text-yes" aria-hidden="true" />
                                             ) : (
-                                                <X className="w-5 h-5 text-red-400" />
+                                                <X className="w-5 h-5 text-no" aria-hidden="true" />
                                             )}
                                         </td>
                                         <td className="py-3 px-4">
                                             {typeof lm === 'string' ? (
-                                                <span className="text-yellow-400 text-xs font-mono">{lm}</span>
+                                                <span className="text-maybe text-xs font-mono">{lm}</span>
                                             ) : lm ? (
-                                                <Check className="w-5 h-5 text-green-400" />
+                                                <Check className="w-5 h-5 text-yes" aria-hidden="true" />
                                             ) : (
-                                                <X className="w-5 h-5 text-red-400" />
+                                                <X className="w-5 h-5 text-no" aria-hidden="true" />
                                             )}
-                                            {note && <span className="ml-2 text-xs text-slate-500">{note}</span>}
+                                            {note && <span className="ml-2 text-xs text-mist">{note}</span>}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <p className="text-xs text-slate-500">Comparison based on LettuceMeet free tier as of 2026.</p>
+                    <p className="text-xs text-mist">Comparison based on LettuceMeet free tier as of 2026.</p>
                 </section>
 
                 {/* The quorum difference */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 space-y-4">
-                    <h2 className="text-2xl font-bold text-white">The Feature LettuceMeet Will Never Build</h2>
-                    <p className="text-slate-400 leading-relaxed">
+                <section className="bg-surface border border-line rounded-card p-8 space-y-4">
+                    <h2 className="font-display text-2xl font-bold text-parchment">The Feature LettuceMeet Will Never Build</h2>
+                    <p className="text-mist leading-relaxed">
                         Quorum logic answers the question every DM is actually asking: <em>&ldquo;Do we have enough players to play?&rdquo;</em> Not just &ldquo;who&apos;s free,&rdquo; but &ldquo;which of these dates crosses the threshold that makes the session worth running?&rdquo;
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         Set a minimum player count (say, 4 for your Commander pod or 3 for a campaign session). Tabletop Time highlights in green every date that hits that threshold. Dates below it are shown in amber. You see viable windows at a glance without counting cells in a grid.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         LettuceMeet is built for finding the best overlap, not for determining session viability. Tabletop Time is the only free scheduling tool that treats minimum headcount as a first-class concept.
                     </p>
                 </section>
 
                 {/* When to still use LettuceMeet */}
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-white">When to Still Use LettuceMeet</h2>
-                    <p className="text-slate-400 leading-relaxed">
+                    <h2 className="font-display text-2xl font-bold text-parchment">When to Still Use LettuceMeet</h2>
+                    <p className="text-mist leading-relaxed">
                         LettuceMeet&apos;s strength is hourly granularity. If your group needs to find a two-hour window on a specific day (a one-shot where 7pm vs 8pm matters), the drag-to-select hour grid is well-suited. Tabletop Time uses date-level candidate slots, not an hour-by-hour grid.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         If everyone in your group already has a Google account and no one minds sharing it, LettuceMeet is a fine tool for one-off scheduling. For ongoing campaigns, recurring pods, or any group with privacy-conscious members, Tabletop Time is the better fit.
                     </p>
                 </section>
 
+                <div className="ornament" aria-hidden="true">✦</div>
                 {/* Migration CTA */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">No Account to Create. No Migration Needed.</h2>
-                    <p className="text-slate-400 leading-relaxed">
-                        There&apos;s nothing to migrate from LettuceMeet because Tabletop Time doesn&apos;t use accounts. Go to <Link href="/new" className="text-indigo-400 hover:text-indigo-300 underline">tabletoptime.us/new</Link>, name your event, add candidate dates, set a quorum if you want one, and share the link. No Google login. No sign-up for your players. Works in any browser on any device.
+                    <h2 className="font-display text-2xl font-bold text-parchment">No Account to Create. No Migration Needed.</h2>
+                    <p className="text-mist leading-relaxed">
+                        There&apos;s nothing to migrate from LettuceMeet because Tabletop Time doesn&apos;t use accounts. Go to <Link href="/new" className="text-gold hover:text-gold-bright underline">tabletoptime.us/new</Link>, name your event, add candidate dates, set a quorum if you want one, and share the link. No Google login. No sign-up for your players. Works in any browser on any device.
                     </p>
-                    <p className="text-slate-400 leading-relaxed">
+                    <p className="text-mist leading-relaxed">
                         Your manager access is stored as a token in your browser. Bookmark the page or save the link and you can edit the event at any time.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <Link
                             href="/new"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all"
+                            className="btn-primary"
                         >
-                            Create Your First Event <ArrowRight className="w-4 h-4" />
+                            Create Your First Event <ArrowRight className="w-4 h-4" aria-hidden="true" />
                         </Link>
                         <Link
                             href="/how-it-works"
-                            className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-slate-700 hover:border-indigo-500/50 text-slate-300 hover:text-white transition-all"
+                            className="btn-secondary"
                         >
                             See How It Works
                         </Link>
@@ -238,7 +239,7 @@ export default function VsLettuceMeetPage() {
 
                 {/* FAQ */}
                 <section className="space-y-6">
-                    <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
+                    <h2 className="font-display text-2xl font-bold text-parchment">Frequently Asked Questions</h2>
                     <div className="space-y-4">
                         <Faq q="Why does LettuceMeet require a Google login?" a="LettuceMeet uses Google OAuth to identify event creators so they can manage their polls later. Tabletop Time solves this differently: your manager access is a token stored locally in your browser, so no account is ever needed." />
                         <Faq q="Can my players vote without signing in?" a="Yes. Players only need the voting link. They click, mark availability, and submit. No account, no Google login, no email address." />
@@ -247,13 +248,13 @@ export default function VsLettuceMeetPage() {
                     </div>
                 </section>
 
-                <div className="border-t border-slate-800 pt-8 flex flex-wrap gap-6 text-sm text-slate-500">
-                    <Link href="/features" className="hover:text-indigo-400 transition-colors">Full Feature List</Link>
-                    <Link href="/vs/doodle" className="hover:text-indigo-400 transition-colors">vs Doodle</Link>
-                    <Link href="/vs/when2meet" className="hover:text-indigo-400 transition-colors">vs When2Meet</Link>
-                    <Link href="/vs/rallly" className="hover:text-indigo-400 transition-colors">vs Rallly</Link>
-                    <Link href="/pricing" className="hover:text-indigo-400 transition-colors">Pricing (Free)</Link>
-                    <Link href="/new" className="hover:text-indigo-400 transition-colors">Create an Event</Link>
+                <div className="border-t border-line pt-8 flex flex-wrap gap-6 text-sm text-mist">
+                    <Link href="/features" className="hover:text-gold-bright transition-colors">Full Feature List</Link>
+                    <Link href="/vs/doodle" className="hover:text-gold-bright transition-colors">vs Doodle</Link>
+                    <Link href="/vs/when2meet" className="hover:text-gold-bright transition-colors">vs When2Meet</Link>
+                    <Link href="/vs/rallly" className="hover:text-gold-bright transition-colors">vs Rallly</Link>
+                    <Link href="/pricing" className="hover:text-gold-bright transition-colors">Pricing (Free)</Link>
+                    <Link href="/new" className="hover:text-gold-bright transition-colors">Create an Event</Link>
                 </div>
             </div>
         </main>
@@ -262,21 +263,21 @@ export default function VsLettuceMeetPage() {
 
 function Problem({ title, body }: { title: string; body: string }) {
     return (
-        <div className="p-5 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
+        <div className="p-5 rounded-card bg-surface border border-line space-y-2">
             <div className="flex items-start gap-2">
-                <X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-200">{title}</h3>
+                <X className="w-4 h-4 text-no mt-0.5 flex-shrink-0" aria-hidden="true" />
+                <h3 className="font-display text-lg font-bold text-parchment">{title}</h3>
             </div>
-            <p className="text-slate-400 text-sm leading-relaxed pl-6">{body}</p>
+            <p className="text-mist text-sm leading-relaxed pl-6">{body}</p>
         </div>
     );
 }
 
 function Faq({ q, a }: { q: string; a: string }) {
     return (
-        <div className="border border-slate-800 rounded-xl p-5 space-y-2">
-            <p className="font-semibold text-slate-200">{q}</p>
-            <p className="text-slate-400 text-sm leading-relaxed">{a}</p>
+        <div className="border border-line rounded-card p-5 space-y-2">
+            <p className="font-semibold text-parchment">{q}</p>
+            <p className="text-mist text-sm leading-relaxed">{a}</p>
         </div>
     );
 }

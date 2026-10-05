@@ -43,40 +43,40 @@ export default function BlogIndex() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 py-20 px-6">
+        <div className="min-h-screen bg-ink text-parchment py-20 px-6">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(blogSchema) }}
             />
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+            <div className="max-w-screen-2xl mx-auto">
+                <h1 className="heading-display text-4xl md:text-5xl font-bold mb-4 text-parchment">
                     Tabletop Time Blog
                 </h1>
-                <p className="text-slate-400 text-lg mb-12">
+                <p className="text-parchment-2 text-lg mb-12">
                     Guides, tips, and rants about the hardest part of tabletop gaming: Scheduling.
                 </p>
 
-                <div className="grid gap-8">
+                <div className="grid gap-6">
                     {posts.map((post) => (
-                        <article key={post.slug} className="group relative border border-slate-800 bg-slate-900/40 p-6 rounded-2xl hover:border-indigo-500/50 transition-all">
-                            <div className="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2 mb-4">
+                        <article key={post.slug} className="group relative card hover:border-line-strong transition-colors">
+                            <div className="flex flex-col gap-2 mb-4">
                                 <Link href={`/blog/${post.slug}`}>
-                                    <h2 className="text-2xl font-bold text-slate-100 group-hover:text-indigo-400 transition-colors">
+                                    <h2 className="heading-display text-2xl font-bold text-parchment group-hover:text-gold-bright transition-colors">
                                         {post.title}
                                     </h2>
                                 </Link>
-                                <time className="text-sm text-slate-500 font-mono shrink-0">
+                                <time className="text-sm text-mist tabular-nums shrink-0">
                                     {new Date(post.date).toLocaleDateString()}
                                 </time>
                             </div>
 
-                            <p className="text-slate-400 mb-6 leading-relaxed">
+                            <p className="text-parchment-2 mb-6 leading-relaxed">
                                 {post.description}
                             </p>
 
                             <div className="flex flex-wrap gap-2">
                                 {post.tags.map(tag => (
-                                    <span key={tag} className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-full text-xs text-indigo-300 font-medium tracking-wide">
+                                    <span key={tag} className="chip tracking-wide">
                                         {tag}
                                     </span>
                                 ))}
