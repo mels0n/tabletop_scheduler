@@ -9,6 +9,21 @@ name: Docker Build & Push
 # would also work, but it runs from the default branch copy of the workflow and
 # loses the tag ref that the semver tags depend on. PRs build and scan the
 # image but never push, and skip the ci gate (ci.yml already runs on PRs).
+#
+# Each platform builds on a native runner (arm64 on ubuntu-24.04-arm) instead
+# of under QEMU, which made an uncached arm64 `npm ci` and `next build` take
+# most of an hour. Each leg is scanned and pushed by digest only; the `merge`
+# job then publishes one multi-arch manifest under the real tags, so a tag
+# never points at a half-built image.
+#
+# Only the newest run per ref publishes: a new push to main cancels the run
+# still in progress for the previous commit. The merge job also moves `latest`
+# only when no newer commit on the branch will publish, so re-running an older
+# run cannot roll `latest` back (it still cancels a newer run in progress, so
+# re-run only the newest main run). The `build` gate requires ci to have
+# succeeded, not merely "not failed": `!failure()` alone lets a cancelled ci
+# through. Keep this workflow's concurrency group distinct from ci.yml's
+# (ci-<workflow>-<ref>); equal names would make the called ci cancel its caller.
 
 on:
   push:
@@ -27,6 +42,10 @@ on:
       - 'content/**'
       - '.claude/**'
 
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
@@ -42,20 +61,31 @@ jobs:
 
   build:
     needs: ci
-    # Run when ci passed, or was skipped (pull_request); never when it failed.
-    if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Run when ci passed, or was skipped (pull_request); never when it failed
+    # or was cancelled.
+    if: ${{ !cancelled() && (needs.ci.result == 'success' || needs.ci.result == 'skipped') }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
 
     steps:
+      - name: Prepare
+        run: echo "PLATFORM_PAIR=${PLATFORM//\//-}" >> "$GITHUB_ENV"
+        env:
+          PLATFORM: ${{ matrix.platform }}
+
       - name: Checkout repository
         uses: actions/checkout@v7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -73,25 +103,26 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Only the labels are used here; the tags (the merge job's, without
+          # its newest-commit check) set the org.opencontainers.image.version label.
           tags: |
             type=sha
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Scan before anything is pushed. A multi-arch build cannot be loaded into
-      # the local daemon, so scan the amd64 image; the layer cache lets the
-      # final multi-arch build reuse it.
-      - name: Build amd64 image for scanning
+      # Scan before anything is pushed: build this platform's image into the
+      # local daemon, scan it, then the push step below reuses the layer cache.
+      - name: Build image for scanning
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           load: true
           push: false
           provenance: false
           tags: scan-target:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,mode=max,scope=build-${{ env.PLATFORM_PAIR }}
 
       # Pinned by commit SHA (v0.36.0, resolved from the upstream release tag).
       - name: Trivy scan (fail on CRITICAL)
@@ -102,16 +133,121 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
 
-      - name: Build and push Docker image
-        id: build-and-push
+      # Pushed by digest only, with no tags; the merge job applies the tags.
+      - name: Build and push by digest
+        id: build
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           provenance: true
           sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+          cache-to: type=gha,mode=max,scope=build-${{ env.PLATFORM_PAIR }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          test -n "$DIGEST" || { echo "::error::build step returned no digest"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: build
+    # Runs only when every platform leg succeeded; PRs never publish.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `latest` moves only when no newer commit on this branch will publish:
+      # either this commit is the head, or every commit after it touched only
+      # paths that `paths-ignore` above skips (keep the two lists in sync).
+      # This stops a re-run of an older commit from moving `latest` backwards.
+      - name: Check no newer commit will publish
+        id: head
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$GITHUB_REF_NAME" --jq .object.sha)
+          newest=false
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            newest=true
+          else
+            cmp=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$head")
+            status=$(jq -r .status <<< "$cmp")
+            count=$(jq '.files | length' <<< "$cmp")
+            # The compare API lists at most 300 files; treat more as unknown.
+            if [ "$status" = "ahead" ] && [ "$count" -lt 300 ]; then
+              newest=true
+              # Renames are judged by both the old and the new path.
+              files=$(jq -er '.files[] | .filename, (.previous_filename // empty)' <<< "$cmp" || [ "$count" -eq 0 ])
+              while IFS= read -r f; do
+                case "$f" in
+                  ''|*.md|docs/*|content/*|.claude/*) ;;
+                  *) newest=false ;;
+                esac
+              done <<< "$files"
+            fi
+          fi
+          if [ "$newest" != "true" ]; then
+            echo "::warning::A newer commit on $GITHUB_REF_NAME ($head) will publish; not moving latest"
+          fi
+          echo "is_newest=$newest" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.head.outputs.is_newest == 'true' }}
+
+      - name: Create and push multi-arch manifest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: docker buildx imagetools inspect "$REGISTRY/$IMAGE_NAME:$VERSION"
