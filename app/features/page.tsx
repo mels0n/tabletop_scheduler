@@ -49,7 +49,7 @@ const schema = [
 
 export default function FeaturesPage() {
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+        <main className="min-h-screen bg-ink text-parchment p-6 md:p-12">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
@@ -58,10 +58,10 @@ export default function FeaturesPage() {
 
                 {/* Hero */}
                 <div className="text-center space-y-6 max-w-3xl mx-auto">
-                    <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                    <h1 className="text-4xl md:text-6xl font-bold font-display text-parchment">
                         More Than Just &quot;Finding a Time&quot;
                     </h1>
-                    <p className="text-xl text-slate-400 leading-relaxed">
+                    <p className="text-xl text-mist leading-relaxed">
                         Generic scheduling tools leave you to do the heavy lifting when someone cancels.
                         We handle the <strong>Game Night Logistics</strong> so you can focus on the game.
                     </p>
@@ -70,49 +70,49 @@ export default function FeaturesPage() {
                 {/* Core Features Grid */}
                 <div className="grid md:grid-cols-3 gap-8">
                     <FeatureCard
-                        icon={<Users className="w-8 h-8 text-indigo-400" />}
+                        icon={<Users className="w-5 h-5" />}
                         title="Quorum Logic"
                         description="Set a minimum player count (e.g., 'Need 4 for Commander'). We automatically highlight dates that hit this threshold."
                     />
                     <FeatureCard
-                        icon={<Trophy className="w-8 h-8 text-amber-400" />}
+                        icon={<Trophy className="w-5 h-5" />}
                         title="Waitlists & Capacity"
                         description="Limited table space? set a Max Player limit. We manage a first-come-first-serve waitlist that auto-promotes players if a spot opens up."
                     />
                     <FeatureCard
-                        icon={<Bot className="w-8 h-8 text-cyan-400" />}
+                        icon={<Bot className="w-5 h-5" />}
                         title="Chat Integration"
                         description="Don't leave the group chat. Our Telegram & Discord bots pin a live vote tally in your group, post reminders and the final result, and DM you login links and results."
                     />
                     <FeatureCard
-                        icon={<CalendarDays className="w-8 h-8 text-violet-400" />}
+                        icon={<CalendarDays className="w-5 h-5" />}
                         title="Campaign / Multi-Session Scheduling"
                         description="Running a D&D campaign, Legacy series, or recurring game night? Campaign mode groups candidate dates by shared player availability so you can see at a glance which run of sessions works for your whole table. Click the group that fits, tick the dates you want, and confirm, all inline with no extra steps. Per-session Google, Outlook, and .ics calendar buttons are generated automatically."
                     />
                 </div>
 
                 {/* The Comparison Matrix */}
-                <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 md:p-8 overflow-hidden">
+                <div className="bg-surface rounded-card border border-line p-6 md:p-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-white mb-4">Why Switch?</h2>
-                        <p className="text-slate-400">See how we stack up against the general-purpose tools, including Doodle.</p>
+                        <h2 className="text-3xl font-bold text-parchment mb-4">Why Switch?</h2>
+                        <p className="text-mist">See how we stack up against the general-purpose tools, including Doodle.</p>
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[1100px]">
                             <thead>
-                                <tr className="border-b border-slate-700 text-slate-400 text-sm">
+                                <tr className="border-b border-line bg-surface text-mist text-sm">
                                     <th className="py-4 pl-4 font-normal w-1/5">Feature</th>
-                                    <th className="py-4 px-2 font-bold text-indigo-400 text-lg bg-indigo-500/10 rounded-t-lg">Tabletop Time</th>
-                                    <th className="py-4 px-2 font-normal"><Link href="/vs/doodle" className="hover:text-white transition-colors">Doodle</Link></th>
-                                    <th className="py-4 px-2 font-normal"><Link href="/vs/when2meet" className="hover:text-white transition-colors">When2Meet</Link></th>
-                                    <th className="py-4 px-2 font-normal"><Link href="/vs/lettucemeet" className="hover:text-white transition-colors">LettuceMeet</Link></th>
-                                    <th className="py-4 px-2 font-normal"><Link href="/vs/rallly" className="hover:text-white transition-colors">Rallly</Link></th>
+                                    <th className="py-4 px-2 font-bold text-gold-bright text-lg bg-surface-2 ">Tabletop Time</th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/doodle" className="hover:text-parchment transition-colors">Doodle</Link></th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/when2meet" className="hover:text-parchment transition-colors">When2Meet</Link></th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/lettucemeet" className="hover:text-parchment transition-colors">LettuceMeet</Link></th>
+                                    <th className="py-4 px-2 font-normal"><Link href="/vs/rallly" className="hover:text-parchment transition-colors">Rallly</Link></th>
                                     <th className="py-4 px-2 font-normal">Calendar Apps</th>
                                     <th className="py-4 px-2 font-normal">Group Chats</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800 text-slate-300 text-sm md:text-base">
+                            <tbody className="divide-y divide-line text-parchment-2 text-sm md:text-base">
                                 <Row label="No Sign-Up Needed" checkTT={true} checkDoodle={false} checkW2M={true} checkLM={false} checkRallly="Optional" checkApps={false} checkChat={false} />
                                 <Row label="No Ads" checkTT={true} checkDoodle={false} checkW2M={false} checkLM={true} checkRallly={true} checkApps={false} checkChat={false} />
                                 <Row label="Quorum (Min Players)" checkTT={true} checkDoodle={false} checkW2M={false} checkLM={false} checkRallly={false} checkApps={false} checkChat={false} />
@@ -122,7 +122,7 @@ export default function FeaturesPage() {
                             </tbody>
                         </table>
                     </div>
-                    <div className="mt-4 text-center text-xs text-slate-500">
+                    <div className="mt-4 text-center text-xs text-mist">
                         * Comparison based on standard free tiers as of 2026.
                         <br />
                         * &quot;Group Chats&quot; refers to Signal, WhatsApp, Discord, etc. LettuceMeet requires Google login to create events.
@@ -132,28 +132,29 @@ export default function FeaturesPage() {
                 {/* Calendar Section */}
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-6">
-                        <div className="inline-flex items-center gap-2 text-emerald-400 font-mono text-sm uppercase tracking-widest">
-                            <Calendar className="w-5 h-5" />
+                        <div className="inline-flex items-center gap-2 text-gold-bright font-semibold text-sm uppercase tracking-[0.12em]">
+                            <Calendar className="w-5 h-5" aria-hidden="true" />
                             <span>It&apos;s not real until it&apos;s on the calendar</span>
                         </div>
-                        <h2 className="text-3xl font-bold text-white">One-Click Finalization</h2>
-                        <p className="text-slate-400 text-lg leading-relaxed">
+                        <h2 className="text-3xl font-bold text-parchment">One-Click Finalization</h2>
+                        <p className="text-mist text-lg leading-relaxed">
                             Once you pick a date, we generate native <strong>Google Calendar</strong> links and standard <strong>.ICS</strong> files for Apple/Outlook. No more &quot;I forgot&quot; excuses.
                         </p>
                     </div>
-                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl border border-slate-700 flex flex-col gap-4 text-center">
-                        <div className="p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-indigo-500/20 cursor-default transition-all">
+                    <div className="bg-surface p-8 rounded-card border border-line flex flex-col gap-4 text-center">
+                        <div className="p-4 bg-gold text-on-gold rounded-control font-bold cursor-default">
                             Add to Google Calendar
                         </div>
-                        <div className="p-4 bg-slate-700 text-slate-300 rounded-lg font-bold cursor-default opacity-75">
+                        <div className="p-4 bg-surface-2 text-parchment-2 rounded-control font-bold cursor-default">
                             Download .ICS File
                         </div>
                     </div>
                 </div>
 
 
-                <div className="text-center pt-12 border-t border-slate-800">
-                    <Link href="/new" className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:shadow-[0_0_60px_-10px_rgba(79,70,229,0.6)] hover:scale-105 text-lg">
+                <div className="text-center pt-12 space-y-8">
+                    <div className="ornament" aria-hidden="true">✦</div>
+                    <Link href="/new" className="btn-primary px-8 py-4 text-lg">
                         Start Your First Event &rarr;
                     </Link>
                 </div>
@@ -165,23 +166,23 @@ export default function FeaturesPage() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
     return (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition-colors group">
-            <div className="mb-4 p-3 bg-slate-950 rounded-xl inline-block group-hover:scale-110 transition-transform">
+        <div className="card-accent">
+            <div className="icon-tile mb-4" aria-hidden="true">
                 {icon}
             </div>
-            <h3 className="text-xl font-bold text-slate-200 mb-2">{title}</h3>
-            <p className="text-slate-400 leading-relaxed">{description}</p>
+            <h3 className="font-display text-xl font-bold text-parchment mb-2">{title}</h3>
+            <p className="text-parchment-2 leading-relaxed">{description}</p>
         </div>
     );
 }
 
 function Cell({ value, note, good = true }: { value: boolean | string; note?: string; good?: boolean }) {
-    if (typeof value === 'string') return <span className="text-xs text-amber-400">{value}</span>;
+    if (typeof value === 'string') return <span className="text-xs text-maybe">{value}</span>;
     return value === good
-        ? <Check className="w-5 h-5 text-emerald-400 inline" />
+        ? <Check className="w-5 h-5 text-yes inline" />
         : note
-            ? <span className="text-xs text-amber-400">{note}</span>
-            : <X className="w-5 h-5 text-rose-500 inline" />;
+            ? <span className="text-xs text-maybe">{note}</span>
+            : <X className="w-5 h-5 text-no inline" />;
 }
 
 function Row({ label, checkTT, checkDoodle, checkW2M, checkLM, checkRallly, checkApps, checkChat, noteChat }: {
@@ -196,9 +197,9 @@ function Row({ label, checkTT, checkDoodle, checkW2M, checkLM, checkRallly, chec
     noteChat?: string;
 }) {
     return (
-        <tr className="hover:bg-slate-800/20 transition-colors">
+        <tr className="hover:bg-surface-2 transition-colors">
             <td className="py-4 pl-4 font-medium">{label}</td>
-            <td className="py-4 px-2 bg-indigo-500/5 font-bold text-indigo-300">
+            <td className="py-4 px-2 bg-surface-2 font-bold text-gold-bright">
                 <Cell value={checkTT} />
             </td>
             <td className="py-4 px-2"><Cell value={checkDoodle} /></td>
