@@ -4,7 +4,7 @@ This is how the hosted version runs: Vercel for the app, Supabase Postgres for t
 
 ## 1. Prerequisites
 - A [Vercel Account](https://vercel.com).
-- A **PostgreSQL Database**. The setup below assumes Supabase, which also schedules the reminders (see step 5).
+- A **PostgreSQL Database**. The setup below assumes Supabase, which also schedules the reminders (see step 6).
   - *Note: SQLite (file:./dev.db) does NOT work on Vercel's Serverless environment.*
 
 ## 2. Environment Variables
