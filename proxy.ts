@@ -21,7 +21,8 @@ const IDENTITY_PAIRS = [
  *
  * Request ids: the incoming `x-request-id` is reused when well formed, otherwise a UUID is
  * minted. It is forwarded on the request (route handlers read it via `Logger.fromRequest`)
- * and echoed on the response. API routes get only this; the cookie logic below is for pages.
+ * and echoed on the response. Only page requests reach this proxy; API route handlers are
+ * not matched and mint their own id via `Logger.fromRequest`.
  *
  * Sliding Session Logic:
  * On every matched request, auth cookies are re-set with the same value and a fresh
@@ -35,8 +36,6 @@ export function proxy(request: NextRequest) {
     requestHeaders.set(REQUEST_ID_HEADER, requestId);
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.headers.set(REQUEST_ID_HEADER, requestId);
-
-    if (request.nextUrl.pathname.startsWith('/api/')) return response;
 
     const redirect = refreshSessionsAndGuard(request, response);
     if (redirect) {
@@ -105,10 +104,9 @@ function refreshSessionsAndGuard(request: NextRequest, response: NextResponse): 
 
 export const config = {
     // Intent: Run on all event pages to catch both Users (Votes) and Managers
-    // Also run on Profile to keep that synced, and on API routes for request ids.
+    // Also run on Profile to keep that synced. API routes are deliberately excluded.
     matcher: [
         '/e/:slug*', // Covers /e/[slug], /e/[slug]/manage, /e/[slug]/vote etc
         '/profile',
-        '/api/:path*',
     ],
 }
