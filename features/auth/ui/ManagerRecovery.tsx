@@ -141,7 +141,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                             value={handle}
                             onChange={e => setHandle(e.target.value)}
                         />
-                        <p className="text-[10px] text-mist">
+                        <p className="text-xs text-mist">
                             {platform === "telegram"
                                 ? "Enter the handle of the linked manager account (with or without @)."
                                 : "Enter the username of the linked Discord account (with or without @)."}

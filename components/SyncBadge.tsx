@@ -12,7 +12,7 @@ interface SyncBadgeProps {
 export function SyncBadge({ variant }: SyncBadgeProps) {
     if (variant === 'telegram') {
         return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-telegram rounded-control border border-telegram flex items-center gap-1">
+            <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-telegram rounded-control border border-telegram flex items-center gap-1">
                 <span data-dot className="w-1.5 h-1.5 rounded-full bg-telegram" />
                 Telegram Synced
             </span>
@@ -21,7 +21,7 @@ export function SyncBadge({ variant }: SyncBadgeProps) {
 
     if (variant === 'discord') {
         return (
-            <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-discord-text rounded-control border border-discord flex items-center gap-1">
+            <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-discord-text rounded-control border border-discord flex items-center gap-1">
                 <span data-dot className="w-1.5 h-1.5 rounded-full bg-discord" />
                 Discord Synced
             </span>
@@ -29,7 +29,7 @@ export function SyncBadge({ variant }: SyncBadgeProps) {
     }
 
     return (
-        <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-mist rounded-control border border-line flex items-center gap-1">
+        <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-mist rounded-control border border-line flex items-center gap-1">
             <span data-dot className="w-1.5 h-1.5 rounded-full bg-mist" />
             This Device Only
         </span>

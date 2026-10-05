@@ -263,7 +263,7 @@ export default async function ManageEventPage(props: PageProps) {
                                 {event.managerChatId && <SyncBadge variant="telegram" />}
                                 {event.managerDiscordId && <SyncBadge variant="discord" />}
                                 {!event.managerChatId && !event.managerDiscordId && (
-                                    <span className="text-[10px] uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-mist rounded-[3px] border border-line-strong flex items-center gap-1">
+                                    <span className="text-xs uppercase font-bold tracking-wide px-2 py-0.5 bg-surface-2 text-mist rounded-[3px] border border-line-strong flex items-center gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-mist" data-dot />
                                         Manager Not Linked
                                     </span>
@@ -428,8 +428,8 @@ export default async function ManageEventPage(props: PageProps) {
                                             </h3>
                                             <ul className="space-y-2">
                                                 {event.participants.filter(p => p.status === 'WAITLIST').map(p => (
-                                                    <li key={p.id} className="flex items-center gap-3 opacity-60">
-                                                        <div className="w-7 h-7 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-maybe">
+                                                    <li key={p.id} className="flex items-center gap-3">
+                                                        <div className="w-7 h-7 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-dashed border-maybe">
                                                             {p.name.substring(0, 2).toUpperCase()}
                                                         </div>
                                                         <div className="font-medium text-mist">{p.name}</div>
@@ -549,8 +549,8 @@ export default async function ManageEventPage(props: PageProps) {
                                                 {finalizedSlot.votes
                                                     .filter((v) => v.participant.status === 'WAITLIST')
                                                     .map((v) => (
-                                                        <li key={v.participant.id} className="flex items-center gap-3 opacity-60">
-                                                            <div className="w-7 h-7 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-maybe">
+                                                        <li key={v.participant.id} className="flex items-center gap-3">
+                                                            <div className="w-7 h-7 rounded-control bg-maybe-bg flex items-center justify-center text-maybe font-bold text-xs border border-dashed border-maybe">
                                                                 {v.participant.name.substring(0, 2).toUpperCase()}
                                                             </div>
                                                             <div>
@@ -652,7 +652,7 @@ export default async function ManageEventPage(props: PageProps) {
                                             const cardClass = slot.perfect
                                                 ? "border-yes bg-yes-bg"
                                                 : !slot.viable
-                                                ? "border-line bg-surface opacity-60"
+                                                ? "border-line border-dashed bg-surface"
                                                 : !slot.hasHost
                                                 ? "border-maybe bg-surface"
                                                 : "border-line-strong bg-surface";
@@ -662,7 +662,7 @@ export default async function ManageEventPage(props: PageProps) {
                                                     <div className="flex items-center justify-between gap-3">
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 flex-wrap mb-2">
-                                                                <span className="font-display font-semibold text-parchment text-sm">
+                                                                <span className="font-display font-semibold text-parchment text-base">
                                                                     <ClientDate date={slot.startTime} formatStr="EEE, MMM d @ h:mm a" />
                                                                     <ClientTimezone className="ml-1 text-mist font-normal" />
                                                                 </span>
@@ -719,7 +719,7 @@ export default async function ManageEventPage(props: PageProps) {
 function SidebarLabel({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex items-center gap-3">
-            <span className="text-[11px] font-semibold text-mist uppercase tracking-widest whitespace-nowrap">{children}</span>
+            <span className="text-xs font-semibold text-mist uppercase tracking-widest whitespace-nowrap">{children}</span>
             <div className="flex-1 h-px bg-line" />
         </div>
     );

@@ -229,7 +229,7 @@ export function QuickSelectionCalendar({
                         >
                             {icon}
                             <span>{label}</span>
-                            <span className={clsx("font-normal hidden sm:inline", brush === pref ? "opacity-70" : "text-mist")}>
+                            <span className={clsx("font-normal hidden sm:inline", brush === pref ? "" : "text-mist")}>
                                 ({sub})
                             </span>
                         </button>
@@ -297,7 +297,7 @@ export function QuickSelectionCalendar({
 
                     <span className="font-display text-lg font-semibold text-parchment shrink-0">
                         {format(viewDate, "MMMM yyyy")}
-                        <ClientTimezone className="ml-1.5 text-[10px] font-normal text-mist" />
+                        <ClientTimezone className="ml-1.5 text-xs font-normal text-mist" />
                     </span>
 
                     {/* Next month button */}
@@ -326,7 +326,7 @@ export function QuickSelectionCalendar({
                 {/* Weekday headers */}
                 <div className="grid grid-cols-7 mb-1">
                     {DAY_LABELS.map((d) => (
-                        <div key={d} className="text-center text-[10px] text-mist font-medium py-1">
+                        <div key={d} className="text-center text-xs text-mist font-medium py-1">
                             {d}
                         </div>
                     ))}
@@ -358,7 +358,7 @@ export function QuickSelectionCalendar({
                             >
                                 {/* Day number */}
                                 <span className={clsx(
-                                    "text-[10px] leading-none px-1 pt-0.5 shrink-0",
+                                    "text-xs leading-none px-1 pt-0.5 shrink-0",
                                     hasSlots ? "text-parchment-2" : "text-mist/50"
                                 )}>
                                     {format(day, "d")}
@@ -374,7 +374,7 @@ export function QuickSelectionCalendar({
                                                 onPointerDown={(e) => handleSlotPointerDown(e, slot.id)}
                                                 className={clsx(
                                                     "relative flex-1 flex items-center justify-center",
-                                                    "rounded-[3px] text-[9px] sm:text-[10px] font-medium cursor-pointer transition-colors",
+                                                    "rounded-[3px] text-xs sm:text-xs font-medium cursor-pointer transition-colors",
                                                     "min-h-[24px]",
                                                     slotColor(votes[slot.id])
                                                 )}

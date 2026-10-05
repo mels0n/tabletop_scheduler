@@ -278,7 +278,7 @@ export default async function EventPage(props: PageProps) {
                                                         {waitlistPlayers.map((p: any) => (
                                                             <span
                                                                 key={p.id}
-                                                                className={`text-sm px-3 py-1 rounded-control border font-medium opacity-60 ${
+                                                                className={`text-sm px-3 py-1 rounded-control border border-dashed font-medium ${
                                                                     p.id === serverParticipantId
                                                                         ? 'bg-maybe-bg border-maybe text-maybe'
                                                                         : 'bg-surface border-line text-mist'
