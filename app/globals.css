@@ -78,7 +78,8 @@ body {
     @apply bg-surface border border-line rounded-card p-6;
   }
   .card-accent {
-    @apply card border-t-2 border-t-gold;
+    /* Square top corners so the gold rule runs edge to edge. */
+    @apply card border-t-2 border-t-gold rounded-t-none;
   }
   .field {
     @apply bg-field border border-line-strong rounded-control px-3 py-2.5 text-parchment placeholder:text-mist;
