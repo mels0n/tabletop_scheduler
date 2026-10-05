@@ -61,7 +61,7 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="text-xs text-slate-600 hover:text-indigo-400 transition-colors flex items-center gap-1 mx-auto mt-4"
+                className="text-xs text-mist hover:text-gold-bright transition-colors flex items-center gap-1 mx-auto mt-4"
             >
                 <Lock className="w-3 h-3" />
                 Lost Manager Link?
@@ -72,17 +72,17 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
     // State 2: Success Modal (Link Sent)
     if (successMsg) {
         return (
-            <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-slate-900 border border-green-800/50 p-6 rounded-xl max-w-sm w-full shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="fixed inset-0 bg-ink/85 flex items-center justify-center p-4 z-50">
+                <div className="bg-surface border border-yes p-6 rounded-card max-w-sm w-full shadow-modal">
                     <div className="flex flex-col items-center text-center gap-4">
-                        <div className="w-12 h-12 bg-green-900/20 rounded-full flex items-center justify-center text-green-500">
+                        <div className="w-12 h-12 bg-yes-bg rounded-card flex items-center justify-center text-yes">
                             <ShieldCheck className="w-6 h-6" />
                         </div>
-                        <h3 className="font-bold text-lg text-green-400">Recovery Sent!</h3>
-                        <p className="text-slate-300 text-sm">{successMsg}</p>
+                        <h3 className="font-bold text-lg text-yes">Recovery Sent!</h3>
+                        <p className="text-parchment-2 text-sm">{successMsg}</p>
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="w-full px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
+                            className="btn-secondary w-full px-4 py-2"
                         >
                             Close
                         </button>
@@ -94,14 +94,14 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
 
     // State 3: Active Form Modal
     return (
-        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl max-w-sm w-full shadow-2xl">
-                <div className="flex items-center gap-2 mb-4 text-indigo-400">
+        <div className="fixed inset-0 bg-ink/85 flex items-center justify-center p-4 z-[100]">
+            <div className="bg-surface border border-line p-6 rounded-card max-w-sm w-full shadow-modal">
+                <div className="flex items-center gap-2 mb-4 text-gold-bright">
                     <ShieldCheck className="w-6 h-6" />
                     <h3 className="font-bold text-lg">Recover Access</h3>
                 </div>
 
-                <p className="text-slate-400 text-sm mb-4">
+                <p className="text-parchment-2 text-sm mb-4">
                     {platform === "telegram"
                         ? <>Enter the Telegram handle of the manager account linked to this event. If it matches, we send a <b>Magic Link</b> to that account&apos;s Telegram DMs. This only works if you linked your Telegram account as manager earlier.</>
                         : <>Enter the Discord Username linked to this event. We will verify it and send a <b>Magic Link</b> to your Discord DMs.</>
@@ -111,55 +111,55 @@ export function ManagerRecovery({ slug, defaultOpen = false }: { slug: string, d
                 <form onSubmit={handleRecover} className="space-y-4">
 
                     {/* Platform Toggle */}
-                    <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-700">
+                    <div className="segmented p-1 gap-1">
                         <button
                             type="button"
                             onClick={() => setPlatform("telegram")}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${platform === "telegram" ? "bg-slate-800 text-sky-400 shadow-sm" : "text-slate-500 hover:text-slate-300"}`}
+                            className={`py-1.5 text-xs font-medium rounded-control transition-colors ${platform === "telegram" ? "is-active text-telegram" : "text-mist hover:text-parchment"}`}
                         >
                             Telegram
                         </button>
                         <button
                             type="button"
                             onClick={() => setPlatform("discord")}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${platform === "discord" ? "bg-slate-800 text-indigo-400 shadow-sm" : "text-slate-500 hover:text-slate-300"}`}
+                            className={`py-1.5 text-xs font-medium rounded-control transition-colors ${platform === "discord" ? "is-active text-discord" : "text-mist hover:text-parchment"}`}
                         >
                             Discord
                         </button>
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        <label className="text-xs font-medium text-mist uppercase tracking-wide">
                             {platform === "telegram" ? "Telegram Handle" : "Discord Username"}
                         </label>
                         <input
                             type="text"
                             placeholder={platform === "telegram" ? "@YourHandle" : "username"}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
+                            className="field w-full px-4 py-2 text-sm"
                             value={handle}
                             onChange={e => setHandle(e.target.value)}
                         />
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-[10px] text-mist">
                             {platform === "telegram"
                                 ? "Enter the handle of the linked manager account (with or without @)."
                                 : "Enter the username of the linked Discord account (with or without @)."}
                         </p>
                     </div>
 
-                    {error && <p className="text-red-400 text-sm bg-red-900/10 p-2 rounded border border-red-900/50">{error}</p>}
+                    {error && <p className="text-no text-sm bg-no-bg p-2 rounded-control border border-no">{error}</p>}
 
                     <div className="flex gap-2 pt-2">
                         <button
                             type="button"
                             onClick={() => setIsOpen(false)}
-                            className="flex-1 px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors text-sm"
+                            className="btn-secondary flex-1 px-4 py-2 text-sm font-normal"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading || !handle}
-                            className={`flex-1 px-4 py-2 rounded-lg font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center text-white ${platform === 'telegram' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                            className={`flex-1 px-4 py-2 rounded-control font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center ${platform === 'telegram' ? 'bg-telegram hover:bg-telegram/90 text-ink' : 'bg-discord hover:bg-discord/90 text-white'}`}
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Send"}
                         </button>
