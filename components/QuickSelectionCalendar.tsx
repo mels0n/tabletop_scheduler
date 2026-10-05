@@ -217,6 +217,7 @@ export function QuickSelectionCalendar({
                         <button
                             key={pref}
                             type="button"
+                            aria-pressed={brush === pref}
                             onClick={() => {
                                 setBrush(pref);
                                 if (pref === "NO") setHostBrush(false);
@@ -238,6 +239,7 @@ export function QuickSelectionCalendar({
                     <button
                         type="button"
                         disabled={brush === "NO"}
+                        aria-pressed={hostBrush && brush !== "NO"}
                         onClick={() => setHostBrush(h => !h)}
                         className={clsx(
                             "flex items-center gap-2 px-3 py-2 rounded-control text-sm font-medium transition-colors min-h-[36px]",
