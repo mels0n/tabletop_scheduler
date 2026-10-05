@@ -17,10 +17,13 @@ name: Docker Build & Push
 # never points at a half-built image.
 #
 # Only the newest run per ref publishes: a new push to main cancels the run
-# still in progress for the previous commit, so an older image can never
-# finish last and take `latest`. The `build` gate also requires ci to have
-# succeeded, not merely "not failed", because ci.yml's own concurrency group
-# can cancel an older ci run, and a cancelled ci must not publish.
+# still in progress for the previous commit. The merge job also moves `latest`
+# only when the commit is still the head of its branch, so re-running an older
+# run cannot roll `latest` back (it still cancels a newer run in progress, so
+# re-run only the newest main run). The `build` gate requires ci to have
+# succeeded, not merely "not failed": `!failure()` alone lets a cancelled ci
+# through. Keep this workflow's concurrency group distinct from ci.yml's
+# (ci-<workflow>-<ref>); equal names would make the called ci cancel its caller.
 
 on:
   push:
@@ -191,6 +194,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # A re-run of an older commit must not move `latest` backwards.
+      - name: Check this commit is still the branch head
+        id: head
+        if: github.ref_type == 'branch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$GITHUB_REF_NAME" --jq .object.sha)
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "is_head=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::$GITHUB_SHA is no longer the head of $GITHUB_REF_NAME ($head); not moving latest"
+            echo "is_head=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v6
@@ -199,7 +217,7 @@ jobs:
           tags: |
             type=sha
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.head.outputs.is_head == 'true' }}
 
       - name: Create and push multi-arch manifest
         working-directory: ${{ runner.temp }}/digests
