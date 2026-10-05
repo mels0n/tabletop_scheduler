@@ -48,7 +48,7 @@ export default function BlogIndex() {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(blogSchema) }}
             />
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-screen-2xl mx-auto">
                 <h1 className="heading-display text-4xl md:text-5xl font-bold mb-4 text-parchment">
                     Tabletop Time Blog
                 </h1>
@@ -56,7 +56,7 @@ export default function BlogIndex() {
                     Guides, tips, and rants about the hardest part of tabletop gaming: Scheduling.
                 </p>
 
-                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid gap-6">
                     {posts.map((post) => (
                         <article key={post.slug} className="group relative card hover:border-line-strong transition-colors">
                             <div className="flex flex-col gap-2 mb-4">

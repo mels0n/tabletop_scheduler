@@ -29,7 +29,7 @@ export default async function ProfilePrivacyPage() {
 
     return (
         <div className="min-h-screen bg-ink text-parchment p-6 md:p-12">
-            <div className="max-w-5xl mx-auto space-y-8">
+            <div className="max-w-3xl mx-auto space-y-8">
                 <Link href="/profile" className="inline-flex items-center gap-2 text-gold hover:text-gold-bright transition-colors mb-4">
                     <ArrowLeft className="w-4 h-4" /> Back to My Events
                 </Link>
