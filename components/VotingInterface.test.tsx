@@ -42,7 +42,7 @@ describe('VotingInterface: vote refused for a participant this browser does not 
             .mockResolvedValueOnce(jsonResponse(403, { error: 'Forbidden', code: 'participant_not_owned' }))
             .mockResolvedValueOnce(jsonResponse(200, { participantId: 9 }));
 
-        render(<VotingInterface eventId={1} slug="evt" minPlayers={1} initialSlots={[slot]} participants={[]} />);
+        render(<VotingInterface eventId={1} slug="evt" minPlayers={1} initialSlots={[slot]} participants={[]} discordLoginEnabled={false} />);
 
         fireEvent.click(screen.getByRole('button', { name: /Detailed/i }));
         fireEvent.change(screen.getByPlaceholderText('Your Name (Required)'), { target: { value: 'Dee' } });
@@ -61,5 +61,17 @@ describe('VotingInterface: vote refused for a participant this browser does not 
         expect(resubmitted.participantId).toBeNull();
         expect(resubmitted.votes).toEqual([{ slotId: 3, preference: 'YES', canHost: false }]);
         await waitFor(() => expect(localStorage.getItem('tabletop_participant_1')).toBe('9'));
+    });
+});
+
+describe('VotingInterface: Discord log in link', () => {
+    it('is hidden when Discord login is not configured', () => {
+        render(<VotingInterface eventId={1} slug="evt" minPlayers={1} initialSlots={[slot]} participants={[]} discordLoginEnabled={false} />);
+        expect(screen.queryByRole('link', { name: /Log in/i })).toBeNull();
+    });
+
+    it('starts the Discord login flow when Discord login is configured', () => {
+        render(<VotingInterface eventId={1} slug="evt" minPlayers={1} initialSlots={[slot]} participants={[]} discordLoginEnabled />);
+        expect(screen.getByRole('link', { name: /Log in/i }).getAttribute('href')).toBe('/api/auth/discord?flow=login&returnTo=%2Fe%2Fevt');
     });
 });
