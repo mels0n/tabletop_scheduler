@@ -13,6 +13,7 @@ vi.mock('@/features/integrations/discord/server/actions', () => ({
 }));
 
 import { DiscordConnect } from './DiscordConnect';
+import { listDiscordChannels } from '@/features/integrations/discord/server/actions';
 
 const oauthLinks = () => screen.queryAllByRole('link').filter(a => a.getAttribute('href')?.startsWith('/api/auth/discord'));
 
@@ -23,9 +24,9 @@ describe('DiscordConnect: OAuth links', () => {
         expect(screen.getByRole('link', { name: /Recover with Discord/ })).toBeTruthy();
     });
 
-    it('renders no link into the OAuth flow when Discord OAuth is not configured', () => {
-        render(<DiscordConnect slug="evt" hasChannel={false} hasManagerDiscordId={false} oauthEnabled={false} />);
-        expect(oauthLinks()).toHaveLength(0);
+    it('renders nothing without OAuth, a bound channel or a linked manager', () => {
+        const { container } = render(<DiscordConnect slug="evt" hasChannel={false} hasManagerDiscordId={false} oauthEnabled={false} />);
+        expect(container.innerHTML).toBe('');
     });
 
     it('keeps a bound channel visible but offers no reconnect or empty manage panel without OAuth', () => {
@@ -62,8 +63,11 @@ describe('DiscordConnect: OAuth links', () => {
         expect((await screen.findByRole('link', { name: 'Re-invite it' })).getAttribute('href')).toBe('/api/auth/discord?flow=connect&returnTo=%2Fe%2Fevt%2Fmanage');
         unmount();
 
-        render(<DiscordConnect slug="evt" hasChannel={false} guildId="1" hasManagerDiscordId={false} oauthEnabled={false} />);
-        await screen.findAllByRole('heading');
+        vi.mocked(listDiscordChannels).mockClear();
+        render(<DiscordConnect slug="evt" hasChannel={false} guildId="1" hasManagerDiscordId oauthEnabled={false} />);
+        await screen.findByRole('button', { name: 'Send Magic Link (Discord DM)' });
         expect(oauthLinks()).toHaveLength(0);
+        // The picker follows the OAuth bot-add flow, so its channel list is never fetched.
+        expect(listDiscordChannels).not.toHaveBeenCalled();
     });
 });
