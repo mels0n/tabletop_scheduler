@@ -20,6 +20,8 @@ const log = Logger.get("VotingReminders");
 export async function runVotingReminders(now: Date): Promise<ReminderRunSummary> {
     const summary: ReminderRunSummary = { sent: 0, failed: 0 };
 
+    // Mirrored by the hosted pg_cron pre-check; widening this selection needs a new migration
+    // (see prisma/hosted/migrations/20261012120000_pg_cron_precheck).
     const events = await prisma.event.findMany({
         where: {
             status: { in: ["ACTIVE", "DRAFT"] },

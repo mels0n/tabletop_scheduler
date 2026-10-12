@@ -40,6 +40,8 @@ export async function runSessionReminders(now: Date): Promise<ReminderRunSummary
     const summary: ReminderRunSummary = { sent: 0, failed: 0 };
     const unsentUpcoming = { startTime: { gt: now }, sessionReminderSentAt: null };
 
+    // Mirrored by the hosted pg_cron pre-check; widening this selection needs a new migration
+    // (see prisma/hosted/migrations/20261012120000_pg_cron_precheck).
     const events = await prisma.event.findMany({
         where: {
             status: "FINALIZED",
