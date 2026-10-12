@@ -4,7 +4,7 @@ import Logger from "@/shared/lib/logger";
 import { getServerConfig } from "@/shared/config/server";
 import { escapeHtml } from "@/shared/lib/escape";
 import { normalizeHandle } from "@/shared/lib/handle";
-import { hashToken } from "@/shared/lib/token";
+import { hashToken, newToken } from "@/shared/lib/token";
 import { getBaseUrl } from "@/shared/lib/url";
 import { generateStatusMessage } from "@/shared/lib/status";
 import { sendTelegramMessage, pinChatMessage } from "../lib/telegram-client";
@@ -132,7 +132,7 @@ async function handleStart(
 
 /** Issues a magic login link valid for 15 minutes (not single-use). Only the hash is stored. */
 async function handleGlobalLogin(chatId: number, user: TelegramUser | undefined, token: string): Promise<void> {
-    const plaintextToken = crypto.randomUUID();
+    const plaintextToken = newToken();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     // The Telegram username lets the login route set a display cookie (mirrors Discord's
@@ -180,6 +180,7 @@ async function connectEvent(slug: string | null, code: string | null, chatId: nu
             telegramChatId: event.telegramChatId ?? null,
             telegramConnectNonce: event.telegramConnectNonce ?? null,
         },
+        // Always newConnectNonce(): its v2_ prefix retires legacy 8-hex codes for this event.
         data: { telegramChatId: chatId.toString(), telegramConnectNonce: newConnectNonce() },
     });
     if (count !== 1) {

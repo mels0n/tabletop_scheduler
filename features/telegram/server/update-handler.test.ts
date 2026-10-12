@@ -96,7 +96,7 @@ describe('handleTelegramUpdate: /connect', () => {
 
         expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
             where: { id: 7, telegramChatId: null, telegramConnectNonce: null },
-            data: { telegramChatId: '-1001', telegramConnectNonce: expect.stringMatching(/^[0-9a-f]{32}$/) },
+            data: { telegramChatId: '-1001', telegramConnectNonce: expect.stringMatching(/^v2_[0-9a-f]{32}$/) },
         });
         expect(writes()).toContainEqual({ pinnedMessageId: 555 });
         expect(pinned).toHaveBeenCalledWith(-1001, 555, 'test-token');
@@ -135,7 +135,7 @@ describe('handleTelegramUpdate: /connect', () => {
 
         expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
             where: { id: 7, telegramChatId: '-1001', telegramConnectNonce: null },
-            data: { telegramChatId: '-3003', telegramConnectNonce: expect.stringMatching(/^[0-9a-f]{32}$/) },
+            data: { telegramChatId: '-3003', telegramConnectNonce: expect.stringMatching(/^v2_[0-9a-f]{32}$/) },
         });
     });
 

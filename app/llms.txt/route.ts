@@ -57,7 +57,7 @@ ${blogLines}
 
 **Three-State Voting**: Players vote Yes (available and want to play), If-Needed (available but not preferred), or No (unavailable). If-Needed votes count toward the viability check. When the organizer finalizes, Yes voters are seated first (earliest vote first, up to the maximum), and If-Needed voters are seated only when Yes voters alone fall short of the minimum; everyone else goes to a waitlist that is promoted automatically when a seat opens.
 
-**Accountless Design**: No user accounts exist. Creating an event stores its admin token in an HTTP-only cookie in the organizer's browser (API callers receive the token in the create response). Participants need no credentials: a signed per-event cookie lets the browser that cast a vote edit it later. Optionally, anyone can link Telegram or Discord to sign in on other devices (Telegram: send /start login to the bot in a private chat for a 15-minute login link). Events are private by default, accessible only via the unique 14-character slug URL.
+**Accountless Design**: No user accounts exist. Creating an event stores its admin token in an HTTP-only cookie in the organizer's browser (API callers receive the token in the create response). Participants need no credentials: a signed per-event cookie lets the browser that cast a vote edit it later. Optionally, anyone can link Telegram or Discord to sign in on other devices (Telegram: send /start login to the bot in a private chat for a 15-minute login link). Events are private by default, accessible only via the unique, unguessable slug URL.
 
 **Campaign Mode**: Groups multi-session events so organizers can find a run of viable dates (e.g., three consecutive Saturdays) rather than scheduling one session at a time.
 

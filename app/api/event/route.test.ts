@@ -68,7 +68,7 @@ describe('POST /api/event', () => {
 
         expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.slug).toMatch(/^[A-Za-z0-9]{14}$/);
+        expect(body.slug).toMatch(/^[A-Za-z0-9]{22}$/);
         expect(body.adminToken).toBeTruthy();
         const data = mockPrisma.event.create.mock.calls[0][0].data;
         // Catches: storing the raw admin token (a database leak would hand out every admin link).
