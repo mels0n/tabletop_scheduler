@@ -120,7 +120,7 @@ export default function TelegramSetupPage() {
                     <ol>
                         <li>Open the event&apos;s <strong>Manage</strong> page.</li>
                         <li>In <strong>Connect Telegram Group</strong>, add the bot to your group if it is not there yet. The &quot;Add to Group&quot; button asks for the Pin Messages permission.</li>
-                        <li>Copy the connect command shown on the Manage page. It looks like <code>/connect your-event-code 1a2b3c4d</code>.</li>
+                        <li>Copy the connect command shown on the Manage page. It looks like <code>/connect your-event-code</code> followed by a long code.</li>
                         <li>Send that command in the group. The bot posts the live event dashboard and pins it.</li>
                     </ol>
                     <p>

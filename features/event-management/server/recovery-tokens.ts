@@ -1,9 +1,8 @@
 import "server-only";
 
-import { randomBytes, randomUUID } from "node:crypto";
 import prisma from "@/shared/lib/prisma";
 import { getBaseUrl } from "@/shared/lib/url";
-import { hashToken } from "@/shared/lib/token";
+import { hashToken, newToken } from "@/shared/lib/token";
 import { normalizeHandle } from "@/shared/lib/handle";
 import { ForbiddenError, NotFoundError, RateLimitError } from "@/shared/errors";
 import { requireEventAdmin } from "@/features/auth/server/verify";
@@ -32,7 +31,7 @@ const RATE_LIMITED = "A link was just sent. Please wait a minute before requesti
 export async function generateManagerMagicLink(slug: string): Promise<string> {
     await requireEventAdmin(slug);
 
-    const rawToken = randomUUID();
+    const rawToken = newToken();
     await prisma.event.update({
         where: { slug },
         data: { adminToken: hashToken(rawToken) },
@@ -41,14 +40,15 @@ export async function generateManagerMagicLink(slug: string): Promise<string> {
 }
 
 /**
- * Creates a short (8 hex chars), 15-minute, single-use token the admin opens as
+ * Creates a 15-minute, single-use token (128 bits; tokens minted as 8 hex chars before
+ * the change still redeem by hash until they expire) the admin opens as
  * `t.me/<bot>?start=rec_<token>` to register their Telegram account as manager.
  * Only the hash is stored. Admin only: redeeming it can claim the Telegram manager slot.
  */
 export async function generateShortRecoveryToken(slug: string): Promise<string> {
     await requireEventAdmin(slug);
 
-    const rawToken = randomBytes(4).toString("hex");
+    const rawToken = newToken();
     await prisma.event.update({
         where: { slug },
         data: {
@@ -174,7 +174,7 @@ export async function createManagerLoginLinks(
     try {
         for (const platform of platforms) {
             const identity = identityFor(manager, platform)!;
-            const rawToken = randomUUID();
+            const rawToken = newToken();
             const tokenHash = hashToken(rawToken);
             await prisma.loginToken.create({
                 data: { token: tokenHash, ...identity, expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MS) },
