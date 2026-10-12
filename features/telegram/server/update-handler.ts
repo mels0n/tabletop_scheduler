@@ -180,6 +180,7 @@ async function connectEvent(slug: string | null, code: string | null, chatId: nu
             telegramChatId: event.telegramChatId ?? null,
             telegramConnectNonce: event.telegramConnectNonce ?? null,
         },
+        // Always newConnectNonce(): its v2_ prefix retires legacy 8-hex codes for this event.
         data: { telegramChatId: chatId.toString(), telegramConnectNonce: newConnectNonce() },
     });
     if (count !== 1) {

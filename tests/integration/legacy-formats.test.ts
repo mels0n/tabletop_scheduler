@@ -159,6 +159,21 @@ describe.skipIf(!generatedClientIsSqlite())('legacy token and slug formats (SQLi
             expect((await db.prisma.event.findUniqueOrThrow({ where: { slug } })).location).toBe('The Dragon Inn');
         });
 
+        it('a 14-char slug event works through the magic link and a bearer admin route', async () => {
+            const token = randomUUID();
+            const s14 = 'Zq8Wm2Lp5Tn7Rk';
+            await seedEvent(s14, { adminToken: hashToken(token) });
+
+            const store = setRequestContext();
+            const res = await magicCall(s14, token);
+            expect(res.headers.get('location')).toBe(`${ORIGIN}/e/${s14}/manage`);
+            expect(store.set).toHaveBeenCalledWith(`tabletop_admin_${s14}`, token, expect.anything());
+
+            setRequestContext({ header: { authorization: `Bearer ${token}` } });
+            expect((await locationCall(s14)).status).toBe(200);
+            expect((await db.prisma.event.findUniqueOrThrow({ where: { slug: s14 } })).location).toBe('The Dragon Inn');
+        });
+
         it('the admin cookie holding the UUID passes verifyEventAdmin', async () => {
             setRequestContext({ cookie: { [`tabletop_admin_${slug}`]: uuid } });
             expect(await verifyEventAdmin(slug)).toBe(true);
@@ -331,6 +346,18 @@ describe.skipIf(!generatedClientIsSqlite())('legacy token and slug formats (SQLi
             const rebound = await db.prisma.event.findUniqueOrThrow({ where: { slug } });
             expect(rebound.telegramChatId).toBe('-2002');
             expect(rebound.telegramConnectNonce).not.toBe(bound.telegramConnectNonce);
+        });
+
+        it('binds a 14-char slug event with a legacy 8-hex code', async () => {
+            const slug = 'Hk4Pz9Qa2Wc7Ux';
+            const nonce = 'ffeeddccbbaa99887766554433221100';
+            const adminHash = await seedConnectable(slug, nonce);
+
+            await handleTelegramUpdate(tgUpdate(`/connect ${slug} ${legacyCode(slug, adminHash, null, nonce)}`, 'group', -4004));
+
+            const bound = await db.prisma.event.findUniqueOrThrow({ where: { slug } });
+            expect(bound.telegramChatId).toBe('-4004');
+            expect(bound.telegramConnectNonce).toMatch(/^v2_/);
         });
 
         it('accepts the legacy code in uppercase', async () => {
