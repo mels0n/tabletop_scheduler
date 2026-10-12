@@ -1,10 +1,10 @@
 import { NextResponse, after } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/shared/lib/prisma";
-import { randomBytes, randomUUID } from "crypto";
+import { randomBytes } from "crypto";
 import Logger from "@/shared/lib/logger";
 import { normalizeHandle } from "@/shared/lib/handle";
-import { hashToken } from "@/shared/lib/token";
+import { hashToken, newToken } from "@/shared/lib/token";
 import { getBaseUrlOrNull } from "@/shared/lib/url";
 import { readDiscordDisplayName, readIdentity } from "@/shared/lib/session";
 import { assertSafeWebhookUrl } from "@/shared/lib/webhook-sender";
@@ -15,11 +15,11 @@ import { processWebhookRow } from "@/features/integrations/webhooks";
 const log = Logger.get("API:EventCreate");
 
 const SLUG_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const SLUG_BYTES = 10; // 80 bits of entropy
-const SLUG_LENGTH = 14; // ceil(80 / log2(62))
+const SLUG_BYTES = 16; // 128 bits of entropy
+const SLUG_LENGTH = 22; // ceil(128 / log2(62))
 
 /**
- * Generates an unguessable public slug: 10 random bytes (80 bits) encoded base62 to 14
+ * Generates an unguessable public slug: 16 random bytes (128 bits) encoded base62 to 22
  * characters. Alphanumeric only, so it survives every slug parser (Telegram commands and
  * pasted links match `[a-zA-Z0-9]+`), unlike base64url's `-` and `_`.
  */
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
         log.debug("Request received", { slots: input.slots.length, eventType: input.eventType });
 
         // Security: Generate token manually so we can hash it for storage.
-        const rawAdminToken = randomUUID();
+        const rawAdminToken = newToken();
         const hashedAdminToken = hashToken(rawAdminToken);
         const manager = await resolveManagerIdentity();
 

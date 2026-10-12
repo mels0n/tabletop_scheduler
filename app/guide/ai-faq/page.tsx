@@ -67,7 +67,7 @@ export default function AiFaqPage() {
         },
         {
             question: "How do I connect a Telegram group or Discord channel?",
-            answer: "Both are optional. For Telegram, add the bot to the group and send the command shown on the event's manage page, which looks like /connect your-event-code 1a2b3c4d. The code works once, and pasting the event link connects nothing. For Discord, click Connect Discord Server on the manage page, add the bot to your server, and pick a channel within an hour. The bot then keeps a pinned live dashboard in the chat."
+            answer: "Both are optional. For Telegram, add the bot to the group and send the command shown on the event's manage page, which looks like /connect your-event-code followed by a long code. The code works once, and pasting the event link connects nothing. For Discord, click Connect Discord Server on the manage page, add the bot to your server, and pick a channel within an hour. The bot then keeps a pinned live dashboard in the chat."
         },
         {
             question: "Is there an API?",
