@@ -2,6 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createHmac } from 'node:crypto';
 import { connectCodeFor, verifyConnectCode, parseConnectCommand, newConnectNonce } from './connect-code';
 import { resetServerConfigForTests } from '@/shared/config/server';
+import { toBase62 } from '@/shared/lib/token';
+
+/** The expected code: the first 128 bits of the HMAC as base62. */
+const hmacCode = (input: string) => toBase62(createHmac('sha256', 'connect-code-test-secret').update(input).digest().subarray(0, 16));
+/** The pre-128-bit code: the first 8 hex chars of the same HMAC. */
+const legacyCode = (input: string) => createHmac('sha256', 'connect-code-test-secret').update(input).digest('hex').slice(0, 8);
 
 const HASH = 'a'.repeat(64);
 
@@ -11,19 +17,17 @@ describe('telegram connect code', () => {
         resetServerConfigForTests();
     });
 
-    it('is the first 32 hex chars of HMAC-SHA256(sessionSecret, connect:<slug>:<hash>:<chatId>:<nonce>)', () => {
-        const expected = createHmac('sha256', 'connect-code-test-secret')
-            .update(`connect:abc123:${HASH}::`)
-            .digest('hex')
-            .slice(0, 32);
-        expect(connectCodeFor('abc123', HASH, null, null)).toBe(expected);
-        expect(connectCodeFor('abc123', HASH, null, null)).toMatch(/^[0-9a-f]{32}$/);
+    it('is the first 128 bits of HMAC-SHA256(sessionSecret, connect:<slug>:<hash>:<chatId>:<nonce>) in base62', () => {
+        expect(connectCodeFor('abc123', HASH, null, null)).toBe(hmacCode(`connect:abc123:${HASH}::`));
+        expect(connectCodeFor('abc123', HASH, null, null)).toMatch(/^[0-9A-Za-z]{22}$/);
     });
 
     it('round trips', () => {
         const code = connectCodeFor('abc123', HASH, null, null);
         expect(verifyConnectCode('abc123', HASH, null, null, code)).toBe(true);
-        expect(verifyConnectCode('abc123', HASH, null, null, code.toUpperCase())).toBe(true);
+        expect(verifyConnectCode('abc123', HASH, null, null, ` ${code} `)).toBe(true);
+        const swapped = code.replace(/[a-zA-Z]/g, (c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase()));
+        if (swapped !== code) expect(verifyConnectCode('abc123', HASH, null, null, swapped)).toBe(false);
     });
 
     it('rejects a code for another slug, another admin token, or a different secret', () => {
@@ -45,8 +49,7 @@ describe('telegram connect code', () => {
         expect(rebind).not.toBe(unbound);
         expect(verifyConnectCode('abc123', HASH, '-1001', null, rebind)).toBe(true);
         expect(verifyConnectCode('abc123', HASH, '-2002', null, rebind)).toBe(false);
-        expect(createHmac('sha256', 'connect-code-test-secret')
-            .update(`connect:abc123:${HASH}:-1001:`).digest('hex').slice(0, 32)).toBe(rebind);
+        expect(hmacCode(`connect:abc123:${HASH}:-1001:`)).toBe(rebind);
     });
 
     it('binds the code to the connect nonce, so rotating the nonce kills a code for the same chat', () => {
@@ -54,15 +57,15 @@ describe('telegram connect code', () => {
         expect(verifyConnectCode('abc123', HASH, '-1001', 'n1', before)).toBe(true);
         expect(verifyConnectCode('abc123', HASH, '-1001', 'n2', before)).toBe(false);
         expect(verifyConnectCode('abc123', HASH, '-1001', null, before)).toBe(false);
-        expect(createHmac('sha256', 'connect-code-test-secret')
-            .update(`connect:abc123:${HASH}:-1001:n1`).digest('hex').slice(0, 32)).toBe(before);
+        expect(hmacCode(`connect:abc123:${HASH}:-1001:n1`)).toBe(before);
     });
 
     it('still accepts a pre-128-bit 8-char code while the nonce predates v2', () => {
         const full = connectCodeFor('abc123', HASH, '-1001', 'legacynonce');
-        const short = full.slice(0, 8);
+        const short = legacyCode(`connect:abc123:${HASH}:-1001:legacynonce`);
         expect(verifyConnectCode('abc123', HASH, '-1001', 'legacynonce', short)).toBe(true);
-        expect(verifyConnectCode('abc123', HASH, '-1001', null, connectCodeFor('abc123', HASH, '-1001', null).slice(0, 8))).toBe(true);
+        expect(verifyConnectCode('abc123', HASH, '-1001', 'legacynonce', short.toUpperCase())).toBe(true);
+        expect(verifyConnectCode('abc123', HASH, '-1001', null, legacyCode(`connect:abc123:${HASH}:-1001:`))).toBe(true);
         expect(verifyConnectCode('abc123', HASH, '-1001', 'legacynonce', full)).toBe(true);
         expect(verifyConnectCode('abc123', HASH, '-1001', 'other', short)).toBe(false);
     });
@@ -72,8 +75,8 @@ describe('telegram connect code', () => {
         expect(nonce).toMatch(/^v2_[0-9a-f]{32}$/);
         const full = connectCodeFor('abc123', HASH, '-1001', nonce);
         expect(verifyConnectCode('abc123', HASH, '-1001', nonce, full)).toBe(true);
-        expect(verifyConnectCode('abc123', HASH, '-1001', nonce, full.slice(0, 8))).toBe(false);
-        expect(verifyConnectCode('abc123', HASH, '-1001', nonce, full.slice(0, 16))).toBe(false);
+        expect(verifyConnectCode('abc123', HASH, '-1001', nonce, legacyCode(`connect:abc123:${HASH}:-1001:${nonce}`))).toBe(false);
+        expect(verifyConnectCode('abc123', HASH, '-1001', nonce, full.slice(0, 21))).toBe(false);
     });
 
     it('rejects malformed input without throwing', () => {

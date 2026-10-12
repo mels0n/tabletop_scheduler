@@ -408,7 +408,7 @@ describe('admin-only recovery setup actions', () => {
 
         const res = await startTelegramRecovery('abc');
 
-        expect(res).toMatchObject({ success: true, token: expect.stringMatching(/^[0-9a-f]{32}$/) });
+        expect(res).toMatchObject({ success: true, token: expect.stringMatching(/^[0-9A-Za-z]{22}$/) });
         const data = mockPrisma.event.update.mock.calls[0][0].data;
         expect(data.recoveryToken).toMatch(/^[0-9a-f]{64}$/);
         expect(data.recoveryToken).not.toBe((res as { token: string }).token);

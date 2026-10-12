@@ -94,7 +94,7 @@ If the caller carries a verified Telegram or Discord identity cookie, that ident
 
 **Response (200):**
 ```json
-{ "slug": "4fQ9xK2mT7bR1zVb7Rt0Wq", "id": 123, "adminToken": "9f3c1a7e5b2d48c6a0e1f7b3d9c2e584" }
+{ "slug": "4fQ9xK2mT7bR1zVb7Rt0Wq", "id": 123, "adminToken": "7Hq2mZx9LcB4tR0vNe8KpW" }
 ```
 
 `slug` is 14 letters and digits (random, base62). Keep `adminToken`: it is the credential for every **event admin** route, sent as the admin cookie or as `Authorization: Bearer <adminToken>`.
@@ -475,7 +475,7 @@ What changed in October 2026 for anyone calling this API from their own code.
 - **Webhooks arrive sooner.** Each webhook gets its first delivery attempt immediately after the action that caused it (create, finalize, cancel). Failures are retried by the queue every 5 minutes with growing backoff, and a webhook is marked `FAILED` after 12 attempts. Every delivery carries `X-Tabletop-Signature`, `X-Tabletop-Event-Id` and `X-Webhook-Id` (stable across retries). The signature formula is under [Outbound Webhooks](#outbound-webhooks) and in [External Integrations](../guides/ExternalIntegrations.md).
 - **`fromUrl` must be a public `https` URL.** `http`, credentials in the URL, and hosts that resolve to private, loopback or link-local addresses are rejected with 400 at creation, and checked again before every delivery.
 - **Strict validation on [Create Event](#create-event).** `title` 1 to 120 characters; `description` up to 2000; 1 to 500 `slots`, each with ISO 8601 `startTime` before `endTime`; `minPlayers` 1 to 100; `maxPlayers` null or at least `minPlayers`; `timezone` a real IANA zone; `telegramLink`, when given, must start with `https://t.me/`. Anything else returns 400 with an `issues` array.
-- **Slugs and tokens carry 128 random bits.** New slugs are 22 characters (letters and digits) and new admin tokens are 32 hex characters. Events and tokens created earlier keep their shorter forms and still work, so do not assume any fixed length or format.
+- **Slugs and tokens carry 128 random bits.** New slugs and admin tokens are 22 characters (letters and digits, case-sensitive). Events and tokens created earlier keep their shorter forms and still work, so do not assume any fixed length or format.
 - **Errors share one shape.** Failures return `{ "error": "...", "code": "..." }` (see [Conventions](#conventions)), and every **event admin** route returns 403 to a caller that is not the admin.
 - **[Validate Events](#validate-events) accepts at most 50 slugs** per request.
 - **Admin token header.** Every **event admin** route accepts `Authorization: Bearer <adminToken>` (or `x-admin-token`), so integrations no longer need a browser cookie.
