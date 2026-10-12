@@ -7,7 +7,11 @@ const log = Logger.get("Webhooks");
 /** A row is FAILED once this many attempts have failed. */
 export const MAX_ATTEMPTS = 12;
 const BACKOFF_MINUTES = 5;
-/** A claim older than this is treated as abandoned (the run that took it crashed or timed out). */
+/**
+ * A claim older than this is treated as abandoned (the run that took it crashed or timed out).
+ * Copied into the hosted pg_cron pre-check (prisma/hosted/migrations/20261012120000_pg_cron_precheck);
+ * changing it needs a new migration, and tests/pg-cron-precheck.test.ts fails until there is one.
+ */
 export const LOCK_TTL_MS = 10 * 60 * 1000;
 
 /** Outcome of one delivery attempt on a row this caller has claimed. */
@@ -17,6 +21,9 @@ export type WebhookAttemptOutcome = "delivered" | "retry" | "failed";
  * The claim condition shared by the cron and the immediate attempt: status PENDING or RETRY,
  * due (`nextAttempt <= now`), and not locked, or locked longer ago than the lock TTL.
  * Used inside a conditional `updateMany`, so two claimants can never both win a row.
+ * The hosted pg_cron pre-check (prisma/hosted/migrations/20261012120000_pg_cron_precheck)
+ * repeats this condition in SQL to decide whether to call the cron route at all; a change
+ * here that claims more rows must be matched there in a new migration.
  */
 export function claimableWhere(now: Date) {
     return {

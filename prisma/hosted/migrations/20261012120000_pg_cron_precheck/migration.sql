@@ -1,11 +1,13 @@
 -- Schedules the hosted reminder and webhook cron jobs in Supabase pg_cron, each gated
 -- on a database check so an idle site does not wake a Vercel function every few minutes.
+-- Why it is built this way: docs/adr/0004-gated-pg-cron-jobs.md.
 --
 -- Each job first asks the database whether its route has anything to do and only calls
 -- it when the answer is yes. The check is a superset of the route's own selection: it
 -- may call when nothing ends up sending, it must never skip a run that would have sent.
 -- The route still makes every real decision and claims each row before sending. Any
--- error in a check (an unexpected value, a renamed column) calls the route anyway.
+-- error in a check (an unexpected value, a renamed column, a statement timeout) logs a
+-- warning and calls the route anyway.
 -- The checks mirror features/notifications/server/reminders (voting.ts, session.ts,
 -- schedule.ts) and features/integrations/webhooks/server/process.ts (claimableWhere);
 -- tests/pg-cron-precheck.test.ts runs this migration and fails when they drift.
@@ -20,9 +22,10 @@
 -- later, add a new migration that schedules it again.
 --
 -- Without pg_cron and pg_net (plain Postgres: CI's migration check, a hosted install
--- outside Supabase) this does nothing. Enabling them later does not re-run a migration;
--- run this file once in the SQL editor in that case. The same applies if the deploy role
--- is not allowed to manage pg_cron: the migration warns and leaves the old jobs running.
+-- outside Supabase) this does nothing but warn. Enabling them later does not re-run a
+-- migration; run this file once in the SQL editor in that case. The same applies if the
+-- deploy role is not allowed to manage pg_cron: the migration warns and leaves the old
+-- jobs running.
 
 do $migration$
 begin
@@ -37,7 +40,7 @@ begin
        where n.nspname = 'net' and p.proname = 'http_get'
      )
   then
-    raise notice 'pg_cron or pg_net is not installed; skipping the reminder and webhook jobs';
+    raise warning 'pg_cron or pg_net is not installed; the reminder and webhook jobs were not scheduled';
     return;
   end if;
 
@@ -71,28 +74,31 @@ begin
           )
           -- Voting reminders (voting.ts + schedule.ts): today's (or, before reminderTime,
           -- yesterday's) target on a reminder day, still inside the 18 hour catch-up window,
-          -- and nothing sent since. The target instant is widened by an hour each way so a
-          -- DST transition can only make this call early, never skip.
+          -- and nothing sent since. The target instant is widened by two hours each way, the
+          -- largest daylight saving shift in use, so a DST transition can only make this
+          -- call early, never skip.
           or exists (
+            -- Zone names once per run (the function reads the time zone database), matched
+            -- without regard to case because Intl accepts any case.
+            with zones as materialized (
+              select distinct on (lower(name)) name, lower(name) as lname
+              from pg_timezone_names
+              order by lower(name), name
+            )
             select 1
             from (
               select
                 e."lastReminderSent" as last_sent,
                 e."reminderDays" as days,
-                z.known,
-                z.tz,
-                (now() at time zone z.tz) as local_now,
+                z.name is not null as known,
+                coalesce(z.name, 'UTC') as tz,
+                (now() at time zone coalesce(z.name, 'UTC')) as local_now,
                 nullif(regexp_replace(split_part(e."reminderTime", ':', 1), '\D', '', 'g'), '')::int as h,
                 nullif(regexp_replace(split_part(e."reminderTime", ':', 2), '\D', '', 'g'), '')::int as m,
                 lower(e."reminderTime") as rt
               from "Event" e
-              cross join lateral (
-                -- A zone Postgres does not know cannot be checked here, so it always calls.
-                select
-                  coalesce(k.known, false) as known,
-                  case when k.known then e.timezone else 'UTC' end as tz
-                from (select exists (select 1 from pg_timezone_names n where n.name = e.timezone) as known) k
-              ) z
+              -- A zone Postgres does not know cannot be checked here, so it always calls.
+              left join zones z on z.lname = lower(e.timezone)
               where e.status in ('ACTIVE', 'DRAFT')
                 and e."reminderEnabled"
                 and e."quorumReachedAt" is null
@@ -125,20 +131,23 @@ begin
             ) u
             where not v.known
               or (
-              v.h is not null
-              and v.m is not null
-              and extract(dow from t.target_local)::int in (
-                select substring(d from '^\s*([+-]?\d+)')::int
-                from unnest(string_to_array(v.days, ',')) as d
-                where d ~ '^\s*[+-]?\d'
-              )
-              and utc_now >= u.target_utc - interval '1 hour'
-              and utc_now < u.target_utc + interval '19 hours'
-              and (v.last_sent is null or v.last_sent < u.target_utc + interval '1 hour')
+                v.h is not null
+                and v.m is not null
+                and extract(dow from t.target_local)::int in (
+                  select substring(d from '^\s*([+-]?\d+)')::int
+                  from unnest(string_to_array(v.days, ',')) as d
+                  where d ~ '^\s*[+-]?\d'
+                )
+                and utc_now >= u.target_utc - interval '2 hours'
+                -- VOTING_CATCHUP_MS (18 hours) plus the two hour margin.
+                and utc_now < u.target_utc + interval '20 hours'
+                and (v.last_sent is null or v.last_sent < u.target_utc + interval '2 hours')
               )
           )
         into due;
-      exception when others then
+      -- OTHERS does not include QUERY_CANCELED, which a statement timeout raises.
+      exception when others or query_canceled then
+        raise warning 'tabletop-reminders pre-check failed, calling the route anyway: %', sqlerrm;
         due := true;
       end;
 
@@ -176,7 +185,9 @@ begin
             and (w."lockedAt" is null or w."lockedAt" < utc_now - interval '10 minutes')
         )
         into due;
-      exception when others then
+      -- OTHERS does not include QUERY_CANCELED, which a statement timeout raises.
+      exception when others or query_canceled then
+        raise warning 'tabletop-webhooks pre-check failed, calling the route anyway: %', sqlerrm;
         due := true;
       end;
 

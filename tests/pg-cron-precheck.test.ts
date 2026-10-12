@@ -2,7 +2,15 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { PGlite } from '@electric-sql/pglite';
-import { isVotingReminderDue, isSessionReminderDue } from '@/features/notifications/server/reminders/schedule';
+import {
+    isVotingReminderDue,
+    isSessionReminderDue,
+    currentVotingTarget,
+    VOTING_CATCHUP_MS,
+} from '@/features/notifications/server/reminders/schedule';
+import { liveChannels } from '@/features/notifications/server/reminders/types';
+import { SESSION_REMINDER_LEADS } from '@/features/notifications/model/leads';
+import { claimableWhere, LOCK_TTL_MS } from '@/features/integrations/webhooks/server/process';
 
 /**
  * The hosted migration 20261012120000_pg_cron_precheck schedules the reminder and webhook
@@ -17,7 +25,7 @@ import { isVotingReminderDue, isSessionReminderDue } from '@/features/notificati
 const ROOT = process.cwd();
 const MIGRATIONS = join(ROOT, 'prisma', 'hosted', 'migrations');
 
-const STUBS = `
+const CRON_STUB = `
 create schema cron;
 create table cron.jobs (name text primary key, schedule text, command text);
 create function cron.schedule(job_name text, schedule text, command text) returns bigint
@@ -29,7 +37,9 @@ $$;
 
 -- pg_cron also has a two-argument overload; keep it so the migration's lookup sees the real shape.
 create function cron.schedule(schedule text, command text) returns bigint language sql as $$ select 0::bigint $$;
+`;
 
+const STUBS = CRON_STUB + `
 create schema net;
 create table net.calls (url text, auth text);
 -- Same signature as pg_net's, so the named arguments in the jobs resolve the same way.
@@ -42,15 +52,24 @@ $$;
 create schema vault;
 create table vault.decrypted_secrets (name text, decrypted_secret text);
 insert into vault.decrypted_secrets values ('app_base_url', 'https://example.test/'), ('cron_secret', 's3cret');
+
+-- What a statement timeout raises inside a check.
+create function public.cancel_check() returns boolean language plpgsql as $$
+begin
+  raise sqlstate '57014' using message = 'canceling statement due to statement timeout';
+end $$;
 `;
+
+const HOUR = 3_600_000;
+const MINUTE = 60_000;
 
 let db: PGlite;
 let jobs: Record<string, string>;
 
 /** Runs one job's command as if pg_cron fired it at `now`; returns the URLs it called. */
-async function fire(job: string, now: Date): Promise<string[]> {
+async function fire(job: string, now: Date, edit: (command: string) => string = c => c): Promise<string[]> {
     await db.exec('truncate net.calls');
-    const command = jobs[job].replaceAll('now()', `'${now.toISOString()}'::timestamptz`);
+    const command = edit(jobs[job]).replaceAll('now()', `'${now.toISOString()}'::timestamptz`);
     await db.exec(command);
     const res = await db.query<{ url: string }>('select url from net.calls');
     return res.rows.map(r => r.url);
@@ -125,6 +144,42 @@ describe('pg_cron_precheck migration', () => {
         await plain.close();
     }, 60_000);
 
+    it('schedules nothing when pg_cron is installed but pg_net is not', async () => {
+        const noNet = new PGlite();
+        await noNet.exec(CRON_STUB);
+        await applyMigrations(noNet);
+        const res = await noNet.query<{ n: number }>('select count(*)::int as n from cron.jobs');
+        expect(res.rows[0].n).toBe(0);
+        await noNet.close();
+    }, 60_000);
+
+    // SQL cannot import the TypeScript rules, so the values it copies are pinned here.
+    it('copies the TypeScript constants and channel columns it mirrors', () => {
+        const webhooks = jobs['tabletop-webhooks'];
+        const reminders = jobs['tabletop-reminders'];
+        expect(webhooks).toContain(`interval '${LOCK_TTL_MS / MINUTE} minutes'`);
+        const statusList = webhooks.match(/w\.status in \(([^)]*)\)/);
+        expect(statusList).not.toBeNull();
+        const sqlStatuses = statusList![1].split(',').map(v => v.trim().replace(/'/g, ''));
+        expect(sqlStatuses.sort()).toEqual([...claimableWhere(new Date()).status.in].sort());
+        // The catch-up window plus the two hour DST margin.
+        expect(reminders).toContain(`interval '${VOTING_CATCHUP_MS / HOUR + 2} hours'`);
+        const channels = Object.keys(liveChannels({ telegramChatId: '1', discordChannelId: '2' }) ?? {});
+        expect(channels.length).toBeGreaterThan(0);
+        for (const column of channels) {
+            // Once in the session check, once in the voting check.
+            expect(reminders.split(`e."${column}" is not null`).length - 1, column).toBe(2);
+        }
+    });
+
+    it('calls the route when a check is cancelled by a statement timeout', async () => {
+        const now = new Date();
+        const webhooks = await fire('tabletop-webhooks', now, c => c.replace('select exists (', 'select public.cancel_check() or exists ('));
+        expect(webhooks.length).toBe(1);
+        const reminders = await fire('tabletop-reminders', now, c => c.replace(/select\s+-- Session reminders/, 'select public.cancel_check() or -- Session reminders'));
+        expect(reminders.length).toBe(1);
+    });
+
     it('schedules both jobs and reads the base URL and secret from Vault', async () => {
         expect(Object.keys(jobs).sort()).toEqual(['tabletop-reminders', 'tabletop-webhooks']);
         await db.exec('delete from vault.decrypted_secrets');
@@ -148,8 +203,9 @@ describe('pg_cron_precheck migration', () => {
             ['not due yet', 'RETRY', new Date(now.getTime() + 60_000), null, false],
             ['delivered', 'DELIVERED', new Date(now.getTime() - 1000), null, false],
             ['failed', 'FAILED', new Date(now.getTime() - 1000), null, false],
-            ['locked by a live run', 'PENDING', new Date(now.getTime() - 1000), new Date(now.getTime() - 60_000), false],
-            ['stale lock', 'PENDING', new Date(now.getTime() - 1000), new Date(now.getTime() - 11 * 60_000), true],
+            ['locked by a live run', 'PENDING', new Date(now.getTime() - 1000), new Date(now.getTime() - MINUTE), false],
+            ['lock just inside its TTL', 'PENDING', new Date(now.getTime() - 1000), new Date(now.getTime() - LOCK_TTL_MS + MINUTE), false],
+            ['lock just past its TTL', 'PENDING', new Date(now.getTime() - 1000), new Date(now.getTime() - LOCK_TTL_MS - MINUTE), true],
         ];
         for (const [name, status, nextAttempt, lockedAt, calls] of cases) {
             it(`${calls ? 'calls' : 'skips'}: ${name}`, async () => {
@@ -183,6 +239,13 @@ describe('pg_cron_precheck migration', () => {
             const id = await insertEvent({ ...base, eventType: 'CAMPAIGN' });
             const slot = await insertSlot(id, new Date(now.getTime() + 60 * 60_000));
             await db.query(`insert into "FinalizedSession" ("eventId", "timeSlotId") values ($1, $2)`, [id, slot]);
+            expect((await fire('tabletop-reminders', now)).length).toBe(1);
+        });
+
+        it('calls for an event linked to Discord only', async () => {
+            const id = await insertEvent({ ...base, telegramChatId: null, discordChannelId: '123' });
+            const slot = await insertSlot(id, new Date(now.getTime() + 60 * MINUTE));
+            await db.query('update "Event" set "finalizedSlotId" = $1 where id = $2', [slot, id]);
             expect((await fire('tabletop-reminders', now)).length).toBe(1);
         });
 
@@ -252,6 +315,22 @@ describe('pg_cron_precheck migration', () => {
             expect((await fire('tabletop-reminders', target)).length).toBe(1);
         });
 
+        it('skips between targets once the previous reminder went out', async () => {
+            // Local 15:00 the next day: yesterday's window has closed and today's target is ahead.
+            const yesterday = new Date(target.getTime() - 24 * HOUR);
+            const now = new Date(target.getTime() - 3 * HOUR);
+            const lastReminderSent = new Date(yesterday.getTime() + 5 * MINUTE);
+            expect(isVotingReminderDue({ ...open, lastReminderSent }, now)).toBe(false);
+            await votingEvent({ lastReminderSent: ts(lastReminderSent) });
+            expect(await fire('tabletop-reminders', now)).toEqual([]);
+        });
+
+        it('treats a time zone written in another case as known', async () => {
+            // Sent after the two hour margin, so only an unknown zone would still call.
+            await votingEvent({ timezone: 'america/chicago', lastReminderSent: ts(new Date(target.getTime() + 2 * HOUR + 5 * MINUTE)) });
+            expect(await fire('tabletop-reminders', new Date(target.getTime() + 3 * HOUR))).toEqual([]);
+        });
+
         it('skips when there is nothing at all', async () => {
             expect(await fire('tabletop-reminders', target)).toEqual([]);
         });
@@ -259,7 +338,7 @@ describe('pg_cron_precheck migration', () => {
         // The property that matters: wherever the TypeScript rule says a reminder is due, the
         // job calls the route. Random schedules across DST zones and transition dates.
         it('never skips a reminder the route would send', async () => {
-            const zones = ['America/Chicago', 'America/New_York', 'Europe/London', 'Australia/Sydney', 'Australia/Lord_Howe', 'Asia/Kolkata', 'Pacific/Chatham', 'America/St_Johns', 'UTC'];
+            const zones = ['America/Chicago', 'America/New_York', 'Europe/London', 'Australia/Sydney', 'Australia/Lord_Howe', 'Asia/Kolkata', 'Pacific/Chatham', 'America/St_Johns', 'Antarctica/Troll', 'UTC'];
             const anchors = ['2026-03-08T07:00:00Z', '2026-03-29T01:00:00Z', '2026-04-05T15:00:00Z', '2026-10-04T15:00:00Z', '2026-10-25T01:00:00Z', '2026-11-01T06:00:00Z', '2026-07-15T12:00:00Z'];
             let seed = 42;
             const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
@@ -267,7 +346,8 @@ describe('pg_cron_precheck migration', () => {
 
             let due = 0;
             let extra = 0;
-            for (let i = 0; i < 400; i++) {
+            const runs = 600;
+            for (let i = 0; i < runs; i++) {
                 await db.exec('delete from "TimeSlot"; delete from "Event";');
                 const timezone = pick(zones);
                 const h = Math.floor(rand() * 24);
@@ -277,7 +357,15 @@ describe('pg_cron_precheck migration', () => {
                     : `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 const reminderDays = [0, 1, 2, 3, 4, 5, 6].filter(() => rand() < 0.5).join(',') || '3';
                 const now = new Date(Date.parse(pick(anchors)) + Math.floor((rand() - 0.5) * 3 * 86_400_000));
-                const lastReminderSent = rand() < 0.3 ? null : new Date(now.getTime() - Math.floor(rand() * 40 * 3_600_000));
+                // Most of the time, place the last send right around the open target (or the
+                // one before it), where the dedupe boundary is.
+                const target = currentVotingTarget({ reminderTime, reminderDays, timezone, lastReminderSent: null }, now);
+                const nearTarget = [-1, 0, 1, 59 * MINUTE, 61 * MINUTE, 119 * MINUTE, 121 * MINUTE, -24 * HOUR + MINUTE, -24 * HOUR - MINUTE];
+                const lastReminderSent = rand() < 0.2
+                    ? null
+                    : target && rand() < 0.6
+                        ? new Date(target.getTime() + pick(nearTarget))
+                        : new Date(now.getTime() - Math.floor(rand() * 40 * HOUR));
 
                 const schedule = { reminderTime, reminderDays, timezone, lastReminderSent };
                 await votingEvent({ timezone, reminderTime, reminderDays, lastReminderSent: ts(lastReminderSent) });
@@ -293,20 +381,37 @@ describe('pg_cron_precheck migration', () => {
             }
             // The check is allowed to be loose, not useless: most not-due cases must skip.
             expect(due).toBeGreaterThan(20);
-            expect(extra).toBeLessThan((400 - due) / 4);
+            expect(extra).toBeLessThan((runs - due) / 4);
         }, 120_000);
 
-        it('matches isSessionReminderDue at the window edges', async () => {
+        it('matches isSessionReminderDue at every lead, for both slot sources and both platforms', async () => {
             const now = new Date('2026-10-12T12:00:00Z');
-            for (const [offsetMin, lead] of [[120, 120], [121, 120], [1, 120], [0, 120], [1440, 1440], [1441, 1440]] as const) {
-                await db.exec('delete from "TimeSlot"; delete from "Event";');
-                const id = await insertEvent({ status: 'FINALIZED', sessionReminderEnabled: true, sessionReminderLeadMinutes: lead, telegramChatId: '-100' });
-                const start = new Date(now.getTime() + offsetMin * 60_000);
-                const slot = await insertSlot(id, start);
-                await db.query('update "Event" set "finalizedSlotId" = $1 where id = $2', [slot, id]);
-                const called = (await fire('tabletop-reminders', now)).length === 1;
-                expect(called, `${offsetMin} min ahead, lead ${lead}`).toBe(isSessionReminderDue(start, lead, now));
+            for (const lead of SESSION_REMINDER_LEADS) {
+                for (const offsetMin of [lead + 1, lead, lead - 1, 1, 0, -1]) {
+                    for (const source of ['finalizedSlotId', 'FinalizedSession'] as const) {
+                        for (const channel of [{ telegramChatId: '-100' }, { discordChannelId: '123' }]) {
+                            await db.exec('delete from "FinalizedSession"; delete from "TimeSlot"; delete from "Event";');
+                            const id = await insertEvent({
+                                status: 'FINALIZED',
+                                eventType: source === 'FinalizedSession' ? 'CAMPAIGN' : 'ONE_SHOT',
+                                sessionReminderEnabled: true,
+                                sessionReminderLeadMinutes: lead,
+                                ...channel,
+                            });
+                            const start = new Date(now.getTime() + offsetMin * MINUTE);
+                            const slot = await insertSlot(id, start);
+                            if (source === 'finalizedSlotId') {
+                                await db.query('update "Event" set "finalizedSlotId" = $1 where id = $2', [slot, id]);
+                            } else {
+                                await db.query(`insert into "FinalizedSession" ("eventId", "timeSlotId") values ($1, $2)`, [id, slot]);
+                            }
+                            const called = (await fire('tabletop-reminders', now)).length === 1;
+                            expect(called, `${offsetMin} min ahead, lead ${lead}, ${source}, ${Object.keys(channel)[0]}`)
+                                .toBe(isSessionReminderDue(start, lead, now));
+                        }
+                    }
+                }
             }
-        });
+        }, 120_000);
     });
 });

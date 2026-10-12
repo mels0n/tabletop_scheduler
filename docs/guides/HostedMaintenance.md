@@ -149,16 +149,12 @@ The migration schedules two jobs:
 | `tabletop-reminders` | every 10 minutes | `<app_base_url>/api/cron/reminders` |
 | `tabletop-webhooks` | every 5 minutes | `<app_base_url>/api/cron/webhooks` |
 
-Each job checks the database before calling and only calls when there is work: a
-webhook row due for delivery, a session reminder inside its lead window, or a voting
-reminder whose target time is open and not yet sent. An idle site therefore makes
-almost no calls, which keeps Vercel function CPU low. The check is deliberately loose
-(it may call when nothing ends up sending, never the other way round), the route still
-makes every real decision, and if the check itself errors the job calls anyway.
-`tests/pg-cron-precheck.test.ts` applies the hosted migrations and compares the checks
-with the reminder rules in code, so a schema change that breaks a check fails CI. A
-skipped run shows in `cron.job_run_details` as succeeded with no matching
-`net._http_response` row.
+Each job checks the database before calling and only calls when there is work, so an
+idle site makes almost no calls to Vercel. The check may call when nothing ends up
+sending but never skips a run that would have sent; [ADR 0004](../adr/0004-gated-pg-cron-jobs.md)
+explains the design. A skipped run shows in `cron.job_run_details` as succeeded with no
+matching `net._http_response` row. A check that fails logs a warning in the Postgres
+logs and calls anyway.
 
 Each call is a `GET` (both routes accept only `GET`) with
 `Authorization: Bearer <cron_secret>`. The secrets are looked up on every run, so
