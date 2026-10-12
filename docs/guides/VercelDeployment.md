@@ -66,7 +66,7 @@ workflow.
 ## 6. Scheduled Jobs
 
 - **Cleanup** runs once a day from Vercel Cron (`vercel.json`, 00:00 UTC).
-- **Reminders and the outbound webhook queue** need to run every few minutes, which Vercel's free cron cannot do. They run from Supabase `pg_cron`; the one-time setup (Vault secrets, then `scripts/sql/pg-cron-reminders.sql`) is in [HostedMaintenance.md](./HostedMaintenance.md#scheduling-reminders-with-pg_cron).
+- **Reminders and the outbound webhook queue** need to run every few minutes, which Vercel's free cron cannot do. They run from Supabase `pg_cron`; the jobs are scheduled by a hosted migration on deploy, and the one-time setup (the two extensions and two Vault secrets) is in [HostedMaintenance.md](./HostedMaintenance.md#scheduling-reminders-with-pg_cron).
 - **Reminder backstop.** `.github/workflows/cron.yml` calls the reminders route every two hours. It needs the repository secrets `DEPLOYMENT_URL` and `CRON_SECRET`.
 - **Fortnightly rebuild.** `.github/workflows/fortnightly-deploy.yml` calls a Vercel deploy hook every other Thursday so blog posts scheduled for a future date get published. Create a deploy hook for `main` in the Vercel project settings and store its URL as the repository secret `VERCEL_DEPLOY_HOOK_URL`. The workflow pushes no commits.
 

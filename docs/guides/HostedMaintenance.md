@@ -130,18 +130,19 @@ reminders. Reminders and the outbound webhook queue are driven from inside
 Supabase instead, using `pg_cron` to schedule HTTP calls through `pg_net`. This is
 free-tier compatible and has no per-run cost.
 
-Do this once per environment, in the Supabase SQL editor. First store the two
-secrets the job needs in Supabase Vault (use the real `CRON_SECRET` value from
-Vercel):
+The jobs themselves are scheduled by a hosted Prisma migration
+(`prisma/hosted/migrations/20261012120000_pg_cron_precheck`), so a production deploy
+creates or updates them with no manual step. Two things must exist first, once per
+environment, in the Supabase SQL editor: the `pg_cron` and `pg_net` extensions
+(Database, Extensions, or `create extension if not exists pg_cron;` and the same for
+`pg_net`), and two Vault secrets (use the real `CRON_SECRET` value from Vercel):
 
 ```sql
 select vault.create_secret('<the CRON_SECRET value>', 'cron_secret');
 select vault.create_secret('https://tabletoptime.us', 'app_base_url');
 ```
 
-Then run the contents of `scripts/sql/pg-cron-reminders.sql` in the same editor.
-That script enables `pg_cron` and `pg_net`, reads both secrets from
-`vault.decrypted_secrets`, and schedules two jobs:
+The migration schedules two jobs:
 
 | Job | Schedule | Calls |
 |-----|----------|-------|
@@ -154,17 +155,20 @@ reminder whose target time is open and not yet sent. An idle site therefore make
 almost no calls, which keeps Vercel function CPU low. The check is deliberately loose
 (it may call when nothing ends up sending, never the other way round), the route still
 makes every real decision, and if the check itself errors the job calls anyway.
-`tests/pg-cron-precheck.test.ts` runs the script against the hosted schema and compares
-the checks with the reminder rules in code, so a schema change that breaks a check
-fails CI. After changing the script, run it again in the SQL editor; a skipped run
-shows in `cron.job_run_details` as succeeded with no matching `net._http_response` row.
+`tests/pg-cron-precheck.test.ts` applies the hosted migrations and compares the checks
+with the reminder rules in code, so a schema change that breaks a check fails CI. A
+skipped run shows in `cron.job_run_details` as succeeded with no matching
+`net._http_response` row.
 
 Each call is a `GET` (both routes accept only `GET`) with
 `Authorization: Bearer <cron_secret>`. The secrets are looked up on every run, so
 nothing needs rescheduling after a Vault update.
 
-The script is safe to run again: `cron.schedule` with an existing job name replaces
-that job in place rather than adding a second one. To remove the jobs:
+On a database without `pg_cron` and `pg_net` the migration does nothing. If the
+extensions are enabled after that migration already ran, paste its `migration.sql`
+into the SQL editor once: `cron.schedule` with an existing job name replaces that job
+in place, so it is always safe to run again. To change a job, add a new migration
+that schedules it again. To remove the jobs:
 
 ```sql
 select cron.unschedule('tabletop-reminders');
