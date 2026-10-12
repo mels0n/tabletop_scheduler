@@ -97,7 +97,7 @@ If the caller carries a verified Telegram or Discord identity cookie, that ident
 { "slug": "4fQ9xK2mT7bR1zVb7Rt0Wq", "id": 123, "adminToken": "7Hq2mZx9LcB4tR0vNe8KpW" }
 ```
 
-`slug` is 14 letters and digits (random, base62). Keep `adminToken`: it is the credential for every **event admin** route, sent as the admin cookie or as `Authorization: Bearer <adminToken>`.
+`slug` is 22 letters and digits for new events (random, case-sensitive base62, 128 bits). Events created earlier keep their shorter slugs, so do not assume a fixed length. Keep `adminToken`: it is the credential for every **event admin** route, sent as the admin cookie or as `Authorization: Bearer <adminToken>`.
 
 If `fromUrl` is set, creating the event queues a `CREATED` webhook. Its first delivery attempt is made right after this response is sent; if that fails, the webhook queue retries it.
 

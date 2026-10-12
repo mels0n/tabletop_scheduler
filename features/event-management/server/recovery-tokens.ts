@@ -76,6 +76,7 @@ export async function getConnectCommand(slug: string): Promise<string> {
     let nonce = event.telegramConnectNonce;
     let chatId = event.telegramChatId ?? null;
     if (!nonce) {
+        // Always newConnectNonce(): its v2_ prefix is what retires legacy 8-hex codes (see connect-code.ts).
         const fresh = newConnectNonce();
         // Only set it if still null; a concurrent writer's nonce wins and is re-read below.
         await prisma.event.updateMany({
