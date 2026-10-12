@@ -382,7 +382,7 @@ function ConnectCommand({ command, error }: { command: string | null; error: str
 
     return (
         <div className="flex items-center gap-2">
-            <code className="flex-1 bg-field p-2 rounded-control text-xs font-mono text-parchment-2 truncate">{command}</code>
+            <code className="flex-1 bg-field p-2 rounded-control text-xs font-mono text-parchment-2 break-all select-all">{command}</code>
             <button
                 onClick={() => {
                     navigator.clipboard.writeText(command);

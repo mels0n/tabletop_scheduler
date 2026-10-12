@@ -87,7 +87,7 @@ export default function DevelopersPage() {
                 <p className="text-mist">
                     Webhooks are now sent right after each change, retried automatically, and signed with an{" "}
                     <code>X-Tabletop-Signature</code> header. A <code>fromUrl</code> must be a public <code>https</code> address. Event creation
-                    checks every field strictly, and event links now use 14-character codes. Every event admin route accepts your
+                    checks every field strictly, and new event links use 22-character random codes (older links keep working). Every event admin route accepts your
                     event&apos;s admin token in an <code>Authorization: Bearer</code> (or <code>x-admin-token</code>) header, and an integration that edits a
                     participant by id must send it. Pages can no longer be embedded in an iframe. If you already call the API, read the{" "}
                     <a

@@ -66,7 +66,7 @@ describe('recovery token minting requires admin', () => {
 
         expect(mockPrisma.event.updateMany).toHaveBeenCalledWith({
             where: { id: 1, telegramConnectNonce: null },
-            data: { telegramConnectNonce: expect.stringMatching(/^[0-9a-f]{32}$/) },
+            data: { telegramConnectNonce: expect.stringMatching(/^v2_[0-9a-f]{32}$/) },
         });
         expect(stored).toBeTruthy();
         expect(command).toBe(`/connect abc ${connectCodeFor('abc', 'e'.repeat(64), null, stored)}`);
