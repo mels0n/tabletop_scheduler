@@ -7,6 +7,11 @@
  * 10-minute pg_cron job with an hours-apart GitHub Actions backstop, so a run can land
  * well after the target; any run inside this window catches up. It is shorter than a
  * day so a missed reminder never collides with the next day's.
+ *
+ * The hosted pg_cron pre-check (prisma/hosted/migrations/20261012120000_pg_cron_precheck)
+ * repeats these voting and session rules in SQL to decide whether to call the reminders
+ * route at all. A change that makes more reminders due must be matched there in a new
+ * migration; tests/pg-cron-precheck.test.ts compares the two.
  */
 export const VOTING_CATCHUP_MS = 18 * 60 * 60 * 1000;
 const WEEKDAYS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };

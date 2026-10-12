@@ -3,8 +3,9 @@ name: Trigger Reminders
 on:
   schedule:
     # Backstop only. Hosted reminders and webhook retries run from Supabase pg_cron
-    # (scripts/sql/pg-cron-reminders.sql); this catches a stalled pg_cron. GitHub delays scheduled runs by
-    # hours, so it stays infrequent and off the top of the hour. Overlap with pg_cron is
+    # (scheduled by prisma/hosted/migrations/20261012120000_pg_cron_precheck); this
+    # catches a stalled pg_cron. GitHub delays scheduled runs by hours, so it stays
+    # infrequent and off the top of the hour. Overlap with pg_cron is
     # safe: each reminder and each webhook row is claimed in the database before sending.
     - cron: '7 */2 * * *'
   workflow_dispatch: # Allow manual trigger
