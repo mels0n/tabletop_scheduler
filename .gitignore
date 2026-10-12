@@ -96,3 +96,19 @@ tmp/
 ACTION-PLAN.md
 *AUDIT-REPORT*.md
 *_STRATEGY.md
+
+# Env and credential files; the example templates stay tracked.
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Public repo: no tool config at any depth, no strategy working docs.
+.claude/
+*BLOG_STRATEGY.md
+*CONTENT_STRATEGY.md
+*SEO_STRATEGY.md
+*MARKETING_STRATEGY.md
