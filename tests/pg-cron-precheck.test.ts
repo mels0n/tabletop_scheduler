@@ -5,17 +5,17 @@ import { PGlite } from '@electric-sql/pglite';
 import { isVotingReminderDue, isSessionReminderDue } from '@/features/notifications/server/reminders/schedule';
 
 /**
- * scripts/sql/pg-cron-reminders.sql gates each hosted cron call on a database check, so an
- * idle site never wakes a function. The check duplicates the routes' own selection in SQL,
- * and a check that is narrower than the route silently stops reminders. These tests run the
- * exact job commands from that file on the hosted schema (all of prisma/hosted/migrations)
- * in an in-memory Postgres, with pg_cron, pg_net and Vault stubbed, and compare the outcome
- * with the TypeScript rules: whenever the route would send, the job must call it.
+ * The hosted migration 20261012120000_pg_cron_precheck schedules the reminder and webhook
+ * jobs in pg_cron, each gated on a database check so an idle site never wakes a function.
+ * The check duplicates the routes' own selection in SQL, and a check that is narrower than
+ * the route silently stops reminders. These tests apply every hosted migration to an
+ * in-memory Postgres with pg_cron, pg_net and Vault stubbed, run the scheduled job commands,
+ * and compare the outcome with the TypeScript rules: whenever the route would send, the
+ * job must call it.
  */
 
 const ROOT = process.cwd();
 const MIGRATIONS = join(ROOT, 'prisma', 'hosted', 'migrations');
-const CRON_SQL = join(ROOT, 'scripts', 'sql', 'pg-cron-reminders.sql');
 
 const STUBS = `
 create schema cron;
@@ -27,9 +27,13 @@ language sql as $$
   select 1::bigint;
 $$;
 
+-- pg_cron also has a two-argument overload; keep it so the migration's lookup sees the real shape.
+create function cron.schedule(schedule text, command text) returns bigint language sql as $$ select 0::bigint $$;
+
 create schema net;
 create table net.calls (url text, auth text);
-create function net.http_get(url text, headers jsonb, timeout_milliseconds integer) returns bigint
+-- Same signature as pg_net's, so the named arguments in the jobs resolve the same way.
+create function net.http_get(url text, params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint
 language sql as $$
   insert into net.calls values (url, headers->>'Authorization');
   select 1::bigint;
@@ -75,15 +79,18 @@ async function insertSlot(eventId: number, start: Date, sentAt: Date | null = nu
     return res.rows[0].id;
 }
 
+async function applyMigrations(target: PGlite): Promise<void> {
+    for (const dir of readdirSync(MIGRATIONS).filter(d => !d.endsWith('.toml')).sort()) {
+        await target.exec(readFileSync(join(MIGRATIONS, dir, 'migration.sql'), 'utf8'));
+    }
+}
+
 beforeAll(async () => {
     db = new PGlite();
-    for (const dir of readdirSync(MIGRATIONS).filter(d => !d.endsWith('.toml')).sort()) {
-        await db.exec(readFileSync(join(MIGRATIONS, dir, 'migration.sql'), 'utf8'));
-    }
+    // pg_cron, pg_net and Vault are Supabase extensions; the stubs stand in for them and
+    // must exist before the migrations run, as they do on Supabase.
     await db.exec(STUBS);
-    // pg_cron and pg_net are Supabase extensions; the stubs above stand in for them.
-    const sql = readFileSync(CRON_SQL, 'utf8').replace(/^create extension .*$/gm, '');
-    await db.exec(sql);
+    await applyMigrations(db);
     const res = await db.query<{ name: string; command: string }>('select name, command from cron.jobs');
     jobs = Object.fromEntries(res.rows.map(r => [r.name, r.command]));
 }, 60_000);
@@ -92,7 +99,32 @@ beforeEach(async () => {
     await db.exec('delete from "WebhookEvent"; delete from "FinalizedSession"; delete from "TimeSlot"; delete from "Event";');
 });
 
-describe('pg-cron-reminders.sql', () => {
+describe('pg_cron_precheck migration', () => {
+    it('leaves existing jobs alone, without failing, when the role may not schedule', async () => {
+        const restricted = new PGlite();
+        await restricted.exec(STUBS);
+        await restricted.exec(`select cron.schedule('tabletop-webhooks', '*/5 * * * *', 'select 1')`);
+        await restricted.exec(`
+            create role deployer;
+            grant all on schema public to deployer;
+            revoke execute on function cron.schedule(text, text, text) from public;
+            set role deployer;
+        `);
+        await applyMigrations(restricted);
+        await restricted.exec('reset role');
+        const res = await restricted.query<{ command: string }>(`select command from cron.jobs where name = 'tabletop-webhooks'`);
+        expect(res.rows[0].command).toBe('select 1');
+        await restricted.close();
+    }, 60_000);
+
+    it('is a no-op on Postgres without pg_cron (CI shadow database, non-Supabase hosts)', async () => {
+        const plain = new PGlite();
+        await applyMigrations(plain);
+        const res = await plain.query<{ n: number }>(`select count(*)::int as n from pg_namespace where nspname = 'cron'`);
+        expect(res.rows[0].n).toBe(0);
+        await plain.close();
+    }, 60_000);
+
     it('schedules both jobs and reads the base URL and secret from Vault', async () => {
         expect(Object.keys(jobs).sort()).toEqual(['tabletop-reminders', 'tabletop-webhooks']);
         await db.exec('delete from vault.decrypted_secrets');
