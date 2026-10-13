@@ -87,8 +87,8 @@ tmp/
 /shared/data/published-posts.generated.ts
 
 # Public repo: tool config and strategy working docs stay local.
-# The .claude/*.json line below must stay AFTER the "!.claude/*.json" line above:
-# the later rule wins, and removing either one would start tracking .claude/*.json again.
+# The ".claude/" rule further down ignores that directory at every depth, so the
+# .claude/* lines here are superseded; they stay so the ignore block remains standard.
 .claude/*.json
 .impeccable/
 /briefs/
