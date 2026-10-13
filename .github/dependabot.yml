@@ -5,6 +5,23 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      # The Prisma CLI and client must stay on the same version.
+      prisma:
+        patterns: ["prisma", "@prisma/client"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # @types/node tracks the runtime Node major (.nvmrc, Dockerfile, engines).
+      # It moves with a deliberate runtime upgrade, never on its own.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # Prisma majors change the schema, config and client setup and must be
+      # proven against every self-host snapshot in prisma/compat/. They are done
+      # as a planned migration that upgrades prisma and @prisma/client together.
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -13,3 +30,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The Node major is changed deliberately across .nvmrc, Dockerfile, engines
+      # and @types/node together, and only to an even-numbered (LTS) release.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
