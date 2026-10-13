@@ -9,6 +9,7 @@ import prisma from '@/shared/lib/prisma';
 import { sendDirectMessage } from '@/features/notifications';
 import { verifyEventAdmin } from '@/features/auth/server/verify';
 import { connectCodeFor } from '@/features/telegram/model/connect-code';
+import { hashToken } from '@/shared/lib/token';
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/shared/lib/prisma');
@@ -160,9 +161,11 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(dcCall[0]).toEqual({ telegramChatId: null, discordUserId: '123456789012345678' });
         expect(dcRow).toMatchObject({ chatId: null, telegramUsername: null, discordId: '123456789012345678', discordUsername: 'Steve' });
 
-        // Each DM carries a different raw token.
-        const tokenOf = (html: string) => html.match(/token=([0-9A-Za-z-]+)/)![1];
+        // Each DM carries a different raw token, and it is the one stored on its own platform's row.
+        const tokenOf = (html: string) => html.match(/token=([0-9A-Za-z]+)/)![1];
         expect(tokenOf(tgCall[1].html)).not.toBe(tokenOf(dcCall[1].html));
+        expect(hashToken(tokenOf(tgCall[1].html))).toBe(tgRow.token);
+        expect(hashToken(tokenOf(dcCall[1].html))).toBe(dcRow.token);
     });
 
     it('escapes the event title in the HTML DM', async () => {
