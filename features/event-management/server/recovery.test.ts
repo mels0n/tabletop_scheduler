@@ -161,7 +161,7 @@ describe('manager recovery (platform-neutral, login-token based)', () => {
         expect(dcRow).toMatchObject({ chatId: null, telegramUsername: null, discordId: '123456789012345678', discordUsername: 'Steve' });
 
         // Each DM carries a different raw token.
-        const tokenOf = (html: string) => html.match(/token=([0-9a-f-]+)/)![1];
+        const tokenOf = (html: string) => html.match(/token=([0-9A-Za-z-]+)/)![1];
         expect(tokenOf(tgCall[1].html)).not.toBe(tokenOf(dcCall[1].html));
     });
 
