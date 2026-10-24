@@ -8,6 +8,7 @@ import {
     validateSlugsSchema,
     oneShotFinalizeSchema,
     campaignFinalizeSchema,
+    reminderSettingsSchema,
     isValidTimezone,
     MAX_EVENT_SLOTS,
 } from './schemas';
@@ -111,6 +112,16 @@ describe('voteSchema', () => {
         const many = Array.from({ length: 1001 }, (_, i) => ({ ...vote, slotId: i + 1 }));
         expect(voteSchema.safeParse({ name: 'C', votes: many }).success).toBe(false);
     });
+
+    // The size cap must come before the refine so an oversized array is rejected
+    // without parsing each element (zod only short-circuits on leading size checks).
+    it('rejects an oversized votes array on its size alone', () => {
+        const junk = Array.from({ length: 5000 }, () => ({ slotId: 'x', preference: 'LOVE' }));
+        const result = voteSchema.safeParse({ name: 'C', votes: junk });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues).toHaveLength(1);
+        expect(result.error?.issues[0]).toMatchObject({ code: 'too_big', path: ['votes'] });
+    });
 });
 
 describe('slot schemas', () => {
@@ -162,5 +173,22 @@ describe('finalize schemas', () => {
         expect(campaignFinalizeSchema.safeParse({ slotIds: ids(MAX_EVENT_SLOTS + 1) }).success).toBe(false);
         expect(campaignFinalizeSchema.safeParse({ slotIds: [1, 1] }).success).toBe(false);
         expect(campaignFinalizeSchema.parse({ slotIds: [1, 2], houseId: '5' }).houseId).toBe(5);
+    });
+
+    it('campaignFinalizeSchema caps the roster at 1000 participants', () => {
+        const ids = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+        expect(campaignFinalizeSchema.safeParse({ slotIds: [1], participantIds: ids(1000) }).success).toBe(true);
+        expect(campaignFinalizeSchema.safeParse({ slotIds: [1], participantIds: ids(1001) }).success).toBe(false);
+    });
+});
+
+describe('reminderSettingsSchema', () => {
+    it('accepts at most one entry per weekday', () => {
+        const base = { enabled: true, time: '18:00' };
+        expect(reminderSettingsSchema.safeParse({ ...base, days: [0, 1, 2, 3, 4, 5, 6] }).success).toBe(true);
+        expect(reminderSettingsSchema.safeParse({ ...base, days: [1, 1] }).success).toBe(false);
+        const eight = reminderSettingsSchema.safeParse({ ...base, days: [0, 1, 2, 3, 4, 5, 6, 0] });
+        expect(eight.success).toBe(false);
+        expect(eight.error?.issues[0]).toMatchObject({ code: 'too_big', path: ['days'] });
     });
 });
