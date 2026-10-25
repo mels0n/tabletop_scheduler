@@ -58,9 +58,29 @@ jobs:
           NEXT_PUBLIC_BASE_URL: https://ci.example
           NEXT_TELEMETRY_DISABLED: '1'
 
-      # Fails on an upward import, an import cycle or an unresolvable import.
+      # dependency-cruiser needs a TypeScript it supports (>=2 <7). With a missing
+      # or newer compiler it cruises 0 modules and passes on an unchecked graph.
+      - name: Guard against a false pass
+        run: |
+          major=$(node -p "require('typescript/package.json').version.split('.')[0]" 2>/dev/null) || {
+            echo "::error::typescript is not installed; dependency-cruiser would check nothing. Run: npm i -D typescript@^6"
+            exit 1
+          }
+          if [ "$major" -ge 7 ]; then
+            echo "::error::typescript $major.x is installed; dependency-cruiser supports >=2 <7 and would check nothing. Run: npm i -D typescript@^6"
+            exit 1
+          fi
+
+      # Fails on an upward import, an import cycle or an unresolvable import,
+      # and on a run that cruised no modules at all.
       - name: Dependency direction
-        run: npm run depcruise
+        run: |
+          set -o pipefail
+          npm run depcruise 2>&1 | tee "$RUNNER_TEMP/depcruise.log"
+          if grep -Eq '(^|[ (])0 modules,' "$RUNNER_TEMP/depcruise.log"; then
+            echo "::error::dependency-cruiser cruised 0 modules. The graph was not checked; this is not a pass."
+            exit 1
+          fi
 
   selfhost-upgrade:
     # Fails when the current prisma/schema.prisma cannot be applied with a plain
