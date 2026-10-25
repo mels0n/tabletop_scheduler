@@ -47,7 +47,7 @@
     "schema-dts": "^2.1.0",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.4.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
