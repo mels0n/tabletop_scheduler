@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -50,7 +51,9 @@ export async function createSqliteTestDb(): Promise<SqliteTestDb> {
         url,
         cleanup: async () => {
             await prisma.$disconnect();
-            rmSync(dir, { recursive: true, force: true });
+            // Windows can hold the SQLite file briefly after disconnect; retry instead of failing on EPERM.
+            // The promise form is used because rmSync does not retry EPERM on current Node versions.
+            await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         },
     };
 }
