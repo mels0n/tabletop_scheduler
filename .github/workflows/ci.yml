@@ -58,8 +58,10 @@ jobs:
           NEXT_PUBLIC_BASE_URL: https://ci.example
           NEXT_TELEMETRY_DISABLED: '1'
 
-      # dependency-cruiser needs a TypeScript it supports (>=2 <7). With a missing
-      # or newer compiler it cruises 0 modules and passes on an unchecked graph.
+      # dependency-cruiser needs a TypeScript it supports (>=2 <7 for 18.x; see
+      # `npx depcruise --info`). With a missing or newer compiler it cruises 0
+      # modules and passes on an unchecked graph. Raise the 7 below when
+      # dependency-cruiser supports TypeScript 7.
       - name: Guard against a false pass
         run: |
           major=$(node -p "require('typescript/package.json').version.split('.')[0]" 2>/dev/null) || {
@@ -72,13 +74,14 @@ jobs:
           fi
 
       # Fails on an upward import, an import cycle or an unresolvable import,
-      # and on a run that cruised no modules at all.
+      # and unless the summary reports at least one module cruised (so a run
+      # that checked nothing, or printed no summary, is never a pass).
       - name: Dependency direction
         run: |
           set -o pipefail
           npm run depcruise 2>&1 | tee "$RUNNER_TEMP/depcruise.log"
-          if grep -Eq '(^|[ (])0 modules,' "$RUNNER_TEMP/depcruise.log"; then
-            echo "::error::dependency-cruiser cruised 0 modules. The graph was not checked; this is not a pass."
+          if ! grep -Eq '(^|[ (])[1-9][0-9]* modules,' "$RUNNER_TEMP/depcruise.log"; then
+            echo "::error::dependency-cruiser reported no modules cruised. The graph was not checked; this is not a pass."
             exit 1
           fi
 
