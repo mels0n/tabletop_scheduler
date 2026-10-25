@@ -1,37 +1,42 @@
 version: 2
+# Security updates only. open-pull-requests-limit: 0 turns off routine version
+# updates; Dependabot security updates (enabled in the repository settings) still
+# open a pull request for each advisory, on their own limit. Upgrades without an
+# advisory are planned and done by hand.
+#
+# There are no ignore rules: they also apply to security updates, so ignoring a
+# major (Prisma, Node) would hide the fix for an advisory that needs one. Such a
+# pull request fails CI and is then done as a planned migration.
+#
+# There is no docker entry: Dependabot raises no security updates for base
+# images, and the Dockerfile's node:22-alpine tag already tracks the latest 22.x.
+#
+# Actions pinned by commit SHA (aquasecurity/trivy-action in docker-publish.yml)
+# get no alerts or security updates; move that pin by hand. See ADR 0005.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
+    # A group only combines advisories that hit several of its packages into one
+    # pull request; it does not bump a partner that has no advisory. When merging
+    # one of these, move the partner to the same version by hand.
     groups:
       # The Prisma CLI and client must stay on the same version.
       prisma:
+        applies-to: security-updates
         patterns: ["prisma", "@prisma/client"]
-        update-types: ["minor", "patch"]
-    ignore:
-      # @types/node tracks the runtime Node major (.nvmrc, Dockerfile, engines).
-      # It moves with a deliberate runtime upgrade, never on its own.
-      - dependency-name: "@types/node"
-        update-types: ["version-update:semver-major"]
-      # Prisma majors change the schema, config and client setup and must be
-      # proven against every self-host snapshot in prisma/compat/. They are done
-      # as a planned migration that upgrades prisma and @prisma/client together.
-      - dependency-name: "prisma"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@prisma/client"
-        update-types: ["version-update:semver-major"]
+      # @vitest/coverage-v8 declares an exact vitest peer.
+      vitest:
+        applies-to: security-updates
+        patterns: ["vitest", "@vitest/*"]
+      # next and eslint-config-next are pinned exact and released together.
+      next:
+        applies-to: security-updates
+        patterns: ["next", "eslint-config-next"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-  - package-ecosystem: docker
-    directory: /
-    schedule:
-      interval: weekly
-    ignore:
-      # The Node major is changed deliberately across .nvmrc, Dockerfile, engines
-      # and @types/node together, and only to an even-numbered (LTS) release.
-      - dependency-name: "node"
-        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 0

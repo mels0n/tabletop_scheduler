@@ -102,6 +102,14 @@ Command handling lives in one place, `features/telegram/server/update-handler.ts
 - Keep PRs focused on a single feature or fix.
 - Add "Why" comments for complex business logic.
 
+## Updating dependencies
+Dependabot opens pull requests for security advisories only ([ADR 0005](docs/adr/0005-security-only-dependency-updates.md)). Other upgrades are done by hand:
+- Check `npm outdated` and `npm audit` whenever you change dependencies for any reason, and before a release is tagged.
+- Upgrade packages that move together in the same pull request: `prisma` with `@prisma/client`, `vitest` with `@vitest/coverage-v8`, `next` with `eslint-config-next`. Read the migration notes for any major.
+- Keep `typescript` below 7 until dependency-cruiser and `typescript-eslint` support it; CI fails otherwise.
+- Check the `aquasecurity/trivy-action` commit pin in `.github/workflows/docker-publish.yml` against its latest release.
+- Run every check listed under Pull Requests above.
+
 ## Logging
 
 We use a centralized structured logger instead of `console.log`. It writes one JSON object per line, and its level comes from `LOG_LEVEL`.
