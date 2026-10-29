@@ -5,6 +5,7 @@ import { updateTelegramInviteLink, checkEventStatus } from "@/features/event-man
 import { Check, CheckCircle, Copy, Loader2, Lock, Save, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatHandle } from "@/shared/lib/handle";
+import { BotAvatar } from "@/shared/ui/BotAvatar";
 
 interface TelegramConnectProps {
     slug: string;
@@ -225,7 +226,12 @@ export function TelegramConnect({
         <div className="space-y-4">
             <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-4">
                 <div className="flex items-start gap-3 text-gold-bright">
-                    <Send className="w-5 h-5 flex-shrink-0 mt-0.5 text-telegram" aria-hidden="true" />
+                    <BotAvatar
+                        size={40}
+                        decorative
+                        badge={<span className="flex size-4 items-center justify-center rounded-full bg-telegram"><Send className="size-2.5 text-parchment" /></span>}
+                        fallback={<Send className="w-5 h-5 flex-shrink-0 mt-0.5 text-telegram" aria-hidden="true" />}
+                    />
                     <div className="space-y-1">
                         <p className="font-bold">Connect Telegram Group</p>
                         <p className="opacity-90 text-xs text-gold-bright">
