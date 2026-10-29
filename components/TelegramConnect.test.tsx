@@ -17,6 +17,9 @@ vi.mock('@/features/event-management/server/recovery', () => ({
     dmManagerLink: vi.fn(),
 }));
 
+const config = vi.hoisted(() => ({ isHosted: false, baseUrl: null, botName: null }));
+vi.mock('@/shared/config/public', () => ({ publicConfig: config }));
+
 import { checkEventStatus, checkManagerStatus } from '@/features/event-management/server/actions';
 import { TelegramConnect } from './TelegramConnect';
 
@@ -109,5 +112,24 @@ describe('TelegramConnect manager DM', () => {
         });
 
         expect(dmManagerLink).toHaveBeenCalledWith('evt', 'telegram');
+    });
+});
+
+describe('TelegramConnect: bot avatar', () => {
+    afterEach(() => { config.isHosted = false; cleanup(); });
+
+    const renderPanel = () => render(
+        <TelegramConnect slug="evt" botUsername="bot" hasChatId={false} initialHandle={null} hasManagerChatId={false} />,
+    );
+
+    it('shows the hosted bot avatar in the connect panel when hosted', () => {
+        config.isHosted = true;
+        const { container } = renderPanel();
+        expect(container.querySelector('img[src="/images/bot/avatar-96.webp"]')).not.toBeNull();
+    });
+
+    it('keeps the Telegram icon on a self-hosted instance', () => {
+        const { container } = renderPanel();
+        expect(container.querySelector('img')).toBeNull();
     });
 });

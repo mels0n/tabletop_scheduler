@@ -243,7 +243,8 @@ export default function FeaturesPage() {
                                 <h3 className="font-display text-xl font-bold text-parchment">Meet the bot</h3>
                                 <p className="text-parchment-2 leading-relaxed">
                                     This is the face that shows up in your group, on both Telegram and Discord.
-                                    Connect it from your event&apos;s Manage page, and it takes over the reminders and the chasing.
+                                    Once you <Link href="/new" className="text-gold-bright hover:underline">create an event</Link>,
+                                    connect it from the event&apos;s Manage page and it takes over the reminders and the chasing.
                                 </p>
                             </div>
                         </div>

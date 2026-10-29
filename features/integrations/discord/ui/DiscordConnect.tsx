@@ -219,16 +219,16 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
             {oauthEnabled && (
                 <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-4">
                     <div className="flex items-start gap-3 text-gold-bright">
-                        {publicConfig.isHosted ? (
-                            <BotAvatar
-                                size={40}
-                                badge={<span className="flex size-4 items-center justify-center rounded-full bg-discord"><DiscordIcon className="size-2.5 text-parchment" /></span>}
-                            />
-                        ) : (
-                            <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
-                                <DiscordIcon className="w-5 h-5" />
-                            </div>
-                        )}
+                        <BotAvatar
+                            size={40}
+                            decorative
+                            badge={<span className="flex size-4 items-center justify-center rounded-full bg-discord"><DiscordIcon className="size-2.5 text-parchment" /></span>}
+                            fallback={
+                                <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
+                                    <DiscordIcon className="w-5 h-5" />
+                                </div>
+                            }
+                        />
                         <div className="space-y-1">
                             <p className="font-bold">Connect Discord Notifications</p>
                             <p className="opacity-90 text-xs text-mist">
