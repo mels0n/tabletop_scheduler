@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { listDiscordChannels, connectDiscordChannel } from "@/features/integrations/discord/server/actions";
 import { AlertCircle, CheckCircle, Loader2, Lock, Save } from "lucide-react";
 import { publicConfig } from "@/shared/config/public";
+import { BotAvatar } from "@/shared/ui/BotAvatar";
 
 function CheckIcon({ className }: { className?: string }) {
     return <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12" /></svg>;
@@ -218,9 +219,16 @@ export function DiscordConnect({ slug, hasChannel: initialHasChannel, guildId: i
             {oauthEnabled && (
                 <div className="p-4 bg-surface-2 border border-line-strong rounded-card space-y-4">
                     <div className="flex items-start gap-3 text-gold-bright">
-                        <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
-                            <DiscordIcon className="w-5 h-5" />
-                        </div>
+                        {publicConfig.isHosted ? (
+                            <BotAvatar
+                                size={40}
+                                badge={<span className="flex size-4 items-center justify-center rounded-full bg-discord"><DiscordIcon className="size-2.5 text-parchment" /></span>}
+                            />
+                        ) : (
+                            <div className="p-2 bg-discord text-parchment rounded-control shrink-0">
+                                <DiscordIcon className="w-5 h-5" />
+                            </div>
+                        )}
                         <div className="space-y-1">
                             <p className="font-bold">Connect Discord Notifications</p>
                             <p className="opacity-90 text-xs text-mist">
