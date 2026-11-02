@@ -12,6 +12,9 @@ vi.mock('@/features/integrations/discord/server/actions', () => ({
     dmDiscordManagerLink: vi.fn(),
 }));
 
+const config = vi.hoisted(() => ({ isHosted: false, baseUrl: null, botName: null }));
+vi.mock('@/shared/config/public', () => ({ publicConfig: config }));
+
 import { DiscordConnect } from './DiscordConnect';
 import { listDiscordChannels } from '@/features/integrations/discord/server/actions';
 
@@ -69,5 +72,23 @@ describe('DiscordConnect: OAuth links', () => {
         expect(oauthLinks()).toHaveLength(0);
         // The picker follows the OAuth bot-add flow, so its channel list is never fetched.
         expect(listDiscordChannels).not.toHaveBeenCalled();
+    });
+});
+
+describe('DiscordConnect: bot avatar', () => {
+    it('shows the hosted bot avatar in the setup panel when hosted', () => {
+        config.isHosted = true;
+        try {
+            const { container } = render(<DiscordConnect slug="evt" hasChannel={false} hasManagerDiscordId={false} oauthEnabled />);
+            expect(container.querySelector('img[src="/images/bot/avatar-96.webp"]')).not.toBeNull();
+        } finally {
+            config.isHosted = false;
+        }
+    });
+
+    it('keeps the Discord icon on a self-hosted instance', () => {
+        const { container } = render(<DiscordConnect slug="evt" hasChannel={false} hasManagerDiscordId={false} oauthEnabled />);
+        expect(container.querySelector('img')).toBeNull();
+        expect(container.querySelector('.bg-discord svg')).not.toBeNull();
     });
 });

@@ -6,6 +6,8 @@ import {
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SchemaGenerator } from '@/shared/lib/aeo';
+import { publicConfig } from '@/shared/config/public';
+import { BotAvatar } from '@/shared/ui/BotAvatar';
 
 export const metadata: Metadata = {
     title: 'Features: Game Night Scheduling Built for Tabletop Groups',
@@ -232,12 +234,26 @@ export default function FeaturesPage() {
                     eyebrow="Telegram and Discord"
                     title="Lives where your group already talks"
                     intro="Connect the Telegram bot or the verified Discord bot to your group, and the scheduling happens in the chat instead of in a link everyone forgets to open."
-                    footer={
+                    footer={publicConfig.isHosted ? (
+                        // The setup guides are for self-hosters bringing their own bot; hosted
+                        // users connect ours from the manage page instead.
+                        <div className="card-accent max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                            <BotAvatar size={160} />
+                            <div className="space-y-2">
+                                <h3 className="font-display text-xl font-bold text-parchment">Meet the bot</h3>
+                                <p className="text-parchment-2 leading-relaxed">
+                                    This is the face that shows up in your group, on both Telegram and Discord.
+                                    Once you <Link href="/new" className="text-gold-bright hover:underline">create an event</Link>,
+                                    connect it from the event&apos;s Manage page and it takes over the reminders and the chasing.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
                         <div className="flex flex-wrap justify-center gap-3">
                             <Link href="/guide/telegram-setup" className="btn-secondary">Telegram setup guide</Link>
                             <Link href="/guide/discord-setup" className="btn-secondary">Discord setup guide</Link>
                         </div>
-                    }
+                    )}
                 >
                     <FeatureCard
                         icon={<Pin className="w-5 h-5" />}
