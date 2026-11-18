@@ -103,7 +103,7 @@ If you want other options in the same spirit, my list of [two-player games for c
 
 A long weekend gives a game this size room to breathe. The rulebook puts a game at about 90 to 120 minutes, and that is exactly what our two-player games took, even as brand-new players. Still, you want time without a clock.
 
-We played our first two games during a long weekend getaway at [Hermann Hill](https://hermannhill.com), a boutique hotel in Hermann, Missouri wine country, at the Norton Vineyard. With nowhere else to be, losing badly in game one was no reason to quit. We could reset the board and go again.
+We played our first two games during a long weekend getaway at [Hermann Hill](https://hermannhill.com), a boutique hotel in Hermann, Missouri wine country, at the Norton Vineyard. With nowhere else to be, losing badly in game one was no reason to quit. The next day we set the board up again on one of the large outdoor tables overlooking the grape vines, and that is where we won.
 
 If you want to try this with a partner or a regular group, the hard part is usually picking the dates. [Tabletop Time](/features) lets everyone vote on dates without making an account, and you can send reminders through Telegram or Discord so the weekend actually happens. For a recurring co-op night, see [how to schedule game night](/blog/game-night-scheduling), and for a seasonal session, [plan a holiday game night](/blog/plan-a-holiday-game-night).
 
