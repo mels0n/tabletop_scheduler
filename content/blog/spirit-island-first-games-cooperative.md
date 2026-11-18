@@ -7,7 +7,7 @@ faq:
   - question: "Is Spirit Island hard to learn?"
     answer: "The rules are learnable in a sitting, and the one rule worth getting exactly right is cascade of blight. The real difficulty is balancing priorities across the board each turn. Expect a heavy, thinking game rather than a quick one, and give yourselves a couple of plays before judging it."
   - question: "What is cascade of blight in Spirit Island?"
-    answer: "When Blight is added to a land that already has Blight, you also add one extra Blight to any one adjacent land. If that land already had Blight, the cascade can repeat. Every Blight added also destroys Presence there, and you lose if the Blight Pool runs out."
+    answer: "When Blight is added to a land that already has Blight, you also add one extra Blight to any one adjacent land. If that land already had Blight, the cascade can repeat. Every Blight added also destroys one Presence of each spirit there. Blight comes off the Blight Card: the first time it runs out, the card flips to its Blighted Island side and adds more, and if it runs out again, you lose."
   - question: "What are the terror levels in Spirit Island and how do they win the game?"
     answer: "At Terror Level 1 you win by clearing every Invader. At Terror Level 2 you only need to clear every Town and City, and at Terror Level 3 only the Cities. The new level applies immediately when its divider is revealed, and reaching the final Victory level of the Terror track is an instant win."
   - question: "What spirits should beginners play in Spirit Island?"
@@ -20,9 +20,9 @@ faq:
 
 My wife and I got absolutely stomped in our first game of Spirit Island. Our second game we won, right as we were convinced we were losing again. This is what I wish someone had told us before we opened the box: how to read the board, which rule to get right, and how to enjoy a cooperative game where the island's invaders are the only opponent and you and your partner are on the same side.
 
-![People playing board games together at a library game night](/images/blog/spirit-island-first-games-cooperative.jpg)
+![A Spirit Island board set up on a table, with island lands, invader pieces and spirit presence tokens](/images/blog/spirit-island-first-games-cooperative.jpg)
 
-*Photo: [San José Public Library](https://www.flickr.com/photos/26204872@N08/32322530331) via Flickr, CC BY-SA 2.0*
+*Photo: [Mathias N](https://commons.wikimedia.org/w/index.php?curid=112659338) via Wikimedia Commons, public domain*
 
 ## Is Spirit Island hard for a first game?
 
@@ -42,9 +42,9 @@ Here is the rule in plain terms, per the [Spirit Island Rules Reference](https:/
 - You add one additional Blight to any **one** adjacent land, not every neighbor.
 - If that neighbor already had Blight, it cascades again.
 - Every Blight added destroys one Presence per spirit in that land, and the destroyed Presence does not return to your spirit panel.
-- If the Blight Pool runs out, you lose.
+- Blight comes off the Blight Card. The first time it runs out, the card flips to its Blighted Island side and adds more. If it runs out again, you lose.
 
-Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a simple first-turn priority: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since an empty Blight Pool ends the game.
+Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a simple first-turn priority: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since every Blight that cascades drains the Blight Card faster.
 
 ## How do you win Spirit Island: fear and terror levels?
 

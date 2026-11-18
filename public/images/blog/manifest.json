@@ -106,14 +106,14 @@
     "provider": "openverse",
     "model": null,
     "mime": "image/jpeg",
-    "bytes": 87323,
+    "bytes": 249040,
     "attribution": {
-      "title": "Board Games for Grown-Ups - Evergreen Branch January 2017",
-      "creator": "San José Public Library",
-      "license": "by-sa 2.0",
-      "source": "https://www.flickr.com/photos/26204872@N08/32322530331",
-      "provider": "flickr"
+      "title": "Mission completed in Spirit Island",
+      "creator": "Mathias N",
+      "license": "cc0 1.0",
+      "source": "https://commons.wikimedia.org/w/index.php?curid=112659338",
+      "provider": "wikimedia"
     },
-    "at": "2026-11-18T15:57:52.576Z"
+    "at": "2026-11-18T16:38:09.609Z"
   }
 }
