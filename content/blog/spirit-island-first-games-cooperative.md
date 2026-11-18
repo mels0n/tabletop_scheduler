@@ -7,7 +7,7 @@ faq:
   - question: "Is Spirit Island hard to learn?"
     answer: "The rules are learnable in a sitting, and the one rule worth getting exactly right is cascade of blight. The real difficulty is balancing priorities across the board each turn. Expect a heavy, thinking game rather than a quick one, and give yourselves a couple of plays before judging it."
   - question: "What is cascade of blight in Spirit Island?"
-    answer: "When Blight is added to a land that already has Blight, you also add one extra Blight to any one adjacent land. If that land already had Blight, the cascade can repeat. Every Blight added also destroys one Presence of each spirit there. Blight comes off the Blight Card, and if the last Blight comes off it, you follow the card's instructions, which are often that you lose."
+    answer: "When Blight is added to a land that already has Blight, you also add one extra Blight to any one adjacent land. If that land already had Blight, the cascade can repeat. Every Blight added also destroys one Presence of each spirit there. Blight comes off the Blight Card: the first time it empties, the card flips to its Blighted Island side and adds more, and if that side runs out too, you lose."
   - question: "What are the terror levels in Spirit Island and how do they win the game?"
     answer: "At Terror Level 1 you win by clearing every Invader. At Terror Level 2 you only need to clear every Town and City, and at Terror Level 3 only the Cities. The new level applies immediately when its divider is revealed, and reaching the final Victory level of the Terror track is an instant win."
   - question: "What spirits should beginners play in Spirit Island?"
@@ -42,7 +42,7 @@ Here is the rule in plain terms, per the [Spirit Island Rules Reference](https:/
 - You add one additional Blight to any **one** adjacent land, not every neighbor.
 - If that neighbor already had Blight, it cascades again.
 - Every Blight added destroys one Presence per spirit in that land, and the destroyed Presence does not return to your spirit panel.
-- Blight comes off the Blight Card. If the last Blight comes off it, follow the card's instructions, which are often "you lose".
+- Blight comes off the Blight Card. The first time it empties, the card flips to its Blighted Island side, which brings more Blight and never flips back. If the Blighted side runs out too, you lose.
 
 Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a simple first-turn priority: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since every Blight that cascades drains the Blight Card faster.
 
@@ -69,7 +69,7 @@ You win Spirit Island by generating fear until the terror level rises, and each 
     <div style="font-size:13px;margin-bottom:4px;">Final Terror Level: Victory</div>
     <div style="background:#1e293b;border-radius:6px;"><div style="width:100%;background:#22d3ee;color:#0f172a;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;">Instant win, whatever is on the board</div></div>
   </div>
-  <div style="font-size:11px;color:#94a3b8;margin-top:14px;">Source: <a href="https://boardgamegeek.com/filepage/158564/spirit-island-rules-reference" style="color:#22d3ee;">Spirit Island Rules Reference (BoardGameGeek)</a></div>
+  <div style="font-size:11px;color:#94a3b8;margin-top:14px;">Source: the Terror Level dividers in the game's Fear deck</div>
 </div>
 
 The takeaway: in Spirit Island, reaching Terror Level 3 means only Cities stand between you and victory, which is how a board that looks like it is falling apart can end in a win.
@@ -80,7 +80,7 @@ That is exactly what happened in our second game. We had been going after Cities
 
 Pick low-complexity spirits that do different jobs. The rulebook's beginner advice is to choose a low-complexity spirit and use its Power Progression card. With two players, spirits should complement each other, because a mismatched pair can make the game feel impossible. Ours did not complement each other, and it showed.
 
-The rulebook's beginner advice names four low-complexity spirits: Lightning's Swift Strike, Vital Strength of the Earth, River Surges in Sunlight, and Shadows Flicker Like Flame. It also suggests new players use the spirit's Power Progression card to pick their powers.
+The rulebook's beginner advice names four low-complexity spirits: Lightning's Swift Strike, Vital Strength of the Earth, River Surges in Sunlight, and Shadows Flicker Like Flame. It also suggests new players use the spirit's Power Progression card to pick their powers, and skip the Blight Card, Adversary and Scenario for a first game, using the Blight instructions printed on the board instead.
 
 Our problem in game one was never the rules. We winged the spirit pick, and our two spirits were not obviously helpful to each other: they pulled in different directions and neither one covered the other's gaps, so every turn felt like we were losing ground. Before game two we took a quick look online for two-player pairing ideas and found a [Reddit thread of favorite two-spirit combos](https://www.reddit.com/r/boardgames/comments/8763ik/spirit_island_favorite_2_spirit_combos/). Picking a pair that actually supported each other changed the whole feel of the game.
 
