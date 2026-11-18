@@ -28,7 +28,7 @@ My wife and I got absolutely stomped in our first game of Spirit Island. Our sec
 
 Spirit Island's rules are not hard, but the game is demanding. The difficulty is balancing priorities: every turn you weigh stopping the spread of Invaders, building fear, and protecting your land from blight, and you cannot do all three. Getting stomped in game one is normal, not a sign you did something wrong.
 
-Spirit Island is a cooperative game by R. Eric Reuss, published by Greater Than Games in 2017, and the base game plays one to four people ([Wikipedia](https://en.wikipedia.org/wiki/Spirit_Island_(board_game))). It reached the number 9 spot on BoardGameGeek's highest-rated list in 2022 and sat at number 10 as of May 2025, according to the same article. Ars Technica, quoted there, also notes the risk of analysis paralysis. You can check current numbers on the [BoardGameGeek page](https://boardgamegeek.com/boardgame/162886/spirit-island).
+Spirit Island is a cooperative game by R. Eric Reuss, published by Greater Than Games in 2017, and the base game plays one to four people. It has long sat near the top of [BoardGameGeek's](https://boardgamegeek.com/boardgame/162886/spirit-island) highest-rated games.
 
 Knowing the rules does not tell you which threat to deal with first. The complexity lives at the table, where you have more good moves than turns and no real sense yet of which ones matter.
 
@@ -44,7 +44,7 @@ Here is the rule in plain terms, per the [Spirit Island Rules Reference](https:/
 - Every Blight added destroys one Presence per spirit in that land, and the destroyed Presence does not return to your spirit panel.
 - If the Blight Pool runs out, you lose.
 
-Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a first-turn priority I wish we had used: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since an empty Blight Pool ends the game.
+Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a simple first-turn priority: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since an empty Blight Pool ends the game.
 
 ## How do you win Spirit Island: fear and terror levels?
 
@@ -80,9 +80,9 @@ That is exactly what happened in our second game. We were sure we were losing ag
 
 Pick low-complexity spirits that do different jobs. The rulebook's beginner advice is to choose a low-complexity spirit and use its Power Progression card. With two players, spirits should complement each other, because a mismatched pair can make the game feel impossible. Ours did not complement each other, and it showed.
 
-The rulebook's beginner advice, as hosted on [Rulespal](https://rulespal.com/spirit-island/rulebook), names four low-complexity spirits: Lightning's Swift Strike, Vital Strength of the Earth, River Surges in Sunlight, and Shadows Flicker Like Flame. Per the same source, new players should use the spirit's Power Progression card to pick their powers.
+The rulebook's beginner advice names four low-complexity spirits: Lightning's Swift Strike, Vital Strength of the Earth, River Surges in Sunlight, and Shadows Flicker Like Flame. It also suggests new players use the spirit's Power Progression card to pick their powers.
 
-For pairing, I lean on a fan-written two-player guide, which suggests the best two-player games span two archetypes and warns against doubling up, for example two spirits that both push fear ([bfowle's two-player guide](https://bfowle.github.io/spirit-island/social/two-player.html)). It is a fan resource, not official, but the logic matches what we felt. In our first game our spirits pulled in different directions and neither one covered the other's gaps. Every turn felt like we were losing ground.
+Our problem in game one was never the rules. We winged the spirit pick, and our two spirits were not obviously helpful to each other: they pulled in different directions and neither one covered the other's gaps, so every turn felt like we were losing ground. Before game two we took a quick look online for two-player pairing ideas and found a [Reddit thread of favorite two-spirit combos](https://www.reddit.com/r/boardgames/comments/8763ik/spirit_island_favorite_2_spirit_combos/). Picking a pair that actually supported each other changed the whole feel of the game.
 
 For your first few games, choose a pair that complements, and stick with them long enough to learn what they do.
 
@@ -90,7 +90,7 @@ For your first few games, choose a pair that complements, and stick with them lo
 
 Agree on how much to share before the first turn, and then keep the game collaborative rather than directed. Cooperative games invite one person to take over and plan both turns. Ask questions instead of giving orders, and remember that a loss belongs to both of you, which is most of the fun.
 
-The same two-player guide calls a partner who plans your turn a "soft alpha" and suggests defaulting to full information and full discussion, while limiting how much you spell out if one player is newer ([bfowle's two-player guide](https://bfowle.github.io/spirit-island/social/two-player.html)). A few habits that help:
+Co-op players have a name for the partner who plans everyone's turn: the alpha player. Talking openly is good, but if one of you is newer, let them make their own calls. A few habits that help:
 
 - Say your plan out loud, then let your partner finish their own turn.
 - Ask "what are you worried about?" instead of "you should play this."
@@ -107,4 +107,4 @@ We played our first two games during a long weekend getaway at [Hermann Hill](ht
 
 If you want to try this with a partner or a regular group, the hard part is usually picking the dates. [Tabletop Time](/features) lets everyone vote on dates without making an account, and you can send reminders through Telegram or Discord so the weekend actually happens. For a recurring co-op night, see [how to schedule game night](/blog/game-night-scheduling), and for a seasonal session, [plan a holiday game night](/blog/plan-a-holiday-game-night).
 
-We got stomped in game one, worked out cascade of blight the hard way, and then in game two looked up from a board we were certain was lost to find Terror Level 3 already in play and not a single City left. Nobody had planned that win, which is why it was so much fun to share.
+We got stomped in game one with two spirits that did nothing for each other, looked up a better pairing, and then in game two looked up from a board we were certain was lost to find Terror Level 3 already in play and not a single City left. Nobody had planned that win, which is why it was so much fun to share.
