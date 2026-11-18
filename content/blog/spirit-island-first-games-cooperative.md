@@ -15,7 +15,7 @@ faq:
   - question: "Is Spirit Island good as a two-player game for couples?"
     answer: "It plays fine with two, and we did exactly that, because you share one outcome and a loss is a team loss. The game supports one to four players in the base box. Agree up front how much you will talk through each other's turns so nobody ends up playing for the other."
   - question: "How long does a Spirit Island game take?"
-    answer: "The rulebook says about 90 to 120 minutes once you know the game, with one- and two-player games running slightly shorter. Your first game will likely run longer while you learn the rules. Block out a generous afternoon or evening."
+    answer: "The rulebook says about 90 to 120 minutes. Our two-player games landed right in that range even though we were new to the game. Block out an afternoon or evening so nobody is watching the clock."
 ---
 
 My wife and I got absolutely stomped in our first game of Spirit Island. Our second game we won, right as we were convinced we were losing again. This is what I wish someone had told us before we opened the box: how to read the board, which rule to get right, and how to enjoy a cooperative game where the island's invaders are the only opponent and you and your partner are on the same side.
@@ -101,7 +101,7 @@ If you want other options in the same spirit, my list of [two-player games for c
 
 ## Why is a long weekend a good way to learn it?
 
-A long weekend gives a game this size room to breathe. The rulebook says a game runs about 90 to 120 minutes once you know it, and one- and two-player games run slightly shorter ([Rulespal](https://rulespal.com/spirit-island/rulebook)). Your first game will take longer, so you want time without a clock.
+A long weekend gives a game this size room to breathe. The rulebook puts a game at about 90 to 120 minutes, and that is exactly what our two-player games took, even as brand-new players. Still, you want time without a clock.
 
 We played our first two games during a long weekend getaway at [Hermann Hill](https://hermannhill.com), a boutique hotel in Hermann, Missouri wine country, at the Norton Vineyard. With nowhere else to be, losing badly in game one was no reason to quit. We could reset the board and go again.
 
