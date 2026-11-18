@@ -99,7 +99,7 @@ That gap is why Thursday does not need yearly resets. The idea of a fresh season
 
 ### Multiplayer Games Are a Set of Duels
 
-Chess is one-on-one: you only ever win points from one person. Most board games are not. In Thursday, every pair at the table is treated as its own head-to-head result, and your change is averaged across your opponents. In a four-player game:
+Chess is one-on-one: you only ever win points from one person. Most board games are not. In Thursday, every pair at the table is treated as its own head-to-head result, and your change is averaged across your opponents. Here is a four-player game where everyone starts level. Each duel is worth 32 points either way, and the real numbers shift once the ratings at the table differ:
 
 | Finish | Head-to-head results | Change (all at 1000, weight 2.0) |
 | --- | --- | --- |
