@@ -100,5 +100,20 @@
       "provider": "flickr"
     },
     "at": "2026-09-30T16:08:15.187Z"
+  },
+  "spirit-island-first-games-cooperative": {
+    "source": "stock",
+    "provider": "openverse",
+    "model": null,
+    "mime": "image/jpeg",
+    "bytes": 87323,
+    "attribution": {
+      "title": "Board Games for Grown-Ups - Evergreen Branch January 2017",
+      "creator": "San José Public Library",
+      "license": "by-sa 2.0",
+      "source": "https://www.flickr.com/photos/26204872@N08/32322530331",
+      "provider": "flickr"
+    },
+    "at": "2026-11-18T15:57:52.576Z"
   }
 }
