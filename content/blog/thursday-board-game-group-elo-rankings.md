@@ -120,7 +120,7 @@ It also closes a loophole. You cannot climb by beating the same easy co-op over 
 
 ### A Tie Is a Tie
 
-Some games break ties with a secondary score or two, and some with a whole list. Thursday's developer asked whether a tie-breaker win should count as a full win in the rating. The view we settled on: no. A tie is a tie. In football, a match settled on penalties still goes into the record books as a draw, even though one team advances. The tie breaker is for the people at the table, not for the ranking. Recording the tie breakers themselves, as many rounds as a game needs or none at all, is the next piece Thursday is building, and it also leaves room for real shared wins.
+Some games break ties with a secondary score or two, and some with a whole list. Thursday's developer asked whether a tie-breaker win should count as a full win in the rating. The view we settled on: no. A tie is a tie. In soccer (football or fútbol to most of the world), a match settled on a penalty shootout still goes into the record books as a draw, even though one team advances. The tie breaker is for the people at the table, not for the ranking. Recording the tie breakers themselves, as many rounds as a game needs or none at all, is the next piece Thursday is building, and it also leaves room for real shared wins.
 
 ### The Fine Print
 
