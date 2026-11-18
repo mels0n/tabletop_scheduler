@@ -1,7 +1,7 @@
 ---
 title: "Thursday: A Board Game Group Manager With Real Elo Rankings"
 description: "A primer on every feature of Thursday (gamethursday.win), the first app built on the Tabletop Time API, and the story of how its weight-adjusted Elo player rankings were designed."
-date: "2026-11-19"
+date: "2026-12-03"
 tags: ["Board Games", "Elo", "Player Rankings", "Integrations", "Game Night", "BoardGameGeek"]
 itemList: ["Groups with roles, guests and share links", "A planner with RSVPs and Tabletop Time scheduling", "A BoardGameGeek-synced collection with group scores", "Game roulette for when nobody can decide", "Play logging with scores, factions and co-op results", "Elo player rankings weighted by game complexity", "A results API for uploading plays"]
 listTitle: "What Thursday Does"
