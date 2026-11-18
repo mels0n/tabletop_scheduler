@@ -74,7 +74,7 @@ You win Spirit Island by generating fear until the terror level rises, and each 
 
 The takeaway: in Spirit Island, reaching Terror Level 3 means only Cities stand between you and victory, which is how a board that looks like it is falling apart can end in a win.
 
-That is exactly what happened in our second game. We had been going after Cities all game, not as a plan to win but because they were doing so much damage. We were sure we were losing again. Then we hit Terror Level 3, and we had to look up what it meant, because in game one we never got anywhere close to it and honestly did not remember what the win condition was. No Cities on the Island. We looked at the board, and there were none. The new level takes effect the moment its divider is revealed, so the game simply ended and we won. Read the victory condition every time the terror level rises, because it may already be true.
+That is exactly what happened in our second game. We had been going after Cities all game, not as a plan to win but because they were doing so much damage. We were sure we were losing again. Then the fear triggered, the terror level moved to 3, and we looked up what that meant, because in game one we never got anywhere close to it and honestly did not remember the win condition. No Cities on the Island. Bam: we had already met it. The new level takes effect the moment its divider is revealed, so the game simply ended and we won. Read the victory condition every time the terror level rises, because it may already be true.
 
 ## Which spirits should you pick for a first game together?
 
@@ -107,4 +107,4 @@ We played our first two games during a long weekend getaway at [Hermann Hill](ht
 
 If you want to try this with a partner or a regular group, the hard part is usually picking the dates. [Tabletop Time](/features) lets everyone vote on dates without making an account, and you can send reminders through Telegram or Discord so the weekend actually happens. For a recurring co-op night, see [how to schedule game night](/blog/game-night-scheduling), and for a seasonal session, [plan a holiday game night](/blog/plan-a-holiday-game-night).
 
-We got stomped in game one with two spirits that did nothing for each other, looked up a better pairing, and then in game two hit Terror Level 3 on a board we were certain was lost, looked up the win condition, only to find we had already knocked out every City because they were hurting us so badly. We had not planned that win, which is why it was so much fun to share.
+We got stomped in game one with two spirits that did nothing for each other, looked up a better pairing, and then in game two watched the terror level tick over to 3 on a board we were certain was lost, only to find we had already met the condition: we had knocked out every City because they were hurting us so badly. We had not planned that win, which is why it was so much fun to share.
