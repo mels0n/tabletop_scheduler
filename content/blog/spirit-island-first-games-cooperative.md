@@ -7,7 +7,7 @@ faq:
   - question: "Is Spirit Island hard to learn?"
     answer: "The rules are learnable in a sitting, and the one rule worth getting exactly right is cascade of blight. The real difficulty is balancing priorities across the board each turn. Expect a heavy, thinking game rather than a quick one, and give yourselves a couple of plays before judging it."
   - question: "What is cascade of blight in Spirit Island?"
-    answer: "When Blight is added to a land that already has Blight, you also add one extra Blight to any one adjacent land. If that land already had Blight, the cascade can repeat. Every Blight added also destroys one Presence of each spirit there. Blight comes off the Blight Card: the first time it runs out, the card flips to its Blighted Island side and adds more, and if it runs out again, you lose."
+    answer: "When Blight is added to a land that already has Blight, you also add one extra Blight to any one adjacent land. If that land already had Blight, the cascade can repeat. Every Blight added also destroys one Presence of each spirit there. Blight comes off the Blight Card, and if the last Blight comes off it, you follow the card's instructions, which are often that you lose."
   - question: "What are the terror levels in Spirit Island and how do they win the game?"
     answer: "At Terror Level 1 you win by clearing every Invader. At Terror Level 2 you only need to clear every Town and City, and at Terror Level 3 only the Cities. The new level applies immediately when its divider is revealed, and reaching the final Victory level of the Terror track is an instant win."
   - question: "What spirits should beginners play in Spirit Island?"
@@ -42,13 +42,13 @@ Here is the rule in plain terms, per the [Spirit Island Rules Reference](https:/
 - You add one additional Blight to any **one** adjacent land, not every neighbor.
 - If that neighbor already had Blight, it cascades again.
 - Every Blight added destroys one Presence per spirit in that land, and the destroyed Presence does not return to your spirit panel.
-- Blight comes off the Blight Card. The first time it runs out, the card flips to its Blighted Island side and adds more. If it runs out again, you lose.
+- Blight comes off the Blight Card. If the last Blight comes off it, follow the card's instructions, which are often "you lose".
 
 Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a simple first-turn priority: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since every Blight that cascades drains the Blight Card faster.
 
 ## How do you win Spirit Island: fear and terror levels?
 
-You win Spirit Island by generating fear until the terror level rises, and each new level makes victory easier. At Terror Level 1 you must clear all Invaders. At Terror Level 2 only Towns and Cities must go. At Terror Level 3 only Cities must go. Reaching the final Victory level also wins instantly.
+You win Spirit Island by generating fear until the terror level rises, and each new level makes victory easier. At Terror Level 1 you must clear all Invaders. At Terror Level 2 only Towns and Cities must go. At Terror Level 3 only Cities must go. Reaching the final Victory level also wins instantly. You win the moment you meet the current condition, and you can lose three ways: the last Blight comes off the Blight Card, a spirit has no Presence left on the island, or you need to draw an Invader Card and the deck is empty.
 
 <div role="img" aria-label="Bar chart of Spirit Island terror levels. Terror Level 1 requires clearing all Invaders (Explorers, Towns, Cities). Terror Level 2 requires clearing Towns and Cities. Terror Level 3 requires clearing only Cities. The final Victory level is an instant win." style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px;margin:24px 0;font-family:system-ui,sans-serif;color:#e2e8f0;">
   <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Spirit Island terror levels and their victory conditions</div>
