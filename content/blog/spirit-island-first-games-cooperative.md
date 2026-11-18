@@ -36,12 +36,12 @@ Knowing the rules does not tell you which threat to deal with first. The complex
 
 Cascade of blight is the rule that turns one bad land into a chain reaction. When Blight is added to a land that already has Blight, you also add one extra Blight to one adjacent land, and that can keep going. It is the one rule worth understanding properly before you start.
 
-Here is the rule in plain terms, per the [Dized rules reference](https://rules.dized.com/game/_7rPptSyRn6_unBi4-2eVg/eyRPfZcgTZimGatpaB4TTA/what-is-cascade):
+Here is the rule in plain terms, per the [Spirit Island Rules Reference](https://boardgamegeek.com/filepage/158564/spirit-island-rules-reference) on BoardGameGeek:
 
 - A land that already has Blight gets another Blight. That triggers the cascade.
 - You add one additional Blight to any **one** adjacent land, not every neighbor.
 - If that neighbor already had Blight, it cascades again.
-- Every Blight added destroys one Presence per spirit in that land, and the destroyed Presence does not return to your spirit panel ([Dized blight rules](https://rules.dized.com/game/_7rPptSyRn6_unBi4-2eVg/6FDKgv-4Qx-XUXPdiMB9GA/blight)).
+- Every Blight added destroys one Presence per spirit in that land, and the destroyed Presence does not return to your spirit panel.
 - If the Blight Pool runs out, you lose.
 
 Why it matters: a single ignored land is not a single problem, because the next Blight that lands there spills into a neighbor, and the Presence you lose along the way never comes back. That gives you a first-turn priority I wish we had used: look for any land where you have Presence and Blight is one step from arriving, and deal with that before the flashier play. My read is that a blighted land bordering another blighted land is where this gets ugly fastest, though that is my inference rather than something the rules state. Treat any land that already has Blight as a fire you must handle before it spreads, since an empty Blight Pool ends the game.
@@ -69,12 +69,12 @@ You win Spirit Island by generating fear until the terror level rises, and each 
     <div style="font-size:13px;margin-bottom:4px;">Final Terror Level: Victory</div>
     <div style="background:#1e293b;border-radius:6px;"><div style="width:100%;background:#22d3ee;color:#0f172a;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;">Instant win, whatever is on the board</div></div>
   </div>
-  <div style="font-size:11px;color:#94a3b8;margin-top:14px;">Source: <a href="https://rules.dized.com/game/_7rPptSyRn6_unBi4-2eVg/JX3j7ssvTxKQDLmk_5323w/fear-and-terror" style="color:#22d3ee;">Dized rules, fear and terror</a></div>
+  <div style="font-size:11px;color:#94a3b8;margin-top:14px;">Source: <a href="https://boardgamegeek.com/filepage/158564/spirit-island-rules-reference" style="color:#22d3ee;">Spirit Island Rules Reference (BoardGameGeek)</a></div>
 </div>
 
 The takeaway: in Spirit Island, reaching Terror Level 3 means only Cities stand between you and victory, which is how a board that looks like it is falling apart can end in a win.
 
-That is exactly what happened in our second game. We were sure we were losing again, then realized we had hit Terror Level 3 and there were no Cities on the board. The new level takes effect the moment its divider is revealed, so the game simply ended and we won ([Dized rules](https://rules.dized.com/game/_7rPptSyRn6_unBi4-2eVg/VEwczo2fTwuONZ50apVctg/win-condition)). Check the victory conditions every time fear advances, not only at the end of a round. We nearly missed our own win.
+That is exactly what happened in our second game. We were sure we were losing again, then realized we had hit Terror Level 3 and there were no Cities on the board. The new level takes effect the moment its divider is revealed, so the game simply ended and we won. Check the victory conditions every time fear advances, not only at the end of a round. We nearly missed our own win.
 
 ## Which spirits should you pick for a first game together?
 
