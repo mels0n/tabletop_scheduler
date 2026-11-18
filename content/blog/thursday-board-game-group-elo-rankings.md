@@ -64,7 +64,7 @@ Thursday has an API of its own. You can create a token in settings and upload re
 
 ### The Small Things
 
-Sign in with Telegram, Discord or an email link, with no password to remember. There are five color themes named for the hours of a Thursday (Morning, Afternoon, Dusk, Evening and Late), or the theme can follow the time of day. A help section walks through each part of the app.
+Sign in with Telegram, Discord or an email link, with no password to remember. Your profile gets a generated avatar you can reroll until one fits. There are a dozen themes: five named for the hours of a Thursday (Morning, Afternoon, Dusk, Evening and Late), a set of Shelf themes that show colored bars with box art (light, dark, red, blue or classic purple), and the original purple look for anyone who misses it. The theme can also match your device or change with the hour. A help section walks through each part of the app.
 
 ## Player Rankings
 
